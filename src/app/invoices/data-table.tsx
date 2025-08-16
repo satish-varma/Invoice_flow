@@ -24,16 +24,19 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Invoice } from "@/services/invoiceService"
 
 
-interface DataTableProps<TData, TValue> {
+interface DataTableProps<TData extends Invoice, TValue> {
   columns: ColumnDef<TData, TValue>[]
-  data: TData[]
+  data: TData[],
+  onPreview: (invoice: TData) => void;
 }
 
-export function InvoicesDataTable<TData, TValue>({
+export function InvoicesDataTable<TData extends Invoice, TValue>({
   columns,
   data,
+  onPreview
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -53,6 +56,9 @@ export function InvoicesDataTable<TData, TValue>({
       sorting,
       columnFilters,
     },
+    meta: {
+      onPreview: onPreview,
+    }
   })
 
   return (
@@ -132,5 +138,3 @@ export function InvoicesDataTable<TData, TValue>({
     </div>
   )
 }
-
-    

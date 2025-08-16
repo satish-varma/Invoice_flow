@@ -1,20 +1,46 @@
 
+'use client'
+
 import { Invoice, getInvoices } from "@/services/invoiceService";
 import { InvoicesDataTable } from "./data-table";
-import { columns } from "./columns";
+import { getColumns } from "./columns";
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader } from "lucide-react";
+import React from "react";
+import { InvoicePreviewDialog } from "@/components/invoice-preview-dialog";
 
-async function getData(): Promise<Invoice[]> {
-  const invoices = await getInvoices();
-  return invoices;
-}
+export default function InvoicesPage() {
+  const [data, setData] = React.useState<Invoice[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [previewingInvoice, setPreviewingInvoice] = React.useState<Invoice | null>(null);
 
-export default async function InvoicesPage() {
-  const data = await getData();
+  React.useEffect(() => {
+    async function getData() {
+      setIsLoading(true);
+      const invoices = await getInvoices();
+      setData(invoices);
+      setIsLoading(false);
+    }
+    getData();
+  }, []);
+  
+  const handlePreview = (invoice: Invoice) => {
+    setPreviewingInvoice(invoice);
+  }
+
+  const columns = React.useMemo(() => getColumns(handlePreview), []);
+
+  if (isLoading) {
+    return (
+        <div className="flex items-center justify-center min-h-screen">
+            <Loader className="h-8 w-8 animate-spin" />
+        </div>
+    )
+  }
 
   return (
+    <>
     <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
         <div className="w-full max-w-7xl mx-auto">
             <div className="flex items-center justify-between mb-8">
@@ -33,10 +59,20 @@ export default async function InvoicesPage() {
                     </p>
                 </div>
             </div>
-            <InvoicesDataTable columns={columns} data={data} />
+            <InvoicesDataTable columns={columns} data={data} onPreview={handlePreview} />
         </div>
     </main>
+    {previewingInvoice && (
+      <InvoicePreviewDialog
+        invoice={previewingInvoice}
+        isOpen={!!previewingInvoice}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setPreviewingInvoice(null);
+          }
+        }}
+      />
+    )}
+    </>
   );
 }
-
-    

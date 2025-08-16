@@ -26,17 +26,27 @@ const handleDownload = (invoice: Invoice) => {
     invoiceElement.style.position = 'absolute';
     invoiceElement.style.left = '-9999px';
     invoiceElement.style.top = '-9999px';
-    invoiceElement.innerHTML = renderToStaticMarkup(
-        <div style={{width: '800px'}}>
-             <InvoicePreview invoice={invoice} />
-        </div>
+    invoiceElement.style.width = '800px';
+    
+    // We need to wrap the preview in a basic HTML structure for renderToStaticMarkup
+    const staticMarkup = renderToStaticMarkup(
+        <html lang="en">
+            <body>
+                <div style={{width: '800px'}}>
+                     <InvoicePreview invoice={invoice} />
+                </div>
+            </body>
+        </html>
     );
+    // Inject the static markup into our container element
+    invoiceElement.innerHTML = staticMarkup;
     document.body.appendChild(invoiceElement);
     
     const input = invoiceElement.querySelector('.invoice-preview-container') as HTMLElement;
+    
     if (input) {
       input.classList.add('pdf-capture');
-      html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
+      html2canvas(input, { scale: 2, useCORS: true, logging: false }).then((canvas) => {
         input.classList.remove('pdf-capture');
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
@@ -46,11 +56,17 @@ const handleDownload = (invoice: Invoice) => {
         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`invoice-${invoice.invoiceNumber || 'untitled'}.pdf`);
         document.body.removeChild(invoiceElement);
+      }).catch(err => {
+        console.error("Error generating PDF", err);
+        document.body.removeChild(invoiceElement);
       });
+    } else {
+       document.body.removeChild(invoiceElement);
     }
 };
 
-export const columns: ColumnDef<Invoice>[] = [
+// We need to pass the preview handler to the columns
+export const getColumns = (onPreview: (invoice: Invoice) => void): ColumnDef<Invoice>[] => [
   {
     accessorKey: "invoiceNumber",
     header: ({ column }) => {
@@ -94,7 +110,11 @@ export const columns: ColumnDef<Invoice>[] = [
       },
       cell: ({ row }) => {
         const date = row.getValue("date") as string;
-        return <div>{format(new Date(date), 'PPP')}</div>
+        try {
+            return <div>{format(new Date(date), 'PPP')}</div>
+        } catch (e) {
+            return <div>Invalid Date</div>
+        }
       }
   },
   {
@@ -144,7 +164,7 @@ export const columns: ColumnDef<Invoice>[] = [
               Copy invoice number
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View details</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onPreview(invoice)}>View details</DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleDownload(invoice)}>Download PDF</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -19,7 +19,8 @@ export default function InvoicesPage() {
   const [previewingInvoice, setPreviewingInvoice] = React.useState<Invoice | null>(null);
   const [invoiceToDownload, setInvoiceToDownload] = React.useState<Invoice | null>(null);
   const invoicePreviewRef = useRef<HTMLDivElement>(null);
-
+  const [pdfUrl, setPdfUrl] = React.useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = React.useState(false);
 
   React.useEffect(() => {
     async function getData() {
@@ -31,29 +32,50 @@ export default function InvoicesPage() {
     getData();
   }, []);
   
-  const handlePreview = (invoice: Invoice) => {
+  const generatePdf = async (invoice: Invoice, output: 'dataurl' | 'save') => {
+    setInvoiceToDownload(invoice);
+    // Use a timeout to allow the off-screen InvoicePreview to render
+    await new Promise(resolve => setTimeout(resolve, 50));
+  
+    const input = invoicePreviewRef.current;
+    if (!input) return null;
+  
+    const canvas = await html2canvas(input, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    setInvoiceToDownload(null);
+  
+    if (output === 'save') {
+      pdf.save(`invoice-${invoice.invoiceNumber || 'untitled'}.pdf`);
+      return null;
+    } else {
+      return pdf.output('datauristring');
+    }
+  };
+  
+  const handlePreview = async (invoice: Invoice) => {
     setPreviewingInvoice(invoice);
+    setIsGeneratingPdf(true);
+    setPdfUrl(null);
+    const url = await generatePdf(invoice, 'dataurl');
+    if (url) {
+      setPdfUrl(url);
+    }
+    setIsGeneratingPdf(false);
   }
 
-  const handleDownload = (invoice: Invoice) => {
-    setInvoiceToDownload(invoice);
+  const handleDownload = async (invoice: Invoice) => {
+    await generatePdf(invoice, 'save');
   };
 
-  React.useEffect(() => {
-    if (invoiceToDownload && invoicePreviewRef.current) {
-        const input = invoicePreviewRef.current;
-        html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`invoice-${invoiceToDownload.invoiceNumber || 'untitled'}.pdf`);
-            setInvoiceToDownload(null);
-        });
-    }
-  }, [invoiceToDownload]);
+  const closePreview = () => {
+    setPreviewingInvoice(null);
+    setPdfUrl(null);
+  }
 
   const columns = React.useMemo(() => getColumns(handlePreview, handleDownload), []);
 
@@ -94,15 +116,17 @@ export default function InvoicesPage() {
         isOpen={!!previewingInvoice}
         onOpenChange={(isOpen) => {
           if (!isOpen) {
-            setPreviewingInvoice(null);
+            closePreview();
           }
         }}
+        pdfUrl={pdfUrl}
+        isGeneratingPdf={isGeneratingPdf}
       />
     )}
     {/* This component is rendered off-screen and used for PDF generation */}
-    {invoiceToDownload && (
+    {(invoiceToDownload || (previewingInvoice && isGeneratingPdf)) && (
         <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-            <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToDownload} />
+            <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToDownload || previewingInvoice!} />
         </div>
     )}
     </>

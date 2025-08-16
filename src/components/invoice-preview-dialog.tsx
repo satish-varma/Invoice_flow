@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Invoice } from '@/services/invoiceService';
-import { generateInvoicePdf } from '@/lib/pdf';
+import { generateInvoicePdf } from '@/lib/pdf.tsx';
 import { Loader } from 'lucide-react';
 
 interface InvoicePreviewDialogProps {

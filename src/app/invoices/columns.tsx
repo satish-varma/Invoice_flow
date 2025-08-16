@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Invoice } from "@/services/invoiceService"
 import { format } from "date-fns"
-import { downloadInvoicePdf } from "@/lib/pdf"
+import { downloadInvoicePdf } from "@/lib/pdf.tsx"
 
 
 // We need to pass the preview handler to the columns

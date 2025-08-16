@@ -32,6 +32,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                 <CardHeader className="p-6">
                     <div className='text-center pb-4'>
                         <CardTitle className="text-2xl font-bold tracking-tight">BILL OF SUPPLY</CardTitle>
+                        <p className='text-sm'>(Original For Recipient)</p>
                     </div>
                     <div className='flex justify-between items-start'>
                         <div>

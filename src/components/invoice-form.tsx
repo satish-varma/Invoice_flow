@@ -80,7 +80,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         }
     }
     loadSettings();
-  }, [initialData]);
+  }, []);
 
   useEffect(() => {
       if (initialData) {

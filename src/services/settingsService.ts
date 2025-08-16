@@ -46,7 +46,9 @@ export async function saveSettings(settings: Omit<Settings, 'id'>): Promise<void
     try {
         const docRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         // Use setDoc with merge to create or update the document
-        await setDoc(docRef, settings, { merge: true });
+        // The id should not be part of the data being written.
+        const { id, ...settingsData } = settings as Settings;
+        await setDoc(docRef, settingsData, { merge: true });
     } catch (error) {
         console.error("Error saving settings: ", error);
         throw new Error("Failed to save settings.");

@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 export interface BillToContact {
+    id: string; // Keep ID for potential future use, but it's mainly the key in the map
     displayName: string;
     name: string;
     address: string;
@@ -12,6 +13,7 @@ export interface BillToContact {
 }
 
 export interface ShipToContact {
+    id: string;
     displayName: string;
     name: string;
     address: string;
@@ -35,8 +37,9 @@ export async function getSettings(): Promise<Settings | null> {
             return docSnap.data() as Settings;
         } else {
             // If the document doesn't exist, create it with empty arrays
-            await setDoc(docRef, { billToContacts: [], shipToContacts: [] });
-            return { billToContacts: [], shipToContacts: [] };
+            const initialSettings: Settings = { billToContacts: [], shipToContacts: [] };
+            await setDoc(docRef, initialSettings);
+            return initialSettings;
         }
     } catch (error) {
         console.error("Error fetching settings: ", error);
@@ -44,39 +47,62 @@ export async function getSettings(): Promise<Settings | null> {
     }
 }
 
-async function contactExists(contacts: any[], displayName: string): Promise<boolean> {
+async function contactExists(contacts: any[] | undefined, displayName: string): Promise<boolean> {
+    if (!contacts) return false;
     return contacts.some(contact => contact.displayName === displayName);
 }
 
-export async function saveBillToContact(contact: BillToContact): Promise<void> {
+export async function saveBillToContact(contact: Omit<BillToContact, 'id'>): Promise<void> {
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const settings = await getSettings();
-        if (settings && await contactExists(settings.billToContacts || [], contact.displayName)) {
+        if (await contactExists(settings?.billToContacts, contact.displayName)) {
             throw new Error("A Bill To contact with this Display Name already exists.");
         }
         await updateDoc(settingsRef, {
             billToContacts: arrayUnion(contact)
         });
     } catch (error) {
-        console.error("Error saving Bill To contact: ", error);
-        throw new Error("Failed to save Bill To contact.");
+        if (error instanceof Error && error.message.includes("No document to update")) {
+            // The document doesn't exist, so create it.
+            try {
+                const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
+                await setDoc(settingsRef, { billToContacts: [contact] }, { merge: true });
+            } catch (e) {
+                console.error("Error creating settings doc for Bill To contact: ", e);
+                throw new Error("Failed to save Bill To contact.");
+            }
+        } else {
+            console.error("Error saving Bill To contact: ", error);
+            throw new Error("Failed to save Bill To contact.");
+        }
     }
 }
 
-export async function saveShipToContact(contact: ShipToContact): Promise<void> {
+export async function saveShipToContact(contact: Omit<ShipToContact, 'id'>): Promise<void> {
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const settings = await getSettings();
-        if (settings && await contactExists(settings.shipToContacts || [], contact.displayName)) {
+        if (await contactExists(settings?.shipToContacts, contact.displayName)) {
             throw new Error("A Ship To contact with this Display Name already exists.");
         }
         await updateDoc(settingsRef, {
             shipToContacts: arrayUnion(contact)
         });
     } catch (error) {
-        console.error("Error saving Ship To contact: ", error);
-        throw new Error("Failed to save Ship To contact.");
+         if (error instanceof Error && error.message.includes("No document to update")) {
+            // The document doesn't exist, so create it.
+            try {
+                const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
+                await setDoc(settingsRef, { shipToContacts: [contact] }, { merge: true });
+            } catch (e) {
+                console.error("Error creating settings doc for Ship To contact: ", e);
+                throw new Error("Failed to save Ship To contact.");
+            }
+        } else {
+            console.error("Error saving Ship To contact: ", error);
+            throw new Error("Failed to save Ship To contact.");
+        }
     }
 }
 

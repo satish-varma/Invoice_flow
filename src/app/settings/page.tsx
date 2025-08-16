@@ -231,8 +231,8 @@ export default function SettingsPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {(!settings.billToContacts || settings.billToContacts.length === 0) && <TableRow><TableCell colSpan={3} className="text-center h-24">No contacts saved.</TableCell></TableRow>}
-                                            {settings.billToContacts && settings.billToContacts.map(c => (
-                                                <TableRow key={c.id}>
+                                            {settings.billToContacts && settings.billToContacts.map((c, index) => (
+                                                <TableRow key={`${c.id}-${index}`}>
                                                     <TableCell className="font-medium">{c.displayName}</TableCell>
                                                     <TableCell>{c.name}</TableCell>
                                                     <TableCell className="text-right">
@@ -293,8 +293,8 @@ export default function SettingsPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {(!settings.shipToContacts || settings.shipToContacts.length === 0) && <TableRow><TableCell colSpan={3} className="text-center h-24">No contacts saved.</TableCell></TableRow>}
-                                            {settings.shipToContacts && settings.shipToContacts.map(c => (
-                                                <TableRow key={c.id}>
+                                            {settings.shipToContacts && settings.shipToContacts.map((c, index) => (
+                                                <TableRow key={`${c.id}-${index}`}>
                                                     <TableCell className="font-medium">{c.displayName}</TableCell>
                                                     <TableCell>{c.name}</TableCell>
                                                     <TableCell className="text-right">

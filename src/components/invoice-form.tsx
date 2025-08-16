@@ -370,7 +370,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 <SelectValue placeholder="Select a billing contact" />
                             </SelectTrigger>
                             <SelectContent>
-                                {settings.billToContacts && settings.billToContacts.map(c => <SelectItem key={c.id} value={c.id}>{c.displayName}</SelectItem>)}
+                                {settings.billToContacts && settings.billToContacts.map((c, index) => <SelectItem key={`${c.id}-${index}`} value={c.id}>{c.displayName}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -437,7 +437,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 <SelectValue placeholder="Select a shipping contact" />
                             </SelectTrigger>
                             <SelectContent>
-                                {settings.shipToContacts && settings.shipToContacts.map(c => <SelectItem key={c.id} value={c.id}>{c.displayName}</SelectItem>)}
+                                {settings.shipToContacts && settings.shipToContacts.map((c, index) => <SelectItem key={`${c.id}-${index}`} value={c.id}>{c.displayName}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -470,7 +470,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {lineItems.map((item) => (
+                    {lineItems.map((item, index) => (
                       <TableRow key={item.id} className="hover:bg-muted/20">
                         <TableCell>
                           <Input placeholder="Item description" value={item.name} onChange={e => handleItemChange(item.id, 'name', e.target.value)} />

@@ -166,7 +166,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                             <div className='p-1'></div>
                          </div>
                          <div className='flex justify-between items-end p-4 h-24'>
-                            <img src='/hyderabad-logo.png' alt='Hyderabad logo' className='h-12' />
+                            <img src='https://placehold.co/150x50.png' alt='Hyderabad logo' className='h-12' data-ai-hint="company logo" />
                             <p className='text-sm'>Authorized Signature</p>
                          </div>
                     </div>
@@ -183,3 +183,5 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
     );
 });
 InvoicePreview.displayName = "InvoicePreview";
+
+    

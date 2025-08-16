@@ -1,21 +1,14 @@
 
+
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal } from "lucide-react"
-import { downloadInvoicePdf } from "@/lib/pdf"
+import { ArrowUpDown, Copy, Download, Eye } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Invoice } from "@/services/invoiceService"
 import { format } from "date-fns"
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 
 
 // We need to pass the preview handler to the columns
@@ -98,29 +91,48 @@ export const getColumns = (onPreview: (invoice: Invoice) => void, onDownload: (i
   },
   {
     id: "actions",
+    header: () => <div className="text-right">Actions</div>,
     cell: ({ row }) => {
       const invoice = row.original
  
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(invoice.invoiceNumber)}
-            >
-              Copy invoice number
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onPreview(invoice)}>View details</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDownload(invoice)}>Download PDF</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center justify-end gap-2">
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => onPreview(invoice)}>
+                            <Eye className="h-4 w-4" />
+                            <span className="sr-only">View Details</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>View Details</p>
+                    </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => onDownload(invoice)}>
+                            <Download className="h-4 w-4" />
+                             <span className="sr-only">Download PDF</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Download PDF</p>
+                    </TooltipContent>
+                </Tooltip>
+                 <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => navigator.clipboard.writeText(invoice.invoiceNumber)}>
+                             <Copy className="h-4 w-4" />
+                             <span className="sr-only">Copy Invoice Number</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Copy Invoice Number</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        </div>
       )
     },
   },

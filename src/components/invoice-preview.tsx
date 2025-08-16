@@ -27,119 +27,121 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
     };
     
     return (
-        <div ref={ref} className="invoice-preview-container bg-white">
-            <Card className="w-full shadow-none border-2 border-black" style={{width: '800px', borderRadius: '0'}}>
-                <CardHeader className="p-0">
-                    <div className='text-center p-2 border-b-2 border-black'>
-                        <CardTitle className="text-xl font-bold tracking-tight">BILL TO SUPPLY</CardTitle>
+        <div ref={ref} className="invoice-preview-container bg-white text-black p-8">
+            <Card className="w-full shadow-none border border-gray-300" style={{width: '800px', borderRadius: '0'}}>
+                <CardHeader className="p-6">
+                    <div className='text-center pb-4'>
+                        <CardTitle className="text-2xl font-bold tracking-tight">BILL OF SUPPLY</CardTitle>
                     </div>
-                    <div className='flex justify-between items-center p-2'>
-                        <p className='font-bold text-lg'>THE GUT GURU</p>
-                        <p className='text-xs'>Original For recipient</p>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="grid grid-cols-2 border-y-2 border-black">
-                        <div className="border-r-2 border-black p-2">
-                             <p className='font-bold'>From:</p>
-                             <p className='font-bold'>THE GUT GURU</p>
-                             <p className='text-sm' style={{whiteSpace: 'pre-wrap'}}>H NO.6-46/3/A, Venkateswarao nagar, Chanda Nagar, Hyderabad-500050</p>
-                             <p className='text-sm'><span className='font-bold'>GSTIN:</span> 36DDTPJ6536D1Z8</p>
+                    <div className='flex justify-between items-start'>
+                        <div>
+                            <p className='font-bold text-xl'>THE GUT GURU</p>
+                            <p className='text-sm w-64' style={{whiteSpace: 'pre-wrap'}}>H NO.6-46/3/A, Venkateswarao nagar, Chanda Nagar, Hyderabad-500050</p>
+                            <p className='text-sm'><span className='font-bold'>GSTIN:</span> 36DDTPJ6536D1Z8</p>
                              <p className='text-sm'><span className='font-bold'>PAN:</span> DDTPJ6536D</p>
                         </div>
-                        <div className="p-2">
-                             <div className='grid grid-cols-[100px_1fr]'>
-                                <div className='font-bold'>Invoice Date:</div>
-                                <div>{invoice.date ? format(new Date(invoice.date), "P") : ''}</div>
+                        <p className='text-xs text-gray-500'>Original For Recipient</p>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <Separator className='my-4 bg-gray-200'/>
+                    <div className="grid grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            <div className='space-y-1'>
+                                <p className='font-bold text-gray-500'>Bill To:</p>
+                                <p className='font-bold'>{invoice.billToName}</p>
+                                <p className='text-sm' style={{whiteSpace: 'pre-wrap'}}>{invoice.billToAddress}</p>
+                                {invoice.billToGst && <p className='text-sm'><span className='font-bold'>GST NO:</span> {invoice.billToGst}</p>}
+                            </div>
+                             <div className='space-y-1'>
+                                <p className='font-bold text-gray-500'>Ship To:</p>
+                                <p className='font-bold'>{invoice.shipToName}</p>
+                                <p className='text-sm' style={{whiteSpace: 'pre-wrap'}}>{invoice.shipToAddress}</p>
+                                {invoice.shipToGst && <p className='text-sm'><span className='font-bold'>GSTIN:</span> {invoice.shipToGst}</p>}
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                             <div className='grid grid-cols-[120px_1fr]'>
                                 <div className='font-bold'>Invoice No.:</div>
                                 <div>{invoice.invoiceNumber}</div>
-                                <div className='font-bold'>Period:</div>
-                                <div>{invoice.period}</div>
+                                <div className='font-bold'>Invoice Date:</div>
+                                <div>{invoice.date ? format(new Date(invoice.date), "P") : ''}</div>
+                                {invoice.period && <>
+                                    <div className='font-bold'>Period:</div>
+                                    <div>{invoice.period}</div>
+                                </>}
+                                {invoice.delivery && <>
                                 <div className='font-bold'>Delivery:</div>
                                 <div>{invoice.delivery}</div>
+                                </>}
                             </div>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 border-b-2 border-black">
-                        <div className="border-r-2 border-black p-2">
-                            <p className='font-bold p-1 bg-gray-200'>Bill To:</p>
-                            <p className='font-bold'>{invoice.billToName}</p>
-                            <p style={{whiteSpace: 'pre-wrap'}}>{invoice.billToAddress}</p>
-                            <p><span className='font-bold'>GST NO:</span> {invoice.billToGst}</p>
-                        </div>
-                         <div className='p-2'>
-                            <p className='font-bold p-1 bg-gray-200'>Ship To:</p>
-                            <p className='font-bold'>{invoice.shipToName}</p>
-                            <p style={{whiteSpace: 'pre-wrap'}}>{invoice.shipToAddress}</p>
-                            <p><span className='font-bold'>GSTIN:</span> {invoice.shipToGst}</p>
-                        </div>
-                    </div>
                     
-                    <div className="mt-0">
+                    <div className="mt-8">
                         <Table>
                         <TableHeader>
-                            <TableRow className='border-b-2 border-black'>
-                                <TableHead className="w-[50px] border-r-2 border-black font-bold text-black">S.No</TableHead>
-                                <TableHead className="w-1/2 border-r-2 border-black font-bold text-black">Item & Description</TableHead>
-                                <TableHead className="w-[100px] text-right border-r-2 border-black font-bold text-black">Qty</TableHead>
-                                <TableHead className="w-[120px] text-right border-r-2 border-black font-bold text-black">Rate</TableHead>
+                            <TableRow className='border-b border-gray-300 bg-gray-50'>
+                                <TableHead className="w-[50px] font-bold text-black">S.No</TableHead>
+                                <TableHead className="w-1/2 font-bold text-black">Item & Description</TableHead>
+                                <TableHead className="w-[100px] text-right font-bold text-black">Qty</TableHead>
+                                <TableHead className="w-[120px] text-right font-bold text-black">Rate</TableHead>
                                 <TableHead className="w-[120px] text-right font-bold text-black">Amount</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {invoice.lineItems.map((item, index) => (
-                            <TableRow key={index} className="border-b border-black/20">
-                                <TableCell className='border-r-2 border-black'>{index + 1}</TableCell>
-                                <TableCell className='border-r-2 border-black'>{item.name}</TableCell>
-                                <TableCell className="text-right border-r-2 border-black">{item.quantity}</TableCell>
-                                <TableCell className="text-right border-r-2 border-black">{item.price.toFixed(2)}</TableCell>
+                            <TableRow key={index} className="border-b border-gray-200">
+                                <TableCell>{index + 1}</TableCell>
+                                <TableCell>{item.name}</TableCell>
+                                <TableCell className="text-right">{item.quantity}</TableCell>
+                                <TableCell className="text-right">{item.price.toFixed(2)}</TableCell>
                                 <TableCell className="font-medium text-right">{(item.quantity * item.price).toFixed(2)}</TableCell>
                             </TableRow>
                             ))}
-                             <TableRow className="border-y-2 border-black">
-                                <TableCell className='border-r-2 border-black' colSpan={3}></TableCell>
-                                <TableCell className="text-right border-r-2 border-black font-bold">Total</TableCell>
+                             <TableRow className="border-y border-gray-300 bg-gray-50">
+                                <TableCell colSpan={4} className="text-right font-bold">Total</TableCell>
                                 <TableCell className="font-medium text-right font-bold">{invoice.subtotal.toFixed(2)}</TableCell>
                             </TableRow>
                         </TableBody>
                         </Table>
                     </div>
-                    <div className='grid grid-cols-2 border-b-2 border-black'>
-                        <div className='border-r-2 border-black p-1'>
-                           <span className='font-bold'>In Words</span>: {inWords(invoice.total)}
+                     <div className='mt-8 flex justify-between items-start'>
+                        <div className='text-sm w-3/5'>
+                           <span className='font-bold'>In Words:</span> {inWords(invoice.total)}
                         </div>
-                        <div>
-                             <div className='grid grid-cols-2 border-t-2 border-black'>
-                                <div className='p-1 border-r-2 border-black font-bold'>Total Amount</div>
-                                <div className='p-1 text-right font-bold'>{invoice.total.toFixed(2)}</div>
+                        <div className="w-2/5 max-w-sm text-sm grid gap-2">
+                             <div className="flex justify-between font-bold text-lg border-t-2 border-gray-300 pt-2 mt-2">
+                                <span>Total Amount</span>
+                                <span>{invoice.total.toFixed(2)}</span>
                             </div>
                         </div>
                     </div>
-                     <div className='text-sm p-2'>
-                        <p className='font-semibold'>Bank Details</p>
-                        <div className='grid grid-cols-[150px_1fr]'>
-                            <div className='font-bold'>Beneficiary Name:</div>
-                            <div>THE GUT GURU</div>
-                            <div className='font-bold'>Bank Name:</div>
-                            <div>HDFC BANK LTD</div>
-                            <div className='font-bold'>Account Number:</div>
-                            <div>50200095177481</div>
-                            <div className='font-bold'>IFSC Code:</div>
-                            <div>HDFC0000045</div>
-                            <div className='font-bold'>Branch:</div>
-                            <div>HYDERABAD - CHANDA NAGAR</div>
-                        </div>
-                    </div>
+                    
                 </CardContent>
-                <CardFooter className="p-0 flex-col items-start gap-4 border-t-2 border-black">
-                    <div className='w-full'>
-                         <div className='grid grid-cols-2'>
-                            <div className='p-1 border-r-2 border-black'>For THE GUT GURU</div>
-                            <div className='p-1'></div>
-                         </div>
-                         <div className='flex justify-between items-end p-4 h-24'>
-                            <img src='https://placehold.co/150x50.png' alt='Hyderabad logo' className='h-12' data-ai-hint="company logo" />
-                            <p className='text-sm'>Authorized Signature</p>
+                <CardFooter className="p-6 flex-col items-start gap-4 border-t border-gray-200 mt-8">
+                    <div className='w-full grid grid-cols-2 gap-8'>
+                         <div className='text-xs'>
+                            <p className='font-semibold mb-2'>Bank Details</p>
+                            <div className='grid grid-cols-[120px_1fr]'>
+                                <div className='font-bold'>Beneficiary Name:</div>
+                                <div>THE GUT GURU</div>
+                                <div className='font-bold'>Bank Name:</div>
+                                <div>HDFC BANK LTD</div>
+                                <div className='font-bold'>Account Number:</div>
+                                <div>50200095177481</div>
+                                <div className='font-bold'>IFSC Code:</div>
+                                <div>HDFC0000045</div>
+                                <div className='font-bold'>Branch:</div>
+                                <div>HYDERABAD - CHANDA NAGAR</div>
+                            </div>
+                        </div>
+                        <div className='flex flex-col justify-between items-end h-full text-sm'>
+                            <div>For THE GUT GURU</div>
+                             <div className='flex flex-col items-center'>
+                                <img src='https://placehold.co/150x50.png' alt='Company Signature' className='h-12' data-ai-hint="company signature" />
+                                <p className='text-xs pt-1 border-t border-gray-400 w-full text-center'>Authorized Signature</p>
+                             </div>
                          </div>
                     </div>
                 </CardFooter>
@@ -148,3 +150,5 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
     );
 });
 InvoicePreview.displayName = "InvoicePreview";
+
+    

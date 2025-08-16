@@ -45,7 +45,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [date, setDate] = useState<Date | undefined>(undefined);
   
   const [period, setPeriod] = useState('');
   const [delivery, setDelivery] = useState('');
@@ -70,6 +70,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   const { toast } = useToast();
 
   useEffect(() => {
+    // Set date on client mount to avoid hydration mismatch
+    setDate(new Date());
     async function loadSettings() {
         const loadedSettings = await getSettings();
         setSettings(loadedSettings);

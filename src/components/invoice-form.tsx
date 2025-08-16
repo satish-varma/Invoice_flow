@@ -8,7 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Download, Eraser, Wand2, Loader } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Download, Eraser, Wand2, Loader, Save, FilePlus } from 'lucide-react';
 import { format } from "date-fns"
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -16,6 +16,7 @@ import { extractInvoiceData, ExtractInvoiceDataOutput } from '@/ai/flows/extract
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
 import { Menubar, MenubarMenu, MenubarTrigger } from './ui/menubar';
+import { Invoice, saveInvoice, LineItem as ServiceLineItem } from '@/services/invoiceService';
 
 type LineItem = {
   id: number;
@@ -23,6 +24,12 @@ type LineItem = {
   quantity: number;
   price: number;
 };
+
+interface InvoiceFormProps {
+    initialData?: Invoice | null;
+    onInvoiceSave: () => void;
+    onAddNew: () => void;
+}
 
 function fileToDataUri(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -33,7 +40,7 @@ function fileToDataUri(file: File): Promise<string> {
     });
 }
 
-export function InvoiceForm() {
+export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFormProps) {
   const [invoiceNumber, setInvoiceNumber] = useState('INV-001');
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
@@ -42,6 +49,7 @@ export function InvoiceForm() {
     { id: 1, name: '', quantity: 1, price: 0 },
   ]);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const invoiceRef = useRef<HTMLDivElement>(null);
@@ -49,10 +57,20 @@ export function InvoiceForm() {
   const { toast } = useToast();
 
   useEffect(() => {
-    setIsMounted(true);
-    // Setting date in useEffect to avoid hydration mismatch
-    setDate(new Date()); 
-  }, []);
+      setIsMounted(true);
+      if (initialData) {
+          setInvoiceNumber(initialData.invoiceNumber);
+          setCustomerName(initialData.customerName);
+          setCustomerAddress(initialData.customerAddress);
+          setDate(new Date(initialData.date));
+          setLineItems(initialData.lineItems.map((item, index) => ({
+              id: item.id || Date.now() + index,
+              ...item
+          })));
+      } else {
+          handleClearForm();
+      }
+  }, [initialData]);
 
   const handleAddItem = () => {
     setLineItems([...lineItems, { id: Date.now(), name: '', quantity: 1, price: 0 }]);
@@ -77,42 +95,66 @@ export function InvoiceForm() {
   }, [lineItems]);
 
   const handleClearForm = () => {
-    setInvoiceNumber('INV-001');
+    setInvoiceNumber('');
     setCustomerName('');
     setCustomerAddress('');
     setDate(new Date());
     setLineItems([{ id: Date.now(), name: '', quantity: 1, price: 0 }]);
+    onAddNew();
   };
 
   const handleDownloadPdf = () => {
     const input = invoiceRef.current;
     if (input) {
-      // Add a class to hide elements during PDF capture
       input.classList.add('pdf-capture');
       html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
-        // Remove the class after capture
         input.classList.remove('pdf-capture');
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         
-        let heightLeft = pdfHeight;
-        let position = 0;
-        const pageHeight = pdf.internal.pageSize.getHeight();
-
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pageHeight;
-
-        while (heightLeft > 0) {
-          position = heightLeft - pdfHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-          heightLeft -= pageHeight;
-        }
-        
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`invoice-${invoiceNumber || 'untitled'}.pdf`);
       });
+    }
+  };
+  
+  const handleSaveInvoice = async () => {
+    if(!customerName) {
+        toast({
+            variant: "destructive",
+            title: "Customer name is required",
+        });
+        return;
+    }
+
+    setIsSaving(true);
+    try {
+        const invoiceData = {
+            customerName,
+            customerAddress,
+            date: date?.toISOString() || new Date().toISOString(),
+            lineItems: lineItems.map(item => ({...item})), // Create clean copy
+            subtotal,
+            tax,
+            total,
+        };
+        await saveInvoice(invoiceData);
+        toast({
+            title: "Invoice Saved",
+            description: "Your invoice has been successfully saved.",
+        });
+        onInvoiceSave();
+    } catch (error) {
+        console.error("Failed to save invoice:", error);
+        toast({
+            variant: "destructive",
+            title: "Save Failed",
+            description: "Could not save the invoice. Please try again.",
+        })
+    } finally {
+        setIsSaving(false);
     }
   };
 
@@ -128,7 +170,6 @@ export function InvoiceForm() {
         if (result.invoiceNumber) setInvoiceNumber(result.invoiceNumber);
         if (result.customerName) setCustomerName(result.customerName);
         if (result.date) {
-            // Add time to the date to avoid timezone issues
             const parsedDate = new Date(result.date + 'T00:00:00');
             if (!isNaN(parsedDate.getTime())) {
               setDate(parsedDate);
@@ -155,14 +196,13 @@ export function InvoiceForm() {
         })
     } finally {
         setIsExtracting(false);
-        // Reset file input to allow re-uploading the same file
         if(fileInputRef.current) {
             fileInputRef.current.value = '';
         }
     }
   };
 
-  if (!isMounted) {
+  if (!isMounted && !initialData) {
       return (
         <div className="flex items-center justify-center min-h-screen">
           <Loader className="h-8 w-8 animate-spin" />
@@ -179,10 +219,15 @@ export function InvoiceForm() {
                 InvoiceFlow
               </h1>
               <p className="text-muted-foreground">
-                Create professional invoices, or upload an image to have AI extract the data for you.
+                {initialData ? 'Editing invoice' : 'Create a new invoice, or upload an image to have AI extract the data for you.'}
               </p>
             </div>
             <Menubar>
+                <MenubarMenu>
+                    <MenubarTrigger onClick={handleAddNew} className="cursor-pointer">
+                        <FilePlus className="mr-2 h-4 w-4" /> New
+                    </MenubarTrigger>
+                </MenubarMenu>
                 <MenubarMenu>
                     <MenubarTrigger onClick={() => fileInputRef.current?.click()} disabled={isExtracting} className="cursor-pointer">
                         {isExtracting ? (
@@ -193,19 +238,29 @@ export function InvoiceForm() {
                         ) : (
                         <>
                             <Wand2 className="mr-2 h-4 w-4" />
-                                Autofill from Image
+                                Autofill
                         </>
                         )}
                     </MenubarTrigger>
                 </MenubarMenu>
                 <MenubarMenu>
-                    <MenubarTrigger onClick={handleDownloadPdf} className="cursor-pointer bg-accent text-accent-foreground hover:bg-accent/90 focus:bg-accent data-[state=open]:bg-accent">
-                        <Download className="mr-2 h-4 w-4" /> Download PDF
+                    <MenubarTrigger onClick={handleDownloadPdf} className="cursor-pointer">
+                        <Download className="mr-2 h-4 w-4" /> Download
                     </MenubarTrigger>
                 </MenubarMenu>
                 <MenubarMenu>
-                     <MenubarTrigger onClick={handleClearForm} className="cursor-pointer text-destructive hover:bg-destructive/10 focus:bg-destructive/10 data-[state=open]:bg-destructive/10">
-                        <Eraser className="mr-2 h-4 w-4" /> Clear Form
+                    <MenubarTrigger onClick={handleSaveInvoice} disabled={isSaving} className="cursor-pointer bg-accent text-accent-foreground hover:bg-accent/90 focus:bg-accent data-[state=open]:bg-accent">
+                         {isSaving ? (
+                            <>
+                                <Loader className="mr-2 h-4 w-4 animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                        <>
+                            <Save className="mr-2 h-4 w-4" />
+                                {initialData ? 'Update' : 'Save'}
+                        </>
+                        )}
                     </MenubarTrigger>
                 </MenubarMenu>
             </Menubar>
@@ -235,7 +290,7 @@ export function InvoiceForm() {
                       <CardTitle className="text-4xl font-bold text-primary tracking-tight">INVOICE</CardTitle>
                       <div className="flex items-center justify-end gap-2 mt-2">
                         <label htmlFor="invoiceNumber" className="text-sm font-medium">#</label>
-                        <Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className="max-w-[150px] h-8 text-right" />
+                        <Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className="max-w-[150px] h-8 text-right" readOnly={!!initialData}/>
                       </div>
                   </div>
               </div>
@@ -347,5 +402,3 @@ export function InvoiceForm() {
     </>
   );
 }
-
-  

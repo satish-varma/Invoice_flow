@@ -8,7 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Download, Eraser, Wand2, Loader, Save, FilePlus } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Download, Wand2, Loader, Save, FilePlus } from 'lucide-react';
 import { format } from "date-fns"
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -16,7 +16,7 @@ import { extractInvoiceData, ExtractInvoiceDataOutput } from '@/ai/flows/extract
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
 import { Menubar, MenubarMenu, MenubarTrigger } from './ui/menubar';
-import { Invoice, saveInvoice, LineItem as ServiceLineItem } from '@/services/invoiceService';
+import { Invoice, saveInvoice } from '@/services/invoiceService';
 
 type LineItem = {
   id: number;
@@ -41,7 +41,7 @@ function fileToDataUri(file: File): Promise<string> {
 }
 
 export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFormProps) {
-  const [invoiceNumber, setInvoiceNumber] = useState('INV-001');
+  const [invoiceNumber, setInvoiceNumber] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -132,18 +132,19 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     setIsSaving(true);
     try {
         const invoiceData = {
+            id: initialData?.id,
             customerName,
             customerAddress,
             date: date?.toISOString() || new Date().toISOString(),
-            lineItems: lineItems.map(item => ({...item})), // Create clean copy
+            lineItems: lineItems.map(({ id, ...item }) => item), // Create clean copy without id
             subtotal,
             tax,
             total,
         };
         await saveInvoice(invoiceData);
         toast({
-            title: "Invoice Saved",
-            description: "Your invoice has been successfully saved.",
+            title: initialData ? "Invoice Updated" : "Invoice Saved",
+            description: `Your invoice has been successfully ${initialData ? 'updated' : 'saved'}.`,
         });
         onInvoiceSave();
     } catch (error) {
@@ -219,12 +220,12 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 InvoiceFlow
               </h1>
               <p className="text-muted-foreground">
-                {initialData ? 'Editing invoice' : 'Create a new invoice, or upload an image to have AI extract the data for you.'}
+                {initialData ? `Editing Invoice #${initialData.invoiceNumber}` : 'Create a new invoice, or upload an image to have AI extract the data for you.'}
               </p>
             </div>
             <Menubar>
                 <MenubarMenu>
-                    <MenubarTrigger onClick={handleAddNew} className="cursor-pointer">
+                    <MenubarTrigger onClick={onAddNew} className="cursor-pointer">
                         <FilePlus className="mr-2 h-4 w-4" /> New
                     </MenubarTrigger>
                 </MenubarMenu>
@@ -290,7 +291,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                       <CardTitle className="text-4xl font-bold text-primary tracking-tight">INVOICE</CardTitle>
                       <div className="flex items-center justify-end gap-2 mt-2">
                         <label htmlFor="invoiceNumber" className="text-sm font-medium">#</label>
-                        <Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className="max-w-[150px] h-8 text-right" readOnly={!!initialData}/>
+                        <Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className="max-w-[150px] h-8 text-right" readOnly={!!initialData || !invoiceNumber} placeholder="INV-..." />
                       </div>
                   </div>
               </div>
@@ -402,3 +403,4 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
+

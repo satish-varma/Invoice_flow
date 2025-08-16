@@ -8,7 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Sparkles } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon } from 'lucide-react';
 import { format } from "date-fns"
 import { extractInvoiceData, ExtractInvoiceDataOutput } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
@@ -17,7 +17,8 @@ import { Menubar, MenubarMenu, MenubarTrigger } from './ui/menubar';
 import { Invoice, saveInvoice } from '@/services/invoiceService';
 import Link from 'next/link';
 import { Label } from './ui/label';
-import { Settings, getSettings } from '@/services/settingsService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getSettings, BillToContact, ShipToContact } from '@/services/settingsService';
 
 type LineItem = {
   id: number;
@@ -43,8 +44,6 @@ function fileToDataUri(file: File): Promise<string> {
 
 export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFormProps) {
   const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [customerName, setCustomerName] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('');
   const [date, setDate] = useState<Date | undefined>(undefined);
   
   const [period, setPeriod] = useState('');
@@ -65,28 +64,29 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [settings, setSettings] = useState<Settings | null>(null);
+  const [billToContacts, setBillToContacts] = useState<BillToContact[]>([]);
+  const [shipToContacts, setShipToContacts] = useState<ShipToContact[]>([]);
 
   const { toast } = useToast();
 
   useEffect(() => {
     // Set date on client mount to avoid hydration mismatch
-    setDate(new Date());
-    async function loadSettings() {
+    if(!initialData) {
+      setDate(new Date());
+    }
+    async function loadContacts() {
         const loadedSettings = await getSettings();
-        setSettings(loadedSettings);
-        if (!initialData && loadedSettings) {
-            applySettings(loadedSettings);
+        if (loadedSettings) {
+            setBillToContacts(loadedSettings.billToContacts || []);
+            setShipToContacts(loadedSettings.shipToContacts || []);
         }
     }
-    loadSettings();
-  }, []);
+    loadContacts();
+  }, [initialData]);
 
   useEffect(() => {
       if (initialData) {
           setInvoiceNumber(initialData.invoiceNumber);
-          setCustomerName(initialData.customerName);
-          setCustomerAddress(initialData.customerAddress);
           setDate(new Date(initialData.date));
           setPeriod(initialData.period || '');
           setDelivery(initialData.delivery || '');
@@ -102,29 +102,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
           })));
       } else {
         handleClearForm(false); // Don't call onAddNew here to prevent loop
-        if (settings) {
-            applySettings(settings);
-        }
       }
-  }, [initialData, settings]);
-  
-  const applySettings = (settingsToApply: Settings) => {
-    setBillToName(settingsToApply.billToName || '');
-    setBillToAddress(settingsToApply.billToAddress || '');
-    setBillToGst(settingsToApply.billToGst || '');
-    setShipToName(settingsToApply.shipToName || '');
-    setShipToAddress(settingsToApply.shipToAddress || '');
-    setShipToGst(settingsToApply.shipToGst || '');
-  };
-
-  const handleApplyDefaults = () => {
-    if (settings) {
-        applySettings(settings);
-        toast({ title: "Defaults Applied", description: "Default 'Bill To' and 'Ship To' information has been applied." });
-    } else {
-        toast({ variant: "destructive", title: "No Defaults Found", description: "Please save some defaults on the Settings page first." });
-    }
-  };
+  }, [initialData]);
 
   const handleAddItem = () => {
     setLineItems([...lineItems, { id: Date.now(), name: '', quantity: 1, price: 0 }]);
@@ -147,8 +126,6 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
 
   const handleClearForm = (shouldCallback = true) => {
     setInvoiceNumber('');
-    setCustomerName('');
-    setCustomerAddress('');
     setDate(new Date());
     setPeriod('');
     setDelivery('');
@@ -175,14 +152,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
 
     setIsSaving(true);
     try {
-        const invoiceData = {
-            id: initialData?.id,
-            // Deprecated fields, kept for compatibility but should be removed later
-            customerName: billToName, 
-            customerAddress: billToAddress,
-            tax: 0, // No tax in the new design
-
-            // New fields
+        const invoiceData: Omit<Invoice, 'id' | 'invoiceNumber' | 'createdAt'> & { id?: string } = {
             date: date?.toISOString() || new Date().toISOString(),
             period,
             delivery,
@@ -192,10 +162,19 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             shipToName,
             shipToAddress,
             shipToGst,
-            lineItems: lineItems.map(({ id, ...item }) => item), // Create clean copy without id
+            lineItems: lineItems.map(({ id, ...item }) => item),
             subtotal,
             total,
+            // Deprecated fields, kept for compatibility but should be removed later
+            customerName: billToName,
+            customerAddress: billToAddress,
+            tax: 0,
         };
+
+        if(initialData?.id) {
+            invoiceData.id = initialData.id;
+        }
+
         await saveInvoice(invoiceData);
         toast({
             title: initialData ? "Invoice Updated" : "Invoice Saved",
@@ -213,6 +192,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         setIsSaving(false);
     }
   };
+
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -258,6 +238,24 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     }
   };
 
+  const handleContactSelect = (type: 'billTo' | 'shipTo', displayName: string) => {
+    if (type === 'billTo') {
+        const contact = billToContacts.find(c => c.displayName === displayName);
+        if (contact) {
+            setBillToName(contact.name);
+            setBillToAddress(contact.address);
+            setBillToGst(contact.gst);
+        }
+    } else {
+        const contact = shipToContacts.find(c => c.displayName === displayName);
+        if (contact) {
+            setShipToName(contact.name);
+            setShipToAddress(contact.address);
+            setShipToGst(contact.gst);
+        }
+    }
+  };
+
   return (
     <>
       <div className="mb-8">
@@ -274,11 +272,6 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 <MenubarMenu>
                     <MenubarTrigger onClick={() => handleClearForm()} className="cursor-pointer">
                         <FilePlus className="mr-2 h-4 w-4" /> New
-                    </MenubarTrigger>
-                </MenubarMenu>
-                 <MenubarMenu>
-                    <MenubarTrigger onClick={handleApplyDefaults} className="cursor-pointer">
-                        <Sparkles className="mr-2 h-4 w-4" /> Apply Defaults
                     </MenubarTrigger>
                 </MenubarMenu>
                 <MenubarMenu>
@@ -354,6 +347,17 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 <h3 className="font-bold text-lg mb-4 mt-8">Bill To</h3>
                  <div className="space-y-2">
                     <div>
+                        <Label>Select Saved Contact</Label>
+                        <Select onValueChange={(value) => handleContactSelect('billTo', value)}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a billing contact" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {billToContacts.map(c => <SelectItem key={c.displayName} value={c.displayName}>{c.displayName}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
                         <Label htmlFor='billToName'>Name</Label>
                         <Input id="billToName" placeholder="Company Name" value={billToName} onChange={e => setBillToName(e.target.value)} />
                     </div>
@@ -409,6 +413,17 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
 
                 <h3 className="font-bold text-lg mb-4 mt-8">Ship To</h3>
                 <div className="space-y-2">
+                    <div>
+                         <Label>Select Saved Contact</Label>
+                        <Select onValueChange={(value) => handleContactSelect('shipTo', value)}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a shipping contact" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {shipToContacts.map(c => <SelectItem key={c.displayName} value={c.displayName}>{c.displayName}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <div>
                         <Label htmlFor='shipToName'>Name</Label>
                         <Input id="shipToName" placeholder="Company Name" value={shipToName} onChange={e => setShipToName(e.target.value)} />

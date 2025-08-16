@@ -7,52 +7,100 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { getSettings, saveSettings, Settings } from '@/services/settingsService';
+import {
+    getSettings,
+    saveBillToContact,
+    saveShipToContact,
+    deleteBillToContact,
+    deleteShipToContact,
+    BillToContact,
+    ShipToContact,
+    Settings,
+} from '@/services/settingsService';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader, Save } from 'lucide-react';
+import { ArrowLeft, Loader, PlusCircle, Save, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
+type ContactType = 'billTo' | 'shipTo';
 
 export default function SettingsPage() {
-    const [settings, setSettings] = useState<Settings>({
-        billToName: '',
-        billToAddress: '',
-        billToGst: '',
-        shipToName: '',
-        shipToAddress: '',
-        shipToGst: '',
-    });
+    const [billToContacts, setBillToContacts] = useState<BillToContact[]>([]);
+    const [shipToContacts, setShipToContacts] = useState<ShipToContact[]>([]);
+
+    const [newBillTo, setNewBillTo] = useState<Omit<BillToContact, 'id'>>({ displayName: '', name: '', address: '', gst: '' });
+    const [newShipTo, setNewShipTo] = useState<Omit<ShipToContact, 'id'>>({ displayName: '', name: '', address: '', gst: '' });
+
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
-    useEffect(() => {
-        async function loadSettings() {
-            setIsLoading(true);
-            const loadedSettings = await getSettings();
-            if (loadedSettings) {
-                setSettings(loadedSettings);
-            }
-            setIsLoading(false);
+    async function loadSettings() {
+        setIsLoading(true);
+        const loadedSettings = await getSettings();
+        if (loadedSettings) {
+            setBillToContacts(loadedSettings.billToContacts || []);
+            setShipToContacts(loadedSettings.shipToContacts || []);
         }
+        setIsLoading(false);
+    }
+
+    useEffect(() => {
         loadSettings();
     }, []);
 
-    const handleInputChange = (field: keyof Settings, value: string) => {
-        setSettings(prev => ({ ...prev, [field]: value }));
+    const handleInputChange = (form: ContactType, field: string, value: string) => {
+        if (form === 'billTo') {
+            setNewBillTo(prev => ({ ...prev, [field]: value }));
+        } else {
+            setNewShipTo(prev => ({ ...prev, [field]: value }));
+        }
     };
-    
-    const handleSaveChanges = async () => {
+
+    const handleAddContact = async (type: ContactType) => {
+        const contactData = type === 'billTo' ? newBillTo : newShipTo;
+        if (!contactData.displayName || !contactData.name) {
+            toast({ variant: "destructive", title: "Missing Information", description: "Display Name and Name are required." });
+            return;
+        }
+
         setIsSaving(true);
         try {
-            await saveSettings(settings);
-            toast({ title: "Settings Saved", description: "Your default settings have been updated." });
+            if (type === 'billTo') {
+                await saveBillToContact(contactData);
+                setNewBillTo({ displayName: '', name: '', address: '', gst: '' });
+            } else {
+                await saveShipToContact(contactData);
+                setNewShipTo({ displayName: '', name: '', address: '', gst: '' });
+            }
+            await loadSettings(); // Refresh the list
+            toast({ title: "Contact Saved", description: `The new ${type === 'billTo' ? '"Bill To"' : '"Ship To"'} contact has been added.` });
         } catch (error) {
-            console.error("Failed to save settings:", error);
-            toast({ variant: "destructive", title: "Save Failed", description: "Could not save your settings. Please try again." });
+            console.error(`Failed to save ${type} contact:`, error);
+            toast({ variant: "destructive", title: "Save Failed", description: `Could not save the contact. Please try again.` });
         } finally {
             setIsSaving(false);
         }
     };
+    
+    const handleDeleteContact = async (type: ContactType, displayName: string) => {
+        setIsSaving(true);
+        try {
+            if (type === 'billTo') {
+                await deleteBillToContact(displayName);
+            } else {
+                await deleteShipToContact(displayName);
+            }
+            await loadSettings(); // Refresh the list
+            toast({ title: "Contact Deleted", description: "The contact has been removed." });
+        } catch (error) {
+            console.error(`Failed to delete ${type} contact:`, error);
+            toast({ variant: "destructive", title: "Delete Failed", description: `Could not delete the contact. Please try again.` });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
 
     if (isLoading) {
         return (
@@ -64,7 +112,7 @@ export default function SettingsPage() {
 
     return (
         <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
-            <div className="w-full max-w-4xl mx-auto">
+            <div className="w-full max-w-6xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
                     <div>
                          <Button variant="outline" asChild>
@@ -74,54 +122,125 @@ export default function SettingsPage() {
                             </Link>
                         </Button>
                         <h1 className="text-4xl font-headline font-bold text-primary mt-4">Settings</h1>
-                        <p className="text-muted-foreground">Manage your default invoice information.</p>
+                        <p className="text-muted-foreground">Manage your saved "Bill To" and "Ship To" contacts.</p>
                     </div>
-                     <Button onClick={handleSaveChanges} disabled={isSaving}>
-                        {isSaving ? <><Loader className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : <><Save className="mr-2 h-4 w-4" /> Save Changes</>}
-                    </Button>
                 </div>
 
-                <div className="grid gap-8">
+                <div className="grid md:grid-cols-2 gap-8">
+                    {/* Bill To Section */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Default "Bill To" & "Ship To" Information</CardTitle>
-                            <CardDescription>This information will be used to pre-fill new invoices.</CardDescription>
+                            <CardTitle>Manage "Bill To" Contacts</CardTitle>
+                            <CardDescription>Add, view, and remove billing contacts.</CardDescription>
                         </CardHeader>
-                        <CardContent className="grid md:grid-cols-2 gap-8">
-                            <div className="space-y-4">
-                                <h3 className="font-bold text-lg">Bill To Details</h3>
+                        <CardContent className="space-y-4">
+                            <div className="p-4 border rounded-lg space-y-4">
+                               <h3 className="font-bold">Add New "Bill To" Contact</h3>
+                                <div className="space-y-2">
+                                    <Label htmlFor="billToDisplayName">Display Name (Unique)</Label>
+                                    <Input id="billToDisplayName" placeholder="e.g., Main Client" value={newBillTo.displayName} onChange={e => handleInputChange('billTo', 'displayName', e.target.value)} />
+                                </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="billToName">Name</Label>
-                                    <Input id="billToName" value={settings.billToName} onChange={e => handleInputChange('billToName', e.target.value)} />
+                                    <Input id="billToName" placeholder="Client Company Name" value={newBillTo.name} onChange={e => handleInputChange('billTo', 'name', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="billToAddress">Address</Label>
-                                    <Textarea id="billToAddress" value={settings.billToAddress} onChange={e => handleInputChange('billToAddress', e.target.value)} />
+                                    <Textarea id="billToAddress" placeholder="Client Address" value={newBillTo.address} onChange={e => handleInputChange('billTo', 'address', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="billToGst">GST No.</Label>
-                                    <Input id="billToGst" value={settings.billToGst} onChange={e => handleInputChange('billToGst', e.target.value)} />
+                                    <Input id="billToGst" placeholder="Client GST Number" value={newBillTo.gst} onChange={e => handleInputChange('billTo', 'gst', e.target.value)} />
                                 </div>
+                                <Button onClick={() => handleAddContact('billTo')} disabled={isSaving} size="sm">
+                                    {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />} Add Bill To
+                                </Button>
                             </div>
-                            <div className="space-y-4">
-                                <h3 className="font-bold text-lg">Ship To Details</h3>
-                                <div className="space-y-2">
-                                    <Label htmlFor="shipToName">Name</Label>
-                                    <Input id="shipToName" value={settings.shipToName} onChange={e => handleInputChange('shipToName', e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="shipToAddress">Address</Label>
-                                    <Textarea id="shipToAddress" value={settings.shipToAddress} onChange={e => handleInputChange('shipToAddress', e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="shipToGst">GSTIN</Label>
-                                    <Input id="shipToGst" value={settings.shipToGst} onChange={e => handleInputChange('shipToGst', e.target.value)} />
+                             <div className="space-y-2">
+                                <h3 className="font-bold">Saved "Bill To" Contacts</h3>
+                                <div className="rounded-md border">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Display Name</TableHead>
+                                                <TableHead>Name</TableHead>
+                                                <TableHead className="text-right">Action</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {billToContacts.length === 0 && <TableRow><TableCell colSpan={3} className="text-center h-24">No contacts saved.</TableCell></TableRow>}
+                                            {billToContacts.map(c => (
+                                                <TableRow key={c.displayName}>
+                                                    <TableCell className="font-medium">{c.displayName}</TableCell>
+                                                    <TableCell>{c.name}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteContact('billTo', c.displayName)} disabled={isSaving}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
                                 </div>
                             </div>
                         </CardContent>
-                         <CardFooter>
-                            <p className="text-xs text-muted-foreground">This information will be used to pre-fill the "Bill To" and "Ship To" sections when you create a new invoice.</p>
-                         </CardFooter>
+                    </Card>
+
+                     {/* Ship To Section */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Manage "Ship To" Contacts</CardTitle>
+                            <CardDescription>Add, view, and remove shipping contacts.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                             <div className="p-4 border rounded-lg space-y-4">
+                               <h3 className="font-bold">Add New "Ship To" Contact</h3>
+                                <div className="space-y-2">
+                                    <Label htmlFor="shipToDisplayName">Display Name (Unique)</Label>
+                                    <Input id="shipToDisplayName" placeholder="e.g., Warehouse" value={newShipTo.displayName} onChange={e => handleInputChange('shipTo', 'displayName', e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="shipToName">Name</Label>
+                                    <Input id="shipToName" placeholder="Shipping Location Name" value={newShipTo.name} onChange={e => handleInputChange('shipTo', 'name', e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="shipToAddress">Address</Label>
+                                    <Textarea id="shipToAddress" placeholder="Shipping Address" value={newShipTo.address} onChange={e => handleInputChange('shipTo', 'address', e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="shipToGst">GSTIN</Label>
+                                    <Input id="shipToGst" placeholder="Shipping GSTIN" value={newShipTo.gst} onChange={e => handleInputChange('shipTo', 'gst', e.target.value)} />
+                                </div>
+                                <Button onClick={() => handleAddContact('shipTo')} disabled={isSaving} size="sm">
+                                    {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />} Add Ship To
+                                </Button>
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="font-bold">Saved "Ship To" Contacts</h3>
+                                <div className="rounded-md border">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Display Name</TableHead>
+                                                <TableHead>Name</TableHead>
+                                                <TableHead className="text-right">Action</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {shipToContacts.length === 0 && <TableRow><TableCell colSpan={3} className="text-center h-24">No contacts saved.</TableCell></TableRow>}
+                                            {shipToContacts.map(c => (
+                                                <TableRow key={c.displayName}>
+                                                    <TableCell className="font-medium">{c.displayName}</TableCell>
+                                                    <TableCell>{c.name}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteContact('shipTo', c.displayName)} disabled={isSaving}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
+                        </CardContent>
                     </Card>
                 </div>
             </div>

@@ -102,5 +102,3 @@ export async function getInvoices(): Promise<Invoice[]> {
     });
     return invoices;
 }
-
-    

@@ -8,7 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Download, Wand2, Loader, Save, FilePlus, ListOrdered } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Sparkles } from 'lucide-react';
 import { format } from "date-fns"
 import { extractInvoiceData, ExtractInvoiceDataOutput } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
@@ -17,6 +17,7 @@ import { Menubar, MenubarMenu, MenubarTrigger } from './ui/menubar';
 import { Invoice, saveInvoice } from '@/services/invoiceService';
 import Link from 'next/link';
 import { Label } from './ui/label';
+import { Settings, getSettings } from '@/services/settingsService';
 
 type LineItem = {
   id: number;
@@ -63,8 +64,21 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   const [isExtracting, setIsExtracting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [settings, setSettings] = useState<Settings | null>(null);
 
   const { toast } = useToast();
+
+  useEffect(() => {
+    async function loadSettings() {
+        const loadedSettings = await getSettings();
+        setSettings(loadedSettings);
+        if (!initialData && loadedSettings) {
+            applySettings(loadedSettings);
+        }
+    }
+    loadSettings();
+  }, [initialData]);
 
   useEffect(() => {
       if (initialData) {
@@ -85,9 +99,30 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
               ...item
           })));
       } else {
-          handleClearForm();
+        handleClearForm(false); // Don't call onAddNew here to prevent loop
+        if (settings) {
+            applySettings(settings);
+        }
       }
-  }, [initialData]);
+  }, [initialData, settings]);
+  
+  const applySettings = (settingsToApply: Settings) => {
+    setBillToName(settingsToApply.billToName || '');
+    setBillToAddress(settingsToApply.billToAddress || '');
+    setBillToGst(settingsToApply.billToGst || '');
+    setShipToName(settingsToApply.shipToName || '');
+    setShipToAddress(settingsToApply.shipToAddress || '');
+    setShipToGst(settingsToApply.shipToGst || '');
+  };
+
+  const handleApplyDefaults = () => {
+    if (settings) {
+        applySettings(settings);
+        toast({ title: "Defaults Applied", description: "Default 'Bill To' and 'Ship To' information has been applied." });
+    } else {
+        toast({ variant: "destructive", title: "No Defaults Found", description: "Please save some defaults on the Settings page first." });
+    }
+  };
 
   const handleAddItem = () => {
     setLineItems([...lineItems, { id: Date.now(), name: '', quantity: 1, price: 0 }]);
@@ -108,7 +143,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     return { subtotal, total: subtotal };
   }, [lineItems]);
 
-  const handleClearForm = () => {
+  const handleClearForm = (shouldCallback = true) => {
     setInvoiceNumber('');
     setCustomerName('');
     setCustomerAddress('');
@@ -122,7 +157,9 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     setShipToAddress('');
     setShipToGst('');
     setLineItems([{ id: Date.now(), name: '', quantity: 1, price: 0 }]);
-    onAddNew();
+    if (shouldCallback) {
+        onAddNew();
+    }
   };
   
   const handleSaveInvoice = async () => {
@@ -233,14 +270,26 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             </div>
             <Menubar>
                 <MenubarMenu>
-                    <MenubarTrigger onClick={handleClearForm} className="cursor-pointer">
+                    <MenubarTrigger onClick={() => handleClearForm()} className="cursor-pointer">
                         <FilePlus className="mr-2 h-4 w-4" /> New
+                    </MenubarTrigger>
+                </MenubarMenu>
+                 <MenubarMenu>
+                    <MenubarTrigger onClick={handleApplyDefaults} className="cursor-pointer">
+                        <Sparkles className="mr-2 h-4 w-4" /> Apply Defaults
                     </MenubarTrigger>
                 </MenubarMenu>
                 <MenubarMenu>
                     <MenubarTrigger className="cursor-pointer">
                       <Link href="/invoices" className='flex items-center'>
                         <ListOrdered className="mr-2 h-4 w-4" /> Saved Invoices
+                      </Link>
+                    </MenubarTrigger>
+                </MenubarMenu>
+                 <MenubarMenu>
+                    <MenubarTrigger className="cursor-pointer">
+                      <Link href="/settings" className='flex items-center'>
+                        <SettingsIcon className="mr-2 h-4 w-4" /> Settings
                       </Link>
                     </MenubarTrigger>
                 </MenubarMenu>
@@ -439,5 +488,3 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
-
-    

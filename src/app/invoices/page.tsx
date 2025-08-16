@@ -12,9 +12,12 @@ import { InvoicePreviewDialog } from "@/components/invoice-preview-dialog";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { InvoicePreview } from "@/components/invoice-preview";
+import type { Settings } from "@/services/settingsService";
+import { getSettings } from "@/services/settingsService";
 
 export default function InvoicesPage() {
   const [data, setData] = React.useState<Invoice[]>([]);
+  const [settings, setSettings] = React.useState<Settings | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [previewingInvoice, setPreviewingInvoice] = React.useState<Invoice | null>(null);
   const [invoiceToGeneratePdf, setInvoiceToGeneratePdf] = React.useState<Invoice | null>(null);
@@ -27,8 +30,12 @@ export default function InvoicesPage() {
   useEffect(() => {
     async function getData() {
       setIsLoading(true);
-      const invoices = await getInvoices();
+      const [invoices, settingsData] = await Promise.all([
+        getInvoices(),
+        getSettings()
+      ]);
       setData(invoices);
+      setSettings(settingsData);
       setIsLoading(false);
     }
     getData();
@@ -149,9 +156,9 @@ export default function InvoicesPage() {
       />
     )}
     {/* This component is rendered off-screen and used for PDF generation */}
-    {invoiceToGeneratePdf && (
+    {invoiceToGeneratePdf && settings && (
         <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', zIndex: -1 }}>
-            <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToGeneratePdf} />
+            <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToGeneratePdf} settings={settings} />
         </div>
     )}
     </>

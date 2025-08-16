@@ -5,12 +5,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from "date-fns";
 import { Invoice } from '@/services/invoiceService';
 import { Separator } from './ui/separator';
+import type { Settings } from '@/services/settingsService';
+import Image from 'next/image';
 
 interface InvoicePreviewProps {
     invoice: Invoice;
+    settings: Settings;
 }
 
-export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewProps>(({ invoice }, ref) => {
+export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewProps>(({ invoice, settings }, ref) => {
     
     const inWords = (num: number): string => {
         const a = ['','one ','two ','three ','four ', 'five ','six ','seven ','eight ','nine ','ten ','eleven ','twelve ','thirteen ','fourteen ','fifteen ','sixteen ','seventeen ','eighteen ','nineteen '];
@@ -25,6 +28,8 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
         str += (Number(n[5]) != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
         return str.trim().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ') + ' Only';
     };
+
+    const defaultSignature = settings?.signatures?.find(s => s.id === settings.defaultSignatureId);
     
     return (
         <div ref={ref} className="invoice-preview-container bg-white text-black p-8">
@@ -59,9 +64,9 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="px-6">
+                <CardContent className="px-6 pt-0">
                     <Separator className='bg-gray-200'/>
-                    <div className="grid grid-cols-[65%_35%] gap-8 items-center py-6">
+                    <div className="grid grid-cols-[65%_35%] gap-8 items-start py-6">
                         <div className="space-y-1">
                             <p className='font-bold text-gray-500'>Bill To:</p>
                             <p className='font-bold'>{invoice.billToName}</p>
@@ -70,13 +75,13 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                         </div>
                         <div className='space-y-1'>
                             <p className='font-bold text-gray-500'>Ship To:</p>
-                            <p className='font-bold'>{invoice.shipToName}</p>
-                            <p className='text-sm' style={{whiteSpace: 'pre-wrap'}}>{invoice.shipToAddress}</p>
+                            <p className='font-bold'>{invoice.shipToName || invoice.billToName}</p>
+                            <p className='text-sm' style={{whiteSpace: 'pre-wrap'}}>{invoice.shipToAddress || invoice.billToAddress}</p>
                             {invoice.shipToGst && <p className='text-sm'><span className='font-bold'>GSTIN:</span> {invoice.shipToGst}</p>}
                         </div>
                     </div>
                     
-                    <div className="mt-8">
+                    <div className="mt-2">
                         <Table>
                         <TableHeader>
                             <TableRow className='border-b border-gray-300 bg-gray-50'>
@@ -137,7 +142,11 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                         <div className='flex flex-col justify-between items-end h-full text-sm'>
                             <div>For THE GUT GURU</div>
                              <div className='flex flex-col items-center'>
-                                <img src='https://placehold.co/150x50.png' alt='Company Signature' className='h-12' data-ai-hint="company signature" />
+                                {defaultSignature ? (
+                                    <Image src={defaultSignature.url} alt="Company Signature" width={150} height={50} className='h-12 object-contain' />
+                                ) : (
+                                    <img src='https://placehold.co/150x50.png' alt='Company Signature' className='h-12' data-ai-hint="company signature" />
+                                )}
                                 <p className='text-xs pt-1 border-t border-gray-400 w-full text-center'>Authorized Signature</p>
                              </div>
                          </div>

@@ -101,7 +101,12 @@ export async function deleteBillToContact(displayName: string): Promise<void> {
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const settings = await getSettings();
-        const contactToDelete = (settings?.billToContacts || []).find(c => c.displayName === displayName);
+        if (!settings || !settings.billToContacts) {
+            throw new Error("Settings or contacts not found");
+        }
+        
+        const contactToDelete = settings.billToContacts.find(c => c.displayName === displayName);
+
         if (contactToDelete) {
              await updateDoc(settingsRef, {
                 billToContacts: arrayRemove(contactToDelete)
@@ -119,7 +124,11 @@ export async function deleteShipToContact(displayName: string): Promise<void> {
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const settings = await getSettings();
-        const contactToDelete = (settings?.shipToContacts || []).find(c => c.displayName === displayName);
+         if (!settings || !settings.shipToContacts) {
+            throw new Error("Settings or contacts not found");
+        }
+
+        const contactToDelete = settings.shipToContacts.find(c => c.displayName === displayName);
 
         if (contactToDelete) {
             await updateDoc(settingsRef, {

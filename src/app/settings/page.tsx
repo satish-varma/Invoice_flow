@@ -15,11 +15,14 @@ import {
     deleteShipToContact,
     updateBillToContact,
     updateShipToContact,
+    setDefaultBillToContact,
+    setDefaultShipToContact,
     BillToContact,
     ShipToContact,
+    Settings,
 } from '@/services/settingsService';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader, PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader, PlusCircle, Pencil, Trash2, Star } from 'lucide-react';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -28,9 +31,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 type ContactType = 'billTo' | 'shipTo';
 
 export default function SettingsPage() {
-    const [billToContacts, setBillToContacts] = useState<BillToContact[]>([]);
-    const [shipToContacts, setShipToContacts] = useState<ShipToContact[]>([]);
-
+    const [settings, setSettings] = useState<Settings>({ billToContacts: [], shipToContacts: [] });
+    
     const [newBillTo, setNewBillTo] = useState<Omit<BillToContact, 'id'>>({ displayName: '', name: '', address: '', gst: '' });
     const [newShipTo, setNewShipTo] = useState<Omit<ShipToContact, 'id'>>({ displayName: '', name: '', address: '', gst: '' });
     
@@ -47,8 +49,7 @@ export default function SettingsPage() {
         setIsLoading(true);
         const loadedSettings = await getSettings();
         if (loadedSettings) {
-            setBillToContacts(loadedSettings.billToContacts || []);
-            setShipToContacts(loadedSettings.shipToContacts || []);
+            setSettings(loadedSettings);
         }
         setIsLoading(false);
     }
@@ -140,6 +141,24 @@ export default function SettingsPage() {
         }
     };
 
+    const handleSetDefault = async (type: ContactType, displayName: string) => {
+        setIsSaving(true);
+        try {
+            if (type === 'billTo') {
+                await setDefaultBillToContact(displayName);
+            } else {
+                await setDefaultShipToContact(displayName);
+            }
+            await loadSettings();
+            toast({ title: "Default Set", description: `The default ${type === 'billTo' ? '"Bill To"' : '"Ship To"'} contact has been updated.` });
+        } catch (error) {
+             console.error(`Failed to set default ${type} contact:`, error);
+            toast({ variant: "destructive", title: "Update Failed", description: `Could not set the default contact. Please try again.` });
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
 
     if (isLoading) {
         return (
@@ -161,7 +180,7 @@ export default function SettingsPage() {
                             </Link>
                         </Button>
                         <h1 className="text-4xl font-headline font-bold text-primary mt-4">Settings</h1>
-                        <p className="text-muted-foreground">Manage your saved "Bill To" and "Ship To" contacts.</p>
+                        <p className="text-muted-foreground">Manage your saved "Bill To" and "Ship To" contacts and set defaults.</p>
                     </div>
                 </div>
 
@@ -207,12 +226,15 @@ export default function SettingsPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {billToContacts.length === 0 && <TableRow><TableCell colSpan={3} className="text-center h-24">No contacts saved.</TableCell></TableRow>}
-                                            {billToContacts.map(c => (
+                                            {(settings.billToContacts || []).length === 0 && <TableRow><TableCell colSpan={3} className="text-center h-24">No contacts saved.</TableCell></TableRow>}
+                                            {(settings.billToContacts || []).map(c => (
                                                 <TableRow key={c.displayName}>
                                                     <TableCell className="font-medium">{c.displayName}</TableCell>
                                                     <TableCell>{c.name}</TableCell>
                                                     <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" onClick={() => handleSetDefault('billTo', c.displayName)} disabled={isSaving} title="Make Default">
+                                                            <Star className={`h-4 w-4 ${settings.defaultBillToContact === c.displayName ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'}`} />
+                                                        </Button>
                                                         <Button variant="ghost" size="icon" onClick={() => handleEditClick(c, 'billTo')} disabled={isSaving}><Pencil className="h-4 w-4" /></Button>
                                                         <Button variant="ghost" size="icon" onClick={() => handleDeleteContact('billTo', c.displayName)} disabled={isSaving}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                                     </TableCell>
@@ -266,12 +288,15 @@ export default function SettingsPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {shipToContacts.length === 0 && <TableRow><TableCell colSpan={3} className="text-center h-24">No contacts saved.</TableCell></TableRow>}
-                                            {shipToContacts.map(c => (
+                                            {(settings.shipToContacts || []).length === 0 && <TableRow><TableCell colSpan={3} className="text-center h-24">No contacts saved.</TableCell></TableRow>}
+                                            {(settings.shipToContacts || []).map(c => (
                                                 <TableRow key={c.displayName}>
                                                     <TableCell className="font-medium">{c.displayName}</TableCell>
                                                     <TableCell>{c.name}</TableCell>
                                                     <TableCell className="text-right">
+                                                         <Button variant="ghost" size="icon" onClick={() => handleSetDefault('shipTo', c.displayName)} disabled={isSaving} title="Make Default">
+                                                            <Star className={`h-4 w-4 ${settings.defaultShipToContact === c.displayName ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'}`} />
+                                                        </Button>
                                                         <Button variant="ghost" size="icon" onClick={() => handleEditClick(c, 'shipTo')} disabled={isSaving}><Pencil className="h-4 w-4" /></Button>
                                                         <Button variant="ghost" size="icon" onClick={() => handleDeleteContact('shipTo', c.displayName)} disabled={isSaving}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                                     </TableCell>
@@ -321,3 +346,5 @@ export default function SettingsPage() {
         </main>
     );
 }
+
+    

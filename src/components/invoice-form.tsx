@@ -18,7 +18,7 @@ import { Invoice, saveInvoice } from '@/services/invoiceService';
 import Link from 'next/link';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getSettings, BillToContact, ShipToContact } from '@/services/settingsService';
+import { getSettings, BillToContact, ShipToContact, Settings } from '@/services/settingsService';
 
 type LineItem = {
   id: number;
@@ -64,8 +64,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [billToContacts, setBillToContacts] = useState<BillToContact[]>([]);
-  const [shipToContacts, setShipToContacts] = useState<ShipToContact[]>([]);
+  const [settings, setSettings] = useState<Settings>({ billToContacts: [], shipToContacts: [] });
 
   const { toast } = useToast();
 
@@ -74,14 +73,33 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     if(!initialData) {
       setDate(new Date());
     }
-    async function loadContacts() {
+    async function loadSettingsAndApplyDefaults() {
         const loadedSettings = await getSettings();
         if (loadedSettings) {
-            setBillToContacts(loadedSettings.billToContacts || []);
-            setShipToContacts(loadedSettings.shipToContacts || []);
+            setSettings(loadedSettings);
+
+            // Apply defaults only for new invoices
+            if (!initialData) {
+                if (loadedSettings.defaultBillToContact) {
+                    const defaultContact = loadedSettings.billToContacts?.find(c => c.displayName === loadedSettings.defaultBillToContact);
+                    if (defaultContact) {
+                        setBillToName(defaultContact.name);
+                        setBillToAddress(defaultContact.address);
+                        setBillToGst(defaultContact.gst);
+                    }
+                }
+                 if (loadedSettings.defaultShipToContact) {
+                    const defaultContact = loadedSettings.shipToContacts?.find(c => c.displayName === loadedSettings.defaultShipToContact);
+                    if (defaultContact) {
+                        setShipToName(defaultContact.name);
+                        setShipToAddress(defaultContact.address);
+                        setShipToGst(defaultContact.gst);
+                    }
+                }
+            }
         }
     }
-    loadContacts();
+    loadSettingsAndApplyDefaults();
   }, [initialData]);
 
   useEffect(() => {
@@ -239,16 +257,15 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   };
 
   const handleContactSelect = (type: 'billTo' | 'shipTo', displayName: string) => {
-    if (type === 'billTo') {
-        const contact = billToContacts.find(c => c.displayName === displayName);
-        if (contact) {
+    const contacts = type === 'billTo' ? settings.billToContacts : settings.shipToContacts;
+    const contact = contacts?.find(c => c.displayName === displayName);
+
+    if (contact) {
+        if (type === 'billTo') {
             setBillToName(contact.name);
             setBillToAddress(contact.address);
             setBillToGst(contact.gst);
-        }
-    } else {
-        const contact = shipToContacts.find(c => c.displayName === displayName);
-        if (contact) {
+        } else {
             setShipToName(contact.name);
             setShipToAddress(contact.address);
             setShipToGst(contact.gst);
@@ -353,7 +370,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 <SelectValue placeholder="Select a billing contact" />
                             </SelectTrigger>
                             <SelectContent>
-                                {billToContacts.map(c => <SelectItem key={c.displayName} value={c.displayName}>{c.displayName}</SelectItem>)}
+                                {(settings.billToContacts || []).map(c => <SelectItem key={c.displayName} value={c.displayName}>{c.displayName}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -420,7 +437,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 <SelectValue placeholder="Select a shipping contact" />
                             </SelectTrigger>
                             <SelectContent>
-                                {shipToContacts.map(c => <SelectItem key={c.displayName} value={c.displayName}>{c.displayName}</SelectItem>)}
+                                {(settings.shipToContacts || []).map(c => <SelectItem key={c.displayName} value={c.displayName}>{c.displayName}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -505,3 +522,5 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
+
+    

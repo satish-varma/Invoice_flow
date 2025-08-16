@@ -23,6 +23,8 @@ export interface ShipToContact {
 export interface Settings {
     billToContacts?: BillToContact[];
     shipToContacts?: ShipToContact[];
+    defaultBillToContact?: string;
+    defaultShipToContact?: string;
 }
 
 const SETTINGS_COLLECTION = 'settings';
@@ -66,7 +68,7 @@ export async function saveBillToContact(contact: Omit<BillToContact, 'id'>): Pro
                  billToContacts: arrayUnion(contact)
              });
         } else {
-             await setDoc(settingsRef, { billToContacts: [contact], shipToContacts: [] });
+             await setDoc(settingsRef, { billToContacts: [contact] }, { merge: true });
         }
     } catch (error) {
         console.error("Error saving Bill To contact: ", error);
@@ -91,7 +93,7 @@ export async function saveShipToContact(contact: Omit<ShipToContact, 'id'>): Pro
                  shipToContacts: arrayUnion(contact)
              });
         } else {
-             await setDoc(settingsRef, { shipToContacts: [contact], billToContacts: [] });
+             await setDoc(settingsRef, { shipToContacts: [contact] }, { merge: true });
         }
     } catch (error) {
         console.error("Error saving Ship To contact: ", error);
@@ -182,3 +184,25 @@ export async function updateShipToContact(contact: ShipToContact): Promise<void>
         throw new Error("Failed to update Ship To contact.");
     }
 }
+
+export async function setDefaultBillToContact(displayName: string): Promise<void> {
+    try {
+        const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
+        await updateDoc(settingsRef, { defaultBillToContact: displayName });
+    } catch (error) {
+        console.error("Error setting default Bill To contact: ", error);
+        throw new Error("Failed to set default Bill To contact.");
+    }
+}
+
+export async function setDefaultShipToContact(displayName: string): Promise<void> {
+    try {
+        const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
+        await updateDoc(settingsRef, { defaultShipToContact: displayName });
+    } catch (error) {
+        console.error("Error setting default Ship To contact: ", error);
+        throw new Error("Failed to set default Ship To contact.");
+    }
+}
+
+    

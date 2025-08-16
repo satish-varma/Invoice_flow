@@ -8,15 +8,14 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Download, Wand2, Loader, Save, FilePlus } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Download, Wand2, Loader, Save, FilePlus, ListOrdered } from 'lucide-react';
 import { format } from "date-fns"
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { extractInvoiceData, ExtractInvoiceDataOutput } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
 import { Menubar, MenubarMenu, MenubarTrigger } from './ui/menubar';
 import { Invoice, saveInvoice } from '@/services/invoiceService';
+import Link from 'next/link';
 
 type LineItem = {
   id: number;
@@ -52,12 +51,9 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const invoiceRef = useRef<HTMLDivElement>(null);
-  const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-      setIsMounted(true);
       if (initialData) {
           setInvoiceNumber(initialData.invoiceNumber);
           setCustomerName(initialData.customerName);
@@ -101,23 +97,6 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     setDate(new Date());
     setLineItems([{ id: Date.now(), name: '', quantity: 1, price: 0 }]);
     onAddNew();
-  };
-
-  const handleDownloadPdf = () => {
-    const input = invoiceRef.current;
-    if (input) {
-      input.classList.add('pdf-capture');
-      html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
-        input.classList.remove('pdf-capture');
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`invoice-${invoiceNumber || 'untitled'}.pdf`);
-      });
-    }
   };
   
   const handleSaveInvoice = async () => {
@@ -203,14 +182,6 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     }
   };
 
-  if (!isMounted && !initialData) {
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader className="h-8 w-8 animate-spin" />
-        </div>
-      );
-  }
-
   return (
     <>
       <div className="mb-8">
@@ -230,6 +201,13 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                     </MenubarTrigger>
                 </MenubarMenu>
                 <MenubarMenu>
+                    <MenubarTrigger className="cursor-pointer">
+                      <Link href="/invoices" className='flex items-center'>
+                        <ListOrdered className="mr-2 h-4 w-4" /> Saved Invoices
+                      </Link>
+                    </MenubarTrigger>
+                </MenubarMenu>
+                <MenubarMenu>
                     <MenubarTrigger onClick={() => fileInputRef.current?.click()} disabled={isExtracting} className="cursor-pointer">
                         {isExtracting ? (
                             <>
@@ -242,11 +220,6 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 Autofill
                         </>
                         )}
-                    </MenubarTrigger>
-                </MenubarMenu>
-                <MenubarMenu>
-                    <MenubarTrigger onClick={handleDownloadPdf} className="cursor-pointer">
-                        <Download className="mr-2 h-4 w-4" /> Download
                     </MenubarTrigger>
                 </MenubarMenu>
                 <MenubarMenu>
@@ -275,7 +248,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             />
         </div>
       </div>
-          <Card ref={invoiceRef} className="w-full shadow-lg">
+          <Card className="w-full shadow-lg">
             <CardHeader className="bg-muted/20 p-6">
               <div className="flex justify-between items-start">
                   <div className='flex items-center gap-4'>
@@ -404,3 +377,4 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   );
 }
 
+    

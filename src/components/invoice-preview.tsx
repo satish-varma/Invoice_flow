@@ -40,7 +40,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                             <p className='text-sm'><span className='font-bold'>GSTIN:</span> 36DDTPJ6536D1Z8</p>
                              <p className='text-sm'><span className='font-bold'>PAN:</span> DDTPJ6536D</p>
                         </div>
-                        <div className="space-y-2 text-sm pt-8">
+                        <div className="space-y-2 text-sm pt-12">
                              <div className='grid grid-cols-[120px_1fr]'>
                                 <div className='font-bold'>Invoice No.:</div>
                                 <div>{invoice.invoiceNumber}</div>

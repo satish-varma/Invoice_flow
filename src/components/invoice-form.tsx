@@ -81,7 +81,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             // Apply defaults only for new invoices
             if (!initialData) {
                 if (loadedSettings.defaultBillToContact) {
-                    const defaultContact = loadedSettings.billToContacts?.find(c => c.displayName === loadedSettings.defaultBillToContact);
+                    const defaultContact = loadedSettings.billToContacts?.find(c => c.id === loadedSettings.defaultBillToContact);
                     if (defaultContact) {
                         setBillToName(defaultContact.name);
                         setBillToAddress(defaultContact.address);
@@ -89,7 +89,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                     }
                 }
                  if (loadedSettings.defaultShipToContact) {
-                    const defaultContact = loadedSettings.shipToContacts?.find(c => c.displayName === loadedSettings.defaultShipToContact);
+                    const defaultContact = loadedSettings.shipToContacts?.find(c => c.id === loadedSettings.defaultShipToContact);
                     if (defaultContact) {
                         setShipToName(defaultContact.name);
                         setShipToAddress(defaultContact.address);
@@ -256,9 +256,9 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     }
   };
 
-  const handleContactSelect = (type: 'billTo' | 'shipTo', displayName: string) => {
+  const handleContactSelect = (type: 'billTo' | 'shipTo', id: string) => {
     const contacts = type === 'billTo' ? settings.billToContacts : settings.shipToContacts;
-    const contact = contacts?.find(c => c.displayName === displayName);
+    const contact = contacts?.find(c => c.id === id);
 
     if (contact) {
         if (type === 'billTo') {
@@ -370,7 +370,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 <SelectValue placeholder="Select a billing contact" />
                             </SelectTrigger>
                             <SelectContent>
-                                {(settings.billToContacts || []).map(c => <SelectItem key={c.displayName} value={c.displayName}>{c.displayName}</SelectItem>)}
+                                {(settings.billToContacts || []).map(c => <SelectItem key={c.id} value={c.id}>{c.displayName}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -437,7 +437,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 <SelectValue placeholder="Select a shipping contact" />
                             </SelectTrigger>
                             <SelectContent>
-                                {(settings.shipToContacts || []).map(c => <SelectItem key={c.displayName} value={c.displayName}>{c.displayName}</SelectItem>)}
+                                {(settings.shipToContacts || []).map(c => <SelectItem key={c.id} value={c.id}>{c.displayName}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -522,5 +522,3 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
-
-    

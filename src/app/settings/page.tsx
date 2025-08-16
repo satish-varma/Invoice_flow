@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,18 +45,16 @@ export default function SettingsPage() {
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
-    async function loadSettings() {
+    const loadSettings = useCallback(async () => {
         setIsLoading(true);
         const loadedSettings = await getSettings();
-        if (loadedSettings) {
-            setSettings(loadedSettings);
-        }
+        setSettings(loadedSettings);
         setIsLoading(false);
-    }
+    }, []);
 
     useEffect(() => {
         loadSettings();
-    }, []);
+    }, [loadSettings]);
 
     const handleInputChange = (form: 'newBillTo' | 'newShipTo' | 'edit', field: string, value: string) => {
         if (form === 'newBillTo') {
@@ -96,13 +94,18 @@ export default function SettingsPage() {
     };
 
     const handleEditClick = (contact: BillToContact | ShipToContact, type: ContactType) => {
-        setEditingContact(contact);
+        setEditingContact(JSON.parse(JSON.stringify(contact))); // Deep copy to avoid state mutation issues
         setEditingContactType(type);
         setIsEditDialogOpen(true);
     };
 
     const handleUpdateContact = async () => {
         if (!editingContact || !editingContactType) return;
+
+        if (!editingContact.displayName || !editingContact.name) {
+            toast({ variant: "destructive", title: "Missing Information", description: "Display Name and Name are required." });
+            return;
+        }
 
         setIsSaving(true);
         try {
@@ -117,19 +120,20 @@ export default function SettingsPage() {
             toast({ title: "Contact Updated", description: "The contact has been successfully updated." });
         } catch (error) {
             console.error(`Failed to update ${editingContactType} contact:`, error);
-            toast({ variant: "destructive", title: "Update Failed", description: `Could not update the contact. Please try again.` });
+            const errorMessage = error instanceof Error ? error.message : `Could not update the contact. Please try again.`;
+            toast({ variant: "destructive", title: "Update Failed", description: errorMessage });
         } finally {
             setIsSaving(false);
         }
     };
     
-    const handleDeleteContact = async (type: ContactType, displayName: string) => {
+    const handleDeleteContact = async (type: ContactType, id: string) => {
         setIsSaving(true);
         try {
             if (type === 'billTo') {
-                await deleteBillToContact(displayName);
+                await deleteBillToContact(id);
             } else {
-                await deleteShipToContact(displayName);
+                await deleteShipToContact(id);
             }
             await loadSettings();
             toast({ title: "Contact Deleted", description: "The contact has been removed." });
@@ -141,13 +145,13 @@ export default function SettingsPage() {
         }
     };
 
-    const handleSetDefault = async (type: ContactType, displayName: string) => {
+    const handleSetDefault = async (type: ContactType, id: string) => {
         setIsSaving(true);
         try {
             if (type === 'billTo') {
-                await setDefaultBillToContact(displayName);
+                await setDefaultBillToContact(id);
             } else {
-                await setDefaultShipToContact(displayName);
+                await setDefaultShipToContact(id);
             }
             await loadSettings();
             toast({ title: "Default Set", description: `The default ${type === 'billTo' ? '"Bill To"' : '"Ship To"'} contact has been updated.` });
@@ -228,15 +232,15 @@ export default function SettingsPage() {
                                         <TableBody>
                                             {(settings.billToContacts || []).length === 0 && <TableRow><TableCell colSpan={3} className="text-center h-24">No contacts saved.</TableCell></TableRow>}
                                             {(settings.billToContacts || []).map(c => (
-                                                <TableRow key={c.displayName}>
+                                                <TableRow key={c.id}>
                                                     <TableCell className="font-medium">{c.displayName}</TableCell>
                                                     <TableCell>{c.name}</TableCell>
                                                     <TableCell className="text-right">
-                                                        <Button variant="ghost" size="icon" onClick={() => handleSetDefault('billTo', c.displayName)} disabled={isSaving} title="Make Default">
-                                                            <Star className={`h-4 w-4 ${settings.defaultBillToContact === c.displayName ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'}`} />
+                                                        <Button variant="ghost" size="icon" onClick={() => handleSetDefault('billTo', c.id)} disabled={isSaving} title="Make Default">
+                                                            <Star className={`h-4 w-4 ${settings.defaultBillToContact === c.id ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'}`} />
                                                         </Button>
                                                         <Button variant="ghost" size="icon" onClick={() => handleEditClick(c, 'billTo')} disabled={isSaving}><Pencil className="h-4 w-4" /></Button>
-                                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteContact('billTo', c.displayName)} disabled={isSaving}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteContact('billTo', c.id)} disabled={isSaving}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -290,15 +294,15 @@ export default function SettingsPage() {
                                         <TableBody>
                                             {(settings.shipToContacts || []).length === 0 && <TableRow><TableCell colSpan={3} className="text-center h-24">No contacts saved.</TableCell></TableRow>}
                                             {(settings.shipToContacts || []).map(c => (
-                                                <TableRow key={c.displayName}>
+                                                <TableRow key={c.id}>
                                                     <TableCell className="font-medium">{c.displayName}</TableCell>
                                                     <TableCell>{c.name}</TableCell>
                                                     <TableCell className="text-right">
-                                                         <Button variant="ghost" size="icon" onClick={() => handleSetDefault('shipTo', c.displayName)} disabled={isSaving} title="Make Default">
-                                                            <Star className={`h-4 w-4 ${settings.defaultShipToContact === c.displayName ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'}`} />
+                                                         <Button variant="ghost" size="icon" onClick={() => handleSetDefault('shipTo', c.id)} disabled={isSaving} title="Make Default">
+                                                            <Star className={`h-4 w-4 ${settings.defaultShipToContact === c.id ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'}`} />
                                                         </Button>
                                                         <Button variant="ghost" size="icon" onClick={() => handleEditClick(c, 'shipTo')} disabled={isSaving}><Pencil className="h-4 w-4" /></Button>
-                                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteContact('shipTo', c.displayName)} disabled={isSaving}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteContact('shipTo', c.id)} disabled={isSaving}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -318,8 +322,8 @@ export default function SettingsPage() {
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                             <div className="space-y-2">
-                                <Label htmlFor="editDisplayName">Display Name (Unique)</Label>
-                                <Input id="editDisplayName" value={editingContact.displayName} readOnly disabled />
+                                <Label htmlFor="editDisplayName">Display Name</Label>
+                                <Input id="editDisplayName" value={editingContact.displayName} onChange={e => handleInputChange('edit', 'displayName', e.target.value)} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="editName">Name</Label>
@@ -335,7 +339,7 @@ export default function SettingsPage() {
                             </div>
                         </div>
                         <DialogFooter>
-                            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                            <DialogClose asChild><Button variant="outline" onClick={() => setEditingContact(null)}>Cancel</Button></DialogClose>
                             <Button onClick={handleUpdateContact} disabled={isSaving}>
                                 {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : 'Save Changes'}
                             </Button>
@@ -346,5 +350,3 @@ export default function SettingsPage() {
         </main>
     );
 }
-
-    

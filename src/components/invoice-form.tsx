@@ -171,7 +171,7 @@ export function InvoiceForm() {
             </div>
             <Menubar>
                 <MenubarMenu>
-                    <MenubarTrigger>
+                    <MenubarTrigger asChild>
                         <Button onClick={() => fileInputRef.current?.click()} disabled={isExtracting} className='bg-transparent text-foreground hover:bg-transparent'>
                             {isExtracting ? (
                                 <>
@@ -188,14 +188,14 @@ export function InvoiceForm() {
                     </MenubarTrigger>
                 </MenubarMenu>
                 <MenubarMenu>
-                    <MenubarTrigger>
+                    <MenubarTrigger asChild>
                         <Button onClick={handleDownloadPdf} style={{backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))"}}>
                             <Download className="mr-2 h-4 w-4" /> Download PDF
                         </Button>
                     </MenubarTrigger>
                 </MenubarMenu>
                 <MenubarMenu>
-                     <MenubarTrigger>
+                     <MenubarTrigger asChild>
                         <Button onClick={handleClearForm} variant="outline" className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive">
                             <Eraser className="mr-2 h-4 w-4" /> Clear Form
                         </Button>

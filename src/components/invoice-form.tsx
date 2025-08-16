@@ -158,6 +158,47 @@ export function InvoiceForm() {
 
   return (
     <>
+      <div className="mb-8">
+        <div className='flex justify-between items-center mb-4'>
+            <div>
+              <h1 className="text-4xl font-headline font-bold text-primary">
+                InvoiceFlow
+              </h1>
+              <p className="text-muted-foreground">
+                Create professional invoices, or upload an image to have AI extract the data for you.
+              </p>
+            </div>
+            <div className="flex gap-2">
+                 <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept="image/*,application/pdf"
+                    disabled={isExtracting}
+                />
+                <Button onClick={() => fileInputRef.current?.click()} disabled={isExtracting}>
+                    {isExtracting ? (
+                        <>
+                            <Loader className="mr-2 h-4 w-4 animate-spin" />
+                            Extracting...
+                        </>
+                    ) : (
+                       <>
+                           <Wand2 className="mr-2 h-4 w-4" />
+                            Autofill from Image
+                       </>
+                    )}
+                </Button>
+                <Button onClick={handleDownloadPdf} style={{backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))"}}>
+                  <Download className="mr-2 h-4 w-4" /> Download PDF
+                </Button>
+                <Button onClick={handleClearForm} variant="outline" className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive">
+                  <Eraser className="mr-2 h-4 w-4" /> Clear Form
+                </Button>
+            </div>
+        </div>
+      </div>
       <div className="flex flex-col-reverse md:flex-row gap-8">
         <div className='flex-grow'>
           <Card ref={invoiceRef} className="w-full shadow-lg">
@@ -285,42 +326,6 @@ export function InvoiceForm() {
               </div>
             </CardFooter>
           </Card>
-        </div>
-        <div className="w-full md:w-64 flex-shrink-0">
-            <Card className="shadow-lg sticky top-8">
-                <CardHeader>
-                    <CardTitle>Invoice Tools</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4">
-                     <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        className="hidden"
-                        accept="image/*,application/pdf"
-                        disabled={isExtracting}
-                    />
-                    <Button onClick={() => fileInputRef.current?.click()} disabled={isExtracting}>
-                        {isExtracting ? (
-                            <>
-                                <Loader className="mr-2 h-4 w-4 animate-spin" />
-                                Extracting...
-                            </>
-                        ) : (
-                           <>
-                               <Wand2 className="mr-2 h-4 w-4" />
-                                Autofill from Image
-                           </>
-                        )}
-                    </Button>
-                    <Button onClick={handleDownloadPdf} style={{backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))"}}>
-                      <Download className="mr-2 h-4 w-4" /> Download PDF
-                    </Button>
-                    <Button onClick={handleClearForm} variant="outline" className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive">
-                      <Eraser className="mr-2 h-4 w-4" /> Clear Form
-                    </Button>
-                </CardContent>
-            </Card>
         </div>
       </div>
     </>

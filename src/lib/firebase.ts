@@ -8,13 +8,13 @@ import { getFirestore } from "firebase/firestore";
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "TODO: YOUR API KEY",
-  authDomain: "TODO: YOUR AUTH DOMAIN",
-  projectId: "TODO: YOUR PROJECT ID",
-  storageBucket: "TODO: YOUR STORAGE BUCKET",
-  messagingSenderId: "TODO: YOUR MESSAGING SENDER ID",
-  appId: "TODO: YOUR APP ID",
-  measurementId: "TODO: YOUR MEASUREMENT ID"
+  "projectId": "invoiceflow-24nxt",
+  "appId": "1:272128777200:web:f1309bfb80260ff45e5b35",
+  "storageBucket": "invoiceflow-24nxt.firebasestorage.app",
+  "apiKey": "AIzaSyCCa1LXbotrsXO8FkppHRzxGno04s_i_SE",
+  "authDomain": "invoiceflow-24nxt.firebaseapp.com",
+  "measurementId": "",
+  "messagingSenderId": "272128777200"
 };
 
 // Initialize Firebase

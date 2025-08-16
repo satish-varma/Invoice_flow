@@ -8,13 +8,14 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Download, Eraser, Upload, Wand2, Loader } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Download, Eraser, Wand2, Loader } from 'lucide-react';
 import { format } from "date-fns"
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { extractInvoiceData, ExtractInvoiceDataOutput } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
+import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem } from './ui/menubar';
 
 type LineItem = {
   id: number;
@@ -168,39 +169,49 @@ export function InvoiceForm() {
                 Create professional invoices, or upload an image to have AI extract the data for you.
               </p>
             </div>
-            <div className="flex gap-2">
-                 <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept="image/*,application/pdf"
-                    disabled={isExtracting}
-                />
-                <Button onClick={() => fileInputRef.current?.click()} disabled={isExtracting}>
-                    {isExtracting ? (
-                        <>
-                            <Loader className="mr-2 h-4 w-4 animate-spin" />
-                            Extracting...
-                        </>
-                    ) : (
-                       <>
-                           <Wand2 className="mr-2 h-4 w-4" />
-                            Autofill from Image
-                       </>
-                    )}
-                </Button>
-                <Button onClick={handleDownloadPdf} style={{backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))"}}>
-                  <Download className="mr-2 h-4 w-4" /> Download PDF
-                </Button>
-                <Button onClick={handleClearForm} variant="outline" className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive">
-                  <Eraser className="mr-2 h-4 w-4" /> Clear Form
-                </Button>
-            </div>
+            <Menubar>
+                <MenubarMenu>
+                    <MenubarTrigger>
+                        <Button onClick={() => fileInputRef.current?.click()} disabled={isExtracting} className='bg-transparent text-foreground hover:bg-transparent'>
+                            {isExtracting ? (
+                                <>
+                                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                                    Extracting...
+                                </>
+                            ) : (
+                            <>
+                                <Wand2 className="mr-2 h-4 w-4" />
+                                    Autofill from Image
+                            </>
+                            )}
+                        </Button>
+                    </MenubarTrigger>
+                </MenubarMenu>
+                <MenubarMenu>
+                    <MenubarTrigger>
+                        <Button onClick={handleDownloadPdf} style={{backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))"}}>
+                            <Download className="mr-2 h-4 w-4" /> Download PDF
+                        </Button>
+                    </MenubarTrigger>
+                </MenubarMenu>
+                <MenubarMenu>
+                     <MenubarTrigger>
+                        <Button onClick={handleClearForm} variant="outline" className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive">
+                            <Eraser className="mr-2 h-4 w-4" /> Clear Form
+                        </Button>
+                    </MenubarTrigger>
+                </MenubarMenu>
+            </Menubar>
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept="image/*,application/pdf"
+                disabled={isExtracting}
+            />
         </div>
       </div>
-      <div className="flex flex-col-reverse md:flex-row gap-8">
-        <div className='flex-grow'>
           <Card ref={invoiceRef} className="w-full shadow-lg">
             <CardHeader className="bg-muted/20 p-6">
               <div className="flex justify-between items-start">
@@ -283,9 +294,9 @@ export function InvoiceForm() {
                           <Input className="text-right" type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="1" />
                         </TableCell>
                         <TableCell>
-                          <Input className="text-right" type="number" value={item.price} onChange={e => handleItemChange(item.id, 'price', parseFloat(e.target.value) || 0)} min="0" step="0.01" placeholder="$0.00" />
+                          <Input className="text-right" type="number" value={item.price} onChange={e => handleItemChange(item.id, 'price', parseFloat(e.target.value) || 0)} min="0" step="0.01" placeholder="0.00" />
                         </TableCell>
-                        <TableCell className="font-medium text-right">${(Number(item.quantity) * Number(item.price)).toFixed(2)}</TableCell>
+                        <TableCell className="font-medium text-right">{(Number(item.quantity) * Number(item.price)).toFixed(2)}</TableCell>
                         <TableCell className="text-right no-print">
                           <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} aria-label="Remove item">
                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -306,15 +317,15 @@ export function InvoiceForm() {
               <div className="w-full max-w-sm text-sm grid gap-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span className='font-medium'>${subtotal.toFixed(2)}</span>
+                  <span className='font-medium'>{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tax (10%)</span>
-                  <span className='font-medium'>${tax.toFixed(2)}</span>
+                  <span className='font-medium'>{tax.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
                   <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>{total.toFixed(2)}</span>
                 </div>
               </div>
               <div className='text-xs text-muted-foreground text-right w-full pt-4 border-t'>
@@ -326,8 +337,6 @@ export function InvoiceForm() {
               </div>
             </CardFooter>
           </Card>
-        </div>
-      </div>
     </>
   );
 }

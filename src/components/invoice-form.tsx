@@ -15,7 +15,7 @@ import html2canvas from 'html2canvas';
 import { extractInvoiceData, ExtractInvoiceDataOutput } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
-import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem } from './ui/menubar';
+import { Menubar, MenubarMenu, MenubarTrigger } from './ui/menubar';
 
 type LineItem = {
   id: number;
@@ -50,7 +50,8 @@ export function InvoiceForm() {
 
   useEffect(() => {
     setIsMounted(true);
-    setDate(new Date());
+    // Setting date in useEffect to avoid hydration mismatch
+    setDate(new Date()); 
   }, []);
 
   const handleAddItem = () => {
@@ -86,13 +87,16 @@ export function InvoiceForm() {
   const handleDownloadPdf = () => {
     const input = invoiceRef.current;
     if (input) {
+      // Add a class to hide elements during PDF capture
       input.classList.add('pdf-capture');
       html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
+        // Remove the class after capture
         input.classList.remove('pdf-capture');
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        
         let heightLeft = pdfHeight;
         let position = 0;
         const pageHeight = pdf.internal.pageSize.getHeight();
@@ -124,7 +128,8 @@ export function InvoiceForm() {
         if (result.invoiceNumber) setInvoiceNumber(result.invoiceNumber);
         if (result.customerName) setCustomerName(result.customerName);
         if (result.date) {
-            const parsedDate = new Date(result.date);
+            // Add time to the date to avoid timezone issues
+            const parsedDate = new Date(result.date + 'T00:00:00');
             if (!isNaN(parsedDate.getTime())) {
               setDate(parsedDate);
             }
@@ -134,6 +139,8 @@ export function InvoiceForm() {
                 id: Date.now() + index,
                 ...item,
             })));
+        } else {
+             setLineItems([{ id: Date.now(), name: '', quantity: 1, price: 0 }]);
         }
         toast({
             title: "Extraction Complete",
@@ -148,13 +155,19 @@ export function InvoiceForm() {
         })
     } finally {
         setIsExtracting(false);
-        // Reset file input
-        event.target.value = '';
+        // Reset file input to allow re-uploading the same file
+        if(fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     }
   };
 
   if (!isMounted) {
-      return null;
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader className="h-8 w-8 animate-spin" />
+        </div>
+      );
   }
 
   return (
@@ -171,8 +184,8 @@ export function InvoiceForm() {
             </div>
             <Menubar>
                 <MenubarMenu>
-                    <MenubarTrigger asChild>
-                        <Button onClick={() => fileInputRef.current?.click()} disabled={isExtracting} className='bg-transparent text-foreground hover:bg-transparent'>
+                    <MenubarTrigger>
+                        <Button onClick={() => fileInputRef.current?.click()} disabled={isExtracting} className='bg-transparent text-foreground hover:bg-transparent p-0 h-auto'>
                             {isExtracting ? (
                                 <>
                                     <Loader className="mr-2 h-4 w-4 animate-spin" />
@@ -188,15 +201,15 @@ export function InvoiceForm() {
                     </MenubarTrigger>
                 </MenubarMenu>
                 <MenubarMenu>
-                    <MenubarTrigger asChild>
-                        <Button onClick={handleDownloadPdf} style={{backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))"}}>
+                    <MenubarTrigger>
+                        <Button onClick={handleDownloadPdf} style={{backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))"}} className='p-0 h-auto bg-transparent hover:bg-transparent text-accent-foreground'>
                             <Download className="mr-2 h-4 w-4" /> Download PDF
                         </Button>
                     </MenubarTrigger>
                 </MenubarMenu>
                 <MenubarMenu>
-                     <MenubarTrigger asChild>
-                        <Button onClick={handleClearForm} variant="outline" className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive">
+                     <MenubarTrigger>
+                        <Button onClick={handleClearForm} variant="outline" className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive p-0 h-auto bg-transparent">
                             <Eraser className="mr-2 h-4 w-4" /> Clear Form
                         </Button>
                     </MenubarTrigger>
@@ -207,7 +220,7 @@ export function InvoiceForm() {
                 ref={fileInputRef}
                 onChange={handleFileChange}
                 className="hidden"
-                accept="image/*,application/pdf"
+                accept="image/*"
                 disabled={isExtracting}
             />
         </div>
@@ -296,7 +309,7 @@ export function InvoiceForm() {
                         <TableCell>
                           <Input className="text-right" type="number" value={item.price} onChange={e => handleItemChange(item.id, 'price', parseFloat(e.target.value) || 0)} min="0" step="0.01" placeholder="0.00" />
                         </TableCell>
-                        <TableCell className="font-medium text-right">{(Number(item.quantity) * Number(item.price)).toFixed(2)}</TableCell>
+                        <TableCell className="font-medium text-right">{!isNaN(item.quantity) && !isNaN(item.price) ? (Number(item.quantity) * Number(item.price)).toFixed(2) : '0.00'}</TableCell>
                         <TableCell className="text-right no-print">
                           <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} aria-label="Remove item">
                             <Trash2 className="h-4 w-4 text-destructive" />

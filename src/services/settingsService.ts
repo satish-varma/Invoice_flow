@@ -55,54 +55,44 @@ async function contactExists(contacts: any[] | undefined, displayName: string): 
 export async function saveBillToContact(contact: Omit<BillToContact, 'id'>): Promise<void> {
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
-        const settings = await getSettings();
-        if (await contactExists(settings?.billToContacts, contact.displayName)) {
-            throw new Error("A Bill To contact with this Display Name already exists.");
-        }
-        await updateDoc(settingsRef, {
-            billToContacts: arrayUnion(contact)
-        });
-    } catch (error) {
-        if (error instanceof Error && error.message.includes("No document to update")) {
-            // The document doesn't exist, so create it.
-            try {
-                const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
-                await setDoc(settingsRef, { billToContacts: [contact] }, { merge: true });
-            } catch (e) {
-                console.error("Error creating settings doc for Bill To contact: ", e);
-                throw new Error("Failed to save Bill To contact.");
-            }
+        const docSnap = await getDoc(settingsRef);
+
+        if (docSnap.exists()) {
+             const settings = docSnap.data() as Settings;
+             if (await contactExists(settings.billToContacts, contact.displayName)) {
+                throw new Error("A Bill To contact with this Display Name already exists.");
+             }
+             await updateDoc(settingsRef, {
+                 billToContacts: arrayUnion(contact)
+             });
         } else {
-            console.error("Error saving Bill To contact: ", error);
-            throw new Error("Failed to save Bill To contact.");
+             await setDoc(settingsRef, { billToContacts: [contact], shipToContacts: [] });
         }
+    } catch (error) {
+        console.error("Error saving Bill To contact: ", error);
+        throw new Error("Failed to save Bill To contact.");
     }
 }
 
 export async function saveShipToContact(contact: Omit<ShipToContact, 'id'>): Promise<void> {
-    try {
+     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
-        const settings = await getSettings();
-        if (await contactExists(settings?.shipToContacts, contact.displayName)) {
-            throw new Error("A Ship To contact with this Display Name already exists.");
-        }
-        await updateDoc(settingsRef, {
-            shipToContacts: arrayUnion(contact)
-        });
-    } catch (error) {
-         if (error instanceof Error && error.message.includes("No document to update")) {
-            // The document doesn't exist, so create it.
-            try {
-                const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
-                await setDoc(settingsRef, { shipToContacts: [contact] }, { merge: true });
-            } catch (e) {
-                console.error("Error creating settings doc for Ship To contact: ", e);
-                throw new Error("Failed to save Ship To contact.");
-            }
+        const docSnap = await getDoc(settingsRef);
+
+        if (docSnap.exists()) {
+             const settings = docSnap.data() as Settings;
+             if (await contactExists(settings.shipToContacts, contact.displayName)) {
+                throw new Error("A Ship To contact with this Display Name already exists.");
+             }
+             await updateDoc(settingsRef, {
+                 shipToContacts: arrayUnion(contact)
+             });
         } else {
-            console.error("Error saving Ship To contact: ", error);
-            throw new Error("Failed to save Ship To contact.");
+             await setDoc(settingsRef, { shipToContacts: [contact], billToContacts: [] });
         }
+    } catch (error) {
+        console.error("Error saving Ship To contact: ", error);
+        throw new Error("Failed to save Ship To contact.");
     }
 }
 

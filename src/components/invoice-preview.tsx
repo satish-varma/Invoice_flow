@@ -59,9 +59,9 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="px-6">
                     <Separator className='bg-gray-200'/>
-                    <div className="grid grid-cols-[65%_35%] gap-8 items-center">
+                    <div className="grid grid-cols-[65%_35%] gap-8 items-center py-6">
                         <div className="space-y-1">
                             <p className='font-bold text-gray-500'>Bill To:</p>
                             <p className='font-bold'>{invoice.billToName}</p>

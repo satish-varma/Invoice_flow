@@ -198,7 +198,7 @@ export async function updateShipToContact(contact: ShipToContact): Promise<void>
 export async function setDefaultBillToContact(id: string): Promise<void> {
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
-        await updateDoc(settingsRef, { defaultBillToContact: id });
+        await setDoc(settingsRef, { defaultBillToContact: id }, { merge: true });
     } catch (error) {
         console.error("Error setting default Bill To contact: ", error);
         throw new Error("Failed to set default Bill To contact.");
@@ -208,7 +208,7 @@ export async function setDefaultBillToContact(id: string): Promise<void> {
 export async function setDefaultShipToContact(id: string): Promise<void> {
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
-        await updateDoc(settingsRef, { defaultShipToContact: id });
+        await setDoc(settingsRef, { defaultShipToContact: id }, { merge: true });
     } catch (error) {
         console.error("Error setting default Ship To contact: ", error);
         throw new Error("Failed to set default Ship To contact.");

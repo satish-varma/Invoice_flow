@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -60,7 +59,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                 </CardHeader>
                 <CardContent className="p-6">
                     <Separator className='my-4 bg-gray-200'/>
-                    <div className="grid grid-cols-[70%_30%] gap-8 items-center">
+                    <div className="grid grid-cols-[60%_40%] gap-8 items-center">
                         <div className="space-y-1">
                             <p className='font-bold text-gray-500'>Bill To:</p>
                             <p className='font-bold'>{invoice.billToName}</p>

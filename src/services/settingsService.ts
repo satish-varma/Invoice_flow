@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 export interface BillToContact {
-    id: string; // Keep ID for potential future use, but it's mainly the key in the map
+    id?: string; // Not stored, used for client-side keying if needed
     displayName: string;
     name: string;
     address: string;
@@ -13,7 +13,7 @@ export interface BillToContact {
 }
 
 export interface ShipToContact {
-    id: string;
+    id?: string; // Not stored, used for client-side keying if needed
     displayName: string;
     name: string;
     address: string;
@@ -70,6 +70,9 @@ export async function saveBillToContact(contact: Omit<BillToContact, 'id'>): Pro
         }
     } catch (error) {
         console.error("Error saving Bill To contact: ", error);
+        if (error instanceof Error && error.message.includes("already exists")) {
+            throw error;
+        }
         throw new Error("Failed to save Bill To contact.");
     }
 }
@@ -92,6 +95,9 @@ export async function saveShipToContact(contact: Omit<ShipToContact, 'id'>): Pro
         }
     } catch (error) {
         console.error("Error saving Ship To contact: ", error);
+        if (error instanceof Error && error.message.includes("already exists")) {
+            throw error;
+        }
         throw new Error("Failed to save Ship To contact.");
     }
 }
@@ -140,5 +146,39 @@ export async function deleteShipToContact(displayName: string): Promise<void> {
     } catch (error) {
         console.error("Error deleting Ship To contact: ", error);
         throw new Error("Failed to delete Ship To contact.");
+    }
+}
+
+export async function updateBillToContact(contact: BillToContact): Promise<void> {
+    try {
+        const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
+        const settings = await getSettings();
+        if (!settings || !settings.billToContacts) {
+            throw new Error("Settings or contacts not found");
+        }
+        const updatedContacts = settings.billToContacts.map(c => 
+            c.displayName === contact.displayName ? contact : c
+        );
+        await updateDoc(settingsRef, { billToContacts: updatedContacts });
+    } catch (error) {
+        console.error("Error updating Bill To contact: ", error);
+        throw new Error("Failed to update Bill To contact.");
+    }
+}
+
+export async function updateShipToContact(contact: ShipToContact): Promise<void> {
+    try {
+        const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
+        const settings = await getSettings();
+        if (!settings || !settings.shipToContacts) {
+            throw new Error("Settings or contacts not found");
+        }
+        const updatedContacts = settings.shipToContacts.map(c => 
+            c.displayName === contact.displayName ? contact : c
+        );
+        await updateDoc(settingsRef, { shipToContacts: updatedContacts });
+    } catch (error) {
+        console.error("Error updating Ship To contact: ", error);
+        throw new Error("Failed to update Ship To contact.");
     }
 }

@@ -13,14 +13,17 @@ import {
     saveShipToContact,
     deleteBillToContact,
     deleteShipToContact,
+    updateBillToContact,
+    updateShipToContact,
     BillToContact,
     ShipToContact,
-    Settings,
 } from '@/services/settingsService';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader, PlusCircle, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader, PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+
 
 type ContactType = 'billTo' | 'shipTo';
 
@@ -30,6 +33,11 @@ export default function SettingsPage() {
 
     const [newBillTo, setNewBillTo] = useState<Omit<BillToContact, 'id'>>({ displayName: '', name: '', address: '', gst: '' });
     const [newShipTo, setNewShipTo] = useState<Omit<ShipToContact, 'id'>>({ displayName: '', name: '', address: '', gst: '' });
+    
+    const [editingContact, setEditingContact] = useState<BillToContact | ShipToContact | null>(null);
+    const [editingContactType, setEditingContactType] = useState<ContactType | null>(null);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
 
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -49,11 +57,13 @@ export default function SettingsPage() {
         loadSettings();
     }, []);
 
-    const handleInputChange = (form: ContactType, field: string, value: string) => {
-        if (form === 'billTo') {
+    const handleInputChange = (form: 'newBillTo' | 'newShipTo' | 'edit', field: string, value: string) => {
+        if (form === 'newBillTo') {
             setNewBillTo(prev => ({ ...prev, [field]: value }));
-        } else {
+        } else if (form === 'newShipTo') {
             setNewShipTo(prev => ({ ...prev, [field]: value }));
+        } else {
+            setEditingContact(prev => prev ? { ...prev, [field]: value } : null);
         }
     };
 
@@ -73,11 +83,40 @@ export default function SettingsPage() {
                 await saveShipToContact(contactData);
                 setNewShipTo({ displayName: '', name: '', address: '', gst: '' });
             }
-            await loadSettings(); // Refresh the list
+            await loadSettings();
             toast({ title: "Contact Saved", description: `The new ${type === 'billTo' ? '"Bill To"' : '"Ship To"'} contact has been added.` });
         } catch (error) {
             console.error(`Failed to save ${type} contact:`, error);
-            toast({ variant: "destructive", title: "Save Failed", description: `Could not save the contact. Please try again.` });
+            const errorMessage = error instanceof Error ? error.message : "Could not save the contact. Please try again.";
+            toast({ variant: "destructive", title: "Save Failed", description: errorMessage });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleEditClick = (contact: BillToContact | ShipToContact, type: ContactType) => {
+        setEditingContact(contact);
+        setEditingContactType(type);
+        setIsEditDialogOpen(true);
+    };
+
+    const handleUpdateContact = async () => {
+        if (!editingContact || !editingContactType) return;
+
+        setIsSaving(true);
+        try {
+            if (editingContactType === 'billTo') {
+                await updateBillToContact(editingContact as BillToContact);
+            } else {
+                await updateShipToContact(editingContact as ShipToContact);
+            }
+            await loadSettings();
+            setIsEditDialogOpen(false);
+            setEditingContact(null);
+            toast({ title: "Contact Updated", description: "The contact has been successfully updated." });
+        } catch (error) {
+            console.error(`Failed to update ${editingContactType} contact:`, error);
+            toast({ variant: "destructive", title: "Update Failed", description: `Could not update the contact. Please try again.` });
         } finally {
             setIsSaving(false);
         }
@@ -91,7 +130,7 @@ export default function SettingsPage() {
             } else {
                 await deleteShipToContact(displayName);
             }
-            await loadSettings(); // Refresh the list
+            await loadSettings();
             toast({ title: "Contact Deleted", description: "The contact has been removed." });
         } catch (error) {
             console.error(`Failed to delete ${type} contact:`, error);
@@ -138,19 +177,19 @@ export default function SettingsPage() {
                                <h3 className="font-bold">Add New "Bill To" Contact</h3>
                                 <div className="space-y-2">
                                     <Label htmlFor="billToDisplayName">Display Name (Unique)</Label>
-                                    <Input id="billToDisplayName" placeholder="e.g., Main Client" value={newBillTo.displayName} onChange={e => handleInputChange('billTo', 'displayName', e.target.value)} />
+                                    <Input id="billToDisplayName" placeholder="e.g., Main Client" value={newBillTo.displayName} onChange={e => handleInputChange('newBillTo', 'displayName', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="billToName">Name</Label>
-                                    <Input id="billToName" placeholder="Client Company Name" value={newBillTo.name} onChange={e => handleInputChange('billTo', 'name', e.target.value)} />
+                                    <Input id="billToName" placeholder="Client Company Name" value={newBillTo.name} onChange={e => handleInputChange('newBillTo', 'name', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="billToAddress">Address</Label>
-                                    <Textarea id="billToAddress" placeholder="Client Address" value={newBillTo.address} onChange={e => handleInputChange('billTo', 'address', e.target.value)} />
+                                    <Textarea id="billToAddress" placeholder="Client Address" value={newBillTo.address} onChange={e => handleInputChange('newBillTo', 'address', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="billToGst">GST No.</Label>
-                                    <Input id="billToGst" placeholder="Client GST Number" value={newBillTo.gst} onChange={e => handleInputChange('billTo', 'gst', e.target.value)} />
+                                    <Input id="billToGst" placeholder="Client GST Number" value={newBillTo.gst} onChange={e => handleInputChange('newBillTo', 'gst', e.target.value)} />
                                 </div>
                                 <Button onClick={() => handleAddContact('billTo')} disabled={isSaving} size="sm">
                                     {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />} Add Bill To
@@ -164,7 +203,7 @@ export default function SettingsPage() {
                                             <TableRow>
                                                 <TableHead>Display Name</TableHead>
                                                 <TableHead>Name</TableHead>
-                                                <TableHead className="text-right">Action</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -174,6 +213,7 @@ export default function SettingsPage() {
                                                     <TableCell className="font-medium">{c.displayName}</TableCell>
                                                     <TableCell>{c.name}</TableCell>
                                                     <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(c, 'billTo')} disabled={isSaving}><Pencil className="h-4 w-4" /></Button>
                                                         <Button variant="ghost" size="icon" onClick={() => handleDeleteContact('billTo', c.displayName)} disabled={isSaving}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                                     </TableCell>
                                                 </TableRow>
@@ -196,19 +236,19 @@ export default function SettingsPage() {
                                <h3 className="font-bold">Add New "Ship To" Contact</h3>
                                 <div className="space-y-2">
                                     <Label htmlFor="shipToDisplayName">Display Name (Unique)</Label>
-                                    <Input id="shipToDisplayName" placeholder="e.g., Warehouse" value={newShipTo.displayName} onChange={e => handleInputChange('shipTo', 'displayName', e.target.value)} />
+                                    <Input id="shipToDisplayName" placeholder="e.g., Warehouse" value={newShipTo.displayName} onChange={e => handleInputChange('newShipTo', 'displayName', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="shipToName">Name</Label>
-                                    <Input id="shipToName" placeholder="Shipping Location Name" value={newShipTo.name} onChange={e => handleInputChange('shipTo', 'name', e.target.value)} />
+                                    <Input id="shipToName" placeholder="Shipping Location Name" value={newShipTo.name} onChange={e => handleInputChange('newShipTo', 'name', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="shipToAddress">Address</Label>
-                                    <Textarea id="shipToAddress" placeholder="Shipping Address" value={newShipTo.address} onChange={e => handleInputChange('shipTo', 'address', e.target.value)} />
+                                    <Textarea id="shipToAddress" placeholder="Shipping Address" value={newShipTo.address} onChange={e => handleInputChange('newShipTo', 'address', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="shipToGst">GSTIN</Label>
-                                    <Input id="shipToGst" placeholder="Shipping GSTIN" value={newShipTo.gst} onChange={e => handleInputChange('shipTo', 'gst', e.target.value)} />
+                                    <Input id="shipToGst" placeholder="Shipping GSTIN" value={newShipTo.gst} onChange={e => handleInputChange('newShipTo', 'gst', e.target.value)} />
                                 </div>
                                 <Button onClick={() => handleAddContact('shipTo')} disabled={isSaving} size="sm">
                                     {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />} Add Ship To
@@ -222,7 +262,7 @@ export default function SettingsPage() {
                                             <TableRow>
                                                 <TableHead>Display Name</TableHead>
                                                 <TableHead>Name</TableHead>
-                                                <TableHead className="text-right">Action</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -232,6 +272,7 @@ export default function SettingsPage() {
                                                     <TableCell className="font-medium">{c.displayName}</TableCell>
                                                     <TableCell>{c.name}</TableCell>
                                                     <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(c, 'shipTo')} disabled={isSaving}><Pencil className="h-4 w-4" /></Button>
                                                         <Button variant="ghost" size="icon" onClick={() => handleDeleteContact('shipTo', c.displayName)} disabled={isSaving}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                                     </TableCell>
                                                 </TableRow>
@@ -244,6 +285,39 @@ export default function SettingsPage() {
                     </Card>
                 </div>
             </div>
+            {editingContact && (
+                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Edit {editingContactType === 'billTo' ? 'Bill To' : 'Ship To'} Contact</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="editDisplayName">Display Name (Unique)</Label>
+                                <Input id="editDisplayName" value={editingContact.displayName} readOnly disabled />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="editName">Name</Label>
+                                <Input id="editName" value={editingContact.name} onChange={e => handleInputChange('edit', 'name', e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="editAddress">Address</Label>
+                                <Textarea id="editAddress" value={editingContact.address} onChange={e => handleInputChange('edit', 'address', e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="editGst">GST No.</Label>
+                                <Input id="editGst" value={editingContact.gst} onChange={e => handleInputChange('edit', 'gst', e.target.value)} />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                            <Button onClick={handleUpdateContact} disabled={isSaving}>
+                                {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : 'Save Changes'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
         </main>
     );
 }

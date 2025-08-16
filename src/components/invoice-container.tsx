@@ -60,6 +60,7 @@ export function InvoiceContainer() {
     useEffect(() => {
         if (invoiceToDownload && invoicePreviewRef.current) {
             const input = invoicePreviewRef.current;
+            // Add a class for specific PDF styling if needed
             input.classList.add('pdf-capture');
             html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
                 input.classList.remove('pdf-capture');
@@ -98,6 +99,7 @@ export function InvoiceContainer() {
                     />
                 )}
             </div>
+             {/* This component is rendered off-screen and used for PDF generation */}
              {invoiceToDownload && (
                 <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
                     <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToDownload} />

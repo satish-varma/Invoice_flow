@@ -3,6 +3,7 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown, MoreHorizontal } from "lucide-react"
+import { downloadInvoicePdf } from "@/lib/pdf"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -15,11 +16,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Invoice } from "@/services/invoiceService"
 import { format } from "date-fns"
-import { downloadInvoicePdf } from "@/lib/pdf.tsx"
 
 
 // We need to pass the preview handler to the columns
-export const getColumns = (onPreview: (invoice: Invoice) => void): ColumnDef<Invoice>[] => [
+export const getColumns = (onPreview: (invoice: Invoice) => void, onDownload: (invoice: Invoice) => void): ColumnDef<Invoice>[] => [
   {
     accessorKey: "invoiceNumber",
     header: ({ column }) => {
@@ -118,7 +118,7 @@ export const getColumns = (onPreview: (invoice: Invoice) => void): ColumnDef<Inv
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onPreview(invoice)}>View details</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => downloadInvoicePdf(invoice)}>Download PDF</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onDownload(invoice)}>Download PDF</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )

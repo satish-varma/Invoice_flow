@@ -7,13 +7,19 @@ import { getColumns } from "./columns";
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader } from "lucide-react";
-import React from "react";
+import React, { useRef } from "react";
 import { InvoicePreviewDialog } from "@/components/invoice-preview-dialog";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import { InvoicePreview } from "@/components/invoice-preview";
 
 export default function InvoicesPage() {
   const [data, setData] = React.useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [previewingInvoice, setPreviewingInvoice] = React.useState<Invoice | null>(null);
+  const [invoiceToDownload, setInvoiceToDownload] = React.useState<Invoice | null>(null);
+  const invoicePreviewRef = useRef<HTMLDivElement>(null);
+
 
   React.useEffect(() => {
     async function getData() {
@@ -29,7 +35,27 @@ export default function InvoicesPage() {
     setPreviewingInvoice(invoice);
   }
 
-  const columns = React.useMemo(() => getColumns(handlePreview), []);
+  const handleDownload = (invoice: Invoice) => {
+    setInvoiceToDownload(invoice);
+  };
+
+  React.useEffect(() => {
+    if (invoiceToDownload && invoicePreviewRef.current) {
+        const input = invoicePreviewRef.current;
+        html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`invoice-${invoiceToDownload.invoiceNumber || 'untitled'}.pdf`);
+            setInvoiceToDownload(null);
+        });
+    }
+  }, [invoiceToDownload]);
+
+  const columns = React.useMemo(() => getColumns(handlePreview, handleDownload), []);
 
   if (isLoading) {
     return (
@@ -72,6 +98,12 @@ export default function InvoicesPage() {
           }
         }}
       />
+    )}
+    {/* This component is rendered off-screen and used for PDF generation */}
+    {invoiceToDownload && (
+        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+            <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToDownload} />
+        </div>
     )}
     </>
   );

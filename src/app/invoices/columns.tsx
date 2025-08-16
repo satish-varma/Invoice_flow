@@ -3,8 +3,6 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown, MoreHorizontal } from "lucide-react"
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 import { Button } from "@/components/ui/button"
 import {
@@ -17,53 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Invoice } from "@/services/invoiceService"
 import { format } from "date-fns"
-import { InvoicePreview } from "@/components/invoice-preview";
-import { renderToStaticMarkup } from "react-dom/server";
+import { downloadInvoicePdf } from "@/lib/pdf"
 
-
-const handleDownload = (invoice: Invoice) => {
-    const invoiceElement = document.createElement('div');
-    invoiceElement.style.position = 'absolute';
-    invoiceElement.style.left = '-9999px';
-    invoiceElement.style.top = '-9999px';
-    invoiceElement.style.width = '800px';
-    
-    // We need to wrap the preview in a basic HTML structure for renderToStaticMarkup
-    const staticMarkup = renderToStaticMarkup(
-        <html lang="en">
-            <body>
-                <div style={{width: '800px'}}>
-                     <InvoicePreview invoice={invoice} />
-                </div>
-            </body>
-        </html>
-    );
-    // Inject the static markup into our container element
-    invoiceElement.innerHTML = staticMarkup;
-    document.body.appendChild(invoiceElement);
-    
-    const input = invoiceElement.querySelector('.invoice-preview-container') as HTMLElement;
-    
-    if (input) {
-      input.classList.add('pdf-capture');
-      html2canvas(input, { scale: 2, useCORS: true, logging: false }).then((canvas) => {
-        input.classList.remove('pdf-capture');
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`invoice-${invoice.invoiceNumber || 'untitled'}.pdf`);
-        document.body.removeChild(invoiceElement);
-      }).catch(err => {
-        console.error("Error generating PDF", err);
-        document.body.removeChild(invoiceElement);
-      });
-    } else {
-       document.body.removeChild(invoiceElement);
-    }
-};
 
 // We need to pass the preview handler to the columns
 export const getColumns = (onPreview: (invoice: Invoice) => void): ColumnDef<Invoice>[] => [
@@ -165,7 +118,7 @@ export const getColumns = (onPreview: (invoice: Invoice) => void): ColumnDef<Inv
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onPreview(invoice)}>View details</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleDownload(invoice)}>Download PDF</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => downloadInvoicePdf(invoice)}>Download PDF</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )

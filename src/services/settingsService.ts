@@ -4,12 +4,6 @@
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-export interface Signature {
-    id: string;
-    name: string;
-    url: string; // data URI
-}
-
 export interface Settings {
     id?: string;
     billToName?: string;
@@ -18,8 +12,6 @@ export interface Settings {
     shipToName?: string;
     shipToAddress?: string;
     shipToGst?: string;
-    signatures?: Signature[];
-    defaultSignatureId?: string;
 }
 
 const SETTINGS_COLLECTION = 'settings';

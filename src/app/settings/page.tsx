@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,19 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { getSettings, saveSettings, Settings } from '@/services/settingsService';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader, Save, Trash2, Upload } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import Image from 'next/image';
+import { ArrowLeft, Loader, Save } from 'lucide-react';
 import Link from 'next/link';
-
-function fileToDataUri(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-}
 
 export default function SettingsPage() {
     const [settings, setSettings] = useState<Settings>({
@@ -31,12 +20,9 @@ export default function SettingsPage() {
         shipToName: '',
         shipToAddress: '',
         shipToGst: '',
-        signatures: [],
-        defaultSignatureId: '',
     });
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    const signatureInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -55,49 +41,6 @@ export default function SettingsPage() {
         setSettings(prev => ({ ...prev, [field]: value }));
     };
     
-    const handleSignatureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        try {
-            const dataUri = await fileToDataUri(file);
-            const newSignature = {
-                id: `sig_${Date.now()}`,
-                name: file.name,
-                url: dataUri,
-            };
-            const updatedSignatures = [...(settings.signatures || []), newSignature];
-            setSettings(prev => ({ ...prev, signatures: updatedSignatures }));
-            
-            // If it's the first signature, set it as default
-            if (updatedSignatures.length === 1) {
-                handleInputChange('defaultSignatureId', newSignature.id);
-            }
-
-            toast({ title: "Signature Uploaded", description: "Remember to save your changes." });
-
-        } catch (error) {
-            console.error("Failed to upload signature:", error);
-            toast({ variant: "destructive", title: "Upload Failed", description: "Could not process the signature file." });
-        } finally {
-            if (signatureInputRef.current) {
-                signatureInputRef.current.value = '';
-            }
-        }
-    };
-    
-    const handleRemoveSignature = (id: string) => {
-        const updatedSignatures = settings.signatures?.filter(sig => sig.id !== id) || [];
-        const isDefaultRemoved = settings.defaultSignatureId === id;
-
-        setSettings(prev => ({
-            ...prev,
-            signatures: updatedSignatures,
-            // If the default signature was removed, reset it.
-            defaultSignatureId: isDefaultRemoved ? (updatedSignatures[0]?.id || '') : prev.defaultSignatureId,
-        }));
-    }
-
     const handleSaveChanges = async () => {
         setIsSaving(true);
         try {
@@ -131,7 +74,7 @@ export default function SettingsPage() {
                             </Link>
                         </Button>
                         <h1 className="text-4xl font-headline font-bold text-primary mt-4">Settings</h1>
-                        <p className="text-muted-foreground">Manage your default invoice information and signatures.</p>
+                        <p className="text-muted-foreground">Manage your default invoice information.</p>
                     </div>
                      <Button onClick={handleSaveChanges} disabled={isSaving}>
                         {isSaving ? <><Loader className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : <><Save className="mr-2 h-4 w-4" /> Save Changes</>}
@@ -176,54 +119,8 @@ export default function SettingsPage() {
                                 </div>
                             </div>
                         </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Signature Management</CardTitle>
-                            <CardDescription>Upload your signatures and select a default for new invoices.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <input type="file" ref={signatureInputRef} onChange={handleSignatureUpload} className="hidden" accept="image/*" />
-                             <Button variant="outline" onClick={() => signatureInputRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Upload Signature</Button>
-                        
-                            {settings.signatures && settings.signatures.length > 0 && (
-                                <div className="mt-6">
-                                    <Label>Select Default Signature</Label>
-                                     <RadioGroup
-                                        value={settings.defaultSignatureId}
-                                        onValueChange={(id) => handleInputChange('defaultSignatureId', id)}
-                                        className="mt-2 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-                                    >
-                                        {settings.signatures.map(sig => (
-                                            <div key={sig.id} className="relative group">
-                                                <Label htmlFor={sig.id} className="block border-2 rounded-md p-2 cursor-pointer has-[:checked]:border-primary">
-                                                    <div className="flex items-center space-x-2">
-                                                         <RadioGroupItem value={sig.id} id={sig.id} />
-                                                        <div className="flex-grow">
-                                                            <div className="bg-gray-100 rounded-md p-2 h-24 flex items-center justify-center">
-                                                                <Image src={sig.url} alt={sig.name} width={120} height={40} className="object-contain max-h-full" />
-                                                            </div>
-                                                            <p className="text-sm font-normal mt-2 truncate" title={sig.name}>{sig.name}</p>
-                                                        </div>
-                                                    </div>
-                                                </Label>
-                                                <Button 
-                                                    variant="destructive" 
-                                                    size="icon" 
-                                                    className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    onClick={() => handleRemoveSignature(sig.id)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </RadioGroup>
-                                </div>
-                            )}
-                        </CardContent>
                          <CardFooter>
-                            <p className="text-xs text-muted-foreground">The default signature will appear on all newly created invoices and PDFs.</p>
+                            <p className="text-xs text-muted-foreground">This information will be used to pre-fill the "Bill To" and "Ship To" sections when you create a new invoice.</p>
                          </CardFooter>
                     </Card>
                 </div>

@@ -28,8 +28,6 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
         str += (Number(n[5]) != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
         return str.trim().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ') + ' Only';
     };
-
-    const defaultSignature = settings?.signatures?.find(s => s.id === settings.defaultSignatureId);
     
     return (
         <div ref={ref} className="invoice-preview-container bg-white text-black p-8">
@@ -142,11 +140,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                         <div className='flex flex-col justify-between items-end h-full text-sm'>
                             <div>For THE GUT GURU</div>
                              <div className='flex flex-col items-center'>
-                                {defaultSignature ? (
-                                    <Image src={defaultSignature.url} alt="Company Signature" width={150} height={50} className='h-12 object-contain' />
-                                ) : (
-                                    <img src='https://placehold.co/150x50.png' alt='Company Signature' className='h-12' data-ai-hint="company signature" />
-                                )}
+                                <Image src="/signature.png" alt="Company Signature" width={150} height={50} className='h-12 object-contain' />
                                 <p className='text-xs pt-1 border-t border-gray-400 w-full text-center'>Authorized Signature</p>
                              </div>
                          </div>

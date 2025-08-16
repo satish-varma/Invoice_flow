@@ -184,34 +184,28 @@ export function InvoiceForm() {
             </div>
             <Menubar>
                 <MenubarMenu>
-                    <MenubarTrigger>
-                        <Button onClick={() => fileInputRef.current?.click()} disabled={isExtracting} className='bg-transparent text-foreground hover:bg-transparent p-0 h-auto'>
-                            {isExtracting ? (
-                                <>
-                                    <Loader className="mr-2 h-4 w-4 animate-spin" />
-                                    Extracting...
-                                </>
-                            ) : (
+                    <MenubarTrigger onClick={() => fileInputRef.current?.click()} disabled={isExtracting} className="cursor-pointer">
+                        {isExtracting ? (
                             <>
-                                <Wand2 className="mr-2 h-4 w-4" />
-                                    Autofill from Image
+                                <Loader className="mr-2 h-4 w-4 animate-spin" />
+                                Extracting...
                             </>
-                            )}
-                        </Button>
+                        ) : (
+                        <>
+                            <Wand2 className="mr-2 h-4 w-4" />
+                                Autofill from Image
+                        </>
+                        )}
                     </MenubarTrigger>
                 </MenubarMenu>
                 <MenubarMenu>
-                    <MenubarTrigger>
-                        <Button onClick={handleDownloadPdf} style={{backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))"}} className='p-0 h-auto bg-transparent hover:bg-transparent text-accent-foreground'>
-                            <Download className="mr-2 h-4 w-4" /> Download PDF
-                        </Button>
+                    <MenubarTrigger onClick={handleDownloadPdf} className="cursor-pointer bg-accent text-accent-foreground hover:bg-accent/90 focus:bg-accent data-[state=open]:bg-accent">
+                        <Download className="mr-2 h-4 w-4" /> Download PDF
                     </MenubarTrigger>
                 </MenubarMenu>
                 <MenubarMenu>
-                     <MenubarTrigger>
-                        <Button onClick={handleClearForm} variant="outline" className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive p-0 h-auto bg-transparent">
-                            <Eraser className="mr-2 h-4 w-4" /> Clear Form
-                        </Button>
+                     <MenubarTrigger onClick={handleClearForm} className="cursor-pointer text-destructive hover:bg-destructive/10 focus:bg-destructive/10 data-[state=open]:bg-destructive/10">
+                        <Eraser className="mr-2 h-4 w-4" /> Clear Form
                     </MenubarTrigger>
                 </MenubarMenu>
             </Menubar>
@@ -353,3 +347,5 @@ export function InvoiceForm() {
     </>
   );
 }
+
+  

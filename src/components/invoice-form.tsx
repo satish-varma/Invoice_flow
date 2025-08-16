@@ -80,16 +80,16 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
 
             // Apply defaults only for new invoices
             if (!initialData) {
-                if (loadedSettings.defaultBillToContact) {
-                    const defaultContact = loadedSettings.billToContacts?.find(c => c.id === loadedSettings.defaultBillToContact);
+                if (loadedSettings.defaultBillToContact && loadedSettings.billToContacts) {
+                    const defaultContact = loadedSettings.billToContacts.find(c => c.id === loadedSettings.defaultBillToContact);
                     if (defaultContact) {
                         setBillToName(defaultContact.name);
                         setBillToAddress(defaultContact.address);
                         setBillToGst(defaultContact.gst);
                     }
                 }
-                 if (loadedSettings.defaultShipToContact) {
-                    const defaultContact = loadedSettings.shipToContacts?.find(c => c.id === loadedSettings.defaultShipToContact);
+                 if (loadedSettings.defaultShipToContact && loadedSettings.shipToContacts) {
+                    const defaultContact = loadedSettings.shipToContacts.find(c => c.id === loadedSettings.defaultShipToContact);
                     if (defaultContact) {
                         setShipToName(defaultContact.name);
                         setShipToAddress(defaultContact.address);
@@ -370,7 +370,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 <SelectValue placeholder="Select a billing contact" />
                             </SelectTrigger>
                             <SelectContent>
-                                {(settings.billToContacts || []).map(c => <SelectItem key={c.id} value={c.id}>{c.displayName}</SelectItem>)}
+                                {settings.billToContacts && settings.billToContacts.map(c => <SelectItem key={c.id} value={c.id}>{c.displayName}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -437,7 +437,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 <SelectValue placeholder="Select a shipping contact" />
                             </SelectTrigger>
                             <SelectContent>
-                                {(settings.shipToContacts || []).map(c => <SelectItem key={c.id} value={c.id}>{c.displayName}</SelectItem>)}
+                                {settings.shipToContacts && settings.shipToContacts.map(c => <SelectItem key={c.id} value={c.id}>{c.displayName}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>

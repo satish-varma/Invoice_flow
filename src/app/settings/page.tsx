@@ -230,8 +230,8 @@ export default function SettingsPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {(settings.billToContacts || []).length === 0 && <TableRow><TableCell colSpan={3} className="text-center h-24">No contacts saved.</TableCell></TableRow>}
-                                            {(settings.billToContacts || []).map(c => (
+                                            {(!settings.billToContacts || settings.billToContacts.length === 0) && <TableRow><TableCell colSpan={3} className="text-center h-24">No contacts saved.</TableCell></TableRow>}
+                                            {settings.billToContacts && settings.billToContacts.map(c => (
                                                 <TableRow key={c.id}>
                                                     <TableCell className="font-medium">{c.displayName}</TableCell>
                                                     <TableCell>{c.name}</TableCell>
@@ -292,8 +292,8 @@ export default function SettingsPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {(settings.shipToContacts || []).length === 0 && <TableRow><TableCell colSpan={3} className="text-center h-24">No contacts saved.</TableCell></TableRow>}
-                                            {(settings.shipToContacts || []).map(c => (
+                                            {(!settings.shipToContacts || settings.shipToContacts.length === 0) && <TableRow><TableCell colSpan={3} className="text-center h-24">No contacts saved.</TableCell></TableRow>}
+                                            {settings.shipToContacts && settings.shipToContacts.map(c => (
                                                 <TableRow key={c.id}>
                                                     <TableCell className="font-medium">{c.displayName}</TableCell>
                                                     <TableCell>{c.name}</TableCell>

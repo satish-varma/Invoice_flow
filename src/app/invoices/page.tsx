@@ -33,12 +33,19 @@ export default function InvoicesPage() {
   }, []);
   
   const generatePdf = async (invoice: Invoice, output: 'dataurl' | 'save') => {
-    setInvoiceToDownload(invoice);
+    // Ensure the component is ready for capture
+    if (output === 'save') {
+        setInvoiceToDownload(invoice);
+    }
+    
     // Use a timeout to allow the off-screen InvoicePreview to render
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, 100));
   
     const input = invoicePreviewRef.current;
-    if (!input) return null;
+    if (!input) {
+        if(output === 'save') setInvoiceToDownload(null);
+        return null;
+    };
   
     const canvas = await html2canvas(input, { scale: 2, useCORS: true });
     const imgData = canvas.toDataURL('image/png');
@@ -47,10 +54,10 @@ export default function InvoicesPage() {
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
     
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    setInvoiceToDownload(null);
-  
+    
     if (output === 'save') {
       pdf.save(`invoice-${invoice.invoiceNumber || 'untitled'}.pdf`);
+      setInvoiceToDownload(null); // Clean up after download
       return null;
     } else {
       return pdf.output('datauristring');
@@ -78,6 +85,11 @@ export default function InvoicesPage() {
   }
 
   const columns = React.useMemo(() => getColumns(handlePreview, handleDownload), []);
+  
+  // The invoice that needs to be rendered off-screen for PDF generation.
+  // It's either the one being downloaded, or the one being previewed (while the PDF is generating).
+  const invoiceForPdf = invoiceToDownload || (previewingInvoice && isGeneratingPdf ? previewingInvoice : null);
+
 
   if (isLoading) {
     return (
@@ -124,9 +136,9 @@ export default function InvoicesPage() {
       />
     )}
     {/* This component is rendered off-screen and used for PDF generation */}
-    {(invoiceToDownload || (previewingInvoice && isGeneratingPdf)) && (
-        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-            <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToDownload || previewingInvoice!} />
+    {invoiceForPdf && (
+        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', zIndex: -1 }}>
+            <InvoicePreview ref={invoicePreviewRef} invoice={invoiceForPdf} />
         </div>
     )}
     </>

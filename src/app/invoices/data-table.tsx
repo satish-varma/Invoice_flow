@@ -66,9 +66,9 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
         <div className="flex items-center py-4">
             <Input
             placeholder="Filter by customer name..."
-            value={(table.getColumn("customerName")?.getFilterValue() as string) ?? ""}
+            value={(table.getColumn("billToName")?.getFilterValue() as string) ?? ""}
             onChange={(event) =>
-                table.getColumn("customerName")?.setFilterValue(event.target.value)
+                table.getColumn("billToName")?.setFilterValue(event.target.value)
             }
             className="max-w-sm"
             />
@@ -138,3 +138,5 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
     </div>
   )
 }
+
+    

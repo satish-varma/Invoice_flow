@@ -16,6 +16,7 @@ import { Textarea } from './ui/textarea';
 import { Menubar, MenubarMenu, MenubarTrigger } from './ui/menubar';
 import { Invoice, saveInvoice } from '@/services/invoiceService';
 import Link from 'next/link';
+import { Label } from './ui/label';
 
 type LineItem = {
   id: number;
@@ -44,6 +45,18 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [date, setDate] = useState<Date | undefined>(new Date());
+  
+  const [period, setPeriod] = useState('');
+  const [delivery, setDelivery] = useState('');
+  
+  const [billToName, setBillToName] = useState('');
+  const [billToAddress, setBillToAddress] = useState('');
+  const [billToGst, setBillToGst] = useState('');
+  
+  const [shipToName, setShipToName] = useState('');
+  const [shipToAddress, setShipToAddress] = useState('');
+  const [shipToGst, setShipToGst] = useState('');
+  
   const [lineItems, setLineItems] = useState<LineItem[]>([
     { id: 1, name: '', quantity: 1, price: 0 },
   ]);
@@ -59,6 +72,14 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
           setCustomerName(initialData.customerName);
           setCustomerAddress(initialData.customerAddress);
           setDate(new Date(initialData.date));
+          setPeriod(initialData.period || '');
+          setDelivery(initialData.delivery || '');
+          setBillToName(initialData.billToName || '');
+          setBillToAddress(initialData.billToAddress || '');
+          setBillToGst(initialData.billToGst || '');
+          setShipToName(initialData.shipToName || '');
+          setShipToAddress(initialData.shipToAddress || '');
+          setShipToGst(initialData.shipToGst || '');
           setLineItems(initialData.lineItems.map((item, index) => ({
               id: item.id || Date.now() + index,
               ...item
@@ -82,12 +103,9 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     ));
   };
   
-  const { subtotal, tax, total } = useMemo(() => {
+  const { subtotal, total } = useMemo(() => {
     const subtotal = lineItems.reduce((acc, item) => acc + Number(item.quantity) * Number(item.price), 0);
-    const taxRate = 0.10; // 10% tax
-    const tax = subtotal * taxRate;
-    const total = subtotal + tax;
-    return { subtotal, tax, total };
+    return { subtotal, total: subtotal };
   }, [lineItems]);
 
   const handleClearForm = () => {
@@ -95,15 +113,23 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     setCustomerName('');
     setCustomerAddress('');
     setDate(new Date());
+    setPeriod('');
+    setDelivery('');
+    setBillToName('');
+    setBillToAddress('');
+    setBillToGst('');
+    setShipToName('');
+    setShipToAddress('');
+    setShipToGst('');
     setLineItems([{ id: Date.now(), name: '', quantity: 1, price: 0 }]);
     onAddNew();
   };
   
   const handleSaveInvoice = async () => {
-    if(!customerName) {
+    if(!billToName) {
         toast({
             variant: "destructive",
-            title: "Customer name is required",
+            title: "Bill To Name is required",
         });
         return;
     }
@@ -112,12 +138,23 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     try {
         const invoiceData = {
             id: initialData?.id,
-            customerName,
-            customerAddress,
+            // Deprecated fields, kept for compatibility but should be removed later
+            customerName: billToName, 
+            customerAddress: billToAddress,
+            tax: 0, // No tax in the new design
+
+            // New fields
             date: date?.toISOString() || new Date().toISOString(),
+            period,
+            delivery,
+            billToName,
+            billToAddress,
+            billToGst,
+            shipToName,
+            shipToAddress,
+            shipToGst,
             lineItems: lineItems.map(({ id, ...item }) => item), // Create clean copy without id
             subtotal,
-            tax,
             total,
         };
         await saveInvoice(invoiceData);
@@ -148,7 +185,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         const result: ExtractInvoiceDataOutput = await extractInvoiceData({ photoDataUri: dataUri });
 
         if (result.invoiceNumber) setInvoiceNumber(result.invoiceNumber);
-        if (result.customerName) setCustomerName(result.customerName);
+        if (result.customerName) setBillToName(result.customerName);
         if (result.date) {
             const parsedDate = new Date(result.date + 'T00:00:00');
             if (!isNaN(parsedDate.getTime())) {
@@ -196,7 +233,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             </div>
             <Menubar>
                 <MenubarMenu>
-                    <MenubarTrigger onClick={onAddNew} className="cursor-pointer">
+                    <MenubarTrigger onClick={handleClearForm} className="cursor-pointer">
                         <FilePlus className="mr-2 h-4 w-4" /> New
                     </MenubarTrigger>
                 </MenubarMenu>
@@ -250,73 +287,102 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
       </div>
           <Card className="w-full shadow-lg">
             <CardHeader className="bg-muted/20 p-6">
-              <div className="flex justify-between items-start">
-                  <div className='flex items-center gap-4'>
-                      <div className="bg-primary p-3 rounded-lg">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary-foreground"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-1V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2Z"/><path d="M9 14h6"/><path d="M12 11v6"/></svg>
-                      </div>
-                      <div>
-                          <p className="font-bold text-lg">The Gut Guru</p>
-                          <p className='text-sm text-muted-foreground'>H NO.6-46/3/A, Venkateswarao nagar, Chanda Nagar, Hyderabad-500050</p>
-                      </div>
-                  </div>
-                  <div className="text-right">
-                      <CardTitle className="text-4xl font-bold text-primary tracking-tight">INVOICE</CardTitle>
-                      <div className="flex items-center justify-end gap-2 mt-2">
-                        <label htmlFor="invoiceNumber" className="text-sm font-medium">#</label>
-                        <Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className="max-w-[150px] h-8 text-right" readOnly={!!initialData || !invoiceNumber} placeholder="INV-..." />
-                      </div>
-                  </div>
-              </div>
+              <CardTitle>Invoice Details</CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-2 gap-8">
-                  <div>
-                      <h3 className='font-semibold text-muted-foreground mb-2'>BILL TO</h3>
-                      <Input id="customerName" placeholder="Customer Name" value={customerName} onChange={e => setCustomerName(e.target.value)} className="mb-2"/>
-                      <Textarea id="customerAddress" placeholder="Customer Address" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} />
-                  </div>
-                  <div className='grid grid-cols-2 gap-4 text-sm'>
-                      <div className="font-semibold text-muted-foreground">Invoice Date</div>
-                      <div>
-                          <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  id="date"
-                                  variant={"outline"}
-                                  className="w-full justify-start text-left font-normal"
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {date ? format(date, "PPP") : <span>Pick a date</span>}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="end">
-                                <Calendar
-                                  mode="single"
-                                  selected={date}
-                                  onSelect={setDate}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                      </div>
-
-                      <div className="font-semibold text-muted-foreground">Due Date</div>
-                      <div>{date ? format(new Date(date.getTime() + 15 * 24 * 60 * 60 * 1000), "PPP") : '-'}</div>
-
-                      <div className="font-semibold text-muted-foreground">Period</div>
-                      <div>{date ? format(date, "MMMM yyyy") : '-'}</div>
-                  </div>
+            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Left Column */}
+              <div>
+                <h3 className="font-bold text-lg mb-4">From</h3>
+                <div className="space-y-2">
+                    <p className='font-bold'>THE GUT GURU</p>
+                    <p className='text-sm text-muted-foreground'>H NO.6-46/3/A, Venkateswarao nagar, Chanda Nagar, Hyderabad-500050</p>
+                    <p className='text-sm text-muted-foreground'>GSTIN: 36DDTPJ6536D1Z8</p>
+                    <p className='text-sm text-muted-foreground'>PAN: DDTPJ6536D</p>
+                </div>
+                
+                <h3 className="font-bold text-lg mb-4 mt-8">Bill To</h3>
+                 <div className="space-y-2">
+                    <div>
+                        <Label htmlFor='billToName'>Name</Label>
+                        <Input id="billToName" placeholder="Company Name" value={billToName} onChange={e => setBillToName(e.target.value)} />
+                    </div>
+                    <div>
+                        <Label htmlFor='billToAddress'>Address</Label>
+                        <Textarea id="billToAddress" placeholder="Billing Address" value={billToAddress} onChange={e => setBillToAddress(e.target.value)} />
+                    </div>
+                    <div>
+                        <Label htmlFor='billToGst'>GST No.</Label>
+                        <Input id="billToGst" placeholder="GST Number" value={billToGst} onChange={e => setBillToGst(e.target.value)} />
+                    </div>
+                </div>
               </div>
-              
+
+              {/* Right Column */}
+              <div>
+                <div className="space-y-4">
+                    <div className='flex items-center gap-2'>
+                        <Label htmlFor="invoiceNumber" className="text-sm font-medium w-24">Invoice #</Label>
+                        <Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className="max-w-[200px]" readOnly={!!initialData || !invoiceNumber} placeholder="INV-..." />
+                    </div>
+                    <div>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <Button
+                                id="date"
+                                variant={"outline"}
+                                className="w-full justify-start text-left font-normal"
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {date ? format(date, "PPP") : <span>Pick a date</span>}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="end">
+                            <Calendar
+                                mode="single"
+                                selected={date}
+                                onSelect={setDate}
+                                initialFocus
+                            />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                    <div>
+                        <Label htmlFor='period'>Period</Label>
+                        <Input id="period" placeholder="e.g. June" value={period} onChange={e => setPeriod(e.target.value)} />
+                    </div>
+                    <div>
+                        <Label htmlFor='delivery'>Delivery</Label>
+                        <Input id="delivery" placeholder="e.g. June" value={delivery} onChange={e => setDelivery(e.target.value)} />
+                    </div>
+                </div>
+
+                <h3 className="font-bold text-lg mb-4 mt-8">Ship To</h3>
+                <div className="space-y-2">
+                    <div>
+                        <Label htmlFor='shipToName'>Name</Label>
+                        <Input id="shipToName" placeholder="Company Name" value={shipToName} onChange={e => setShipToName(e.target.value)} />
+                    </div>
+                    <div>
+                        <Label htmlFor='shipToAddress'>Address</Label>
+                        <Textarea id="shipToAddress" placeholder="Shipping Address" value={shipToAddress} onChange={e => setShipToAddress(e.target.value)} />
+                    </div>
+                    <div>
+                        <Label htmlFor='shipToGst'>GSTIN</Label>
+                        <Input id="shipToGst" placeholder="Shipping GSTIN" value={shipToGst} onChange={e => setShipToGst(e.target.value)} />
+                    </div>
+                </div>
+              </div>
+            </CardContent>
+
+            <CardContent>
               <div className="mt-6">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-1/2">Item</TableHead>
+                      <TableHead className="w-1/2">Item & Description</TableHead>
                       <TableHead className="w-[100px] text-right">Quantity</TableHead>
-                      <TableHead className="w-[120px] text-right">Price</TableHead>
-                      <TableHead className="w-[120px] text-right">Total</TableHead>
+                      <TableHead className="w-[120px] text-right">Rate</TableHead>
+                      <TableHead className="w-[120px] text-right">Amount</TableHead>
                       <TableHead className="text-right no-print w-[80px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -327,7 +393,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                           <Input placeholder="Item description" value={item.name} onChange={e => handleItemChange(item.id, 'name', e.target.value)} />
                         </TableCell>
                         <TableCell>
-                          <Input className="text-right" type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="1" />
+                          <Input className="text-right" type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="0" />
                         </TableCell>
                         <TableCell>
                           <Input className="text-right" type="number" value={item.price} onChange={e => handleItemChange(item.id, 'price', parseFloat(e.target.value) || 0)} min="0" step="0.01" placeholder="0.00" />
@@ -355,12 +421,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                   <span className="text-muted-foreground">Subtotal</span>
                   <span className='font-medium'>{subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tax (10%)</span>
-                  <span className='font-medium'>{tax.toFixed(2)}</span>
-                </div>
                 <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
-                  <span>Total</span>
+                  <span>Total Amount</span>
                   <span>{total.toFixed(2)}</span>
                 </div>
               </div>
@@ -370,6 +432,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                   <p>Bank: HDFC BANK LTD</p>
                   <p>Account Number: 50200095177481</p>
                   <p>IFSC Code: HDFC0000045</p>
+                  <p>Branch: HYDERABAD - CHANDA NAGAR</p>
               </div>
             </CardFooter>
           </Card>

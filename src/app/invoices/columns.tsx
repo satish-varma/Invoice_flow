@@ -1,5 +1,4 @@
 
-
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
@@ -28,7 +27,7 @@ export const getColumns = (onPreview: (invoice: Invoice) => void, onDownload: (i
       },
   },
   {
-    accessorKey: "customerName",
+    accessorKey: "billToName",
     header: ({ column }) => {
       return (
         <Button
@@ -40,6 +39,9 @@ export const getColumns = (onPreview: (invoice: Invoice) => void, onDownload: (i
         </Button>
       )
     },
+    cell: ({ row }) => {
+        return <div>{row.original.billToName || row.original.customerName}</div>
+    }
   },
   {
     accessorKey: "date",
@@ -137,3 +139,5 @@ export const getColumns = (onPreview: (invoice: Invoice) => void, onDownload: (i
     },
   },
 ]
+
+    

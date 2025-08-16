@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc } from 'firebase/firestore';
 
 export interface LineItem {
   id: number;
@@ -14,14 +14,26 @@ export interface LineItem {
 export interface Invoice {
   id?: string;
   invoiceNumber: string;
-  customerName: string;
-  customerAddress: string;
   date: string; // Storing date as ISO string
   lineItems: LineItem[];
   subtotal: number;
-  tax: number;
   total: number;
   createdAt?: any;
+  
+  // New fields from the template
+  period?: string;
+  delivery?: string;
+  billToName?: string;
+  billToAddress?: string;
+  billToGst?: string;
+  shipToName?: string;
+  shipToAddress?: string;
+  shipToGst?: string;
+
+  // Deprecated fields, can be removed after migration
+  customerName: string;
+  customerAddress: string;
+  tax: number;
 }
 
 const INVOICES_COLLECTION = 'invoices';
@@ -32,7 +44,8 @@ async function getNextInvoiceNumber(): Promise<string> {
 
     const newInvoiceNumber = await runTransaction(db, async (transaction) => {
         const counterDoc = await transaction.get(counterRef);
-        let nextNumber = 1;
+        // Using a fixed prefix and number for consistency with the image
+        let nextNumber = 2405; 
         if (counterDoc.exists()) {
             nextNumber = counterDoc.data().currentNumber + 1;
         }
@@ -40,21 +53,33 @@ async function getNextInvoiceNumber(): Promise<string> {
         return nextNumber;
     });
 
-    return `INV-${String(newInvoiceNumber).padStart(3, '0')}`;
+    return `TGGHS/25-26/${String(newInvoiceNumber)}`;
 }
 
 
-export async function saveInvoice(invoice: Omit<Invoice, 'id' | 'invoiceNumber' | 'createdAt'>): Promise<string> {
+export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & {id?: string}): Promise<string> {
   try {
-    const invoiceNumber = await getNextInvoiceNumber();
-    const docRef = await addDoc(collection(db, INVOICES_COLLECTION), {
-      ...invoice,
-      invoiceNumber,
-      createdAt: serverTimestamp(),
-    });
-    return docRef.id;
+    if (invoice.id) {
+      // Update existing invoice
+      const docRef = doc(db, INVOICES_COLLECTION, invoice.id);
+      const { id, ...invoiceData } = invoice;
+      await updateDoc(docRef, {
+        ...invoiceData,
+      });
+      return invoice.id;
+    } else {
+      // Create new invoice
+      const invoiceNumber = await getNextInvoiceNumber();
+      const { id, ...invoiceData } = invoice;
+      const docRef = await addDoc(collection(db, INVOICES_COLLECTION), {
+        ...invoiceData,
+        invoiceNumber,
+        createdAt: serverTimestamp(),
+      });
+      return docRef.id;
+    }
   } catch (e) {
-    console.error("Error adding document: ", e);
+    console.error("Error adding/updating document: ", e);
     throw new Error("Failed to save invoice.");
   }
 }
@@ -69,6 +94,7 @@ export async function getInvoices(): Promise<Invoice[]> {
         invoices.push({ 
             id: doc.id,
             ...data,
+            customerName: data.billToName || data.customerName, // Fallback for old data
             // Convert Firestore Timestamp to a serializable format if needed
             date: new Date(data.date).toISOString(),
             createdAt: data.createdAt?.toDate().toISOString(),
@@ -77,3 +103,4 @@ export async function getInvoices(): Promise<Invoice[]> {
     return invoices;
 }
 
+    

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from "date-fns";
 import { Invoice } from '@/services/invoiceService';
@@ -183,5 +183,3 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
     );
 });
 InvoicePreview.displayName = "InvoicePreview";
-
-    

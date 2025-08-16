@@ -28,7 +28,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
     
     return (
         <div ref={ref} className="invoice-preview-container bg-white text-black p-8">
-            <Card className="w-full shadow-none border border-gray-300" style={{width: '800px', borderRadius: '0'}}>
+            <Card className="w-full shadow-none border-0" style={{width: '800px', borderRadius: '0'}}>
                 <CardHeader className="p-6">
                     <div className='text-center pb-4'>
                         <CardTitle className="text-2xl font-bold tracking-tight">BILL OF SUPPLY</CardTitle>
@@ -40,27 +40,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                             <p className='text-sm'><span className='font-bold'>GSTIN:</span> 36DDTPJ6536D1Z8</p>
                              <p className='text-sm'><span className='font-bold'>PAN:</span> DDTPJ6536D</p>
                         </div>
-                        <p className='text-xs text-gray-500'>Original For Recipient</p>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                    <Separator className='my-4 bg-gray-200'/>
-                    <div className="grid grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                            <div className='space-y-1'>
-                                <p className='font-bold text-gray-500'>Bill To:</p>
-                                <p className='font-bold'>{invoice.billToName}</p>
-                                <p className='text-sm' style={{whiteSpace: 'pre-wrap'}}>{invoice.billToAddress}</p>
-                                {invoice.billToGst && <p className='text-sm'><span className='font-bold'>GST NO:</span> {invoice.billToGst}</p>}
-                            </div>
-                             <div className='space-y-1'>
-                                <p className='font-bold text-gray-500'>Ship To:</p>
-                                <p className='font-bold'>{invoice.shipToName}</p>
-                                <p className='text-sm' style={{whiteSpace: 'pre-wrap'}}>{invoice.shipToAddress}</p>
-                                {invoice.shipToGst && <p className='text-sm'><span className='font-bold'>GSTIN:</span> {invoice.shipToGst}</p>}
-                            </div>
-                        </div>
-                        <div className="space-y-2">
+                        <div className="space-y-2 text-sm">
                              <div className='grid grid-cols-[120px_1fr]'>
                                 <div className='font-bold'>Invoice No.:</div>
                                 <div>{invoice.invoiceNumber}</div>
@@ -77,6 +57,23 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                             </div>
                         </div>
                     </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <Separator className='my-4 bg-gray-200'/>
+                    <div className="grid grid-cols-2 gap-8">
+                        <div className="space-y-1">
+                            <p className='font-bold text-gray-500'>Bill To:</p>
+                            <p className='font-bold'>{invoice.billToName}</p>
+                            <p className='text-sm' style={{whiteSpace: 'pre-wrap'}}>{invoice.billToAddress}</p>
+                            {invoice.billToGst && <p className='text-sm'><span className='font-bold'>GST NO:</span> {invoice.billToGst}</p>}
+                        </div>
+                        <div className='space-y-1'>
+                            <p className='font-bold text-gray-500'>Ship To:</p>
+                            <p className='font-bold'>{invoice.shipToName}</p>
+                            <p className='text-sm' style={{whiteSpace: 'pre-wrap'}}>{invoice.shipToAddress}</p>
+                            {invoice.shipToGst && <p className='text-sm'><span className='font-bold'>GSTIN:</span> {invoice.shipToGst}</p>}
+                        </div>
+                    </div>
                     
                     <div className="mt-8">
                         <Table>
@@ -91,7 +88,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                         </TableHeader>
                         <TableBody>
                             {invoice.lineItems.map((item, index) => (
-                            <TableRow key={index} className="border-b border-gray-200">
+                            <TableRow key={index} className="border-b-0">
                                 <TableCell>{index + 1}</TableCell>
                                 <TableCell>{item.name}</TableCell>
                                 <TableCell className="text-right">{item.quantity}</TableCell>
@@ -111,7 +108,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                            <span className='font-bold'>In Words:</span> {inWords(invoice.total)}
                         </div>
                         <div className="w-2/5 max-w-sm text-sm grid gap-2">
-                             <div className="flex justify-between font-bold text-lg border-t-2 border-gray-300 pt-2 mt-2">
+                             <div className="flex justify-between font-bold text-lg pt-2 mt-2">
                                 <span>Total Amount</span>
                                 <span>{invoice.total.toFixed(2)}</span>
                             </div>
@@ -150,5 +147,3 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
     );
 });
 InvoicePreview.displayName = "InvoicePreview";
-
-    

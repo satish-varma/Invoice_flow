@@ -14,14 +14,26 @@ InvoiceFlow is a modern, web-based application designed to streamline the proces
 
 ## Getting Started
 
-To run this application locally, you will need to have Node.js and npm installed.
+To run this application locally, you will need to have Node.js, npm, and the Firebase CLI installed.
 
 1.  **Install Dependencies:**
     ```bash
     npm install
     ```
 
-2.  **Run the Development Server:**
+2. **Deploy Firestore Rules:**
+   The application requires open access to Firestore for development. You need to deploy the included security rules.
+   First, log in to Firebase:
+   ```bash
+   firebase login
+   ```
+   Then, deploy the rules:
+   ```bash
+   firebase deploy --only firestore
+   ```
+   **Note:** These rules are insecure and should not be used in a production environment.
+
+3.  **Run the Development Server:**
     ```bash
     npm run dev
     ```

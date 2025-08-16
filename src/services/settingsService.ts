@@ -48,9 +48,9 @@ export async function getSettings(): Promise<Settings> {
     }
 }
 
-async function contactExists(contacts: any[] | undefined, displayName: string): Promise<boolean> {
-    if (!contacts) return false;
-    return contacts.some(contact => contact.displayName === displayName);
+function contactExists(contacts: any[] | undefined, displayName: string): Promise<boolean> {
+    if (!contacts) return Promise.resolve(false);
+    return Promise.resolve(contacts.some(contact => contact.displayName === displayName));
 }
 
 export async function saveBillToContact(contact: Omit<BillToContact, 'id'>): Promise<void> {
@@ -58,17 +58,17 @@ export async function saveBillToContact(contact: Omit<BillToContact, 'id'>): Pro
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const settings = await getSettings();
         
-        if (contactExists(settings.billToContacts, contact.displayName)) {
+        if (await contactExists(settings.billToContacts, contact.displayName)) {
            throw new Error("A Bill To contact with this Display Name already exists.");
         }
 
         const newContact: BillToContact = {
             ...contact,
-            id: Date.now().toString(), // Assign a unique ID
+            id: `${Date.now()}-${Math.random()}`, // Assign a more unique ID
         };
         
         const updatedContacts = [...(settings.billToContacts || []), newContact];
-        await setDoc(settingsRef, { ...settings, billToContacts: updatedContacts });
+        await setDoc(settingsRef, { ...settings, billToContacts: updatedContacts }, { merge: true });
 
     } catch (error) {
         console.error("Error saving Bill To contact: ", error);
@@ -84,17 +84,17 @@ export async function saveShipToContact(contact: Omit<ShipToContact, 'id'>): Pro
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const settings = await getSettings();
         
-        if (contactExists(settings.shipToContacts, contact.displayName)) {
+        if (await contactExists(settings.shipToContacts, contact.displayName)) {
            throw new Error("A Ship To contact with this Display Name already exists.");
         }
 
         const newContact: ShipToContact = {
             ...contact,
-            id: Date.now().toString(), // Assign a unique ID
+            id: `${Date.now()}-${Math.random()}`, // Assign a more unique ID
         };
         
         const updatedContacts = [...(settings.shipToContacts || []), newContact];
-        await setDoc(settingsRef, { ...settings, shipToContacts: updatedContacts });
+        await setDoc(settingsRef, { ...settings, shipToContacts: updatedContacts }, { merge: true });
 
     } catch (error) {
         console.error("Error saving Ship To contact: ", error);
@@ -152,7 +152,7 @@ export async function updateBillToContact(contact: BillToContact): Promise<void>
 
         // Check for duplicate display name, excluding the current contact being edited
         const otherContacts = settings.billToContacts.filter(c => c.id !== contact.id);
-        if (contactExists(otherContacts, contact.displayName)) {
+        if (await contactExists(otherContacts, contact.displayName)) {
            throw new Error("A Bill To contact with this Display Name already exists.");
         }
 
@@ -178,7 +178,7 @@ export async function updateShipToContact(contact: ShipToContact): Promise<void>
         }
 
         const otherContacts = settings.shipToContacts.filter(c => c.id !== contact.id);
-         if (contactExists(otherContacts, contact.displayName)) {
+         if (await contactExists(otherContacts, contact.displayName)) {
            throw new Error("A Ship To contact with this Display Name already exists.");
         }
 

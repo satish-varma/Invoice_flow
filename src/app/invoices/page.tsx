@@ -7,7 +7,7 @@ import { getColumns } from "./columns";
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader } from "lucide-react";
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import { InvoicePreviewDialog } from "@/components/invoice-preview-dialog";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -17,12 +17,14 @@ export default function InvoicesPage() {
   const [data, setData] = React.useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [previewingInvoice, setPreviewingInvoice] = React.useState<Invoice | null>(null);
-  const [invoiceToDownload, setInvoiceToDownload] = React.useState<Invoice | null>(null);
+  const [invoiceToGeneratePdf, setInvoiceToGeneratePdf] = React.useState<Invoice | null>(null);
+  const [pdfOutput, setPdfOutput] = React.useState<'dataurl' | 'save' | null>(null);
+  
   const invoicePreviewRef = useRef<HTMLDivElement>(null);
   const [pdfUrl, setPdfUrl] = React.useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = React.useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     async function getData() {
       setIsLoading(true);
       const invoices = await getInvoices();
@@ -32,51 +34,53 @@ export default function InvoicesPage() {
     getData();
   }, []);
   
-  const generatePdf = async (invoice: Invoice, output: 'dataurl' | 'save') => {
-    // Ensure the component is ready for capture
-    if (output === 'save') {
-        setInvoiceToDownload(invoice);
-    }
-    
-    // Use a timeout to allow the off-screen InvoicePreview to render
-    await new Promise(resolve => setTimeout(resolve, 100));
+  useEffect(() => {
+    const generatePdf = async () => {
+      if (!invoiceToGeneratePdf || !pdfOutput || !invoicePreviewRef.current) {
+        return;
+      }
   
-    const input = invoicePreviewRef.current;
-    if (!input) {
-        if(output === 'save') setInvoiceToDownload(null);
-        return null;
+      const input = invoicePreviewRef.current;
+      const canvas = await html2canvas(input, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      
+      if (pdfOutput === 'save') {
+        pdf.save(`invoice-${invoiceToGeneratePdf.invoiceNumber || 'untitled'}.pdf`);
+      } else {
+        const url = pdf.output('datauristring');
+        setPdfUrl(url);
+      }
+
+      // Reset states
+      setIsGeneratingPdf(false);
+      setInvoiceToGeneratePdf(null);
+      setPdfOutput(null);
     };
-  
-    const canvas = await html2canvas(input, { scale: 2, useCORS: true });
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    
-    if (output === 'save') {
-      pdf.save(`invoice-${invoice.invoiceNumber || 'untitled'}.pdf`);
-      setInvoiceToDownload(null); // Clean up after download
-      return null;
-    } else {
-      return pdf.output('datauristring');
-    }
-  };
-  
-  const handlePreview = async (invoice: Invoice) => {
+
+    // Use a timeout to ensure the component has rendered before capturing
+    const timer = setTimeout(() => {
+        generatePdf();
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [invoiceToGeneratePdf, pdfOutput]);
+
+  const handlePreview = (invoice: Invoice) => {
     setPreviewingInvoice(invoice);
     setIsGeneratingPdf(true);
     setPdfUrl(null);
-    const url = await generatePdf(invoice, 'dataurl');
-    if (url) {
-      setPdfUrl(url);
-    }
-    setIsGeneratingPdf(false);
+    setInvoiceToGeneratePdf(invoice);
+    setPdfOutput('dataurl');
   }
 
-  const handleDownload = async (invoice: Invoice) => {
-    await generatePdf(invoice, 'save');
+  const handleDownload = (invoice: Invoice) => {
+    setInvoiceToGeneratePdf(invoice);
+    setPdfOutput('save');
   };
 
   const closePreview = () => {
@@ -86,11 +90,6 @@ export default function InvoicesPage() {
 
   const columns = React.useMemo(() => getColumns(handlePreview, handleDownload), []);
   
-  // The invoice that needs to be rendered off-screen for PDF generation.
-  // It's either the one being downloaded, or the one being previewed (while the PDF is generating).
-  const invoiceForPdf = invoiceToDownload || (previewingInvoice && isGeneratingPdf ? previewingInvoice : null);
-
-
   if (isLoading) {
     return (
         <div className="flex items-center justify-center min-h-screen">
@@ -136,9 +135,9 @@ export default function InvoicesPage() {
       />
     )}
     {/* This component is rendered off-screen and used for PDF generation */}
-    {invoiceForPdf && (
+    {invoiceToGeneratePdf && (
         <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', zIndex: -1 }}>
-            <InvoicePreview ref={invoicePreviewRef} invoice={invoiceForPdf} />
+            <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToGeneratePdf} />
         </div>
     )}
     </>

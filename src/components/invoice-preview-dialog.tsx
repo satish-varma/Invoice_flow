@@ -31,7 +31,7 @@ export function InvoicePreviewDialog({ invoice, isOpen, onOpenChange, pdfUrl, is
                            <p className="text-muted-foreground">Generating PDF Preview...</p>
                         </div>
                    ) : pdfUrl ? (
-                        <embed src={pdfUrl} type="application/pdf" className="w-full h-full" />
+                        <iframe src={pdfUrl} className="w-full h-full" title={`Invoice Preview for ${invoice.invoiceNumber}`} />
                    ) : (
                         <div className="text-destructive-foreground bg-destructive p-4 rounded-md">
                             Could not load PDF preview.

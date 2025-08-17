@@ -140,7 +140,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                         <div className='flex flex-col justify-end items-center h-full text-sm'>
                             <div className='text-center w-full'>
                                 <p>For THE GUT GURU</p>
-                                <div className='relative w-[150px] h-[75px] mx-auto my-2'>
+                                <div className='relative w-[100px] h-[100px] mx-auto my-2'>
                                     <Image src="/signature.png" alt="Company Stamp" layout="fill" objectFit="contain" />
                                 </div>
                                 <p>Authorized Signature</p>

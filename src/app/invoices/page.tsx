@@ -39,6 +39,7 @@ export default function InvoicesPage() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isBulkDownloading, setIsBulkDownloading] = useState(false);
 
   const [invoicesToDelete, setInvoicesToDelete] = useState<string[] | null>(null);
   const { toast } = useToast();
@@ -61,7 +62,7 @@ export default function InvoicesPage() {
   useEffect(() => {
     const generatePdf = async () => {
       // Ensure there's a component to capture and an action to perform
-      if (!invoiceToGeneratePdf || !pdfOutput || !invoicePreviewRef.current) {
+      if (!invoiceToGeneratePdf || !pdfOutput || !invoicePreviewRef.current || isBulkDownloading) {
         return;
       }
   
@@ -100,7 +101,7 @@ export default function InvoicesPage() {
 
     generatePdf();
 
-  }, [invoiceToGeneratePdf, pdfOutput]);
+  }, [invoiceToGeneratePdf, pdfOutput, isBulkDownloading]);
 
   const handlePreview = (invoice: Invoice) => {
     closePreview(); // Close any existing preview first
@@ -135,6 +136,33 @@ export default function InvoicesPage() {
     setInvoicesToDelete(ids);
   }
 
+  const handleBulkDownload = async (invoices: Invoice[]) => {
+    if (isBulkDownloading) return;
+    setIsBulkDownloading(true);
+
+    toast({
+      title: "Bulk Download Started",
+      description: `Preparing to download ${invoices.length} invoices. Please allow pop-ups if prompted.`,
+    });
+
+    for (const invoice of invoices) {
+      await new Promise(resolve => {
+        setInvoiceToGeneratePdf(invoice);
+        setPdfOutput('save');
+        // Wait for the download to be triggered in the useEffect
+        setTimeout(resolve, 1500); 
+      });
+    }
+
+    setInvoiceToGeneratePdf(null);
+    setPdfOutput(null);
+    setIsBulkDownloading(false);
+    toast({
+      title: "Bulk Download Complete",
+      description: `Finished processing ${invoices.length} invoices.`,
+    });
+  };
+
   const confirmDelete = async () => {
     if (!invoicesToDelete) return;
     setIsDeleting(true);
@@ -164,10 +192,11 @@ export default function InvoicesPage() {
 
   const columns = React.useMemo(() => getColumns(handlePreview, handleDownload, handleDeleteRequest), []);
   
-  if (isLoading) {
+  if (isLoading || isBulkDownloading) {
     return (
-        <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center justify-center min-h-screen">
             <Loader className="h-8 w-8 animate-spin" />
+            {isBulkDownloading && <p className="mt-4 text-muted-foreground">Processing bulk download...</p>}
         </div>
     )
   }
@@ -192,7 +221,12 @@ export default function InvoicesPage() {
                     </p>
                 </div>
             </div>
-            <InvoicesDataTable columns={columns} data={data} onDeleteSelected={handleBulkDeleteRequest} />
+            <InvoicesDataTable 
+              columns={columns} 
+              data={data} 
+              onDeleteSelected={handleBulkDeleteRequest}
+              onDownloadSelected={handleBulkDownload}
+            />
         </div>
     </main>
     {previewingInvoice && (

@@ -26,19 +26,21 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Invoice } from "@/services/invoiceService"
-import { Trash2 } from "lucide-react"
+import { Download, Trash2 } from "lucide-react"
 
 
 interface DataTableProps<TData extends Invoice, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[],
   onDeleteSelected: (selectedIds: string[]) => void;
+  onDownloadSelected: (selectedInvoices: TData[]) => void;
 }
 
 export function InvoicesDataTable<TData extends Invoice, TValue>({
   columns,
   data,
   onDeleteSelected,
+  onDownloadSelected,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -69,6 +71,11 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
     // table.resetRowSelection();
   };
 
+   const handleDownload = () => {
+    const selectedInvoices = table.getSelectedRowModel().rows.map(row => row.original);
+    onDownloadSelected(selectedInvoices);
+  };
+
   return (
     <div>
         <div className="flex items-center justify-between py-4">
@@ -81,10 +88,16 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
             className="max-w-sm"
             />
             {table.getSelectedRowModel().rows.length > 0 && (
-                <Button variant="destructive" onClick={handleDelete}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete ({table.getSelectedRowModel().rows.length})
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={handleDownload}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download ({table.getSelectedRowModel().rows.length})
+                    </Button>
+                    <Button variant="destructive" onClick={handleDelete}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete ({table.getSelectedRowModel().rows.length})
+                    </Button>
+                </div>
             )}
         </div>
         <div className="rounded-md border">

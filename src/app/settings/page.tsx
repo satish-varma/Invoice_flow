@@ -183,8 +183,8 @@ export default function SettingsPage() {
                                 Back to Create
                             </Link>
                         </Button>
-                        <h1 className="text-4xl font-headline font-bold text-primary mt-4">Settings</h1>
-                        <p className="text-muted-foreground">Manage your saved "Bill To" and "Ship To" contacts and set defaults.</p>
+                        <h1 className="text-3xl sm:text-4xl font-headline font-bold text-primary mt-4">Settings</h1>
+                        <p className="text-muted-foreground text-sm sm:text-base">Manage your saved "Bill To" and "Ship To" contacts and set defaults.</p>
                     </div>
                 </div>
 
@@ -220,7 +220,7 @@ export default function SettingsPage() {
                             </div>
                              <div className="space-y-2">
                                 <h3 className="font-bold">Saved "Bill To" Contacts</h3>
-                                <div className="rounded-md border">
+                                <div className="rounded-md border overflow-x-auto">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
@@ -282,7 +282,7 @@ export default function SettingsPage() {
                             </div>
                             <div className="space-y-2">
                                 <h3 className="font-bold">Saved "Ship To" Contacts</h3>
-                                <div className="rounded-md border">
+                                <div className="rounded-md border overflow-x-auto">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
@@ -350,3 +350,5 @@ export default function SettingsPage() {
         </main>
     );
 }
+
+    

@@ -78,29 +78,29 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
 
   return (
     <div>
-        <div className="flex items-center justify-between py-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
             <Input
             placeholder="Filter by customer name..."
             value={(table.getColumn("billToName")?.getFilterValue() as string) ?? ""}
             onChange={(event) =>
                 table.getColumn("billToName")?.setFilterValue(event.target.value)
             }
-            className="max-w-sm"
+            className="w-full sm:max-w-sm"
             />
             {table.getSelectedRowModel().rows.length > 0 && (
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={handleDownload}>
+                <div className="flex w-full sm:w-auto items-center gap-2">
+                    <Button variant="outline" onClick={handleDownload} className="w-full sm:w-auto">
                         <Download className="mr-2 h-4 w-4" />
                         Download ({table.getSelectedRowModel().rows.length})
                     </Button>
-                    <Button variant="destructive" onClick={handleDelete}>
+                    <Button variant="destructive" onClick={handleDelete} className="w-full sm:w-auto">
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete ({table.getSelectedRowModel().rows.length})
                     </Button>
                 </div>
             )}
         </div>
-        <div className="rounded-md border">
+        <div className="rounded-md border overflow-x-auto">
             <Table>
                 <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -165,3 +165,5 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
     </div>
   )
 }
+
+    

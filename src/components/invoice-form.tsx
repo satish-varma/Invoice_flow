@@ -283,16 +283,16 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   return (
     <>
       <div className="mb-8">
-        <div className='flex justify-between items-center mb-4'>
+        <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4'>
             <div>
               <h1 className="text-4xl font-headline font-bold text-primary">
                 InvoiceFlow
               </h1>
-              <p className="text-muted-foreground">
-                {initialData ? `Editing Invoice #${initialData.invoiceNumber}` : 'Create a new invoice, or upload an image to have AI extract the data for you.'}
+              <p className="text-muted-foreground text-sm sm:text-base">
+                {initialData ? `Editing Invoice #${initialData.invoiceNumber}` : 'Create a new invoice, or upload one to have AI extract the data.'}
               </p>
             </div>
-            <Menubar>
+            <Menubar className="flex-wrap h-auto sm:h-10">
                 <MenubarMenu>
                     <MenubarTrigger onClick={() => handleClearForm()} className="cursor-pointer">
                         <FilePlus className="mr-2 h-4 w-4" /> New
@@ -354,10 +354,10 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         </div>
       </div>
           <Card className="w-full shadow-lg">
-            <CardHeader className="bg-muted/20 p-6">
+            <CardHeader className="bg-muted/20 p-4 sm:p-6">
               <CardTitle>Invoice Details</CardTitle>
             </CardHeader>
-            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <CardContent className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Left Column */}
               <div>
                 <h3 className="font-bold text-lg mb-4">From</h3>
@@ -478,8 +478,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
               </div>
             </CardContent>
 
-            <CardContent>
-              <div className="mt-6">
+            <CardContent className="p-4 sm:p-6">
+              <div className="mt-6 overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -519,7 +519,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 </Button>
               </div>
             </CardContent>
-            <CardFooter className="bg-muted/20 p-6 flex-col items-end gap-4">
+            <CardFooter className="bg-muted/20 p-4 sm:p-6 flex-col items-end gap-4">
               <div className="w-full max-w-sm text-sm grid gap-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
@@ -543,3 +543,5 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
+
+    

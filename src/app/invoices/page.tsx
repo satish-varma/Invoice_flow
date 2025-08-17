@@ -62,7 +62,7 @@ export default function InvoicesPage() {
   useEffect(() => {
     const generatePdf = async () => {
       // Ensure there's a component to capture and an action to perform
-      if (!invoiceToGeneratePdf || !pdfOutput || !invoicePreviewRef.current || isBulkDownloading) {
+      if (!invoiceToGeneratePdf || !pdfOutput || !invoicePreviewRef.current) {
         return;
       }
   
@@ -82,9 +82,11 @@ export default function InvoicesPage() {
             
             if (pdfOutput === 'save') {
                 pdf.save(`invoice-${invoiceToGeneratePdf.invoiceNumber || 'untitled'}.pdf`);
-                // Reset states after saving
-                setInvoiceToGeneratePdf(null);
-                setPdfOutput(null);
+                // Reset states after saving. In bulk download, this is handled by the loop.
+                if (!isBulkDownloading) {
+                    setInvoiceToGeneratePdf(null);
+                    setPdfOutput(null);
+                }
             } else { // 'dataurl' for preview
                 const url = pdf.output('datauristring');
                 setPdfUrl(url);
@@ -146,11 +148,15 @@ export default function InvoicesPage() {
     });
 
     for (const invoice of invoices) {
-      await new Promise(resolve => {
+      // This function now returns a promise that resolves after the PDF is saved
+      await new Promise<void>(resolve => {
         setInvoiceToGeneratePdf(invoice);
         setPdfOutput('save');
-        // Wait for the download to be triggered in the useEffect
-        setTimeout(resolve, 1500); 
+        // The useEffect will trigger the download. We need a way to know when it's done.
+        // A simple timeout is a pragmatic way to wait for the async operation.
+        setTimeout(() => {
+          resolve();
+        }, 1500); // Wait for PDF generation and download prompt
       });
     }
 

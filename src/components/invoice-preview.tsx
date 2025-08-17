@@ -123,7 +123,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                     
                 </CardContent>
                 <CardFooter className="p-6 flex-col items-start gap-4 border-t border-gray-200 mt-8">
-                    <div className='w-full grid grid-cols-2 gap-8'>
+                    <div className='w-full grid grid-cols-[70%_30%] gap-8'>
                          <div className='text-xs'>
                             <p className='font-semibold mb-2'>Bank Details</p>
                             <div className='grid grid-cols-[120px_1fr]'>
@@ -145,7 +145,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                                 <div className='relative w-[80px] h-[80px] mx-auto'>
                                     <Image src="/signature.png" alt="Company Stamp" layout="fill" objectFit="contain" />
                                 </div>
-                                <p className="-mt-2">Authorized Signature</p>
+                                <p className="-mt-4">Authorized Signature</p>
                             </div>
                          </div>
                     </div>

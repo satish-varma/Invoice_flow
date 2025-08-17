@@ -234,7 +234,6 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         const dataUri = await fileToDataUri(file);
         const result: ExtractInvoiceDataOutput = await extractInvoiceData({ photoDataUri: dataUri });
 
-        if (result.invoiceNumber) setInvoiceNumber(result.invoiceNumber);
         if (result.customerName) setBillToName(result.customerName);
         if (result.date) {
             const parsedDate = new Date(result.date + 'T00:00:00');

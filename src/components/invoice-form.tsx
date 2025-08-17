@@ -42,6 +42,11 @@ function fileToDataUri(file: File): Promise<string> {
     });
 }
 
+const months = [
+    "January", "February", "March", "April", "May", "June", 
+    "July", "August", "September", "October", "November", "December"
+];
+
 export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFormProps) {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [date, setDate] = useState<Date | undefined>(undefined);
@@ -72,6 +77,11 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     // Set date on client mount to avoid hydration mismatch
     if(!initialData) {
       setDate(new Date());
+      const now = new Date();
+      const prevMonthIndex = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+      const prevMonthName = months[prevMonthIndex];
+      setPeriod(prevMonthName);
+      setDelivery(prevMonthName);
     }
     async function loadSettingsAndApplyDefaults() {
         const loadedSettings = await getSettings();
@@ -145,8 +155,11 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   const handleClearForm = (shouldCallback = true) => {
     setInvoiceNumber('');
     setDate(new Date());
-    setPeriod('');
-    setDelivery('');
+    const now = new Date();
+    const prevMonthIndex = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+    const prevMonthName = months[prevMonthIndex];
+    setPeriod(prevMonthName);
+    setDelivery(prevMonthName);
     setBillToName('');
     setBillToAddress('');
     setBillToGst('');
@@ -420,11 +433,25 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                     </div>
                     <div>
                         <Label htmlFor='period'>Period</Label>
-                        <Input id="period" placeholder="e.g. June" value={period} onChange={e => setPeriod(e.target.value)} />
+                        <Select value={period} onValueChange={setPeriod}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a month" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {months.map(month => <SelectItem key={month} value={month}>{month}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div>
                         <Label htmlFor='delivery'>Delivery</Label>
-                        <Input id="delivery" placeholder="e.g. June" value={delivery} onChange={e => setDelivery(e.target.value)} />
+                        <Select value={delivery} onValueChange={setDelivery}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a month" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {months.map(month => <SelectItem key={month} value={month}>{month}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
 
@@ -522,3 +549,5 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
+
+    

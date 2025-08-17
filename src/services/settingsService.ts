@@ -196,6 +196,9 @@ export async function updateShipToContact(contact: ShipToContact): Promise<void>
 }
 
 export async function setDefaultBillToContact(id: string): Promise<void> {
+    if (!id) {
+        throw new Error("Cannot set default with an empty ID.");
+    }
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         await setDoc(settingsRef, { defaultBillToContact: id }, { merge: true });
@@ -206,6 +209,9 @@ export async function setDefaultBillToContact(id: string): Promise<void> {
 }
 
 export async function setDefaultShipToContact(id: string): Promise<void> {
+    if (!id) {
+        throw new Error("Cannot set default with an empty ID.");
+    }
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         await setDoc(settingsRef, { defaultShipToContact: id }, { merge: true });

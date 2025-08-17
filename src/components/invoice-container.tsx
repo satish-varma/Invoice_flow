@@ -69,14 +69,14 @@ export function InvoiceContainer() {
             const input = invoicePreviewRef.current;
             // Add a class for specific PDF styling if needed
             input.classList.add('pdf-capture');
-            html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
+            html2canvas(input, { scale: 1.5, useCORS: true }).then((canvas) => {
                 input.classList.remove('pdf-capture');
-                const imgData = canvas.toDataURL('image/png');
+                const imgData = canvas.toDataURL('image/jpeg', 0.9);
                 const pdf = new jsPDF('p', 'mm', 'a4');
                 const pdfWidth = pdf.internal.pageSize.getWidth();
                 const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
                 
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
                 pdf.save(`invoice-${invoiceToDownload.invoiceNumber || 'untitled'}.pdf`);
                 setInvoiceToDownload(null);
             }).catch(error => {

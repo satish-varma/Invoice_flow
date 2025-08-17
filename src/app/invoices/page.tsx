@@ -72,13 +72,13 @@ export default function InvoicesPage() {
         if (!input) return;
 
         try {
-            const canvas = await html2canvas(input, { scale: 2, useCORS: true });
-            const imgData = canvas.toDataURL('image/png');
+            const canvas = await html2canvas(input, { scale: 1.5, useCORS: true });
+            const imgData = canvas.toDataURL('image/jpeg', 0.9); // Use JPEG with quality 90%
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
             
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
             
             if (pdfOutput === 'save') {
                 pdf.save(`invoice-${invoiceToGeneratePdf.invoiceNumber || 'untitled'}.pdf`);

@@ -41,8 +41,8 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                         <div>
                             <p className='font-bold text-xl'>THE GUT GURU</p>
                             <p className='text-sm w-64' style={{whiteSpace: 'pre-wrap'}}>H NO.6-46/3/A, Venkateswarao nagar, Chanda Nagar, Hyderabad-500050</p>
-                             <div className='text-sm flex gap-4'>
-                                <p><span className='font-bold'>GSTIN:</span> 36DDTPJ6536D1Z8</p>
+                             <div className='text-sm'>
+                                <p className='mb-0'><span className='font-bold'>GSTIN:</span> 36DDTPJ6536D1Z8</p>
                                 <p><span className='font-bold'>PAN:</span> DDTPJ6536D</p>
                             </div>
                         </div>

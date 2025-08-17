@@ -235,12 +235,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         const result: ExtractInvoiceDataOutput = await extractInvoiceData({ photoDataUri: dataUri });
 
         if (result.customerName) setBillToName(result.customerName);
-        if (result.date) {
-            const parsedDate = new Date(result.date + 'T00:00:00');
-            if (!isNaN(parsedDate.getTime())) {
-              setDate(parsedDate);
-            }
-        }
+
         if (result.lineItems && result.lineItems.length > 0) {
             setLineItems(result.lineItems.map((item, index) => ({
                 id: Date.now() + index,

@@ -1,44 +1,61 @@
 
 'use client'
 
-import { Invoice, getInvoices } from "@/services/invoiceService";
+import { Invoice, getInvoices, deleteInvoice, deleteInvoices } from "@/services/invoiceService";
 import { InvoicesDataTable } from "./data-table";
 import { getColumns } from "./columns";
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader } from "lucide-react";
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { InvoicePreviewDialog } from "@/components/invoice-preview-dialog";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { InvoicePreview } from "@/components/invoice-preview";
 import type { Settings } from "@/services/settingsService";
 import { getSettings } from "@/services/settingsService";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useToast } from "@/hooks/use-toast";
+
 
 export default function InvoicesPage() {
-  const [data, setData] = React.useState<Invoice[]>([]);
-  const [settings, setSettings] = React.useState<Settings | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [previewingInvoice, setPreviewingInvoice] = React.useState<Invoice | null>(null);
-  const [invoiceToGeneratePdf, setInvoiceToGeneratePdf] = React.useState<Invoice | null>(null);
-  const [pdfOutput, setPdfOutput] = React.useState<'dataurl' | 'save' | null>(null);
+  const [data, setData] = useState<Invoice[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [previewingInvoice, setPreviewingInvoice] = useState<Invoice | null>(null);
+  const [invoiceToGeneratePdf, setInvoiceToGeneratePdf] = useState<Invoice | null>(null);
+  const [pdfOutput, setPdfOutput] = useState<'dataurl' | 'save' | null>(null);
   
   const invoicePreviewRef = useRef<HTMLDivElement>(null);
-  const [pdfUrl, setPdfUrl] = React.useState<string | null>(null);
-  const [isGeneratingPdf, setIsGeneratingPdf] = React.useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [invoicesToDelete, setInvoicesToDelete] = useState<string[] | null>(null);
+  const { toast } = useToast();
+
+  const loadInvoices = async () => {
+    setIsLoading(true);
+    const [invoices, settingsData] = await Promise.all([
+      getInvoices(),
+      getSettings()
+    ]);
+    setData(invoices);
+    setSettings(settingsData);
+    setIsLoading(false);
+  }
 
   useEffect(() => {
-    async function getData() {
-      setIsLoading(true);
-      const [invoices, settingsData] = await Promise.all([
-        getInvoices(),
-        getSettings()
-      ]);
-      setData(invoices);
-      setSettings(settingsData);
-      setIsLoading(false);
-    }
-    getData();
+    loadInvoices();
   }, []);
   
   useEffect(() => {
@@ -106,10 +123,46 @@ export default function InvoicesPage() {
     setPreviewingInvoice(null);
     setPdfUrl(null);
     setIsGeneratingPdf(false);
-    // Don't reset invoiceToGeneratePdf or pdfOutput here, useEffect handles it
   }
 
-  const columns = React.useMemo(() => getColumns(handlePreview, handleDownload), []);
+  const handleDeleteRequest = (invoice: Invoice) => {
+    if (invoice.id) {
+        setInvoicesToDelete([invoice.id]);
+    }
+  }
+
+  const handleBulkDeleteRequest = (ids: string[]) => {
+    setInvoicesToDelete(ids);
+  }
+
+  const confirmDelete = async () => {
+    if (!invoicesToDelete) return;
+    setIsDeleting(true);
+    try {
+        if (invoicesToDelete.length === 1) {
+            await deleteInvoice(invoicesToDelete[0]);
+        } else {
+            await deleteInvoices(invoicesToDelete);
+        }
+        toast({
+            title: "Success",
+            description: `Successfully deleted ${invoicesToDelete.length} invoice(s).`,
+        });
+        await loadInvoices(); // Reload data
+    } catch (error) {
+        console.error("Failed to delete invoices:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to delete invoices. Please try again.",
+        });
+    } finally {
+        setInvoicesToDelete(null);
+        setIsDeleting(false);
+    }
+  }
+
+  const columns = React.useMemo(() => getColumns(handlePreview, handleDownload, handleDeleteRequest), []);
   
   if (isLoading) {
     return (
@@ -139,7 +192,7 @@ export default function InvoicesPage() {
                     </p>
                 </div>
             </div>
-            <InvoicesDataTable columns={columns} data={data} onPreview={handlePreview} />
+            <InvoicesDataTable columns={columns} data={data} onDeleteSelected={handleBulkDeleteRequest} />
         </div>
     </main>
     {previewingInvoice && (
@@ -161,6 +214,26 @@ export default function InvoicesPage() {
             <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToGeneratePdf} settings={settings} />
         </div>
     )}
+
+    {/* Delete Confirmation Dialog */}
+    <AlertDialog open={!!invoicesToDelete} onOpenChange={(open) => !open && setInvoicesToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the selected invoice(s).
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setInvoicesToDelete(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                    {isDeleting ? <Loader className="mr-2 h-4 w-4 animate-spin"/> : null}
+                    Delete
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
     </>
   );
 }

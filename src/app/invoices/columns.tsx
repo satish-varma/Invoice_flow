@@ -2,16 +2,43 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, Copy, Download, Eye } from "lucide-react"
+import { ArrowUpDown, Copy, Download, Eye, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Invoice } from "@/services/invoiceService"
 import { format } from "date-fns"
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { Checkbox } from "@/components/ui/checkbox"
 
 
-// We need to pass the preview handler to the columns
-export const getColumns = (onPreview: (invoice: Invoice) => void, onDownload: (invoice: Invoice) => void): ColumnDef<Invoice>[] => [
+// We need to pass the handlers to the columns
+export const getColumns = (
+    onPreview: (invoice: Invoice) => void, 
+    onDownload: (invoice: Invoice) => void,
+    onDelete: (invoice: Invoice) => void
+): ColumnDef<Invoice>[] => [
+    {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+    },
   {
     accessorKey: "invoiceNumber",
     header: ({ column }) => {
@@ -133,11 +160,20 @@ export const getColumns = (onPreview: (invoice: Invoice) => void, onDownload: (i
                         <p>Copy Invoice Number</p>
                     </TooltipContent>
                 </Tooltip>
+                 <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => onDelete(invoice)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                             <span className="sr-only">Delete Invoice</span>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Delete Invoice</p>
+                    </TooltipContent>
+                </Tooltip>
             </TooltipProvider>
         </div>
       )
     },
   },
 ]
-
-    

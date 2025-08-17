@@ -5,6 +5,7 @@ import * as React from "react"
 import {
   ColumnDef,
   ColumnFiltersState,
+  RowSelectionState,
   SortingState,
   flexRender,
   getCoreRowModel,
@@ -25,23 +26,25 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Invoice } from "@/services/invoiceService"
+import { Trash2 } from "lucide-react"
 
 
 interface DataTableProps<TData extends Invoice, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[],
-  onPreview: (invoice: TData) => void;
+  onDeleteSelected: (selectedIds: string[]) => void;
 }
 
 export function InvoicesDataTable<TData extends Invoice, TValue>({
   columns,
   data,
-  onPreview
+  onDeleteSelected,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
         []
       )
+    const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
 
   const table = useReactTable({
     data,
@@ -52,18 +55,23 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
+    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
+      rowSelection,
     },
-    meta: {
-      onPreview: onPreview,
-    }
   })
+
+  const handleDelete = () => {
+    const selectedIds = table.getSelectedRowModel().rows.map(row => (row.original as Invoice).id!);
+    onDeleteSelected(selectedIds);
+    // table.resetRowSelection();
+  };
 
   return (
     <div>
-        <div className="flex items-center py-4">
+        <div className="flex items-center justify-between py-4">
             <Input
             placeholder="Filter by customer name..."
             value={(table.getColumn("billToName")?.getFilterValue() as string) ?? ""}
@@ -72,6 +80,12 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
             }
             className="max-w-sm"
             />
+            {table.getSelectedRowModel().rows.length > 0 && (
+                <Button variant="destructive" onClick={handleDelete}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete ({table.getSelectedRowModel().rows.length})
+                </Button>
+            )}
         </div>
         <div className="rounded-md border">
             <Table>
@@ -138,5 +152,3 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
     </div>
   )
 }
-
-    

@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 
 export interface LineItem {
   id: number;
@@ -101,4 +101,28 @@ export async function getInvoices(): Promise<Invoice[]> {
         } as Invoice);
     });
     return invoices;
+}
+
+export async function deleteInvoice(id: string): Promise<void> {
+    try {
+        const docRef = doc(db, INVOICES_COLLECTION, id);
+        await deleteDoc(docRef);
+    } catch (e) {
+        console.error("Error deleting document: ", e);
+        throw new Error("Failed to delete invoice.");
+    }
+}
+
+export async function deleteInvoices(ids: string[]): Promise<void> {
+    try {
+        const batch = writeBatch(db);
+        ids.forEach(id => {
+            const docRef = doc(db, INVOICES_COLLECTION, id);
+            batch.delete(docRef);
+        });
+        await batch.commit();
+    } catch (e) {
+        console.error("Error deleting documents in batch: ", e);
+        throw new Error("Failed to delete invoices.");
+    }
 }

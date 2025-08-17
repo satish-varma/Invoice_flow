@@ -69,7 +69,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                             <p className='font-bold text-gray-500'>Bill To:</p>
                             <p className='font-bold'>{invoice.billToName}</p>
                             <p className='text-sm' style={{whiteSpace: 'pre-wrap'}}>{invoice.billToAddress}</p>
-                            {invoice.billToGst && <p className='text-sm'><span className='font-bold'>GST NO:</span> {invoice.billToGst}</p>}
+                            {invoice.billToGst && <p className='text-sm'><span className='font-bold'>GSTIN:</span> {invoice.billToGst}</p>}
                         </div>
                         <div className='space-y-1'>
                             <p className='font-bold text-gray-500'>Ship To:</p>
@@ -140,7 +140,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                         <div className='flex flex-col justify-end items-center h-full text-sm'>
                             <div className='text-center w-full'>
                                 <p>For THE GUT GURU</p>
-                                <div className='relative w-[80px] h-[80px] mx-auto'>
+                                <div className='relative w-[80px] h-[80px]'>
                                     <Image src="/signature.png" alt="Company Stamp" layout="fill" objectFit="contain" />
                                 </div>
                                 <p>Authorized Signature</p>

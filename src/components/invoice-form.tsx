@@ -253,7 +253,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         toast({
             variant: "destructive",
             title: "Extraction Failed",
-            description: "Could not extract data from the image. Please try another image.",
+            description: "Could not extract data from the file. Please try another file.",
         })
     } finally {
         setIsExtracting(false);
@@ -390,7 +390,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                         <Textarea id="billToAddress" placeholder="Billing Address" value={billToAddress} onChange={e => setBillToAddress(e.target.value)} />
                     </div>
                     <div>
-                        <Label htmlFor='billToGst'>GST No.</Label>
+                        <Label htmlFor='billToGst'>GSTIN</Label>
                         <Input id="billToGst" placeholder="GST Number" value={billToGst} onChange={e => setBillToGst(e.target.value)} />
                     </div>
                 </div>
@@ -543,5 +543,3 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
-
-    

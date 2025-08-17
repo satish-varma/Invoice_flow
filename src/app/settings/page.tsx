@@ -211,7 +211,7 @@ export default function SettingsPage() {
                                     <Textarea id="billToAddress" placeholder="Client Address" value={newBillTo.address} onChange={e => handleInputChange('newBillTo', 'address', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="billToGst">GST No.</Label>
+                                    <Label htmlFor="billToGst">GSTIN</Label>
                                     <Input id="billToGst" placeholder="Client GST Number" value={newBillTo.gst} onChange={e => handleInputChange('newBillTo', 'gst', e.target.value)} />
                                 </div>
                                 <Button onClick={() => handleAddContact('billTo')} disabled={isSaving} size="sm">
@@ -334,7 +334,7 @@ export default function SettingsPage() {
                                 <Textarea id="editAddress" value={editingContact.address} onChange={e => handleInputChange('edit', 'address', e.target.value)} />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="editGst">GST No.</Label>
+                                <Label htmlFor="editGst">GSTIN</Label>
                                 <Input id="editGst" value={editingContact.gst} onChange={e => handleInputChange('edit', 'gst', e.target.value)} />
                             </div>
                         </div>

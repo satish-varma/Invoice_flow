@@ -10,6 +10,7 @@ import { Loader } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { InvoicePreview } from './invoice-preview';
+import { getSettings, Settings } from '@/services/settingsService';
 
 export function InvoiceContainer() {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -18,18 +19,24 @@ export function InvoiceContainer() {
     const { toast } = useToast();
     const invoicePreviewRef = useRef<HTMLDivElement>(null);
     const [invoiceToDownload, setInvoiceToDownload] = useState<Invoice | null>(null);
+    const [settings, setSettings] = useState<Settings | null>(null);
 
-    const fetchInvoices = async () => {
+
+    const fetchData = async () => {
         setIsLoading(true);
         try {
-            const fetchedInvoices = await getInvoices();
+            const [fetchedInvoices, fetchedSettings] = await Promise.all([
+                getInvoices(),
+                getSettings()
+            ]);
             setInvoices(fetchedInvoices);
+            setSettings(fetchedSettings);
         } catch (error) {
             console.error(error);
             toast({
                 variant: 'destructive',
-                title: 'Failed to fetch invoices',
-                description: 'There was an error loading your invoices. Please try again later.',
+                title: 'Failed to fetch data',
+                description: 'There was an error loading your data. Please try again later.',
             });
         } finally {
             setIsLoading(false);
@@ -37,11 +44,11 @@ export function InvoiceContainer() {
     };
 
     useEffect(() => {
-        fetchInvoices();
+        fetchData();
     }, []);
 
     const handleInvoiceSave = () => {
-        fetchInvoices();
+        fetchData();
         setSelectedInvoice(null); // Clear form after saving
     };
 
@@ -58,7 +65,7 @@ export function InvoiceContainer() {
     };
 
     useEffect(() => {
-        if (invoiceToDownload && invoicePreviewRef.current) {
+        if (invoiceToDownload && invoicePreviewRef.current && settings) {
             const input = invoicePreviewRef.current;
             // Add a class for specific PDF styling if needed
             input.classList.add('pdf-capture');
@@ -72,9 +79,17 @@ export function InvoiceContainer() {
                 pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
                 pdf.save(`invoice-${invoiceToDownload.invoiceNumber || 'untitled'}.pdf`);
                 setInvoiceToDownload(null);
+            }).catch(error => {
+                console.error("Error generating PDF:", error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Download Failed',
+                    description: 'There was an error generating the PDF for download.',
+                });
+                setInvoiceToDownload(null);
             });
         }
-    }, [invoiceToDownload]);
+    }, [invoiceToDownload, settings, toast]);
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -100,9 +115,9 @@ export function InvoiceContainer() {
                 )}
             </div>
              {/* This component is rendered off-screen and used for PDF generation */}
-             {invoiceToDownload && (
-                <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-                    <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToDownload} />
+             {invoiceToDownload && settings && (
+                <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', zIndex: -1 }}>
+                    <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToDownload} settings={settings} />
                 </div>
             )}
         </div>

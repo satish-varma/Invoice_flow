@@ -62,7 +62,7 @@ export default function InvoicesPage() {
   useEffect(() => {
     const generatePdf = async () => {
       // Ensure there's a component to capture and an action to perform
-      if (!invoiceToGeneratePdf || !pdfOutput || !invoicePreviewRef.current) {
+      if (!invoiceToGeneratePdf || !pdfOutput || !invoicePreviewRef.current || !settings) {
         return;
       }
   
@@ -94,6 +94,7 @@ export default function InvoicesPage() {
             }
         } catch (error) {
             console.error("Error generating PDF:", error);
+            toast({ variant: "destructive", title: "PDF Generation Failed", description: "There was an error generating the PDF." });
             setIsGeneratingPdf(false);
             setInvoiceToGeneratePdf(null);
             setPdfOutput(null);
@@ -103,7 +104,7 @@ export default function InvoicesPage() {
 
     generatePdf();
 
-  }, [invoiceToGeneratePdf, pdfOutput, isBulkDownloading]);
+  }, [invoiceToGeneratePdf, pdfOutput, isBulkDownloading, settings, toast]);
 
   const handlePreview = (invoice: Invoice) => {
     closePreview(); // Close any existing preview first

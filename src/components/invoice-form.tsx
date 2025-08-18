@@ -13,7 +13,7 @@ import { format } from "date-fns"
 import { extractInvoiceData, ExtractInvoiceDataOutput } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
-import { Menubar, MenubarMenu, MenubarTrigger } from './ui/menubar';
+import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem } from './ui/menubar';
 import { Invoice, saveInvoice } from '@/services/invoiceService';
 import Link from 'next/link';
 import { Label } from './ui/label';
@@ -289,57 +289,67 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 InvoiceFlow
               </h1>
               <p className="text-muted-foreground text-sm sm:text-base">
-                {initialData ? `Editing Invoice #${initialData.invoiceNumber}` : 'Create a new invoice, or upload one to have AI extract the data.'}
+                {initialData ? `Editing Invoice #${initialData.invoiceNumber}` : 'Create a new invoice or upload one to have AI extract the data.'}
               </p>
             </div>
             <Menubar className="flex-wrap h-auto sm:h-10">
                 <MenubarMenu>
-                    <MenubarTrigger onClick={() => handleClearForm()} className="cursor-pointer">
-                        <FilePlus className="mr-2 h-4 w-4" /> New
-                    </MenubarTrigger>
-                </MenubarMenu>
-                <MenubarMenu>
-                    <MenubarTrigger className="cursor-pointer">
-                      <Link href="/invoices" className='flex items-center'>
-                        <ListOrdered className="mr-2 h-4 w-4" /> Saved Invoices
-                      </Link>
+                    <MenubarTrigger asChild>
+                      <Button variant="ghost" onClick={() => handleClearForm()} className="cursor-pointer">
+                          <FilePlus className="mr-2 h-4 w-4" /> New
+                      </Button>
                     </MenubarTrigger>
                 </MenubarMenu>
                  <MenubarMenu>
-                    <MenubarTrigger className="cursor-pointer">
-                      <Link href="/settings" className='flex items-center'>
-                        <SettingsIcon className="mr-2 h-4 w-4" /> Settings
-                      </Link>
+                    <MenubarTrigger asChild>
+                       <Button variant="ghost" asChild className="cursor-pointer">
+                          <Link href="/invoices" className='flex items-center'>
+                            <ListOrdered className="mr-2 h-4 w-4" /> Saved Invoices
+                          </Link>
+                       </Button>
+                    </MenubarTrigger>
+                </MenubarMenu>
+                 <MenubarMenu>
+                     <MenubarTrigger asChild>
+                        <Button variant="ghost" asChild className="cursor-pointer">
+                          <Link href="/settings" className='flex items-center'>
+                            <SettingsIcon className="mr-2 h-4 w-4" /> Settings
+                          </Link>
+                        </Button>
                     </MenubarTrigger>
                 </MenubarMenu>
                 <MenubarMenu>
-                    <MenubarTrigger onClick={() => fileInputRef.current?.click()} disabled={isExtracting} className="cursor-pointer">
-                        {isExtracting ? (
+                     <MenubarTrigger asChild>
+                        <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={isExtracting} className="cursor-pointer">
+                            {isExtracting ? (
+                                <>
+                                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                                    Extracting...
+                                </>
+                            ) : (
                             <>
-                                <Loader className="mr-2 h-4 w-4 animate-spin" />
-                                Extracting...
+                                <Wand2 className="mr-2 h-4 w-4" />
+                                    Autofill
                             </>
-                        ) : (
-                        <>
-                            <Wand2 className="mr-2 h-4 w-4" />
-                                Autofill
-                        </>
-                        )}
+                            )}
+                        </Button>
                     </MenubarTrigger>
                 </MenubarMenu>
                 <MenubarMenu>
-                    <MenubarTrigger onClick={handleSaveInvoice} disabled={isSaving} className="cursor-pointer bg-accent text-accent-foreground hover:bg-accent/90 focus:bg-accent data-[state=open]:bg-accent">
-                         {isSaving ? (
+                    <MenubarTrigger asChild>
+                        <Button onClick={handleSaveInvoice} disabled={isSaving} className="cursor-pointer bg-accent text-accent-foreground hover:bg-accent/90 focus:bg-accent data-[state=open]:bg-accent">
+                            {isSaving ? (
+                                <>
+                                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
                             <>
-                                <Loader className="mr-2 h-4 w-4 animate-spin" />
-                                Saving...
+                                <Save className="mr-2 h-4 w-4" />
+                                    {initialData ? 'Update' : 'Save'}
                             </>
-                        ) : (
-                        <>
-                            <Save className="mr-2 h-4 w-4" />
-                                {initialData ? 'Update' : 'Save'}
-                        </>
-                        )}
+                            )}
+                        </Button>
                     </MenubarTrigger>
                 </MenubarMenu>
             </Menubar>

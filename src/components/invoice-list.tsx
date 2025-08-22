@@ -50,7 +50,7 @@ export function InvoiceList({ invoices, onSelectInvoice, onDownloadInvoice }: In
                             <TableRow 
                                 key={invoice.id} 
                                 onClick={() => onSelectInvoice(invoice)}
-                                className="cursor-pointer hover:bg-muted/50"
+                                className="cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] hover:bg-muted/50"
                             >
                                 <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                                 <TableCell>{invoice.customerName}</TableCell>

@@ -528,7 +528,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                   </TableHeader>
                   <TableBody>
                     {lineItems.map((item, index) => (
-                      <TableRow key={item.id} className="hover:bg-muted/20">
+                      <TableRow key={item.id} className="animate-fade-in-down hover:bg-muted/20">
                         <TableCell>
                           <Input placeholder="Item description" value={item.name} onChange={e => handleItemChange(item.id, 'name', e.target.value)} />
                         </TableCell>

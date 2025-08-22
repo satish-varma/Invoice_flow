@@ -126,6 +126,7 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
                     <TableRow
                         key={row.id}
                         data-state={row.getIsSelected() && "selected"}
+                        className="transition-all hover:shadow-md hover:scale-[1.01]"
                     >
                         {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>

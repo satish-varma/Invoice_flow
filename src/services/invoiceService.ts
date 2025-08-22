@@ -3,6 +3,7 @@
 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { getSettings } from './settingsService';
 
 export interface LineItem {
   id: number;
@@ -41,11 +42,12 @@ const COUNTER_DOCUMENT = 'invoiceCounter';
 
 async function getNextInvoiceNumber(): Promise<string> {
     const counterRef = doc(db, 'counters', COUNTER_DOCUMENT);
+    const settings = await getSettings();
+    const prefix = settings.invoicePrefix || 'INV-';
 
     const newInvoiceNumber = await runTransaction(db, async (transaction) => {
         const counterDoc = await transaction.get(counterRef);
-        // Using a fixed prefix and number for consistency with the image
-        let nextNumber = 2405; 
+        let nextNumber = 1; 
         if (counterDoc.exists()) {
             nextNumber = counterDoc.data().currentNumber + 1;
         }
@@ -53,7 +55,7 @@ async function getNextInvoiceNumber(): Promise<string> {
         return nextNumber;
     });
 
-    return `TGGHS/25-26/${String(newInvoiceNumber)}`;
+    return `${prefix}${String(newInvoiceNumber)}`;
 }
 
 

@@ -39,11 +39,11 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                     </div>
                     <div className='flex justify-between items-start'>
                         <div>
-                            <p className='font-bold text-xl'>THE GUT GURU</p>
-                            <p className='text-sm w-64' style={{whiteSpace: 'pre-wrap'}}>H NO.6-46/3/A, Venkateswarao nagar, Chanda Nagar, Hyderabad-500050</p>
+                            <p className='font-bold text-xl'>{settings.companyName}</p>
+                            <p className='text-sm w-64' style={{whiteSpace: 'pre-wrap'}}>{settings.companyAddress}</p>
                              <div className='text-sm'>
-                                <p className='mb-0'><span className='font-bold'>GSTIN:</span> 36DDTPJ6536D1Z8</p>
-                                <p><span className='font-bold'>PAN:</span> DDTPJ6536D</p>
+                                {settings.companyGstin && <p className='mb-0'><span className='font-bold'>GSTIN:</span> {settings.companyGstin}</p>}
+                                {settings.companyPan && <p><span className='font-bold'>PAN:</span> {settings.companyPan}</p>}
                             </div>
                         </div>
                         <div className="space-y-2 text-sm pt-12">
@@ -128,23 +128,25 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                             <p className='font-semibold mb-2'>Bank Details</p>
                             <div className='grid grid-cols-[120px_1fr]'>
                                 <div className='font-bold'>Beneficiary Name:</div>
-                                <div>THE GUT GURU</div>
+                                <div>{settings.bankBeneficiary}</div>
                                 <div className='font-bold'>Bank Name:</div>
-                                <div>HDFC BANK LTD</div>
+                                <div>{settings.bankName}</div>
                                 <div className='font-bold'>Account Number:</div>
-                                <div>50200095177481</div>
+                                <div>{settings.bankAccount}</div>
                                 <div className='font-bold'>IFSC Code:</div>
-                                <div>HDFC0000045</div>
+                                <div>{settings.bankIfsc}</div>
                                 <div className='font-bold'>Branch:</div>
-                                <div>HYDERABAD - CHANDA NAGAR</div>
+                                <div>{settings.bankBranch}</div>
                             </div>
                         </div>
                         <div className='flex flex-col justify-end items-center h-full text-sm'>
                             <div className='text-center w-full'>
-                                <p className="mb-2">For THE GUT GURU</p>
+                                <p className="mb-2">For {settings.companyName}</p>
+                                {settings.stampLogoUrl && (
                                 <div className='relative w-[80px] h-[80px] mx-auto'>
-                                    <Image src="/signature.png" alt="Company Stamp" fill sizes="80px" className="object-contain" priority />
+                                    <Image src={settings.stampLogoUrl} alt="Company Stamp" fill sizes="80px" className="object-contain" priority />
                                 </div>
+                                )}
                                 <p className="-mt-2">Authorized Signature</p>
                             </div>
                          </div>

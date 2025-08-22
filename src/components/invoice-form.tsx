@@ -371,11 +371,11 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
               {/* Left Column */}
               <div>
                 <h3 className="font-bold text-lg mb-4">From</h3>
-                <div className="space-y-2">
-                    <p className='font-bold'>THE GUT GURU</p>
-                    <p className='text-sm text-muted-foreground'>H NO.6-46/3/A, Venkateswarao nagar, Chanda Nagar, Hyderabad-500050</p>
-                    <p className='text-sm text-muted-foreground'>GSTIN: 36DDTPJ6536D1Z8</p>
-                    <p className='text-sm text-muted-foreground'>PAN: DDTPJ6536D</p>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                    <p className='font-bold text-base text-foreground'>{settings.companyName}</p>
+                    <p style={{whiteSpace: 'pre-wrap'}}>{settings.companyAddress}</p>
+                    {settings.companyGstin && <p>GSTIN: {settings.companyGstin}</p>}
+                    {settings.companyPan && <p>PAN: {settings.companyPan}</p>}
                 </div>
                 
                 <h3 className="font-bold text-lg mb-4 mt-8">Bill To</h3>
@@ -411,7 +411,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 <div className="space-y-4">
                     <div className='flex items-center gap-2'>
                         <Label htmlFor="invoiceNumber" className="text-sm font-medium w-24">Invoice #</Label>
-                        <Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className="max-w-[200px]" readOnly={!!initialData || !invoiceNumber} placeholder="INV-..." />
+                        <Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className="max-w-[200px]" readOnly={!!initialData || !invoiceNumber} placeholder="Auto-generated" />
                     </div>
                     <div>
                         <Popover>
@@ -540,21 +540,18 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                   <span>{total.toFixed(2)}</span>
                 </div>
               </div>
+               {settings.bankBeneficiary && (
               <div className='text-xs text-muted-foreground text-right w-full pt-4 border-t'>
                   <p className='font-semibold'>Bank Details</p>
-                  <p>Beneficiary: THE GUT GURU</p>
-                  <p>Bank: HDFC BANK LTD</p>
-                  <p>Account Number: 50200095177481</p>
-                  <p>IFSC Code: HDFC0000045</p>
-                  <p>Branch: HYDERABAD - CHANDA NAGAR</p>
+                  <p>Beneficiary: {settings.bankBeneficiary}</p>
+                  <p>Bank: {settings.bankName}</p>
+                  <p>Account Number: {settings.bankAccount}</p>
+                  <p>IFSC Code: {settings.bankIfsc}</p>
+                  <p>Branch: {settings.bankBranch}</p>
               </div>
+               )}
             </CardFooter>
           </Card>
     </>
   );
 }
-
-    
-
-    
-

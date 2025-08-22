@@ -20,7 +20,21 @@ export interface ShipToContact {
     gst: string;
 }
 
-export interface Settings {
+export interface CompanySettings {
+    companyName?: string;
+    companyAddress?: string;
+    companyGstin?: string;
+    companyPan?: string;
+    invoicePrefix?: string;
+    bankBeneficiary?: string;
+    bankName?: string;
+    bankAccount?: string;
+    bankIfsc?: string;
+    bankBranch?: string;
+    stampLogoUrl?: string;
+}
+
+export interface Settings extends CompanySettings {
     billToContacts?: BillToContact[];
     shipToContacts?: ShipToContact[];
     defaultBillToContact?: string; // Storing ID of the default contact
@@ -38,7 +52,21 @@ export async function getSettings(): Promise<Settings> {
         if (docSnap.exists()) {
             return docSnap.data() as Settings;
         } else {
-            const initialSettings: Settings = { billToContacts: [], shipToContacts: [] };
+            const initialSettings: Settings = { 
+                billToContacts: [], 
+                shipToContacts: [],
+                companyName: 'THE GUT GURU',
+                companyAddress: 'H NO.6-46/3/A, Venkateswarao nagar, Chanda Nagar, Hyderabad-500050',
+                companyGstin: '36DDTPJ6536D1Z8',
+                companyPan: 'DDTPJ6536D',
+                invoicePrefix: 'TGGHS/25-26/',
+                bankBeneficiary: 'THE GUT GURU',
+                bankName: 'HDFC BANK LTD',
+                bankAccount: '50200095177481',
+                bankIfsc: 'HDFC0000045',
+                bankBranch: 'HYDERABAD - CHANDA NAGAR',
+                stampLogoUrl: '/signature.png',
+            };
             await setDoc(docRef, initialSettings);
             return initialSettings;
         }
@@ -47,6 +75,18 @@ export async function getSettings(): Promise<Settings> {
         return { billToContacts: [], shipToContacts: [] };
     }
 }
+
+export async function saveCompanySettings(companySettings: CompanySettings): Promise<void> {
+    try {
+        const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
+        // Use setDoc with merge to create the document if it doesn't exist, or update it if it does.
+        await setDoc(settingsRef, companySettings, { merge: true });
+    } catch (error) {
+        console.error("Error saving company settings: ", error);
+        throw new Error("Failed to save company settings.");
+    }
+}
+
 
 function contactExists(contacts: any[] | undefined, displayName: string): Promise<boolean> {
     if (!contacts) return Promise.resolve(false);

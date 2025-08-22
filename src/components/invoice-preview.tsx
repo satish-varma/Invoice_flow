@@ -41,10 +41,10 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                     </div>
                     {activeProfile ? (
                     <div className='flex justify-between items-start'>
-                        <div>
+                        <div className="space-y-1">
                             <p className='font-bold text-xl'>{activeProfile.companyName}</p>
                             <p className='text-sm w-64' style={{whiteSpace: 'pre-wrap'}}>{activeProfile.companyAddress}</p>
-                             <div className='text-sm'>
+                             <div className='text-sm mt-1'>
                                 {activeProfile.companyGstin && <p className='mb-0'><span className='font-bold'>GSTIN:</span> {activeProfile.companyGstin}</p>}
                                 {activeProfile.companyPan && <p><span className='font-bold'>PAN:</span> {activeProfile.companyPan}</p>}
                             </div>

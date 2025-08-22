@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -12,9 +13,9 @@ import { format } from "date-fns"
 import { extractInvoiceData, ExtractInvoiceDataOutput } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
-import { Menubar, MenubarMenu, MenubarTrigger } from './ui/menubar';
 import { Invoice, saveInvoice } from '@/services/invoiceService';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getSettings, Settings, CompanyProfile } from '@/services/settingsService';
@@ -67,6 +68,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   const [isExtracting, setIsExtracting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pathname = usePathname();
   
   const [settings, setSettings] = useState<Settings>({ companyProfiles: [], billToContacts: [], shipToContacts: [] });
   const [activeCompanyProfile, setActiveCompanyProfile] = useState<CompanyProfile | null>(null);
@@ -328,70 +330,46 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 {initialData ? `Editing Invoice #${initialData.invoiceNumber}` : 'Create a new invoice or upload one to have AI extract the data.'}
               </p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-                <Menubar className="flex-wrap h-auto sm:h-10 border-none bg-transparent p-0">
-                    <MenubarMenu>
-                        <MenubarTrigger asChild>
-                        <Button variant="ghost" onClick={() => handleClearForm()} className="cursor-pointer">
-                            <FilePlus className="mr-2 h-4 w-4" /> New
-                        </Button>
-                        </MenubarTrigger>
-                    </MenubarMenu>
-                    <MenubarMenu>
-                        <MenubarTrigger asChild>
-                        <Button variant="ghost" asChild className="cursor-pointer">
-                            <Link href="/invoices" className='flex items-center'>
-                                <ListOrdered className="mr-2 h-4 w-4" /> Saved Invoices
-                            </Link>
-                        </Button>
-                        </MenubarTrigger>
-                    </MenubarMenu>
-                    <MenubarMenu>
-                        <MenubarTrigger asChild>
-                            <Button variant="ghost" asChild className="cursor-pointer">
-                            <Link href="/settings" className='flex items-center'>
-                                <SettingsIcon className="mr-2 h-4 w-4" /> Settings
-                            </Link>
-                            </Button>
-                        </MenubarTrigger>
-                    </MenubarMenu>
-                    <MenubarMenu>
-                        <MenubarTrigger asChild>
-                            <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={isExtracting} className="cursor-pointer">
-                                {isExtracting ? (
-                                    <>
-                                        <Loader className="mr-2 h-4 w-4 animate-spin" />
-                                        Extracting...
-                                    </>
-                                ) : (
-                                <>
-                                    <Wand2 className="mr-2 h-4 w-4" />
-                                        Autofill
-                                </>
-                                )}
-                            </Button>
-                        </MenubarTrigger>
-                    </MenubarMenu>
-                </Menubar>
-                <Button onClick={() => handleSaveInvoice(false)} disabled={isSaving} variant="secondary">
-                    {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    {initialData ? 'Update' : 'Save'}
-                </Button>
-                <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90 focus:bg-accent">
-                    {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save &amp; Download
-                </Button>
-            </div>
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-                accept="image/*,application/pdf"
-                disabled={isExtracting}
-            />
+        </div>
+        <div className='bg-card p-2 rounded-lg shadow-sm w-full flex flex-col sm:flex-row items-center justify-between gap-2 flex-wrap'>
+          <nav className="flex items-center gap-1 flex-wrap">
+              <Button asChild variant="ghost" className={pathname === '/' ? 'text-primary' : ''}>
+                  <Link href="/"><FilePlus /> New</Link>
+              </Button>
+              <Button asChild variant="ghost" className={pathname === '/invoices' ? 'text-primary' : ''}>
+                  <Link href="/invoices"><ListOrdered /> Saved Invoices</Link>
+              </Button>
+               <Button asChild variant="ghost" className={pathname === '/settings' ? 'text-primary' : ''}>
+                  <Link href="/settings"><SettingsIcon /> Settings</Link>
+              </Button>
+          </nav>
+          <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={isExtracting}>
+                  {isExtracting ? (
+                      <><Loader className="animate-spin" /> Extracting...</>
+                  ) : (
+                      <><Wand2 /> Autofill</>
+                  )}
+              </Button>
+              <Button onClick={() => handleSaveInvoice(false)} disabled={isSaving} variant="secondary">
+                  {isSaving ? <Loader className="animate-spin" /> : <Save />}
+                  {initialData ? 'Update' : 'Save'}
+              </Button>
+              <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
+                  {isSaving ? <Loader className="animate-spin" /> : <Save />}
+                  Save &amp; Download
+              </Button>
+          </div>
         </div>
       </div>
+      <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept="image/*,application/pdf"
+          disabled={isExtracting}
+      />
           <Card className="w-full shadow-lg">
             <CardHeader className="bg-muted/20 p-4 sm:p-6">
               <CardTitle>Invoice Details</CardTitle>
@@ -603,3 +581,5 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
+
+    

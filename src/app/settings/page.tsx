@@ -33,10 +33,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type ContactType = 'billTo' | 'shipTo';
 
+const initialCompanySettings: CompanySettings = {
+    companyName: '',
+    companyAddress: '',
+    companyGstin: '',
+    companyPan: '',
+    invoicePrefix: '',
+    bankBeneficiary: '',
+    bankName: '',
+    bankAccount: '',
+    bankIfsc: '',
+    bankBranch: '',
+    stampLogoUrl: '',
+};
+
 export default function SettingsPage() {
     const [settings, setSettings] = useState<Settings>({ billToContacts: [], shipToContacts: [] });
     
-    const [companySettings, setCompanySettings] = useState<CompanySettings>({});
+    const [companySettings, setCompanySettings] = useState<CompanySettings>(initialCompanySettings);
     
     const [newBillTo, setNewBillTo] = useState<Omit<BillToContact, 'id'>>({ displayName: '', name: '', address: '', gst: '' });
     const [newShipTo, setNewShipTo] = useState<Omit<ShipToContact, 'id'>>({ displayName: '', name: '', address: '', gst: '' });
@@ -57,7 +71,7 @@ export default function SettingsPage() {
         setIsLoading(true);
         const loadedSettings = await getSettings();
         setSettings(loadedSettings);
-        setCompanySettings(loadedSettings);
+        setCompanySettings({ ...initialCompanySettings, ...loadedSettings });
         if (loadedSettings.stampLogoUrl) {
             setStampPreview(loadedSettings.stampLogoUrl);
         }
@@ -251,19 +265,19 @@ export default function SettingsPage() {
                                     <div className="grid md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label>Company Name</Label>
-                                            <Input value={companySettings.companyName} onChange={e => handleCompanySettingsChange('companyName', e.target.value)} />
+                                            <Input value={companySettings.companyName ?? ''} onChange={e => handleCompanySettingsChange('companyName', e.target.value)} />
                                         </div>
                                          <div className="space-y-2">
                                             <Label>Company Address</Label>
-                                            <Textarea value={companySettings.companyAddress} onChange={e => handleCompanySettingsChange('companyAddress', e.target.value)} />
+                                            <Textarea value={companySettings.companyAddress ?? ''} onChange={e => handleCompanySettingsChange('companyAddress', e.target.value)} />
                                         </div>
                                         <div className="space-y-2">
                                             <Label>GSTIN</Label>
-                                            <Input value={companySettings.companyGstin} onChange={e => handleCompanySettingsChange('companyGstin', e.target.value)} />
+                                            <Input value={companySettings.companyGstin ?? ''} onChange={e => handleCompanySettingsChange('companyGstin', e.target.value)} />
                                         </div>
                                         <div className="space-y-2">
                                             <Label>PAN</Label>
-                                            <Input value={companySettings.companyPan} onChange={e => handleCompanySettingsChange('companyPan', e.target.value)} />
+                                            <Input value={companySettings.companyPan ?? ''} onChange={e => handleCompanySettingsChange('companyPan', e.target.value)} />
                                         </div>
                                     </div>
                                 </div>
@@ -272,7 +286,7 @@ export default function SettingsPage() {
                                      <h3 className="font-bold mb-4">Invoice Numbering</h3>
                                      <div className="space-y-2">
                                         <Label>Invoice Number Prefix</Label>
-                                        <Input value={companySettings.invoicePrefix} onChange={e => handleCompanySettingsChange('invoicePrefix', e.target.value)} placeholder="e.g., INV-2024-" />
+                                        <Input value={companySettings.invoicePrefix ?? ''} onChange={e => handleCompanySettingsChange('invoicePrefix', e.target.value)} placeholder="e.g., INV-2024-" />
                                         <p className='text-xs text-muted-foreground'>The invoice number will be this prefix followed by an auto-incrementing number.</p>
                                      </div>
                                 </div>
@@ -280,11 +294,11 @@ export default function SettingsPage() {
                                 <div className="p-4 border rounded-lg">
                                      <h3 className="font-bold mb-4">Bank Details</h3>
                                      <div className="grid md:grid-cols-2 gap-4">
-                                        <div className="space-y-2"><Label>Beneficiary</Label><Input value={companySettings.bankBeneficiary} onChange={e => handleCompanySettingsChange('bankBeneficiary', e.target.value)} /></div>
-                                        <div className="space-y-2"><Label>Bank Name</Label><Input value={companySettings.bankName} onChange={e => handleCompanySettingsChange('bankName', e.target.value)} /></div>
-                                        <div className="space-y-2"><Label>Account Number</Label><Input value={companySettings.bankAccount} onChange={e => handleCompanySettingsChange('bankAccount', e.target.value)} /></div>
-                                        <div className="space-y-2"><Label>IFSC Code</Label><Input value={companySettings.bankIfsc} onChange={e => handleCompanySettingsChange('bankIfsc', e.target.value)} /></div>
-                                        <div className="space-y-2 md:col-span-2"><Label>Branch</Label><Input value={companySettings.bankBranch} onChange={e => handleCompanySettingsChange('bankBranch', e.target.value)} /></div>
+                                        <div className="space-y-2"><Label>Beneficiary</Label><Input value={companySettings.bankBeneficiary ?? ''} onChange={e => handleCompanySettingsChange('bankBeneficiary', e.target.value)} /></div>
+                                        <div className="space-y-2"><Label>Bank Name</Label><Input value={companySettings.bankName ?? ''} onChange={e => handleCompanySettingsChange('bankName', e.target.value)} /></div>
+                                        <div className="space-y-2"><Label>Account Number</Label><Input value={companySettings.bankAccount ?? ''} onChange={e => handleCompanySettingsChange('bankAccount', e.target.value)} /></div>
+                                        <div className="space-y-2"><Label>IFSC Code</Label><Input value={companySettings.bankIfsc ?? ''} onChange={e => handleCompanySettingsChange('bankIfsc', e.target.value)} /></div>
+                                        <div className="space-y-2 md:col-span-2"><Label>Branch</Label><Input value={companySettings.bankBranch ?? ''} onChange={e => handleCompanySettingsChange('bankBranch', e.target.value)} /></div>
                                      </div>
                                 </div>
                                  {/* Stamp Logo Section */}

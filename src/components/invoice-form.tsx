@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
 import { Invoice, saveInvoice } from '@/services/invoiceService';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getSettings, Settings, CompanyProfile } from '@/services/settingsService';
@@ -69,6 +69,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
+  const router = useRouter();
   
   const [settings, setSettings] = useState<Settings>({ companyProfiles: [], billToContacts: [], shipToContacts: [] });
   const [activeCompanyProfile, setActiveCompanyProfile] = useState<CompanyProfile | null>(null);
@@ -317,6 +318,13 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     }
   }
 
+  const handleNewClick = () => {
+    onAddNew();
+    if(pathname !== '/') {
+        router.push('/');
+    }
+  }
+
 
   return (
     <>
@@ -333,8 +341,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         </div>
         <div className='bg-card p-2 rounded-lg shadow-sm w-full flex flex-col sm:flex-row items-center justify-between gap-2 flex-wrap'>
           <nav className="flex items-center gap-1 flex-wrap">
-              <Button asChild variant="ghost" className={pathname === '/' ? 'text-primary' : ''}>
-                  <Link href="/"><FilePlus /> New</Link>
+              <Button variant="ghost" onClick={handleNewClick} className={pathname === '/' ? 'text-primary' : ''}>
+                  <FilePlus /> New
               </Button>
               <Button asChild variant="ghost" className={pathname === '/invoices' ? 'text-primary' : ''}>
                   <Link href="/invoices"><ListOrdered /> Saved Invoices</Link>
@@ -581,5 +589,3 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
-
-    

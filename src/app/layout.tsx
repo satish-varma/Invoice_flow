@@ -1,3 +1,4 @@
+
 import type {Metadata} from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
@@ -12,6 +13,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'InvoiceFlow',
   description: 'Generate, manage, and download professional-looking invoices.',
+  manifest: '/manifest.json'
 };
 
 export default function RootLayout({
@@ -21,6 +23,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={inter.variable}>
+       <head>
+        <meta name="theme-color" content="#f43f5e" />
+      </head>
       <body className="font-body antialiased">
         {children}
         <Toaster />

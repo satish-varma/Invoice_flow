@@ -47,9 +47,12 @@ export function InvoiceContainer() {
         fetchData();
     }, []);
 
-    const handleInvoiceSave = () => {
+    const handleInvoiceSave = (savedInvoice?: Invoice) => {
         fetchData();
         setSelectedInvoice(null); // Clear form after saving
+        if (savedInvoice) {
+            handleDownload(savedInvoice);
+        }
     };
 
     const handleSelectInvoice = (invoice: Invoice) => {

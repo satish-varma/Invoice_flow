@@ -8,12 +8,13 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, ChevronDown } from 'lucide-react';
 import { format } from "date-fns"
 import { extractInvoiceData, ExtractInvoiceDataOutput } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
-import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem } from './ui/menubar';
+import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem, MenubarSeparator } from './ui/menubar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Invoice, saveInvoice } from '@/services/invoiceService';
 import Link from 'next/link';
 import { Label } from './ui/label';
@@ -29,7 +30,7 @@ type LineItem = {
 
 interface InvoiceFormProps {
     initialData?: Invoice | null;
-    onInvoiceSave: () => void;
+    onInvoiceSave: (savedInvoice?: Invoice) => void;
     onAddNew: () => void;
 }
 
@@ -186,7 +187,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     }
   };
   
-  const handleSaveInvoice = async () => {
+  const handleSaveInvoice = async (andDownload = false) => {
     if(!billToName) {
         toast({
             variant: "destructive",
@@ -205,7 +206,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
 
     setIsSaving(true);
     try {
-        const invoiceData: Omit<Invoice, 'id' | 'invoiceNumber' | 'createdAt'> & { id?: string } = {
+        const invoiceData: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & { id?: string } = {
             date: date?.toISOString() || new Date().toISOString(),
             companyProfileId: activeCompanyProfile.id,
             period,
@@ -229,12 +230,18 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             invoiceData.id = initialData.id;
         }
 
-        await saveInvoice(invoiceData);
+        const savedInvoice = await saveInvoice(invoiceData);
         toast({
             title: initialData ? "Invoice Updated" : "Invoice Saved",
             description: `Your invoice has been successfully ${initialData ? 'updated' : 'saved'}.`,
         });
-        onInvoiceSave();
+        
+        if (andDownload) {
+            onInvoiceSave(savedInvoice);
+        } else {
+            onInvoiceSave();
+        }
+
     } catch (error) {
         console.error("Failed to save invoice:", error);
         toast({
@@ -366,23 +373,25 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                         </Button>
                     </MenubarTrigger>
                 </MenubarMenu>
-                <MenubarMenu>
-                    <MenubarTrigger asChild>
-                        <Button onClick={handleSaveInvoice} disabled={isSaving} className="cursor-pointer bg-accent text-accent-foreground hover:bg-accent/90 focus:bg-accent data-[state=open]:bg-accent">
-                            {isSaving ? (
-                                <>
-                                    <Loader className="mr-2 h-4 w-4 animate-spin" />
-                                    Saving...
-                                </>
-                            ) : (
-                            <>
-                                <Save className="mr-2 h-4 w-4" />
-                                    {initialData ? 'Update' : 'Save'}
-                            </>
-                            )}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button disabled={isSaving} className="cursor-pointer bg-accent text-accent-foreground hover:bg-accent/90 focus:bg-accent data-[state=open]:bg-accent">
+                             {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            {initialData ? 'Update' : 'Save'}
+                            <ChevronDown className="h-4 w-4 ml-2" />
                         </Button>
-                    </MenubarTrigger>
-                </MenubarMenu>
+                    </DropdownMenuTrigger>
+                     <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleSaveInvoice(false)} disabled={isSaving}>
+                            <Save className="mr-2 h-4 w-4" />
+                            <span>{initialData ? 'Update Invoice' : 'Save Invoice'}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleSaveInvoice(true)} disabled={isSaving}>
+                            <Save className="mr-2 h-4 w-4" />
+                            <span>Save &amp; Download</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </Menubar>
             <input
                 type="file"
@@ -543,7 +552,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-1/2">Item & Description</TableHead>
+                      <TableHead className="w-1/2">Item &amp; Description</TableHead>
                       <TableHead className="w-[100px] text-right">Quantity</TableHead>
                       <TableHead className="w-[120px] text-right">Rate</TableHead>
                       <TableHead className="w-[120px] text-right">Amount</TableHead>
@@ -605,5 +614,3 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
-
-    

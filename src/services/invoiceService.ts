@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
 import { getSettings, CompanyProfile } from './settingsService';
 
 export interface LineItem {
@@ -69,8 +69,11 @@ async function getNextInvoiceNumber(companyProfileId?: string): Promise<string> 
 }
 
 
-export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & {id?: string}): Promise<string> {
+export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & {id?: string}): Promise<Invoice> {
   try {
+    let savedInvoiceId: string;
+    let fullInvoice: Invoice;
+
     if (invoice.id) {
       // Update existing invoice
       const docRef = doc(db, INVOICES_COLLECTION, invoice.id);
@@ -78,18 +81,35 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
       await updateDoc(docRef, {
         ...invoiceData,
       });
-      return invoice.id;
+      savedInvoiceId = invoice.id;
+      const updatedDoc = await getDoc(docRef);
+      fullInvoice = { id: savedInvoiceId, ...updatedDoc.data() } as Invoice;
+
     } else {
       // Create new invoice
       const invoiceNumber = await getNextInvoiceNumber(invoice.companyProfileId);
       const { id, ...invoiceData } = invoice;
-      const docRef = await addDoc(collection(db, INVOICES_COLLECTION), {
+      const completeInvoiceData = {
         ...invoiceData,
         invoiceNumber,
         createdAt: serverTimestamp(),
-      });
-      return docRef.id;
+      }
+      const docRef = await addDoc(collection(db, INVOICES_COLLECTION), completeInvoiceData);
+      savedInvoiceId = docRef.id;
+      fullInvoice = { id: savedInvoiceId, ...completeInvoiceData } as Invoice;
     }
+
+    // Convert date objects for serialization
+    if (fullInvoice.date && typeof fullInvoice.date !== 'string') {
+        fullInvoice.date = (fullInvoice.date as any).toDate().toISOString();
+    }
+    if (fullInvoice.createdAt && typeof fullInvoice.createdAt !== 'string') {
+       fullInvoice.createdAt = (fullInvoice.createdAt as any).toDate().toISOString();
+    }
+
+
+    return fullInvoice;
+
   } catch (e) {
     console.error("Error adding/updating document: ", e);
     throw new Error("Failed to save invoice.");
@@ -138,5 +158,3 @@ export async function deleteInvoices(ids: string[]): Promise<void> {
         throw new Error("Failed to delete invoices.");
     }
 }
-
-    

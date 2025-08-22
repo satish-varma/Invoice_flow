@@ -20,21 +20,26 @@ export interface ShipToContact {
     gst: string;
 }
 
-export interface CompanySettings {
-    companyName?: string;
-    companyAddress?: string;
-    companyGstin?: string;
-    companyPan?: string;
-    invoicePrefix?: string;
-    bankBeneficiary?: string;
-    bankName?: string;
-    bankAccount?: string;
-    bankIfsc?: string;
-    bankBranch?: string;
-    stampLogoUrl?: string;
+export interface CompanyProfile {
+    id: string;
+    profileName: string; // e.g., "Main Company", "Side Business"
+    companyName: string;
+    companyAddress: string;
+    companyGstin: string;
+    companyPan: string;
+    invoicePrefix: string;
+    bankBeneficiary: string;
+    bankName: string;
+    bankAccount: string;
+    bankIfsc: string;
+    bankBranch: string;
+    stampLogoUrl: string;
 }
 
-export interface Settings extends CompanySettings {
+
+export interface Settings {
+    companyProfiles?: CompanyProfile[];
+    defaultCompanyProfile?: string; // ID of the default profile
     billToContacts?: BillToContact[];
     shipToContacts?: ShipToContact[];
     defaultBillToContact?: string; // Storing ID of the default contact
@@ -50,44 +55,93 @@ export async function getSettings(): Promise<Settings> {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-            return docSnap.data() as Settings;
+            // Ensure companyProfiles is at least an empty array
+            const data = docSnap.data() as Settings;
+            if (!data.companyProfiles) {
+                data.companyProfiles = [];
+            }
+            return data;
         } else {
             const initialSettings: Settings = { 
+                companyProfiles: [],
                 billToContacts: [], 
                 shipToContacts: [],
-                companyName: 'THE GUT GURU',
-                companyAddress: 'H NO.6-46/3/A, Venkateswarao nagar, Chanda Nagar, Hyderabad-500050',
-                companyGstin: '36DDTPJ6536D1Z8',
-                companyPan: 'DDTPJ6536D',
-                invoicePrefix: 'TGGHS/25-26/',
-                bankBeneficiary: 'THE GUT GURU',
-                bankName: 'HDFC BANK LTD',
-                bankAccount: '50200095177481',
-                bankIfsc: 'HDFC0000045',
-                bankBranch: 'HYDERABAD - CHANDA NAGAR',
-                stampLogoUrl: '/signature.png',
             };
             await setDoc(docRef, initialSettings);
             return initialSettings;
         }
     } catch (error) {
         console.error("Error fetching settings: ", error);
-        return { billToContacts: [], shipToContacts: [] };
+        return { companyProfiles: [], billToContacts: [], shipToContacts: [] };
     }
 }
 
-export async function saveCompanySettings(companySettings: CompanySettings): Promise<void> {
-    try {
-        const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
-        // Use setDoc with merge to create the document if it doesn't exist, or update it if it does.
-        await setDoc(settingsRef, companySettings, { merge: true });
-    } catch (error) {
-        console.error("Error saving company settings: ", error);
-        throw new Error("Failed to save company settings.");
+export async function saveCompanyProfile(profile: Omit<CompanyProfile, 'id'>): Promise<string> {
+    const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
+    const settings = await getSettings();
+    const profiles = settings.companyProfiles || [];
+    
+    if (profiles.some(p => p.profileName === profile.profileName)) {
+        throw new Error("A company profile with this name already exists.");
     }
+    
+    const newProfile: CompanyProfile = {
+        ...profile,
+        id: `${Date.now()}-${Math.random()}`,
+    };
+
+    const updatedProfiles = [...profiles, newProfile];
+    await setDoc(settingsRef, { companyProfiles: updatedProfiles }, { merge: true });
+    
+    // If this is the first profile, make it the default
+    if (updatedProfiles.length === 1) {
+        await setDefaultCompanyProfile(newProfile.id);
+    }
+    
+    return newProfile.id;
 }
 
 
+export async function updateCompanyProfile(profile: CompanyProfile): Promise<void> {
+    const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
+    const settings = await getSettings();
+    const profiles = settings.companyProfiles || [];
+
+    const otherProfiles = profiles.filter(p => p.id !== profile.id);
+    if (otherProfiles.some(p => p.profileName === profile.profileName)) {
+        throw new Error("A company profile with this name already exists.");
+    }
+
+    const updatedProfiles = profiles.map(p => p.id === profile.id ? profile : p);
+    await updateDoc(settingsRef, { companyProfiles: updatedProfiles });
+}
+
+export async function deleteCompanyProfile(id: string): Promise<void> {
+    const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
+    const settings = await getSettings();
+    const profiles = settings.companyProfiles || [];
+    
+    const updatedProfiles = profiles.filter(p => p.id !== id);
+    
+    const updatePayload: { companyProfiles: CompanyProfile[]; defaultCompanyProfile?: string } = {
+        companyProfiles: updatedProfiles
+    };
+
+    // If the deleted profile was the default, unset it
+    if (settings.defaultCompanyProfile === id) {
+        updatePayload.defaultCompanyProfile = updatedProfiles.length > 0 ? updatedProfiles[0].id : '';
+    }
+
+    await updateDoc(settingsRef, updatePayload);
+}
+
+export async function setDefaultCompanyProfile(id: string): Promise<void> {
+    const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
+    await updateDoc(settingsRef, { defaultCompanyProfile: id });
+}
+
+
+// CONTACT MANAGEMENT
 function contactExists(contacts: any[] | undefined, displayName: string): Promise<boolean> {
     if (!contacts) return Promise.resolve(false);
     return Promise.resolve(contacts.some(contact => contact.displayName === displayName));
@@ -260,3 +314,5 @@ export async function setDefaultShipToContact(id: string): Promise<void> {
         throw new Error(`Failed to set default Ship To contact: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
+
+    

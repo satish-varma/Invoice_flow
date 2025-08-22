@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from "date-fns";
 import { Invoice } from '@/services/invoiceService';
 import { Separator } from './ui/separator';
-import type { Settings } from '@/services/settingsService';
+import type { Settings, CompanyProfile } from '@/services/settingsService';
 import Image from 'next/image';
 
 interface InvoicePreviewProps {
@@ -15,6 +15,8 @@ interface InvoicePreviewProps {
 
 export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewProps>(({ invoice, settings }, ref) => {
     
+    const activeProfile = settings.companyProfiles?.find(p => p.id === invoice.companyProfileId);
+
     const inWords = (num: number): string => {
         const a = ['','one ','two ','three ','four ', 'five ','six ','seven ','eight ','nine ','ten ','eleven ','twelve ','thirteen ','fourteen ','fifteen ','sixteen ','seventeen ','eighteen ','nineteen '];
         const b = ['', '', 'twenty','thirty','forty','fifty', 'sixty','seventy','eighty','ninety'];
@@ -37,13 +39,14 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                         <CardTitle className="text-2xl font-bold tracking-tight">BILL OF SUPPLY</CardTitle>
                         <p className='text-sm'>(Original For Recipient)</p>
                     </div>
+                    {activeProfile ? (
                     <div className='flex justify-between items-start'>
                         <div>
-                            <p className='font-bold text-xl'>{settings.companyName}</p>
-                            <p className='text-sm w-64' style={{whiteSpace: 'pre-wrap'}}>{settings.companyAddress}</p>
+                            <p className='font-bold text-xl'>{activeProfile.companyName}</p>
+                            <p className='text-sm w-64' style={{whiteSpace: 'pre-wrap'}}>{activeProfile.companyAddress}</p>
                              <div className='text-sm'>
-                                {settings.companyGstin && <p className='mb-0'><span className='font-bold'>GSTIN:</span> {settings.companyGstin}</p>}
-                                {settings.companyPan && <p><span className='font-bold'>PAN:</span> {settings.companyPan}</p>}
+                                {activeProfile.companyGstin && <p className='mb-0'><span className='font-bold'>GSTIN:</span> {activeProfile.companyGstin}</p>}
+                                {activeProfile.companyPan && <p><span className='font-bold'>PAN:</span> {activeProfile.companyPan}</p>}
                             </div>
                         </div>
                         <div className="space-y-2 text-sm pt-12">
@@ -63,6 +66,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                             </div>
                         </div>
                     </div>
+                    ) : ( <p>Company profile not found.</p> )}
                 </CardHeader>
                 <CardContent className="px-6 pt-0">
                     <Separator className='bg-gray-200'/>
@@ -122,29 +126,30 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                     </div>
                     
                 </CardContent>
+                {activeProfile && (
                 <CardFooter className="p-6 flex-col items-start gap-4 border-t border-gray-200 mt-8">
                     <div className='w-full grid grid-cols-[70%_30%] gap-8'>
                          <div className='text-xs'>
                             <p className='font-semibold mb-2'>Bank Details</p>
                             <div className='grid grid-cols-[120px_1fr]'>
                                 <div className='font-bold'>Beneficiary Name:</div>
-                                <div>{settings.bankBeneficiary}</div>
+                                <div>{activeProfile.bankBeneficiary}</div>
                                 <div className='font-bold'>Bank Name:</div>
-                                <div>{settings.bankName}</div>
+                                <div>{activeProfile.bankName}</div>
                                 <div className='font-bold'>Account Number:</div>
-                                <div>{settings.bankAccount}</div>
+                                <div>{activeProfile.bankAccount}</div>
                                 <div className='font-bold'>IFSC Code:</div>
-                                <div>{settings.bankIfsc}</div>
+                                <div>{activeProfile.bankIfsc}</div>
                                 <div className='font-bold'>Branch:</div>
-                                <div>{settings.bankBranch}</div>
+                                <div>{activeProfile.bankBranch}</div>
                             </div>
                         </div>
                         <div className='flex flex-col justify-end items-center h-full text-sm'>
                             <div className='text-center w-full'>
-                                <p className="mb-2">For {settings.companyName}</p>
-                                {settings.stampLogoUrl && (
+                                <p className="mb-2">For {activeProfile.companyName}</p>
+                                {activeProfile.stampLogoUrl && (
                                 <div className='relative w-[80px] h-[80px] mx-auto'>
-                                    <Image src={settings.stampLogoUrl} alt="Company Stamp" fill sizes="80px" className="object-contain" priority />
+                                    <Image src={activeProfile.stampLogoUrl} alt="Company Stamp" fill sizes="80px" className="object-contain" priority />
                                 </div>
                                 )}
                                 <p className="-mt-2">Authorized Signature</p>
@@ -152,8 +157,11 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                          </div>
                     </div>
                 </CardFooter>
+                )}
             </Card>
         </div>
     );
 });
 InvoicePreview.displayName = "InvoicePreview";
+
+    

@@ -3,7 +3,7 @@
 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
-import { getSettings } from './settingsService';
+import { getSettings, CompanyProfile } from './settingsService';
 
 export interface LineItem {
   id: number;
@@ -20,6 +20,9 @@ export interface Invoice {
   subtotal: number;
   total: number;
   createdAt?: any;
+  
+  // Store the ID of the company profile used for this invoice
+  companyProfileId?: string; 
   
   // New fields from the template
   period?: string;
@@ -40,10 +43,17 @@ export interface Invoice {
 const INVOICES_COLLECTION = 'invoices';
 const COUNTER_DOCUMENT = 'invoiceCounter';
 
-async function getNextInvoiceNumber(): Promise<string> {
+async function getNextInvoiceNumber(companyProfileId?: string): Promise<string> {
     const counterRef = doc(db, 'counters', COUNTER_DOCUMENT);
     const settings = await getSettings();
-    const prefix = settings.invoicePrefix || 'INV-';
+    
+    let prefix = 'INV-'; // Default prefix
+    if (companyProfileId) {
+        const profile = settings.companyProfiles?.find(p => p.id === companyProfileId);
+        if (profile?.invoicePrefix) {
+            prefix = profile.invoicePrefix;
+        }
+    }
 
     const newInvoiceNumber = await runTransaction(db, async (transaction) => {
         const counterDoc = await transaction.get(counterRef);
@@ -71,7 +81,7 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
       return invoice.id;
     } else {
       // Create new invoice
-      const invoiceNumber = await getNextInvoiceNumber();
+      const invoiceNumber = await getNextInvoiceNumber(invoice.companyProfileId);
       const { id, ...invoiceData } = invoice;
       const docRef = await addDoc(collection(db, INVOICES_COLLECTION), {
         ...invoiceData,
@@ -128,3 +138,5 @@ export async function deleteInvoices(ids: string[]): Promise<void> {
         throw new Error("Failed to delete invoices.");
     }
 }
+
+    

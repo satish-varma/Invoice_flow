@@ -18,7 +18,7 @@ import { Invoice, saveInvoice } from '@/services/invoiceService';
 import Link from 'next/link';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getSettings, BillToContact, ShipToContact, Settings } from '@/services/settingsService';
+import { getSettings, Settings, CompanyProfile } from '@/services/settingsService';
 
 type LineItem = {
   id: number;
@@ -69,7 +69,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [settings, setSettings] = useState<Settings>({ billToContacts: [], shipToContacts: [] });
+  const [settings, setSettings] = useState<Settings>({ companyProfiles: [], billToContacts: [], shipToContacts: [] });
+  const [activeCompanyProfile, setActiveCompanyProfile] = useState<CompanyProfile | null>(null);
 
   const { toast } = useToast();
 
@@ -83,28 +84,41 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
       setPeriod(prevMonthName);
       setDelivery(prevMonthName);
     }
+    
     async function loadSettingsAndApplyDefaults() {
         const loadedSettings = await getSettings();
-        if (loadedSettings) {
-            setSettings(loadedSettings);
+        setSettings(loadedSettings);
 
-            // Apply defaults only for new invoices
-            if (!initialData) {
-                if (loadedSettings.defaultBillToContact && loadedSettings.billToContacts) {
-                    const defaultContact = loadedSettings.billToContacts.find(c => c.id === loadedSettings.defaultBillToContact);
-                    if (defaultContact) {
-                        setBillToName(defaultContact.name);
-                        setBillToAddress(defaultContact.address);
-                        setBillToGst(defaultContact.gst);
-                    }
+        // Determine which profile to use
+        let profileToApply: CompanyProfile | undefined;
+        if (initialData?.companyProfileId) {
+            profileToApply = loadedSettings.companyProfiles?.find(p => p.id === initialData.companyProfileId);
+        } else if (loadedSettings.defaultCompanyProfile) {
+            profileToApply = loadedSettings.companyProfiles?.find(p => p.id === loadedSettings.defaultCompanyProfile);
+        } else if (loadedSettings.companyProfiles && loadedSettings.companyProfiles.length > 0) {
+            profileToApply = loadedSettings.companyProfiles[0];
+        }
+
+        if (profileToApply) {
+            setActiveCompanyProfile(profileToApply);
+        }
+
+        // Apply contact defaults only for new invoices
+        if (!initialData) {
+            if (loadedSettings.defaultBillToContact && loadedSettings.billToContacts) {
+                const defaultContact = loadedSettings.billToContacts.find(c => c.id === loadedSettings.defaultBillToContact);
+                if (defaultContact) {
+                    setBillToName(defaultContact.name);
+                    setBillToAddress(defaultContact.address);
+                    setBillToGst(defaultContact.gst);
                 }
-                 if (loadedSettings.defaultShipToContact && loadedSettings.shipToContacts) {
-                    const defaultContact = loadedSettings.shipToContacts.find(c => c.id === loadedSettings.defaultShipToContact);
-                    if (defaultContact) {
-                        setShipToName(defaultContact.name);
-                        setShipToAddress(defaultContact.address);
-                        setShipToGst(defaultContact.gst);
-                    }
+            }
+             if (loadedSettings.defaultShipToContact && loadedSettings.shipToContacts) {
+                const defaultContact = loadedSettings.shipToContacts.find(c => c.id === loadedSettings.defaultShipToContact);
+                if (defaultContact) {
+                    setShipToName(defaultContact.name);
+                    setShipToAddress(defaultContact.address);
+                    setShipToGst(defaultContact.gst);
                 }
             }
         }
@@ -180,11 +194,20 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         });
         return;
     }
+    if (!activeCompanyProfile) {
+        toast({
+            variant: "destructive",
+            title: "Company Profile is required",
+            description: "Please select a company profile or add one in settings."
+        });
+        return;
+    }
 
     setIsSaving(true);
     try {
         const invoiceData: Omit<Invoice, 'id' | 'invoiceNumber' | 'createdAt'> & { id?: string } = {
             date: date?.toISOString() || new Date().toISOString(),
+            companyProfileId: activeCompanyProfile.id,
             period,
             delivery,
             billToName,
@@ -279,6 +302,14 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         }
     }
   };
+  
+  const handleCompanyProfileSelect = (id: string) => {
+    const profile = settings.companyProfiles?.find(p => p.id === id);
+    if(profile) {
+      setActiveCompanyProfile(profile);
+    }
+  }
+
 
   return (
     <>
@@ -371,12 +402,31 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
               {/* Left Column */}
               <div>
                 <h3 className="font-bold text-lg mb-4">From</h3>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                    <p className='font-bold text-base text-foreground'>{settings.companyName}</p>
-                    <p style={{whiteSpace: 'pre-wrap'}}>{settings.companyAddress}</p>
-                    {settings.companyGstin && <p>GSTIN: {settings.companyGstin}</p>}
-                    {settings.companyPan && <p>PAN: {settings.companyPan}</p>}
-                </div>
+                {settings.companyProfiles && settings.companyProfiles.length > 0 && (
+                  <div className='mb-4'>
+                    <Label>Select Company Profile</Label>
+                    <Select onValueChange={handleCompanyProfileSelect} value={activeCompanyProfile?.id}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a company profile..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {settings.companyProfiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.profileName}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {activeCompanyProfile ? (
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                        <p className='font-bold text-base text-foreground'>{activeCompanyProfile.companyName}</p>
+                        <p style={{whiteSpace: 'pre-wrap'}}>{activeCompanyProfile.companyAddress}</p>
+                        {activeCompanyProfile.companyGstin && <p>GSTIN: {activeCompanyProfile.companyGstin}</p>}
+                        {activeCompanyProfile.companyPan && <p>PAN: {activeCompanyProfile.companyPan}</p>}
+                    </div>
+                ) : (
+                    <div className="text-sm text-muted-foreground p-4 border-dashed border rounded-md">
+                        No company profile selected. Please <Link href="/settings" className="text-primary underline">add or select a profile</Link>.
+                    </div>
+                )}
                 
                 <h3 className="font-bold text-lg mb-4 mt-8">Bill To</h3>
                  <div className="space-y-2">
@@ -540,14 +590,14 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                   <span>{total.toFixed(2)}</span>
                 </div>
               </div>
-               {settings.bankBeneficiary && (
+               {activeCompanyProfile?.bankBeneficiary && (
               <div className='text-xs text-muted-foreground text-right w-full pt-4 border-t'>
                   <p className='font-semibold'>Bank Details</p>
-                  <p>Beneficiary: {settings.bankBeneficiary}</p>
-                  <p>Bank: {settings.bankName}</p>
-                  <p>Account Number: {settings.bankAccount}</p>
-                  <p>IFSC Code: {settings.bankIfsc}</p>
-                  <p>Branch: {settings.bankBranch}</p>
+                  <p>Beneficiary: {activeCompanyProfile.bankBeneficiary}</p>
+                  <p>Bank: {activeCompanyProfile.bankName}</p>
+                  <p>Account Number: {activeCompanyProfile.bankAccount}</p>
+                  <p>IFSC Code: {activeCompanyProfile.bankIfsc}</p>
+                  <p>Branch: {activeCompanyProfile.bankBranch}</p>
               </div>
                )}
             </CardFooter>
@@ -555,3 +605,5 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
+
+    

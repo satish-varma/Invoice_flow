@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -8,13 +7,12 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, ChevronDown } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon } from 'lucide-react';
 import { format } from "date-fns"
 import { extractInvoiceData, ExtractInvoiceDataOutput } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
-import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem, MenubarSeparator } from './ui/menubar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Menubar, MenubarMenu, MenubarTrigger } from './ui/menubar';
 import { Invoice, saveInvoice } from '@/services/invoiceService';
 import Link from 'next/link';
 import { Label } from './ui/label';
@@ -330,69 +328,60 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 {initialData ? `Editing Invoice #${initialData.invoiceNumber}` : 'Create a new invoice or upload one to have AI extract the data.'}
               </p>
             </div>
-            <Menubar className="flex-wrap h-auto sm:h-10">
-                <MenubarMenu>
-                    <MenubarTrigger asChild>
-                      <Button variant="ghost" onClick={() => handleClearForm()} className="cursor-pointer">
-                          <FilePlus className="mr-2 h-4 w-4" /> New
-                      </Button>
-                    </MenubarTrigger>
-                </MenubarMenu>
-                 <MenubarMenu>
-                    <MenubarTrigger asChild>
-                       <Button variant="ghost" asChild className="cursor-pointer">
-                          <Link href="/invoices" className='flex items-center'>
-                            <ListOrdered className="mr-2 h-4 w-4" /> Saved Invoices
-                          </Link>
-                       </Button>
-                    </MenubarTrigger>
-                </MenubarMenu>
-                 <MenubarMenu>
-                     <MenubarTrigger asChild>
+            <div className="flex items-center gap-2 flex-wrap">
+                <Menubar className="flex-wrap h-auto sm:h-10 border-none bg-transparent p-0">
+                    <MenubarMenu>
+                        <MenubarTrigger asChild>
+                        <Button variant="ghost" onClick={() => handleClearForm()} className="cursor-pointer">
+                            <FilePlus className="mr-2 h-4 w-4" /> New
+                        </Button>
+                        </MenubarTrigger>
+                    </MenubarMenu>
+                    <MenubarMenu>
+                        <MenubarTrigger asChild>
                         <Button variant="ghost" asChild className="cursor-pointer">
-                          <Link href="/settings" className='flex items-center'>
-                            <SettingsIcon className="mr-2 h-4 w-4" /> Settings
-                          </Link>
+                            <Link href="/invoices" className='flex items-center'>
+                                <ListOrdered className="mr-2 h-4 w-4" /> Saved Invoices
+                            </Link>
                         </Button>
-                    </MenubarTrigger>
-                </MenubarMenu>
-                <MenubarMenu>
-                     <MenubarTrigger asChild>
-                        <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={isExtracting} className="cursor-pointer">
-                            {isExtracting ? (
+                        </MenubarTrigger>
+                    </MenubarMenu>
+                    <MenubarMenu>
+                        <MenubarTrigger asChild>
+                            <Button variant="ghost" asChild className="cursor-pointer">
+                            <Link href="/settings" className='flex items-center'>
+                                <SettingsIcon className="mr-2 h-4 w-4" /> Settings
+                            </Link>
+                            </Button>
+                        </MenubarTrigger>
+                    </MenubarMenu>
+                    <MenubarMenu>
+                        <MenubarTrigger asChild>
+                            <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={isExtracting} className="cursor-pointer">
+                                {isExtracting ? (
+                                    <>
+                                        <Loader className="mr-2 h-4 w-4 animate-spin" />
+                                        Extracting...
+                                    </>
+                                ) : (
                                 <>
-                                    <Loader className="mr-2 h-4 w-4 animate-spin" />
-                                    Extracting...
+                                    <Wand2 className="mr-2 h-4 w-4" />
+                                        Autofill
                                 </>
-                            ) : (
-                            <>
-                                <Wand2 className="mr-2 h-4 w-4" />
-                                    Autofill
-                            </>
-                            )}
-                        </Button>
-                    </MenubarTrigger>
-                </MenubarMenu>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button disabled={isSaving} className="cursor-pointer bg-accent text-accent-foreground hover:bg-accent/90 focus:bg-accent data-[state=open]:bg-accent">
-                             {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                            {initialData ? 'Update' : 'Save'}
-                            <ChevronDown className="h-4 w-4 ml-2" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleSaveInvoice(false)} disabled={isSaving}>
-                            <Save className="mr-2 h-4 w-4" />
-                            <span>{initialData ? 'Update Invoice' : 'Save Invoice'}</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleSaveInvoice(true)} disabled={isSaving}>
-                            <Save className="mr-2 h-4 w-4" />
-                            <span>Save &amp; Download</span>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </Menubar>
+                                )}
+                            </Button>
+                        </MenubarTrigger>
+                    </MenubarMenu>
+                </Menubar>
+                <Button onClick={() => handleSaveInvoice(false)} disabled={isSaving} variant="secondary">
+                    {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    {initialData ? 'Update' : 'Save'}
+                </Button>
+                <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90 focus:bg-accent">
+                    {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Save &amp; Download
+                </Button>
+            </div>
             <input
                 type="file"
                 ref={fileInputRef}

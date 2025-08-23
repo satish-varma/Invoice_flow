@@ -2,6 +2,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Allow public access to all collections for a public-facing app.
+    // WARNING: This is insecure for production apps that handle sensitive data.
+    // Any user can read, write, and delete any data in your database.
     match /{document=**} {
       allow read, write: if true;
     }

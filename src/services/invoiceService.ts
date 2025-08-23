@@ -43,23 +43,15 @@ export interface Invoice {
 const INVOICES_COLLECTION = 'invoices';
 const COUNTER_DOCUMENT = 'invoiceCounter';
 
-async function getNextInvoiceNumber(companyProfileId?: string): Promise<string> {
+async function getNextInvoiceNumber(prefix: string): Promise<string> {
     const counterRef = doc(db, 'counters', COUNTER_DOCUMENT);
-    const settings = await getSettings();
-    
-    let prefix = 'INV-'; // Default prefix
-    if (companyProfileId) {
-        const profile = settings.companyProfiles?.find(p => p.id === companyProfileId);
-        if (profile?.invoicePrefix) {
-            prefix = profile.invoicePrefix;
-        }
-    }
 
     const newInvoiceNumber = await runTransaction(db, async (transaction) => {
         const counterDoc = await transaction.get(counterRef);
         let nextNumber = 1; 
         if (counterDoc.exists()) {
-            nextNumber = counterDoc.data().currentNumber + 1;
+            const currentNumber = counterDoc.data().currentNumber || 0;
+            nextNumber = currentNumber + 1;
         }
         transaction.set(counterRef, { currentNumber: nextNumber }, { merge: true });
         return nextNumber;
@@ -87,7 +79,16 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
 
     } else {
       // Create new invoice
-      const invoiceNumber = await getNextInvoiceNumber(invoice.companyProfileId);
+      const settings = await getSettings();
+      let prefix = 'INV-'; // Default prefix
+      if (invoice.companyProfileId) {
+          const profile = settings.companyProfiles?.find(p => p.id === invoice.companyProfileId);
+          if (profile?.invoicePrefix) {
+              prefix = profile.invoicePrefix;
+          }
+      }
+
+      const invoiceNumber = await getNextInvoiceNumber(prefix);
       const { id, ...invoiceData } = invoice;
       const completeInvoiceData = {
         ...invoiceData,

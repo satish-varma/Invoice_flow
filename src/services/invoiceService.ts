@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc, deleteDoc, writeBatch, getDoc, Timestamp } from 'firebase/firestore';
 import { getSettings, CompanyProfile } from './settingsService';
 
 export interface LineItem {
@@ -64,7 +64,7 @@ async function getNextInvoiceNumber(prefix: string): Promise<string> {
 export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & {id?: string}): Promise<Invoice> {
   try {
     let savedInvoiceId: string;
-    let fullInvoice: Invoice;
+    let finalInvoiceData: any; // Used to hold the data before serialization fix
 
     if (invoice.id) {
       // Update existing invoice
@@ -75,7 +75,7 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
       });
       savedInvoiceId = invoice.id;
       const updatedDoc = await getDoc(docRef);
-      fullInvoice = { id: savedInvoiceId, ...updatedDoc.data() } as Invoice;
+      finalInvoiceData = { id: savedInvoiceId, ...updatedDoc.data() };
 
     } else {
       // Create new invoice
@@ -97,19 +97,21 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
       }
       const docRef = await addDoc(collection(db, INVOICES_COLLECTION), completeInvoiceData);
       savedInvoiceId = docRef.id;
-      fullInvoice = { id: savedInvoiceId, ...completeInvoiceData } as Invoice;
+      
+      // We can't get the server timestamp back immediately, so we'll use the client date for the return object
+      finalInvoiceData = { id: savedInvoiceId, ...completeInvoiceData, createdAt: new Date() } as Invoice;
     }
 
-    // Convert date objects for serialization
-    if (fullInvoice.date && typeof fullInvoice.date !== 'string') {
-        fullInvoice.date = (fullInvoice.date as any).toDate().toISOString();
-    }
-    if (fullInvoice.createdAt && typeof fullInvoice.createdAt !== 'string') {
-       fullInvoice.createdAt = (fullInvoice.createdAt as any).toDate().toISOString();
-    }
+    // Create a serializable version of the invoice to return to the client
+    const serializableInvoice: Invoice = {
+      ...finalInvoiceData,
+      id: savedInvoiceId,
+      // Convert Firestore Timestamp or Date object to ISO string
+      date: finalInvoiceData.date instanceof Timestamp ? finalInvoiceData.date.toDate().toISOString() : new Date(finalInvoiceData.date).toISOString(),
+      createdAt: finalInvoiceData.createdAt instanceof Timestamp ? finalInvoiceData.createdAt.toDate().toISOString() : new Date(finalInvoiceData.createdAt).toISOString(),
+    };
 
-
-    return fullInvoice;
+    return serializableInvoice;
 
   } catch (e) {
     console.error("Error adding/updating document: ", e);

@@ -13,8 +13,9 @@ export interface LineItem {
 }
 
 export interface TaxItem {
+  id?: number;
   name: string;
-  rate: number;
+  rate: number; // Will be 0 for manual entry but kept for structure
   amount: number;
 }
 
@@ -81,8 +82,8 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
       await updateDoc(docRef, {
         ...invoiceData,
       });
-      const updatedDoc = await getDoc(docRef);
-      finalInvoiceData = { id: invoice.id, ...updatedDoc.data() };
+      const updatedDocSnap = await getDoc(docRef);
+      finalInvoiceData = { id: invoice.id, ...updatedDocSnap.data() };
     } else {
       // Create new invoice
       const settings = await getSettings();
@@ -103,8 +104,8 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
       }
       const docRef = await addDoc(collection(db, INVOICES_COLLECTION), completeInvoiceData);
       
-      // We can't get the server timestamp back immediately, so we'll use the client date for the return object
-      finalInvoiceData = { id: docRef.id, ...completeInvoiceData, createdAt: new Date() };
+      const newDocSnap = await getDoc(docRef);
+      finalInvoiceData = { id: docRef.id, ...newDocSnap.data() };
     }
 
     // Create a serializable version of the invoice to return to the client
@@ -112,7 +113,7 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
       ...finalInvoiceData,
       // Convert Firestore Timestamp or Date object to ISO string
       date: finalInvoiceData.date instanceof Timestamp ? finalInvoiceData.date.toDate().toISOString() : new Date(finalInvoiceData.date).toISOString(),
-      createdAt: finalInvoiceData.createdAt instanceof Timestamp ? finalInvoiceData.createdAt.toDate().toISOString() : new Date(finalInvoiceData.createdAt).toISOString(),
+      createdAt: finalInvoiceData.createdAt instanceof Timestamp ? finalInvoiceData.createdAt.toDate().toISOString() : new Date().toISOString(),
     };
 
     return serializableInvoice;
@@ -166,5 +167,3 @@ export async function deleteInvoices(ids: string[]): Promise<void> {
         throw new Error("Failed to delete invoices.");
     }
 }
-
-    

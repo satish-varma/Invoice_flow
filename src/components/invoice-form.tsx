@@ -47,18 +47,6 @@ const months = [
     "July", "August", "September", "October", "November", "December"
 ];
 
-const availableTaxes = [
-    { id: 'SGST2.5', name: 'SGST @ 2.5%', rate: 2.5 },
-    { id: 'CGST2.5', name: 'CGST @ 2.5%', rate: 2.5 },
-    { id: 'SGST6', name: 'SGST @ 6%', rate: 6 },
-    { id: 'CGST6', name: 'CGST @ 6%', rate: 6 },
-    { id: 'SGST9', name: 'SGST @ 9%', rate: 9 },
-    { id: 'CGST9', name: 'CGST @ 9%', rate: 9 },
-    { id: 'SGST14', name: 'SGST @ 14%', rate: 14 },
-    { id: 'CGST14', name: 'CGST @ 14%', rate: 14 },
-    { id: 'Cess12', name: 'Cess @ 12%', rate: 12 },
-];
-
 export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFormProps) {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [date, setDate] = useState<Date | undefined>(undefined);
@@ -135,9 +123,6 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                     setShipToName(defaultContact.name);
                     setShipToAddress(defaultContact.address);
                     setShipToGst(defaultContact.gst);
-                    // Apply taxes from default contact
-                    const taxesToApply = availableTaxes.filter(t => defaultContact.taxes?.includes(t.id));
-                    setAppliedTaxes(taxesToApply.map(t => ({ name: t.name, rate: t.rate, amount: 0 })));
                 }
             }
         }
@@ -157,7 +142,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
           setShipToName(initialData.shipToName || '');
           setShipToAddress(initialData.shipToAddress || '');
           setShipToGst(initialData.shipToGst || '');
-          setAppliedTaxes(initialData.taxes || []);
+          setAppliedTaxes(initialData.taxes?.map(t => ({...t, rate: t.rate || 0 })) || []);
           setLineItems(initialData.lineItems.map((item, index) => ({
               id: item.id || Date.now() + index,
               ...item
@@ -180,24 +165,25 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
       item.id === id ? { ...item, [field]: value } : item
     ));
   };
+
+  const handleAddTax = () => {
+    setAppliedTaxes([...appliedTaxes, { id: Date.now(), name: '', rate: 0, amount: 0 }]);
+  };
+  
+  const handleRemoveTax = (id: number) => {
+      setAppliedTaxes(appliedTaxes.filter(tax => tax.id !== id));
+  };
+  
+  const handleTaxChange = (id: number, field: keyof Omit<TaxItem, 'id'>, value: string | number) => {
+      setAppliedTaxes(appliedTaxes.map(tax =>
+          tax.id === id ? { ...tax, [field]: value } : tax
+      ));
+  };
   
   const { subtotal, taxTotal, total } = useMemo(() => {
     const subtotal = lineItems.reduce((acc, item) => acc + Number(item.quantity) * Number(item.price), 0);
-    
-    const calculatedTaxes = appliedTaxes.map(tax => ({
-      ...tax,
-      amount: (subtotal * tax.rate) / 100,
-    }));
-
-    const taxTotal = calculatedTaxes.reduce((acc, tax) => acc + tax.amount, 0);
-
-    // Update state with calculated amounts for saving
-    if (JSON.stringify(calculatedTaxes) !== JSON.stringify(appliedTaxes)) {
-        setAppliedTaxes(calculatedTaxes);
-    }
-    
+    const taxTotal = appliedTaxes.reduce((acc, tax) => acc + Number(tax.amount), 0);
     const total = subtotal + taxTotal;
-    
     return { subtotal, taxTotal, total };
   }, [lineItems, appliedTaxes]);
 
@@ -254,7 +240,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             shipToGst,
             lineItems: lineItems.map(({ id, ...item }) => item),
             subtotal,
-            taxes: appliedTaxes,
+            taxes: appliedTaxes.map(({ id, ...tax }) => tax),
             taxTotal,
             total,
             // Deprecated fields, kept for compatibility but should be removed later
@@ -345,9 +331,6 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             setShipToName(contact.name);
             setShipToAddress(contact.address);
             setShipToGst(contact.gst);
-             // Apply taxes from selected contact
-            const taxesToApply = availableTaxes.filter(t => contact.taxes?.includes(t.id));
-            setAppliedTaxes(taxesToApply.map(t => ({ name: t.name, rate: t.rate, amount: 0 })));
         }
     }
   };
@@ -404,7 +387,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                   {isSaving ? <Loader className="animate-spin" /> : <Save />}
                   {initialData ? 'Update' : 'Save'}
               </Button>
-              <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
+              <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90 active:scale-95">
                   {isSaving ? <Loader className="animate-spin" /> : <Save />}
                   Save &amp; Download
               </Button>
@@ -589,7 +572,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                         </TableCell>
                         <TableCell className="font-medium text-right">{!isNaN(item.quantity) && !isNaN(item.price) ? (Number(item.quantity) * Number(item.price)).toFixed(2) : '0.00'}</TableCell>
                         <TableCell className="text-right no-print">
-                          <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} aria-label="Remove item">
+                          <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} aria-label="Remove item" className="active:scale-95">
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </TableCell>
@@ -599,23 +582,46 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 </Table>
               </div>
               <div className="mt-4 no-print">
-                <Button onClick={handleAddItem} variant="outline" size="sm" className="bg-transparent hover:bg-accent/10">
+                <Button onClick={handleAddItem} variant="outline" size="sm" className="bg-transparent hover:bg-accent/10 active:scale-95">
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                 </Button>
               </div>
             </CardContent>
             <CardFooter className="bg-muted/20 p-4 sm:p-6 flex-col items-end gap-4">
-              <div className="w-full max-w-sm text-sm grid gap-2">
+              <div className="w-full max-w-sm text-sm space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
                   <span className='font-medium'>{subtotal.toFixed(2)}</span>
                 </div>
-                {appliedTaxes.map((tax, index) => (
-                    <div key={index} className="flex justify-between">
-                        <span className="text-muted-foreground">{tax.name}</span>
-                        <span className='font-medium'>{tax.amount.toFixed(2)}</span>
-                    </div>
-                ))}
+                
+                 {/* Manual Tax Section */}
+                <div className='space-y-2 border-t border-dashed pt-2'>
+                    {appliedTaxes.map((tax, index) => (
+                        <div key={tax.id} className="flex items-center gap-2 animate-fade-in-down">
+                            <Input 
+                                placeholder="Tax Name" 
+                                value={tax.name}
+                                onChange={e => handleTaxChange(tax.id!, 'name', e.target.value)}
+                                className="h-8"
+                            />
+                            <Input 
+                                type="number"
+                                placeholder="Amount" 
+                                value={tax.amount}
+                                onChange={e => handleTaxChange(tax.id!, 'amount', parseFloat(e.target.value) || 0)}
+                                className="h-8 text-right w-28"
+                            />
+                             <Button variant="ghost" size="icon" onClick={() => handleRemoveTax(tax.id!)} aria-label="Remove tax" className="h-8 w-8 active:scale-95">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                        </div>
+                    ))}
+                    <Button onClick={handleAddTax} variant="outline" size="sm" className="bg-transparent hover:bg-accent/10 h-8 active:scale-95">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Tax
+                    </Button>
+                </div>
+
+
                 <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
                   <span>Total Amount</span>
                   <span>{total.toFixed(2)}</span>
@@ -636,7 +642,3 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
-
-    
-
-    

@@ -15,7 +15,7 @@ export interface LineItem {
 export interface TaxItem {
   id?: number;
   name: string;
-  rate: number; // Will be 0 for manual entry but kept for structure
+  rate: number;
   amount: number;
 }
 
@@ -52,28 +52,35 @@ export interface Invoice {
 const INVOICES_COLLECTION = 'invoices';
 const COUNTER_DOCUMENT = 'invoiceCounter';
 
+
 async function getNextInvoiceNumber(prefix: string): Promise<string> {
     const counterRef = doc(db, 'counters', COUNTER_DOCUMENT);
 
-    const newInvoiceNumber = await runTransaction(db, async (transaction) => {
-        const counterDoc = await transaction.get(counterRef);
-        let nextNumber = 1; 
-        if (counterDoc.exists()) {
-            const data = counterDoc.data();
-            const currentNumber = (data && data.currentNumber) ? data.currentNumber : 0;
-            nextNumber = currentNumber + 1;
-        }
-        transaction.set(counterRef, { currentNumber: nextNumber }, { merge: true });
-        return nextNumber;
-    });
+    try {
+        const newInvoiceNumber = await runTransaction(db, async (transaction) => {
+            const counterDoc = await transaction.get(counterRef);
+            let nextNumber = 1;
+            if (counterDoc.exists()) {
+                const data = counterDoc.data();
+                const currentNumber = data?.currentNumber ?? 0;
+                nextNumber = currentNumber + 1;
+            }
+            transaction.set(counterRef, { currentNumber: nextNumber }, { merge: true });
+            return nextNumber;
+        });
 
-    return `${prefix}${String(newInvoiceNumber)}`;
+        return `${prefix}${String(newInvoiceNumber)}`;
+    } catch (error) {
+        console.error("Error in getNextInvoiceNumber transaction:", error);
+        throw new Error("Failed to generate a new invoice number.");
+    }
 }
 
 
 export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & {id?: string}): Promise<Invoice> {
   try {
     let finalInvoiceData: any;
+    let newInvoiceNumber: string | null = null;
 
     if (invoice.id) {
       // Update existing invoice
@@ -95,11 +102,11 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
           }
       }
 
-      const invoiceNumber = await getNextInvoiceNumber(prefix);
+      newInvoiceNumber = await getNextInvoiceNumber(prefix);
       const { id, ...invoiceData } = invoice;
       const completeInvoiceData = {
         ...invoiceData,
-        invoiceNumber,
+        invoiceNumber: newInvoiceNumber,
         createdAt: serverTimestamp(),
       }
       const docRef = await addDoc(collection(db, INVOICES_COLLECTION), completeInvoiceData);
@@ -111,6 +118,8 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
     // Create a serializable version of the invoice to return to the client
     const serializableInvoice: Invoice = {
       ...finalInvoiceData,
+      // Ensure the invoice number is correctly assigned for new invoices
+      invoiceNumber: newInvoiceNumber || finalInvoiceData.invoiceNumber,
       // Convert Firestore Timestamp or Date object to ISO string
       date: finalInvoiceData.date instanceof Timestamp ? finalInvoiceData.date.toDate().toISOString() : new Date(finalInvoiceData.date).toISOString(),
       createdAt: finalInvoiceData.createdAt instanceof Timestamp ? finalInvoiceData.createdAt.toDate().toISOString() : new Date().toISOString(),

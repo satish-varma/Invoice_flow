@@ -36,7 +36,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Checkbox } from '@/components/ui/checkbox';
 
 
-const availableTaxes = [
+export const availableTaxes = [
     { id: 'SGST2.5', name: 'SGST @ 2.5%', rate: 2.5 },
     { id: 'CGST2.5', name: 'CGST @ 2.5%', rate: 2.5 },
     { id: 'SGST6', name: 'SGST @ 6%', rate: 6 },
@@ -657,8 +657,3 @@ export default function SettingsPage() {
         </main>
     );
 }
-
-
-    
-
-    

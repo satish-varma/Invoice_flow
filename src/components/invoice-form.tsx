@@ -19,6 +19,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getSettings, Settings, CompanyProfile } from '@/services/settingsService';
+import { availableTaxes } from '@/app/settings/page';
+
 
 type LineItem = {
   id: number;
@@ -78,6 +80,23 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
 
   const { toast } = useToast();
 
+  const subtotal = useMemo(() => {
+    return lineItems.reduce((acc, item) => acc + Number(item.quantity) * Number(item.price), 0);
+  }, [lineItems]);
+  
+  // Recalculate tax amounts whenever subtotal or applied taxes change
+  useEffect(() => {
+    setAppliedTaxes(currentTaxes => 
+        currentTaxes.map(tax => {
+            if (tax.rate > 0) { // Only recalculate for taxes with a rate
+                const newAmount = (subtotal * tax.rate) / 100;
+                return { ...tax, amount: newAmount };
+            }
+            return tax; // Keep manual amount for taxes with no rate (or rate 0)
+        })
+    );
+  }, [subtotal]);
+
   useEffect(() => {
     // Set date on client mount to avoid hydration mismatch
     if(!initialData) {
@@ -123,12 +142,24 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                     setShipToName(defaultContact.name);
                     setShipToAddress(defaultContact.address);
                     setShipToGst(defaultContact.gst);
+                    // Also apply taxes from the default ship to contact
+                    if (defaultContact.taxes && defaultContact.taxes.length > 0) {
+                        const taxesToApply = availableTaxes
+                            .filter(tax => defaultContact.taxes!.includes(tax.id))
+                            .map(tax => ({
+                                id: Date.now() + Math.random(),
+                                name: tax.name,
+                                rate: tax.rate,
+                                amount: (subtotal * tax.rate) / 100
+                            }));
+                        setAppliedTaxes(taxesToApply);
+                    }
                 }
             }
         }
     }
     loadSettingsAndApplyDefaults();
-  }, [initialData]);
+  }, [initialData, subtotal]); // Add subtotal as dependency to re-calculate taxes on default load
 
   useEffect(() => {
       if (initialData) {
@@ -174,18 +205,17 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
       setAppliedTaxes(appliedTaxes.filter(tax => tax.id !== id));
   };
   
-  const handleTaxChange = (id: number, field: keyof Omit<TaxItem, 'id'>, value: string | number) => {
+  const handleTaxChange = (id: number, field: keyof TaxItem, value: string | number) => {
       setAppliedTaxes(appliedTaxes.map(tax =>
           tax.id === id ? { ...tax, [field]: value } : tax
       ));
   };
   
-  const { subtotal, taxTotal, total } = useMemo(() => {
-    const subtotal = lineItems.reduce((acc, item) => acc + Number(item.quantity) * Number(item.price), 0);
+  const { taxTotal, total } = useMemo(() => {
     const taxTotal = appliedTaxes.reduce((acc, tax) => acc + Number(tax.amount), 0);
     const total = subtotal + taxTotal;
-    return { subtotal, taxTotal, total };
-  }, [lineItems, appliedTaxes]);
+    return { taxTotal, total };
+  }, [subtotal, appliedTaxes]);
 
   const handleClearForm = (shouldCallback = true) => {
     setInvoiceNumber('');
@@ -331,6 +361,20 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             setShipToName(contact.name);
             setShipToAddress(contact.address);
             setShipToGst(contact.gst);
+            // Auto-populate taxes from the selected ship-to contact
+            if (contact.taxes && contact.taxes.length > 0) {
+                const taxesToApply = availableTaxes
+                    .filter(taxDef => contact.taxes!.includes(taxDef.id))
+                    .map(taxDef => ({
+                        id: Date.now() + Math.random(),
+                        name: taxDef.name,
+                        rate: taxDef.rate,
+                        amount: (subtotal * taxDef.rate) / 100,
+                    }));
+                setAppliedTaxes(taxesToApply);
+            } else {
+                setAppliedTaxes([]); // Clear taxes if the contact has none defined
+            }
         }
     }
   };
@@ -343,11 +387,11 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   }
 
   const handleNewClick = () => {
-    handleClearForm(); // This will call onAddNew
-    if(pathname !== '/') {
-        router.push('/');
+    if (pathname !== '/') {
+      router.push('/');
     }
-  }
+    onAddNew();
+  };
 
 
   return (
@@ -365,7 +409,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         </div>
         <div className='bg-card p-2 rounded-lg shadow-sm w-full flex flex-col sm:flex-row items-center justify-between gap-2 flex-wrap'>
           <nav className="flex items-center gap-1 flex-wrap">
-              <Button variant="ghost" onClick={handleNewClick} className={pathname === '/' ? 'text-primary' : ''}>
+              <Button variant="ghost" onClick={handleNewClick}>
                   <FilePlus /> New
               </Button>
               <Button asChild variant="ghost" className={pathname === '/invoices' ? 'text-primary' : ''}>
@@ -387,7 +431,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                   {isSaving ? <Loader className="animate-spin" /> : <Save />}
                   {initialData ? 'Update' : 'Save'}
               </Button>
-              <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90 active:scale-95">
+              <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
                   {isSaving ? <Loader className="animate-spin" /> : <Save />}
                   Save &amp; Download
               </Button>
@@ -596,7 +640,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 
                  {/* Manual Tax Section */}
                 <div className='space-y-2 border-t border-dashed pt-2'>
-                    {appliedTaxes.map((tax, index) => (
+                    {appliedTaxes.map((tax) => (
                         <div key={tax.id} className="flex items-center gap-2 animate-fade-in-down">
                             <Input 
                                 placeholder="Tax Name" 

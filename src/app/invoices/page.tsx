@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
+import { generateAndSavePdf } from "@/lib/pdf";
 
 
 export default function InvoicesPage() {
@@ -32,8 +33,8 @@ export default function InvoicesPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [previewingInvoice, setPreviewingInvoice] = useState<Invoice | null>(null);
-  const [invoiceToGeneratePdf, setInvoiceToGeneratePdf] = useState<Invoice | null>(null);
-  const [pdfOutput, setPdfOutput] = useState<'dataurl' | 'save' | null>(null);
+  const [invoiceToGenerate, setInvoiceToGenerate] = useState<Invoice | null>(null);
+  const [pdfAction, setPdfAction] = useState<'preview' | 'save' | null>(null);
   
   const invoicePreviewRef = useRef<HTMLDivElement>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -44,7 +45,7 @@ export default function InvoicesPage() {
   const [invoicesToDelete, setInvoicesToDelete] = useState<string[] | null>(null);
   const { toast } = useToast();
 
-  const loadInvoices = async () => {
+  const loadData = async () => {
     setIsLoading(true);
     const [invoices, settingsData] = await Promise.all([
       getInvoices(),
@@ -56,71 +57,70 @@ export default function InvoicesPage() {
   }
 
   useEffect(() => {
-    loadInvoices();
+    loadData();
   }, []);
   
   useEffect(() => {
     const generatePdf = async () => {
-      // Ensure there's a component to capture and an action to perform
-      if (!invoiceToGeneratePdf || !pdfOutput || !invoicePreviewRef.current || !settings) {
-        return;
-      }
-  
-      // Add a small delay to ensure the component is fully rendered in the DOM
-      setTimeout(async () => {
+        if (!invoiceToGenerate || !pdfAction || !invoicePreviewRef.current || !settings) {
+            return;
+        }
+
         const input = invoicePreviewRef.current;
         if (!input) return;
 
+        setIsGeneratingPdf(true);
+
         try {
-            const canvas = await html2canvas(input, { scale: 1.5, useCORS: true });
-            const imgData = canvas.toDataURL('image/jpeg', 0.9); // Use JPEG with quality 90%
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            
-            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-            
-            if (pdfOutput === 'save') {
-                pdf.save(`invoice-${invoiceToGeneratePdf.invoiceNumber || 'untitled'}.pdf`);
-                // Reset states after saving. In bulk download, this is handled by the loop.
-                if (!isBulkDownloading) {
-                    setInvoiceToGeneratePdf(null);
-                    setPdfOutput(null);
+            if (pdfAction === 'save') {
+                await generateAndSavePdf(input, `invoice-${invoiceToGenerate.invoiceNumber || 'untitled'}.pdf`);
+                 if (!isBulkDownloading) {
+                    setInvoiceToGenerate(null);
+                    setPdfAction(null);
                 }
-            } else { // 'dataurl' for preview
+            } else { // 'preview'
+                const canvas = await html2canvas(input, { scale: 1.5, useCORS: true });
+                const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
                 const url = pdf.output('datauristring');
                 setPdfUrl(url);
-                setIsGeneratingPdf(false); // Stop generating indicator for preview
             }
         } catch (error) {
             console.error("Error generating PDF:", error);
             toast({ variant: "destructive", title: "PDF Generation Failed", description: "There was an error generating the PDF." });
-            setIsGeneratingPdf(false);
-            setInvoiceToGeneratePdf(null);
-            setPdfOutput(null);
+        } finally {
+            if (pdfAction === 'preview') {
+              setIsGeneratingPdf(false); // Only stop generating indicator for preview
+            }
+            if (!isBulkDownloading) {
+              setInvoiceToGenerate(null); // Reset after single action
+              setPdfAction(null);
+            }
         }
-      }, 500); // 500ms delay
     };
 
-    generatePdf();
-
-  }, [invoiceToGeneratePdf, pdfOutput, isBulkDownloading, settings, toast]);
+    // Use a timeout to ensure the DOM is fully updated before capturing
+    if(invoiceToGenerate) {
+      setTimeout(generatePdf, 100);
+    }
+    
+  }, [invoiceToGenerate, pdfAction, settings, toast, isBulkDownloading]);
 
   const handlePreview = (invoice: Invoice) => {
     closePreview(); // Close any existing preview first
     setPreviewingInvoice(invoice);
-    setIsGeneratingPdf(true);
     setPdfUrl(null);
-    setInvoiceToGeneratePdf(invoice); // Set the invoice to be rendered for PDF generation
-    setPdfOutput('dataurl');
+    setInvoiceToGenerate(invoice);
+    setPdfAction('preview');
   }
 
   const handleDownload = (invoice: Invoice) => {
     closePreview();
-    setIsGeneratingPdf(false);
-    setPdfUrl(null);
-    setInvoiceToGeneratePdf(invoice); // Set the invoice to be rendered for PDF generation
-    setPdfOutput('save');
+    setInvoiceToGenerate(invoice);
+    setPdfAction('save');
   };
 
   const closePreview = () => {
@@ -139,30 +139,26 @@ export default function InvoicesPage() {
     setInvoicesToDelete(ids);
   }
 
-  const handleBulkDownload = async (invoices: Invoice[]) => {
+ const handleBulkDownload = async (invoices: Invoice[]) => {
     if (isBulkDownloading) return;
     setIsBulkDownloading(true);
 
     toast({
       title: "Bulk Download Started",
-      description: `Preparing to download ${invoices.length} invoices. Please allow pop-ups if prompted.`,
+      description: `Preparing to download ${invoices.length} invoices.`,
     });
 
     for (const invoice of invoices) {
-      // This function now returns a promise that resolves after the PDF is saved
-      await new Promise<void>(resolve => {
-        setInvoiceToGeneratePdf(invoice);
-        setPdfOutput('save');
-        // The useEffect will trigger the download. We need a way to know when it's done.
-        // A simple timeout is a pragmatic way to wait for the async operation.
-        setTimeout(() => {
-          resolve();
-        }, 1500); // Wait for PDF generation and download prompt
-      });
+      // Set the state to trigger the useEffect for PDF generation
+      setInvoiceToGenerate(invoice);
+      setPdfAction('save');
+      // Wait for the PDF to be generated and download to start.
+      // This is a simple way to queue them up. A more complex system could be used for progress.
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
-    setInvoiceToGeneratePdf(null);
-    setPdfOutput(null);
+    setInvoiceToGenerate(null);
+    setPdfAction(null);
     setIsBulkDownloading(false);
     toast({
       title: "Bulk Download Complete",
@@ -183,7 +179,7 @@ export default function InvoicesPage() {
             title: "Success",
             description: `Successfully deleted ${invoicesToDelete.length} invoice(s).`,
         });
-        await loadInvoices(); // Reload data
+        await loadData(); // Reload data
     } catch (error) {
         console.error("Failed to delete invoices:", error);
         toast({
@@ -250,9 +246,9 @@ export default function InvoicesPage() {
       />
     )}
     {/* This component is rendered off-screen and used for PDF generation */}
-    {invoiceToGeneratePdf && settings && (
+    {invoiceToGenerate && settings && (
         <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', zIndex: -1 }}>
-            <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToGeneratePdf} settings={settings} />
+            <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToGenerate} settings={settings} />
         </div>
     )}
 
@@ -278,5 +274,3 @@ export default function InvoicesPage() {
     </>
   );
 }
-
-    

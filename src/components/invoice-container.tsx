@@ -7,10 +7,9 @@ import { InvoiceList } from '@/components/invoice-list';
 import { getInvoices, Invoice } from '@/services/invoiceService';
 import { useToast } from '@/hooks/use-toast';
 import { Loader } from 'lucide-react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { InvoicePreview } from './invoice-preview';
 import { getSettings, Settings } from '@/services/settingsService';
+import { generateAndSavePdf } from '@/lib/pdf';
 
 export function InvoiceContainer() {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -68,29 +67,29 @@ export function InvoiceContainer() {
     };
 
     useEffect(() => {
-        if (invoiceToDownload && invoicePreviewRef.current && settings) {
-            const input = invoicePreviewRef.current;
-            // Add a class for specific PDF styling if needed
-            input.classList.add('pdf-capture');
-            html2canvas(input, { scale: 1.5, useCORS: true }).then((canvas) => {
-                input.classList.remove('pdf-capture');
-                const imgData = canvas.toDataURL('image/jpeg', 0.9);
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        const createPdf = async () => {
+            if (invoiceToDownload && invoicePreviewRef.current && settings) {
+                const element = invoicePreviewRef.current;
+                const fileName = `invoice-${invoiceToDownload.invoiceNumber || 'untitled'}.pdf`;
                 
-                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-                pdf.save(`invoice-${invoiceToDownload.invoiceNumber || 'untitled'}.pdf`);
-                setInvoiceToDownload(null);
-            }).catch(error => {
-                console.error("Error generating PDF:", error);
-                toast({
-                    variant: 'destructive',
-                    title: 'Download Failed',
-                    description: 'There was an error generating the PDF for download.',
-                });
-                setInvoiceToDownload(null);
-            });
+                try {
+                    await generateAndSavePdf(element, fileName);
+                } catch(error) {
+                     console.error("Error generating PDF:", error);
+                     toast({
+                         variant: 'destructive',
+                         title: 'Download Failed',
+                         description: 'There was an error generating the PDF for download.',
+                     });
+                } finally {
+                    setInvoiceToDownload(null);
+                }
+            }
+        };
+
+        // Delay generation slightly to ensure component is fully rendered with the correct data
+        if (invoiceToDownload) {
+            setTimeout(createPdf, 50);
         }
     }, [invoiceToDownload, settings, toast]);
 

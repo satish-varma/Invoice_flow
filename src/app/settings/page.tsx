@@ -67,14 +67,19 @@ const initialCompanyProfile: Omit<CompanyProfile, 'id'> = {
 };
 
 const initialBillToState: Omit<BillToContact, 'id'> = { 
+    displayName: '', name: '', address: '', gst: ''
+};
+
+const initialShipToState: Omit<ShipToContact, 'id'> = { 
     displayName: '', name: '', address: '', gst: '', taxes: [] 
 };
+
 
 export default function SettingsPage() {
     const [settings, setSettings] = useState<Settings>({ companyProfiles: [], billToContacts: [], shipToContacts: [] });
     
     const [newBillTo, setNewBillTo] = useState<Omit<BillToContact, 'id'>>(initialBillToState);
-    const [newShipTo, setNewShipTo] = useState<Omit<ShipToContact, 'id'>>({ displayName: '', name: '', address: '', gst: '' });
+    const [newShipTo, setNewShipTo] = useState<Omit<ShipToContact, 'id'>>(initialShipToState);
     
     const [editingContact, setEditingContact] = useState<BillToContact | ShipToContact | null>(null);
     const [editingContactType, setEditingContactType] = useState<ContactType | null>(null);
@@ -105,7 +110,7 @@ export default function SettingsPage() {
         loadSettings();
     }, [loadSettings]);
 
-    const handleTaxChange = (form: 'newBillTo' | 'editContact', taxId: string, checked: boolean | 'indeterminate') => {
+    const handleTaxChange = (form: 'newShipTo' | 'editContact', taxId: string, checked: boolean | 'indeterminate') => {
         const updater = (prev: any) => {
             const currentTaxes = prev.taxes || [];
             if (checked) {
@@ -115,14 +120,14 @@ export default function SettingsPage() {
             }
         };
 
-        if (form === 'newBillTo') {
-            setNewBillTo(updater);
+        if (form === 'newShipTo') {
+            setNewShipTo(updater);
         } else {
             setEditingContact(updater);
         }
     };
     
-    const renderTaxesSelector = (form: 'newBillTo' | 'editContact', contactData: any) => (
+    const renderTaxesSelector = (form: 'newShipTo' | 'editContact', contactData: any) => (
         <div className="space-y-2">
             <Label>Applicable Taxes</Label>
             <div className="p-4 border rounded-md grid grid-cols-2 gap-4">
@@ -185,8 +190,8 @@ export default function SettingsPage() {
                 await saveBillToContact(contactData);
                 setNewBillTo(initialBillToState);
             } else {
-                await saveShipToContact(contactData);
-                setNewShipTo({ displayName: '', name: '', address: '', gst: '' });
+                await saveShipToContact(contactData as Omit<ShipToContact, 'id'>);
+                setNewShipTo(initialShipToState);
             }
             await loadSettings();
             toast({ title: "Contact Saved", description: `The new ${type === 'billTo' ? '"Bill To"' : '"Ship To"'} contact has been added.` });
@@ -490,7 +495,6 @@ export default function SettingsPage() {
                                             <Label htmlFor="billToGst">GSTIN</Label>
                                             <Input id="billToGst" placeholder="Client GST Number" value={newBillTo.gst} onChange={e => handleInputChange('newBillTo', 'gst', e.target.value)} />
                                         </div>
-                                        {renderTaxesSelector('newBillTo', newBillTo)}
                                         <Button onClick={() => handleAddContact('billTo')} disabled={isSaving} size="sm">
                                             {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />} Add Bill To
                                         </Button>
@@ -553,6 +557,7 @@ export default function SettingsPage() {
                                             <Label htmlFor="shipToGst">GSTIN</Label>
                                             <Input id="shipToGst" placeholder="Shipping GSTIN" value={newShipTo.gst} onChange={e => handleInputChange('newShipTo', 'gst', e.target.value)} />
                                         </div>
+                                        {renderTaxesSelector('newShipTo', newShipTo)}
                                         <Button onClick={() => handleAddContact('shipTo')} disabled={isSaving} size="sm">
                                             {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />} Add Ship To
                                         </Button>
@@ -638,7 +643,7 @@ export default function SettingsPage() {
                                 <Label htmlFor="editGst">GSTIN</Label>
                                 <Input id="editGst" value={editingContact.gst} onChange={e => handleInputChange('editContact', 'gst', e.target.value)} />
                             </div>
-                             {editingContactType === 'billTo' && renderTaxesSelector('editContact', editingContact)}
+                             {editingContactType === 'shipTo' && renderTaxesSelector('editContact', editingContact)}
                         </div>
                         <DialogFooter>
                             <DialogClose asChild><Button variant="outline" onClick={() => setEditingContact(null)}>Cancel</Button></DialogClose>
@@ -653,5 +658,7 @@ export default function SettingsPage() {
     );
 }
 
+
+    
 
     

@@ -10,7 +10,6 @@ export interface BillToContact {
     name: string;
     address: string;
     gst: string;
-    taxes?: string[]; // Array of tax IDs like 'SGST9', 'CGST9'
 }
 
 export interface ShipToContact {
@@ -19,6 +18,7 @@ export interface ShipToContact {
     name: string;
     address: string;
     gst: string;
+    taxes?: string[]; // Array of tax IDs like 'SGST9', 'CGST9'
 }
 
 export interface CompanyProfile {
@@ -63,6 +63,9 @@ export async function getSettings(): Promise<Settings> {
             }
              if (!data.billToContacts) {
                 data.billToContacts = [];
+            }
+            if (!data.shipToContacts) {
+                data.shipToContacts = [];
             }
             return data;
         } else {
@@ -318,5 +321,7 @@ export async function setDefaultShipToContact(id: string): Promise<void> {
         throw new Error(`Failed to set default Ship To contact: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
+
+    
 
     

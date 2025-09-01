@@ -127,9 +127,6 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                     setBillToName(defaultContact.name);
                     setBillToAddress(defaultContact.address);
                     setBillToGst(defaultContact.gst);
-                    // Apply taxes from default contact
-                     const taxesToApply = availableTaxes.filter(t => defaultContact.taxes?.includes(t.id));
-                    setAppliedTaxes(taxesToApply.map(t => ({ name: t.name, rate: t.rate, amount: 0 })));
                 }
             }
              if (loadedSettings.defaultShipToContact && loadedSettings.shipToContacts) {
@@ -138,6 +135,9 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                     setShipToName(defaultContact.name);
                     setShipToAddress(defaultContact.address);
                     setShipToGst(defaultContact.gst);
+                    // Apply taxes from default contact
+                    const taxesToApply = availableTaxes.filter(t => defaultContact.taxes?.includes(t.id));
+                    setAppliedTaxes(taxesToApply.map(t => ({ name: t.name, rate: t.rate, amount: 0 })));
                 }
             }
         }
@@ -338,10 +338,6 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             setBillToName(contact.name);
             setBillToAddress(contact.address);
             setBillToGst(contact.gst);
-
-            // Apply taxes from selected contact
-            const taxesToApply = availableTaxes.filter(t => contact.taxes?.includes(t.id));
-            setAppliedTaxes(taxesToApply.map(t => ({ name: t.name, rate: t.rate, amount: 0 })));
         }
     } else { // 'shipTo'
         const contact = settings.shipToContacts?.find(c => c.id === id);
@@ -349,6 +345,9 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             setShipToName(contact.name);
             setShipToAddress(contact.address);
             setShipToGst(contact.gst);
+             // Apply taxes from selected contact
+            const taxesToApply = availableTaxes.filter(t => contact.taxes?.includes(t.id));
+            setAppliedTaxes(taxesToApply.map(t => ({ name: t.name, rate: t.rate, amount: 0 })));
         }
     }
   };
@@ -637,5 +636,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
+
+    
 
     

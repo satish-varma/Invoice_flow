@@ -52,6 +52,8 @@ Extract the invoice number, customer name, date, and all line items from the pro
 For the date, please format it as YYYY-MM-DD. If the year is not specified, assume the current year.
 For each line item, extract the description, quantity, and unit price.
 
+IMPORTANT: When parsing numbers for quantity and price, treat commas (,) as thousand separators and dots (.) as decimal separators. Ensure the entire number is captured as a single value.
+
 Invoice Image: {{media url=photoDataUri}}`,
 });
 

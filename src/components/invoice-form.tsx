@@ -146,8 +146,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                     if (defaultContact.taxes && defaultContact.taxes.length > 0) {
                         const taxesToApply = availableTaxes
                             .filter(tax => defaultContact.taxes!.includes(tax.id))
-                            .map(tax => ({
-                                id: Date.now() + Math.random(),
+                            .map((tax, index) => ({
+                                id: Date.now() + index,
                                 name: tax.name,
                                 rate: tax.rate,
                                 amount: (subtotal * tax.rate) / 100
@@ -173,7 +173,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
           setShipToName(initialData.shipToName || '');
           setShipToAddress(initialData.shipToAddress || '');
           setShipToGst(initialData.shipToGst || '');
-          setAppliedTaxes(initialData.taxes?.map(t => ({...t, rate: t.rate || 0 })) || []);
+          setAppliedTaxes(initialData.taxes?.map((t, index) => ({...t, id: t.id || Date.now() + index, rate: t.rate || 0 })) || []);
           setLineItems(initialData.lineItems.map((item, index) => ({
               id: item.id || Date.now() + index,
               ...item
@@ -365,8 +365,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             if (contact.taxes && contact.taxes.length > 0) {
                 const taxesToApply = availableTaxes
                     .filter(taxDef => contact.taxes!.includes(taxDef.id))
-                    .map(taxDef => ({
-                        id: Date.now() + Math.random(),
+                    .map((taxDef, index) => ({
+                        id: Date.now() + index,
                         name: taxDef.name,
                         rate: taxDef.rate,
                         amount: (subtotal * taxDef.rate) / 100,
@@ -648,6 +648,13 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 onChange={e => handleTaxChange(tax.id!, 'name', e.target.value)}
                                 className="h-8"
                             />
+                             <Input 
+                                type="number"
+                                placeholder="Rate (%)" 
+                                value={tax.rate}
+                                onChange={e => handleTaxChange(tax.id!, 'rate', parseFloat(e.target.value) || 0)}
+                                className="h-8 text-right w-24"
+                            />
                             <Input 
                                 type="number"
                                 placeholder="Amount" 
@@ -686,3 +693,5 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
+
+    

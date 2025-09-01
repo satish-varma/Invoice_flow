@@ -10,6 +10,7 @@ export interface BillToContact {
     name: string;
     address: string;
     gst: string;
+    taxes?: string[]; // Array of tax IDs like 'SGST9', 'CGST9'
 }
 
 export interface ShipToContact {
@@ -59,6 +60,9 @@ export async function getSettings(): Promise<Settings> {
             const data = docSnap.data() as Settings;
             if (!data.companyProfiles) {
                 data.companyProfiles = [];
+            }
+             if (!data.billToContacts) {
+                data.billToContacts = [];
             }
             return data;
         } else {

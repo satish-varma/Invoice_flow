@@ -13,7 +13,7 @@ import { format } from "date-fns"
 import { extractInvoiceData, ExtractInvoiceDataOutput } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
-import { Invoice, saveInvoice } from '@/services/invoiceService';
+import { Invoice, saveInvoice, TaxItem } from '@/services/invoiceService';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Label } from './ui/label';
@@ -47,6 +47,18 @@ const months = [
     "July", "August", "September", "October", "November", "December"
 ];
 
+const availableTaxes = [
+    { id: 'SGST2.5', name: 'SGST @ 2.5%', rate: 2.5 },
+    { id: 'CGST2.5', name: 'CGST @ 2.5%', rate: 2.5 },
+    { id: 'SGST6', name: 'SGST @ 6%', rate: 6 },
+    { id: 'CGST6', name: 'CGST @ 6%', rate: 6 },
+    { id: 'SGST9', name: 'SGST @ 9%', rate: 9 },
+    { id: 'CGST9', name: 'CGST @ 9%', rate: 9 },
+    { id: 'SGST14', name: 'SGST @ 14%', rate: 14 },
+    { id: 'CGST14', name: 'CGST @ 14%', rate: 14 },
+    { id: 'Cess12', name: 'Cess @ 12%', rate: 12 },
+];
+
 export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFormProps) {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [date, setDate] = useState<Date | undefined>(undefined);
@@ -61,6 +73,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   const [shipToName, setShipToName] = useState('');
   const [shipToAddress, setShipToAddress] = useState('');
   const [shipToGst, setShipToGst] = useState('');
+
+  const [appliedTaxes, setAppliedTaxes] = useState<TaxItem[]>([]);
   
   const [lineItems, setLineItems] = useState<LineItem[]>([
     { id: 1, name: '', quantity: 1, price: 0 },
@@ -113,6 +127,9 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                     setBillToName(defaultContact.name);
                     setBillToAddress(defaultContact.address);
                     setBillToGst(defaultContact.gst);
+                    // Apply taxes from default contact
+                     const taxesToApply = availableTaxes.filter(t => defaultContact.taxes?.includes(t.id));
+                    setAppliedTaxes(taxesToApply.map(t => ({ name: t.name, rate: t.rate, amount: 0 })));
                 }
             }
              if (loadedSettings.defaultShipToContact && loadedSettings.shipToContacts) {
@@ -140,6 +157,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
           setShipToName(initialData.shipToName || '');
           setShipToAddress(initialData.shipToAddress || '');
           setShipToGst(initialData.shipToGst || '');
+          setAppliedTaxes(initialData.taxes || []);
           setLineItems(initialData.lineItems.map((item, index) => ({
               id: item.id || Date.now() + index,
               ...item
@@ -163,10 +181,25 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     ));
   };
   
-  const { subtotal, total } = useMemo(() => {
+  const { subtotal, taxTotal, total } = useMemo(() => {
     const subtotal = lineItems.reduce((acc, item) => acc + Number(item.quantity) * Number(item.price), 0);
-    return { subtotal, total: subtotal };
-  }, [lineItems]);
+    
+    const calculatedTaxes = appliedTaxes.map(tax => ({
+      ...tax,
+      amount: (subtotal * tax.rate) / 100,
+    }));
+
+    const taxTotal = calculatedTaxes.reduce((acc, tax) => acc + tax.amount, 0);
+
+    // Update state with calculated amounts for saving
+    if (JSON.stringify(calculatedTaxes) !== JSON.stringify(appliedTaxes)) {
+        setAppliedTaxes(calculatedTaxes);
+    }
+    
+    const total = subtotal + taxTotal;
+    
+    return { subtotal, taxTotal, total };
+  }, [lineItems, appliedTaxes]);
 
   const handleClearForm = (shouldCallback = true) => {
     setInvoiceNumber('');
@@ -182,6 +215,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     setShipToName('');
     setShipToAddress('');
     setShipToGst('');
+    setAppliedTaxes([]);
     setLineItems([{ id: Date.now(), name: '', quantity: 1, price: 0 }]);
     if (shouldCallback) {
         onAddNew();
@@ -220,11 +254,13 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             shipToGst,
             lineItems: lineItems.map(({ id, ...item }) => item),
             subtotal,
+            taxes: appliedTaxes,
+            taxTotal,
             total,
             // Deprecated fields, kept for compatibility but should be removed later
             customerName: billToName,
             customerAddress: billToAddress,
-            tax: 0,
+            tax: taxTotal, // Use new taxTotal for old field
         };
 
         if(initialData?.id) {
@@ -245,10 +281,11 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
 
     } catch (error) {
         console.error("Failed to save invoice:", error);
+        const errorMessage = error instanceof Error ? error.message : "Could not save the invoice. Please try again.";
         toast({
             variant: "destructive",
             title: "Save Failed",
-            description: "Could not save the invoice. Please try again.",
+            description: errorMessage,
         })
     } finally {
         setIsSaving(false);
@@ -295,15 +332,20 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   };
 
   const handleContactSelect = (type: 'billTo' | 'shipTo', id: string) => {
-    const contacts = type === 'billTo' ? settings.billToContacts : settings.shipToContacts;
-    const contact = contacts?.find(c => c.id === id);
-
-    if (contact) {
-        if (type === 'billTo') {
+    if (type === 'billTo') {
+        const contact = settings.billToContacts?.find(c => c.id === id);
+        if (contact) {
             setBillToName(contact.name);
             setBillToAddress(contact.address);
             setBillToGst(contact.gst);
-        } else {
+
+            // Apply taxes from selected contact
+            const taxesToApply = availableTaxes.filter(t => contact.taxes?.includes(t.id));
+            setAppliedTaxes(taxesToApply.map(t => ({ name: t.name, rate: t.rate, amount: 0 })));
+        }
+    } else { // 'shipTo'
+        const contact = settings.shipToContacts?.find(c => c.id === id);
+        if (contact) {
             setShipToName(contact.name);
             setShipToAddress(contact.address);
             setShipToGst(contact.gst);
@@ -319,7 +361,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   }
 
   const handleNewClick = () => {
-    onAddNew();
+    handleClearForm(); // This will call onAddNew
     if(pathname !== '/') {
         router.push('/');
     }
@@ -569,6 +611,12 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                   <span className="text-muted-foreground">Subtotal</span>
                   <span className='font-medium'>{subtotal.toFixed(2)}</span>
                 </div>
+                {appliedTaxes.map((tax, index) => (
+                    <div key={index} className="flex justify-between">
+                        <span className="text-muted-foreground">{tax.name}</span>
+                        <span className='font-medium'>{tax.amount.toFixed(2)}</span>
+                    </div>
+                ))}
                 <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
                   <span>Total Amount</span>
                   <span>{total.toFixed(2)}</span>
@@ -589,3 +637,5 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
+
+    

@@ -12,12 +12,20 @@ export interface LineItem {
   price: number;
 }
 
+export interface TaxItem {
+  name: string;
+  rate: number;
+  amount: number;
+}
+
 export interface Invoice {
   id?: string;
   invoiceNumber: string;
   date: string; // Storing date as ISO string
   lineItems: LineItem[];
   subtotal: number;
+  taxes?: TaxItem[];
+  taxTotal: number;
   total: number;
   createdAt?: any;
   
@@ -50,7 +58,8 @@ async function getNextInvoiceNumber(prefix: string): Promise<string> {
         const counterDoc = await transaction.get(counterRef);
         let nextNumber = 1; 
         if (counterDoc.exists()) {
-            const currentNumber = counterDoc.data().currentNumber || 0;
+            const data = counterDoc.data();
+            const currentNumber = (data && data.currentNumber) ? data.currentNumber : 0;
             nextNumber = currentNumber + 1;
         }
         transaction.set(counterRef, { currentNumber: nextNumber }, { merge: true });
@@ -63,8 +72,7 @@ async function getNextInvoiceNumber(prefix: string): Promise<string> {
 
 export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & {id?: string}): Promise<Invoice> {
   try {
-    let savedInvoiceId: string;
-    let finalInvoiceData: any; // Used to hold the data before serialization fix
+    let finalInvoiceData: any;
 
     if (invoice.id) {
       // Update existing invoice
@@ -73,10 +81,8 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
       await updateDoc(docRef, {
         ...invoiceData,
       });
-      savedInvoiceId = invoice.id;
       const updatedDoc = await getDoc(docRef);
-      finalInvoiceData = { id: savedInvoiceId, ...updatedDoc.data() };
-
+      finalInvoiceData = { id: invoice.id, ...updatedDoc.data() };
     } else {
       // Create new invoice
       const settings = await getSettings();
@@ -96,16 +102,14 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
         createdAt: serverTimestamp(),
       }
       const docRef = await addDoc(collection(db, INVOICES_COLLECTION), completeInvoiceData);
-      savedInvoiceId = docRef.id;
       
       // We can't get the server timestamp back immediately, so we'll use the client date for the return object
-      finalInvoiceData = { id: savedInvoiceId, ...completeInvoiceData, createdAt: new Date() } as Invoice;
+      finalInvoiceData = { id: docRef.id, ...completeInvoiceData, createdAt: new Date() };
     }
 
     // Create a serializable version of the invoice to return to the client
     const serializableInvoice: Invoice = {
       ...finalInvoiceData,
-      id: savedInvoiceId,
       // Convert Firestore Timestamp or Date object to ISO string
       date: finalInvoiceData.date instanceof Timestamp ? finalInvoiceData.date.toDate().toISOString() : new Date(finalInvoiceData.date).toISOString(),
       createdAt: finalInvoiceData.createdAt instanceof Timestamp ? finalInvoiceData.createdAt.toDate().toISOString() : new Date(finalInvoiceData.createdAt).toISOString(),
@@ -115,7 +119,8 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
 
   } catch (e) {
     console.error("Error adding/updating document: ", e);
-    throw new Error("Failed to save invoice.");
+    const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+    throw new Error(`Failed to save invoice: ${errorMessage}`);
   }
 }
 
@@ -161,3 +166,5 @@ export async function deleteInvoices(ids: string[]): Promise<void> {
         throw new Error("Failed to delete invoices.");
     }
 }
+
+    

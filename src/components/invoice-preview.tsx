@@ -117,8 +117,18 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                         <div className='text-sm w-3/5'>
                            <span className='font-bold'>In Words:</span> {inWords(invoice.total)}
                         </div>
-                        <div className="w-2/5 max-w-sm text-sm grid gap-2">
-                             <div className="flex justify-between font-bold text-lg pt-2 mt-2">
+                        <div className="w-2/5 max-w-sm text-sm grid gap-1">
+                             <div className="flex justify-between">
+                                <span>Subtotal</span>
+                                <span>{invoice.subtotal.toFixed(2)}</span>
+                             </div>
+                             {invoice.taxes?.map((tax, index) => (
+                                <div key={index} className="flex justify-between">
+                                    <span>{tax.name}</span>
+                                    <span>{tax.amount.toFixed(2)}</span>
+                                </div>
+                             ))}
+                             <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
                                 <span>Total Amount</span>
                                 <span>{invoice.total.toFixed(2)}</span>
                             </div>

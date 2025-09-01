@@ -33,6 +33,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Checkbox } from '@/components/ui/checkbox';
+
+
+const availableTaxes = [
+    { id: 'SGST2.5', name: 'SGST @ 2.5%', rate: 2.5 },
+    { id: 'CGST2.5', name: 'CGST @ 2.5%', rate: 2.5 },
+    { id: 'SGST6', name: 'SGST @ 6%', rate: 6 },
+    { id: 'CGST6', name: 'CGST @ 6%', rate: 6 },
+    { id: 'SGST9', name: 'SGST @ 9%', rate: 9 },
+    { id: 'CGST9', name: 'CGST @ 9%', rate: 9 },
+    { id: 'SGST14', name: 'SGST @ 14%', rate: 14 },
+    { id: 'CGST14', name: 'CGST @ 14%', rate: 14 },
+    { id: 'Cess12', name: 'Cess @ 12%', rate: 12 },
+];
 
 
 type ContactType = 'billTo' | 'shipTo';
@@ -52,10 +66,14 @@ const initialCompanyProfile: Omit<CompanyProfile, 'id'> = {
     stampLogoUrl: '',
 };
 
+const initialBillToState: Omit<BillToContact, 'id'> = { 
+    displayName: '', name: '', address: '', gst: '', taxes: [] 
+};
+
 export default function SettingsPage() {
     const [settings, setSettings] = useState<Settings>({ companyProfiles: [], billToContacts: [], shipToContacts: [] });
     
-    const [newBillTo, setNewBillTo] = useState<Omit<BillToContact, 'id'>>({ displayName: '', name: '', address: '', gst: '' });
+    const [newBillTo, setNewBillTo] = useState<Omit<BillToContact, 'id'>>(initialBillToState);
     const [newShipTo, setNewShipTo] = useState<Omit<ShipToContact, 'id'>>({ displayName: '', name: '', address: '', gst: '' });
     
     const [editingContact, setEditingContact] = useState<BillToContact | ShipToContact | null>(null);
@@ -86,6 +104,46 @@ export default function SettingsPage() {
     useEffect(() => {
         loadSettings();
     }, [loadSettings]);
+
+    const handleTaxChange = (form: 'newBillTo' | 'editContact', taxId: string, checked: boolean | 'indeterminate') => {
+        const updater = (prev: any) => {
+            const currentTaxes = prev.taxes || [];
+            if (checked) {
+                return { ...prev, taxes: [...currentTaxes, taxId] };
+            } else {
+                return { ...prev, taxes: currentTaxes.filter((t: string) => t !== taxId) };
+            }
+        };
+
+        if (form === 'newBillTo') {
+            setNewBillTo(updater);
+        } else {
+            setEditingContact(updater);
+        }
+    };
+    
+    const renderTaxesSelector = (form: 'newBillTo' | 'editContact', contactData: any) => (
+        <div className="space-y-2">
+            <Label>Applicable Taxes</Label>
+            <div className="p-4 border rounded-md grid grid-cols-2 gap-4">
+                {availableTaxes.map(tax => (
+                    <div key={tax.id} className="flex items-center space-x-2">
+                        <Checkbox
+                            id={`${form}-${tax.id}`}
+                            checked={contactData.taxes?.includes(tax.id)}
+                            onCheckedChange={(checked) => handleTaxChange(form, tax.id, checked)}
+                        />
+                        <label
+                            htmlFor={`${form}-${tax.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                            {tax.name}
+                        </label>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
 
     const handleInputChange = (form: 'newBillTo' | 'newShipTo' | 'editContact', field: string, value: string) => {
         if (form === 'newBillTo') {
@@ -125,7 +183,7 @@ export default function SettingsPage() {
         try {
             if (type === 'billTo') {
                 await saveBillToContact(contactData);
-                setNewBillTo({ displayName: '', name: '', address: '', gst: '' });
+                setNewBillTo(initialBillToState);
             } else {
                 await saveShipToContact(contactData);
                 setNewShipTo({ displayName: '', name: '', address: '', gst: '' });
@@ -432,6 +490,7 @@ export default function SettingsPage() {
                                             <Label htmlFor="billToGst">GSTIN</Label>
                                             <Input id="billToGst" placeholder="Client GST Number" value={newBillTo.gst} onChange={e => handleInputChange('newBillTo', 'gst', e.target.value)} />
                                         </div>
+                                        {renderTaxesSelector('newBillTo', newBillTo)}
                                         <Button onClick={() => handleAddContact('billTo')} disabled={isSaving} size="sm">
                                             {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />} Add Bill To
                                         </Button>
@@ -579,6 +638,7 @@ export default function SettingsPage() {
                                 <Label htmlFor="editGst">GSTIN</Label>
                                 <Input id="editGst" value={editingContact.gst} onChange={e => handleInputChange('editContact', 'gst', e.target.value)} />
                             </div>
+                             {editingContactType === 'billTo' && renderTaxesSelector('editContact', editingContact)}
                         </div>
                         <DialogFooter>
                             <DialogClose asChild><Button variant="outline" onClick={() => setEditingContact(null)}>Cancel</Button></DialogClose>
@@ -592,3 +652,6 @@ export default function SettingsPage() {
         </main>
     );
 }
+
+
+    

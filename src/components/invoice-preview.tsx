@@ -20,15 +20,36 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
     const inWords = (num: number): string => {
         const a = ['','one ','two ','three ','four ', 'five ','six ','seven ','eight ','nine ','ten ','eleven ','twelve ','thirteen ','fourteen ','fifteen ','sixteen ','seventeen ','eighteen ','nineteen '];
         const b = ['', '', 'twenty','thirty','forty','fifty', 'sixty','seventy','eighty','ninety'];
-        const n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
-        if (!n) return '';
-        let str = '';
-        str += (Number(n[1]) != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'crore ' : '';
-        str += (Number(n[2]) != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'lakh ' : '';
-        str += (Number(n[3]) != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'thousand ' : '';
-        str += (Number(n[4]) != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'hundred ' : '';
-        str += (Number(n[5]) != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
-        return str.trim().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ') + ' Only';
+        
+        const convert = (n: string): string => {
+            let str = '';
+            const num = Number(n);
+             if (num === 0) return '';
+            const match = n.match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+            if (!match) return '';
+            str += (Number(match[1]) != 0) ? (a[Number(match[1])] || b[match[1][0]] + ' ' + a[match[1][1]]) + 'crore ' : '';
+            str += (Number(match[2]) != 0) ? (a[Number(match[2])] || b[match[2][0]] + ' ' + a[match[2][1]]) + 'lakh ' : '';
+            str += (Number(match[3]) != 0) ? (a[Number(match[3])] || b[match[3][0]] + ' ' + a[match[3][1]]) + 'thousand ' : '';
+            str += (Number(match[4]) != 0) ? (a[Number(match[4])] || b[match[4][0]] + ' ' + a[match[4][1]]) + 'hundred ' : '';
+            str += (Number(match[5]) != 0) ? ((str != '') ? 'and ' : '') + (a[Number(match[5])] || b[match[5][0]] + ' ' + a[match[5][1]]) : '';
+            return str;
+        }
+
+        const numStr = num.toFixed(2);
+        const [integerPart, decimalPart] = numStr.split('.');
+        const integerWords = convert(('000000000' + integerPart).substr(-9));
+        let finalWords = integerWords.trim().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ');
+
+        if (Number(decimalPart) > 0) {
+            const decimalWords = convert(('000000000' + decimalPart).substr(-9));
+            if (finalWords) {
+                finalWords += ' And ' + decimalWords.trim().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ') + ' Paise';
+            } else {
+                 finalWords = decimalWords.trim().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ') + ' Paise';
+            }
+        }
+        
+        return finalWords + ' Only';
     };
     
     return (

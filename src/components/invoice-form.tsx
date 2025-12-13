@@ -8,7 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck } from 'lucide-react';
 import { format } from "date-fns"
 import { extractInvoiceData, ExtractInvoiceDataOutput } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
@@ -410,10 +410,13 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         <div className='bg-card p-2 rounded-lg shadow-sm w-full flex flex-col sm:flex-row items-center justify-between gap-2 flex-wrap'>
           <nav className="flex items-center gap-1 flex-wrap">
               <Button variant="ghost" onClick={handleNewClick}>
-                  <FilePlus /> New
+                  <FilePlus /> New Invoice
               </Button>
               <Button asChild variant="ghost" className={pathname === '/invoices' ? 'text-primary' : ''}>
                   <Link href="/invoices"><ListOrdered /> Saved Invoices</Link>
+              </Button>
+               <Button asChild variant="ghost" className={pathname === '/delivery-challan' ? 'text-primary' : ''}>
+                  <Link href="/delivery-challan"><Truck /> Delivery Challan</Link>
               </Button>
                <Button asChild variant="ghost" className={pathname === '/settings' ? 'text-primary' : ''}>
                   <Link href="/settings"><SettingsIcon /> Settings</Link>
@@ -693,5 +696,3 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
-
-    

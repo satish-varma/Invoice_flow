@@ -47,12 +47,14 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
         if (Number(decimalPart) > 0) {
             let decimalWords = '';
             if (Number(decimalPart) > 0) {
-                decimalWords = convert(('000000000' + decimalPart).substr(-9));
+                 decimalWords = convert(('000000000' + decimalPart).substr(-9));
             }
+            const formattedDecimalWords = decimalWords.trim().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ');
+            
             if (finalWords) {
-                finalWords += ' And ' + decimalWords.trim().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ') + ' Paise';
+                finalWords += ' And ' + formattedDecimalWords + ' Paise';
             } else {
-                 finalWords = decimalWords.trim().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ') + ' Paise';
+                 finalWords = formattedDecimalWords + ' Paise';
             }
         }
         
@@ -143,8 +145,8 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                             </Table>
                         </div>
                         <div className='mt-8 flex justify-between items-start'>
-                            <div className='text-sm w-3/5'>
-                            <span className='font-bold'>In Words:</span> {inWords(invoice.total)}
+                             <div className="w-3/5">
+                                {/* This space is intentionally left blank to push the summary to the right */}
                             </div>
                              <div className="w-2/5 max-w-sm text-sm">
                                 <table className="w-full">
@@ -166,6 +168,9 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                         <div className='text-sm mt-4'>
+                            <span className='font-bold'>In Words:</span> {inWords(invoice.total)}
                         </div>
                     </CardContent>
                 </div>

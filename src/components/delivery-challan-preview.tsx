@@ -152,7 +152,10 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                 </div>
                 <div data-pdf-footer>
                     <CardFooter className="p-6 text-center text-xs text-gray-500 border-t border-gray-200 mt-8">
-                       <p className='w-full'>For questions concerning this invoice, please contact: Satish Varma, (91) 7709632898, thegutguru.in@gmail.com | www.thegutguru.in</p>
+                       <div className='w-full'>
+                           <p>For questions concerning this invoice, please contact:</p>
+                           <p>Satish Varma, (91) 7709632898, thegutguru.in@gmail.com | www.thegutguru.in</p>
+                       </div>
                     </CardFooter>
                 </div>
             </Card>

@@ -37,11 +37,18 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
 
         const numStr = num.toFixed(2);
         const [integerPart, decimalPart] = numStr.split('.');
-        const integerWords = convert(('000000000' + integerPart).substr(-9));
+        let integerWords = '';
+        if (Number(integerPart) > 0) {
+            integerWords = convert(('000000000' + integerPart).substr(-9));
+        }
+
         let finalWords = integerWords.trim().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ');
 
         if (Number(decimalPart) > 0) {
-            const decimalWords = convert(('000000000' + decimalPart).substr(-9));
+            let decimalWords = '';
+            if (Number(decimalPart) > 0) {
+                decimalWords = convert(('000000000' + decimalPart).substr(-9));
+            }
             if (finalWords) {
                 finalWords += ' And ' + decimalWords.trim().split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ') + ' Paise';
             } else {
@@ -49,7 +56,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
             }
         }
         
-        return finalWords + ' Only';
+        return finalWords ? finalWords + ' Only' : 'Zero Only';
     };
     
     return (
@@ -139,21 +146,25 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                             <div className='text-sm w-3/5'>
                             <span className='font-bold'>In Words:</span> {inWords(invoice.total)}
                             </div>
-                            <div className="w-2/5 max-w-sm text-sm grid gap-1">
-                                <div className="flex justify-between">
-                                    <span>Subtotal</span>
-                                    <span>{invoice.subtotal.toFixed(2)}</span>
-                                </div>
-                                {invoice.taxes?.map((tax, index) => (
-                                    <div key={index} className="flex justify-between">
-                                        <span>{tax.name}</span>
-                                        <span>{tax.amount.toFixed(2)}</span>
-                                    </div>
-                                ))}
-                                <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
-                                    <span>Total Amount</span>
-                                    <span>{invoice.total.toFixed(2)}</span>
-                                </div>
+                             <div className="w-2/5 max-w-sm text-sm">
+                                <table className="w-full">
+                                    <tbody>
+                                        <tr>
+                                            <td className="py-1">Subtotal</td>
+                                            <td className="py-1 text-right">{invoice.subtotal.toFixed(2)}</td>
+                                        </tr>
+                                        {invoice.taxes?.map((tax, index) => (
+                                            <tr key={index}>
+                                                <td className="py-1">{tax.name}</td>
+                                                <td className="py-1 text-right">{tax.amount.toFixed(2)}</td>
+                                            </tr>
+                                        ))}
+                                        <tr className="font-bold text-lg border-t mt-2">
+                                            <td className="py-2">Total Amount</td>
+                                            <td className="py-2 text-right">{invoice.total.toFixed(2)}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </CardContent>
@@ -197,3 +208,5 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
     );
 });
 InvoicePreview.displayName = "InvoicePreview";
+
+    

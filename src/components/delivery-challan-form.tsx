@@ -42,9 +42,6 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     const [billToName, setBillToName] = useState('');
     const [billToAddress, setBillToAddress] = useState('');
     
-    const [shipToName, setShipToName] = useState('');
-    const [shipToAddress, setShipToAddress] = useState('');
-
     const [lineItems, setLineItems] = useState<ChallanLineItem[]>([
         { id: 1, name: '', hsnCode: '', quantity: 1, unitPrice: 0, total: 0 },
     ]);
@@ -103,13 +100,6 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                         setBillToAddress(defaultContact.address);
                     }
                 }
-                if (loadedSettings.defaultShipToContact && loadedSettings.shipToContacts) {
-                    const defaultContact = loadedSettings.shipToContacts.find(c => c.id === loadedSettings.defaultShipToContact);
-                    if (defaultContact) {
-                        setShipToName(defaultContact.name);
-                        setShipToAddress(defaultContact.address);
-                    }
-                }
             }
         }
         loadSettingsAndApplyDefaults();
@@ -121,8 +111,6 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
             setDcDate(new Date(initialData.dcDate));
             setBillToName(initialData.billToName || '');
             setBillToAddress(initialData.billToAddress || '');
-            setShipToName(initialData.shipToName || '');
-            setShipToAddress(initialData.shipToAddress || '');
             setLineItems(initialData.lineItems.map((item, index) => ({
                 id: item.id || Date.now() + index,
                 name: item.name || '',
@@ -167,8 +155,6 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         setDcDate(new Date());
         setBillToName('');
         setBillToAddress('');
-        setShipToName('');
-        setShipToAddress('');
         setLineItems([{ id: Date.now(), name: '', hsnCode: '', quantity: 1, unitPrice: 0, total: 0 }]);
         setGstRate(5);
         setShipping(0);
@@ -196,8 +182,8 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 companyProfileId: activeCompanyProfile.id,
                 billToName,
                 billToAddress,
-                shipToName,
-                shipToAddress,
+                shipToName: billToName, // Set Ship To same as Bill To
+                shipToAddress: billToAddress, // Set Ship To same as Bill To
                 lineItems: lineItems.map(({ id, ...item }) => item),
                 subtotal,
                 gstAmount,
@@ -245,8 +231,8 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
             if (result.dcDate) setDcDate(new Date(result.dcDate));
             if (result.billToName) setBillToName(result.billToName);
             if (result.billToAddress) setBillToAddress(result.billToAddress);
-            if (result.shipToName) setShipToName(result.shipToName);
-            if (result.shipToAddress) setShipToAddress(result.shipToAddress);
+            if (result.shipToName) setBillToName(result.shipToName); // Use ship to if bill to is not found
+            if (result.shipToAddress) setBillToAddress(result.shipToAddress);
             if (result.lineItems && result.lineItems.length > 0) {
                 setLineItems(result.lineItems.map((item, index) => ({
                     id: Date.now() + index,
@@ -283,7 +269,8 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         }
     };
 
-    const handleContactSelect = (type: 'billTo' | 'shipTo', id: string) => {
+    const handleContactSelect = (value: string) => {
+        const [id, type] = value.split('|');
         if (type === 'billTo') {
             const contact = settings.billToContacts?.find(c => c.id === id);
             if (contact) {
@@ -293,8 +280,8 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         } else {
             const contact = settings.shipToContacts?.find(c => c.id === id);
             if (contact) {
-                setShipToName(contact.name);
-                setShipToAddress(contact.address);
+                setBillToName(contact.name);
+                setBillToAddress(contact.address);
             }
         }
     };
@@ -312,6 +299,12 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         }
         onAddNew();
     };
+
+    const combinedContacts = useMemo(() => {
+        const billTo = settings.billToContacts?.map(c => ({...c, type: 'billTo'})) || [];
+        const shipTo = settings.shipToContacts?.map(c => ({...c, type: 'shipTo'})) || [];
+        return [...billTo, ...shipTo];
+    }, [settings.billToContacts, settings.shipToContacts]);
 
 
   return (
@@ -398,16 +391,20 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                     </div>
                 )}
                 
-                <h3 className="font-bold text-lg mb-4 mt-8">Bill To</h3>
+                <h3 className="font-bold text-lg mb-4 mt-8">Bill To / Ship To</h3>
                  <div className="space-y-2">
                     <div>
                         <Label>Select Saved Contact</Label>
-                        <Select onValueChange={(value) => handleContactSelect('billTo', value)}>
+                        <Select onValueChange={handleContactSelect}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Select a billing contact" />
+                                <SelectValue placeholder="Select a contact" />
                             </SelectTrigger>
                             <SelectContent>
-                                {settings.billToContacts && settings.billToContacts.map((c, index) => <SelectItem key={`${c.id}-${index}`} value={c.id}>{c.displayName}</SelectItem>)}
+                                {combinedContacts.map((c, index) => 
+                                <SelectItem key={`${c.id}-${index}`} value={`${c.id}|${c.type}`}>
+                                    {c.displayName} ({c.type === 'billTo' ? 'Bill' : 'Ship'})
+                                </SelectItem>
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
@@ -450,29 +447,6 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                             />
                             </PopoverContent>
                         </Popover>
-                    </div>
-                </div>
-
-                <h3 className="font-bold text-lg mb-4 mt-8">Ship To</h3>
-                <div className="space-y-2">
-                    <div>
-                         <Label>Select Saved Contact</Label>
-                        <Select onValueChange={(value) => handleContactSelect('shipTo', value)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a shipping contact" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {settings.shipToContacts && settings.shipToContacts.map((c, index) => <SelectItem key={`${c.id}-${index}`} value={c.id}>{c.displayName}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div>
-                        <Label htmlFor='shipToName'>Name</Label>
-                        <Input id="shipToName" placeholder="Company Name" value={shipToName} onChange={e => setShipToName(e.target.value)} />
-                    </div>
-                    <div>
-                        <Label htmlFor='shipToAddress'>Address</Label>
-                        <Textarea id="shipToAddress" placeholder="Shipping Address" value={shipToAddress} onChange={e => setShipToAddress(e.target.value)} />
                     </div>
                 </div>
               </div>
@@ -576,5 +550,3 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     </>
   );
 }
-
-    

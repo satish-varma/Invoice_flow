@@ -141,7 +141,7 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                 
                  <div data-pdf-signature>
                     {activeProfile && (
-                        <div className='flex flex-col justify-end items-end h-full text-sm mt-8 pl-[20%]'>
+                        <div className='flex flex-col justify-end items-end h-full text-sm mt-8 pl-[50%]'>
                             <div className='text-center w-full max-w-sm ml-auto'>
                                 <p className="mb-2">For {activeProfile.companyName}</p>
                                 
@@ -168,3 +168,4 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
     );
 });
 DeliveryChallanPreview.displayName = "DeliveryChallanPreview";
+

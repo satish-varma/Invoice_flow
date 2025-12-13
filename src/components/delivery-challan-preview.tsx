@@ -89,53 +89,53 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                             </Table>
                         </div>
                          <div className='mt-8 flex justify-between items-start'>
-                            <div className="w-3/5">
-                            {activeProfile && activeProfile.bankBeneficiary && (
-                                    <div className='text-xs'>
-                                    <p className='font-semibold mb-2'>BANK DETAILS</p>
-                                    <div className='grid grid-cols-[100px_1fr]'>
-                                        <div className='font-bold'>Name:</div>
-                                        <div>{activeProfile.bankBeneficiary}</div>
-                                        <div className='font-bold'>Account No:</div>
-                                        <div>{activeProfile.bankAccount}</div>
-                                        <div className='font-bold'>IFSC:</div>
-                                        <div>{activeProfile.bankIfsc}</div>
-                                        <div className='font-bold'>Bank:</div>
-                                        <div>{activeProfile.bankName}</div>
+                             <div className="w-3/5">
+                                {activeProfile && activeProfile.bankBeneficiary && (
+                                        <div className='text-xs'>
+                                        <p className='font-semibold mb-2'>BANK DETAILS</p>
+                                        <div className='grid grid-cols-[100px_1fr]'>
+                                            <div className='font-bold'>Name:</div>
+                                            <div>{activeProfile.bankBeneficiary}</div>
+                                            <div className='font-bold'>Account No:</div>
+                                            <div>{activeProfile.bankAccount}</div>
+                                            <div className='font-bold'>IFSC:</div>
+                                            <div>{activeProfile.bankIfsc}</div>
+                                            <div className='font-bold'>Bank:</div>
+                                            <div>{activeProfile.bankName}</div>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
                                 <div className='text-xs mt-8'>
-                                <p><span className='font-bold'>Note:</span> {challan.note}</p>
-                            </div>
-                            </div>
-                            <div className="w-2/5 max-w-sm text-sm">
-                            <table className="w-full">
-                                <tbody>
-                                    <tr>
-                                        <td className="py-1 text-right font-bold">SUBTOTAL</td>
-                                        <td className="py-1 text-right w-[100px]">{challan.subtotal.toFixed(2)}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-1 text-right font-bold">GST @{gstRate.toFixed(2)}%</td>
-                                        <td className="py-1 text-right">{challan.gstAmount.toFixed(2)}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-1 text-right font-bold">SHIPPING/HANDLING</td>
-                                        <td className="py-1 text-right">{challan.shipping.toFixed(2)}</td>
-                                    </tr>
+                                    <p><span className='font-bold'>Note:</span> {challan.note}</p>
+                                </div>
+                             </div>
+                             <div className="w-2/5 max-w-sm text-sm">
+                                <table className="w-full">
+                                    <tbody>
                                         <tr>
-                                        <td className="py-1 text-right font-bold">OTHER</td>
-                                        <td className="py-1 text-right">{challan.other.toFixed(2)}</td>
-                                    </tr>
-                                    <tr className="font-bold text-lg">
-                                        <td className="py-2 text-right border-t border-black">TOTAL</td>
-                                        <td className="py-2 text-right border-t border-black">{challan.total.toFixed(2)}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                            <td className="py-1 text-right font-bold">SUBTOTAL</td>
+                                            <td className="py-1 text-right w-[100px]">{challan.subtotal.toFixed(2)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="py-1 text-right font-bold">GST @{gstRate.toFixed(2)}%</td>
+                                            <td className="py-1 text-right">{challan.gstAmount.toFixed(2)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="py-1 text-right font-bold">SHIPPING/HANDLING</td>
+                                            <td className="py-1 text-right">{challan.shipping.toFixed(2)}</td>
+                                        </tr>
+                                            <tr>
+                                            <td className="py-1 text-right font-bold">OTHER</td>
+                                            <td className="py-1 text-right">{challan.other.toFixed(2)}</td>
+                                        </tr>
+                                        <tr className="font-bold text-lg">
+                                            <td className="py-2 text-right border-t border-black">TOTAL</td>
+                                            <td className="py-2 text-right border-t border-black">{challan.total.toFixed(2)}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
                     </CardContent>
                 </div>
                 
@@ -149,7 +149,8 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img src="/sigwithsign.png" alt="Company Stamp" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
                                 </div>
-                                <p className="pt-2 -mt-2 border-t-2 border-black">Authorized Signature</p>
+                                 <div className="w-full h-[2px] bg-black mt-2"></div>
+                                <p className="pt-2">Authorized Signature</p>
                             </div>
                         </div>
                     )}

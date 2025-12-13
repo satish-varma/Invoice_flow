@@ -149,7 +149,6 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img src="/sigwithsign.png" alt="Company Stamp" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
                                 </div>
-                                 <div className="w-full h-[2px] bg-black mt-2"></div>
                                 <p className="pt-2">Authorized Signature</p>
                             </div>
                         </div>

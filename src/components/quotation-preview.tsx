@@ -163,12 +163,12 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                             </div>
                         </div>
 
-                        <div className="flex justify-between items-end mt-8 text-sm">
-                            <div className='w-3/5'>
+                        <div className="flex justify-between mt-8 text-sm">
+                            <div className='w-3/5 self-center'>
                                 <span className='font-bold'>In Words:</span> {inWords(quotation.total)}
                             </div>
                              {activeProfile && (
-                                <div className='text-center w-2/5'>
+                                <div className='text-center w-2/5 self-end'>
                                     <p className="mb-2">For {activeProfile.companyName}</p>
                                     
                                     <div style={{ position: 'relative', width: '110px', height: '80px', margin: '0 auto' }}>

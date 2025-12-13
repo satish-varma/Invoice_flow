@@ -400,7 +400,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                     </div>
                 )}
                 
-                <h3 className="font-bold text-lg mb-4 mt-8">To (Company)</h3>
+                <h3 className="font-bold text-lg mb-4">To (Company)</h3>
                  <div className="space-y-2">
                     <div>
                         <Label>Select Saved Contact</Label>
@@ -583,3 +583,5 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     </>
   );
 }
+
+    

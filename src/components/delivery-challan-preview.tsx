@@ -141,8 +141,9 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                                         <div className='text-center w-full'>
                                             <p className="mb-2">For {activeProfile.companyName}</p>
                                             
-                                            <div className='relative w-[110px] h-[80px] mx-auto'>
-                                                <Image src="/sigwithsign.png" alt="Company Stamp" fill sizes="110px" className="object-contain" priority />
+                                            <div style={{ position: 'relative', width: '110px', height: '80px', margin: '0 auto' }}>
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img src="/sigwithsign.png" alt="Company Stamp" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
                                             </div>
                                             <p className="pt-2 -mt-2">Authorized Signature</p>
                                         </div>
@@ -165,3 +166,5 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
     );
 });
 DeliveryChallanPreview.displayName = "DeliveryChallanPreview";
+
+    

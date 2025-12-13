@@ -8,13 +8,19 @@ import html2canvas from 'html2canvas';
  * @param element The HTML element to render into the PDF.
  * @param fileName The desired name of the output PDF file.
  */
-export async function generateAndSavePdf(element: HTMLElement, fileName: string) {
+export async function generateAndSavePdf(element: HTMLElement, fileName:string) {
     const bodyElement = element.querySelector('[data-pdf-body]') as HTMLElement;
     const footerElement = element.querySelector('[data-pdf-footer]') as HTMLElement;
 
     if (!bodyElement || !footerElement) {
         console.error("PDF generation failed: body or footer element not found.");
         return;
+    }
+    
+    // Find and temporarily remove the manifest link to prevent CORS issues with html2canvas
+    const manifestLink = document.querySelector('link[rel="manifest"]');
+    if (manifestLink) {
+        manifestLink.remove();
     }
 
     try {
@@ -26,7 +32,7 @@ export async function generateAndSavePdf(element: HTMLElement, fileName: string)
 
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
-        const canvasOptions = { scale: 2, useCORS: true };
+        const canvasOptions = { scale: 2, useCORS: true, logging: false };
         const jpegQuality = 0.9; // High quality JPEG
 
         // 1. Process Body
@@ -77,5 +83,10 @@ export async function generateAndSavePdf(element: HTMLElement, fileName: string)
     } catch (error) {
         console.error("Error generating PDF:", error);
         throw new Error("Failed to generate PDF.");
+    } finally {
+        // Re-add the manifest link after PDF generation is complete
+        if (manifestLink) {
+            document.head.appendChild(manifestLink);
+        }
     }
 }

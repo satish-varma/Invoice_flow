@@ -131,11 +131,11 @@ export const getColumns = (
                     <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon" onClick={() => onPreview(invoice)}>
                             <Eye className="h-4 w-4" />
-                            <span className="sr-only">View Details</span>
+                            <span className="sr-only">Preview</span>
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                        <p>View Details</p>
+                        <p>Preview</p>
                     </TooltipContent>
                 </Tooltip>
                 <Tooltip>

@@ -3,13 +3,14 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 /**
- * Generates and saves a multi-page PDF from an HTML element,
- * ensuring the footer is not split across pages.
+ * Generates and saves a multi-page PDF from an HTML element with discrete body, signature, and footer sections.
+ * This ensures that the signature block is not split across pages and the footer is always at the bottom.
  * @param element The HTML element to render into the PDF.
  * @param fileName The desired name of the output PDF file.
  */
 export async function generateAndSavePdf(element: HTMLElement, fileName:string) {
     const bodyElement = element.querySelector('[data-pdf-body]') as HTMLElement;
+    const signatureElement = element.querySelector('[data-pdf-signature]') as HTMLElement;
     const footerElement = element.querySelector('[data-pdf-footer]') as HTMLElement;
 
     if (!bodyElement || !footerElement) {
@@ -17,6 +18,7 @@ export async function generateAndSavePdf(element: HTMLElement, fileName:string) 
         throw new Error("Required PDF structure (body or footer) not found.");
     }
     
+    // Temporarily remove manifest link to prevent CORS issues with html2canvas
     const manifestLink = document.querySelector('link[rel="manifest"]');
     if (manifestLink) {
         manifestLink.remove();
@@ -50,25 +52,44 @@ export async function generateAndSavePdf(element: HTMLElement, fileName:string) 
             pdf.addImage(bodyImgData, 'JPEG', 0, position, pdfWidth, bodyImgHeight, undefined, 'FAST');
             heightLeft -= pdfHeight;
         }
+        
+        let lastElementBottom = (bodyImgHeight % pdfHeight);
+        if (lastElementBottom === 0 && bodyImgHeight > 0) {
+            lastElementBottom = pdfHeight;
+        }
 
-        // 2. Process Footer
+        // 2. Process Signature (if it exists)
+        if (signatureElement) {
+            const signatureCanvas = await html2canvas(signatureElement, canvasOptions);
+            const signatureImgData = signatureCanvas.toDataURL('image/jpeg', 0.95);
+            const signatureImgHeight = (signatureCanvas.height * pdfWidth) / signatureCanvas.width;
+            
+            const spaceLeftOnPage = pdfHeight - lastElementBottom;
+
+            if (signatureImgHeight > spaceLeftOnPage) {
+                pdf.addPage();
+                pdf.addImage(signatureImgData, 'JPEG', 0, 0, pdfWidth, signatureImgHeight, undefined, 'FAST');
+                lastElementBottom = signatureImgHeight;
+            } else {
+                pdf.addImage(signatureImgData, 'JPEG', 0, lastElementBottom, pdfWidth, signatureImgHeight, undefined, 'FAST');
+                lastElementBottom += signatureImgHeight;
+            }
+        }
+
+        // 3. Process Footer
         const footerCanvas = await html2canvas(footerElement, canvasOptions);
         const footerImgData = footerCanvas.toDataURL('image/jpeg', 0.95);
         const footerImgHeight = (footerCanvas.height * pdfWidth) / footerCanvas.width;
         
-        // 3. Calculate position for the footer
-        const lastPage = pdf.getNumberOfPages();
-        pdf.setPage(lastPage);
-        
-        const bodyHeightOnLastPage = bodyImgHeight % pdfHeight || (bodyImgHeight > 0 ? pdfHeight : 0);
-        const spaceLeftOnLastPage = pdfHeight - bodyHeightOnLastPage;
+        const spaceLeftForFooter = pdfHeight - lastElementBottom;
 
-        if (footerImgHeight > spaceLeftOnLastPage) {
+        if (footerImgHeight > spaceLeftForFooter) {
             pdf.addPage();
-            pdf.addImage(footerImgData, 'JPEG', 0, 0, pdfWidth, footerImgHeight, undefined, 'FAST');
+            pdf.addImage(footerImgData, 'JPEG', 0, pdfHeight - footerImgHeight, pdfWidth, footerImgHeight, undefined, 'FAST');
         } else {
-            pdf.addImage(footerImgData, 'JPEG', 0, bodyHeightOnLastPage, pdfWidth, footerImgHeight, undefined, 'FAST');
+            pdf.addImage(footerImgData, 'JPEG', 0, pdfHeight - footerImgHeight, pdfWidth, footerImgHeight, undefined, 'FAST');
         }
+
 
         // 4. Save PDF
         pdf.save(fileName);
@@ -77,6 +98,7 @@ export async function generateAndSavePdf(element: HTMLElement, fileName:string) 
         console.error("Error generating PDF:", error);
         throw new Error("Failed to generate PDF.");
     } finally {
+        // Re-add the manifest link if it was removed
         if (manifestLink) {
             document.head.appendChild(manifestLink);
         }

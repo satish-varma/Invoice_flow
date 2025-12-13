@@ -34,7 +34,6 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                                 <div className='text-sm mt-1'>
                                     {activeProfile.companyGstin && <p className='mb-0'><span className='font-bold'>GSTIN:</span> {activeProfile.companyGstin}</p>}
                                     <p><span className='font-bold'>Mobile:</span> +91 7709632898</p>
-                                    {/* Email needs to be added to company profile settings */}
                                 </div>
                             </div>
                             <div className="space-y-2 text-sm pt-12">
@@ -89,10 +88,7 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                             </TableBody>
                             </Table>
                         </div>
-                    </CardContent>
-                </div>
-                <div data-pdf-footer className='p-6'>
-                    <div className='mt-8 flex justify-between items-start'>
+                         <div className='mt-8 flex justify-between items-start'>
                             <div className="w-3/5">
                             {activeProfile && activeProfile.bankBeneficiary && (
                                     <div className='text-xs'>
@@ -138,21 +134,28 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                                     </tr>
                                 </tbody>
                             </table>
-                            {activeProfile && (
-                                <div className='flex flex-col justify-end items-center h-full text-sm mt-8'>
-                                    <div className='text-center w-full'>
-                                        <p className="mb-2">For {activeProfile.companyName}</p>
-                                        
-                                        <div style={{ position: 'relative', width: '110px', height: '80px', margin: '0 auto' }}>
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img src="/sigwithsign.png" alt="Company Stamp" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
-                                        </div>
-                                        <p className="pt-2 -mt-2">Authorized Signature</p>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
+                    </CardContent>
+                </div>
+                
+                 <div data-pdf-signature>
+                    {activeProfile && (
+                        <div className='flex flex-col justify-end items-end h-full text-sm mt-8 pr-6'>
+                            <div className='text-center w-full max-w-sm ml-auto'>
+                                <p className="mb-2">For {activeProfile.companyName}</p>
+                                
+                                <div style={{ position: 'relative', width: '110px', height: '80px', margin: '0 auto' }}>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src="/sigwithsign.png" alt="Company Stamp" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
+                                </div>
+                                <p className="pt-2 -mt-2 border-t-2 border-black">Authorized Signature</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div data-pdf-footer>
                      <CardFooter className="p-4 text-center text-xs text-gray-500 border-t border-gray-200 mt-4">
                        <div className='w-full'>
                            <p>For questions concerning this invoice, please contact: </p>

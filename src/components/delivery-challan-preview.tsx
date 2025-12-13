@@ -34,7 +34,7 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                                 <p className='text-sm w-64' style={{whiteSpace: 'pre-wrap'}}>{activeProfile.companyAddress}</p>
                                 <div className='text-sm mt-1'>
                                     {activeProfile.companyGstin && <p className='mb-0'><span className='font-bold'>GSTIN:</span> {activeProfile.companyGstin}</p>}
-                                    {activeProfile.companyPan && <p><span className='font-bold'>Mobile:</span> {activeProfile.companyPan}</p>}
+                                    <p><span className='font-bold'>Mobile:</span> +91 7709632898</p>
                                     {/* Email needs to be added to company profile settings */}
                                 </div>
                             </div>
@@ -166,5 +166,3 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
     );
 });
 DeliveryChallanPreview.displayName = "DeliveryChallanPreview";
-
-    

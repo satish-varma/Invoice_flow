@@ -89,71 +89,71 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                             </TableBody>
                             </Table>
                         </div>
-                       <div className='mt-8 flex justify-between items-start'>
-                             <div className="w-3/5">
-                                {activeProfile && activeProfile.bankBeneficiary && (
-                                     <div className='text-xs'>
-                                        <p className='font-semibold mb-2'>BANK DETAILS</p>
-                                        <div className='grid grid-cols-[100px_1fr]'>
-                                            <div className='font-bold'>Name:</div>
-                                            <div>{activeProfile.bankBeneficiary}</div>
-                                            <div className='font-bold'>Account No:</div>
-                                            <div>{activeProfile.bankAccount}</div>
-                                            <div className='font-bold'>IFSC:</div>
-                                            <div>{activeProfile.bankIfsc}</div>
-                                            <div className='font-bold'>Bank:</div>
-                                            <div>{activeProfile.bankName}</div>
-                                        </div>
-                                    </div>
-                                )}
-                                 <div className='text-xs mt-8'>
-                                    <p><span className='font-bold'>Note:</span> {challan.note}</p>
-                                </div>
-                             </div>
-                             <div className="w-2/5 max-w-sm text-sm">
-                                <table className="w-full">
-                                    <tbody>
-                                        <tr>
-                                            <td className="py-1 text-right font-bold">SUBTOTAL</td>
-                                            <td className="py-1 text-right w-[100px]">{challan.subtotal.toFixed(2)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="py-1 text-right font-bold">GST @{gstRate.toFixed(2)}%</td>
-                                            <td className="py-1 text-right">{challan.gstAmount.toFixed(2)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="py-1 text-right font-bold">SHIPPING/HANDLING</td>
-                                            <td className="py-1 text-right">{challan.shipping.toFixed(2)}</td>
-                                        </tr>
-                                         <tr>
-                                            <td className="py-1 text-right font-bold">OTHER</td>
-                                            <td className="py-1 text-right">{challan.other.toFixed(2)}</td>
-                                        </tr>
-                                        <tr className="font-bold text-lg">
-                                            <td className="py-2 text-right border-t border-black">TOTAL</td>
-                                            <td className="py-2 text-right border-t border-black">{challan.total.toFixed(2)}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                                {activeProfile && (
-                                    <div className='flex flex-col justify-end items-center h-full text-sm mt-8'>
-                                        <div className='text-center w-full'>
-                                            <p className="mb-2">For {activeProfile.companyName}</p>
-                                            
-                                            <div style={{ position: 'relative', width: '110px', height: '80px', margin: '0 auto' }}>
-                                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                <img src="/sigwithsign.png" alt="Company Stamp" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
-                                            </div>
-                                            <p className="pt-2 -mt-2">Authorized Signature</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
                     </CardContent>
                 </div>
-                <div data-pdf-footer>
-                    <CardFooter className="p-4 text-center text-xs text-gray-500 border-t border-gray-200 mt-4">
+                <div data-pdf-footer className='p-6'>
+                    <div className='mt-8 flex justify-between items-start'>
+                            <div className="w-3/5">
+                            {activeProfile && activeProfile.bankBeneficiary && (
+                                    <div className='text-xs'>
+                                    <p className='font-semibold mb-2'>BANK DETAILS</p>
+                                    <div className='grid grid-cols-[100px_1fr]'>
+                                        <div className='font-bold'>Name:</div>
+                                        <div>{activeProfile.bankBeneficiary}</div>
+                                        <div className='font-bold'>Account No:</div>
+                                        <div>{activeProfile.bankAccount}</div>
+                                        <div className='font-bold'>IFSC:</div>
+                                        <div>{activeProfile.bankIfsc}</div>
+                                        <div className='font-bold'>Bank:</div>
+                                        <div>{activeProfile.bankName}</div>
+                                    </div>
+                                </div>
+                            )}
+                                <div className='text-xs mt-8'>
+                                <p><span className='font-bold'>Note:</span> {challan.note}</p>
+                            </div>
+                            </div>
+                            <div className="w-2/5 max-w-sm text-sm">
+                            <table className="w-full">
+                                <tbody>
+                                    <tr>
+                                        <td className="py-1 text-right font-bold">SUBTOTAL</td>
+                                        <td className="py-1 text-right w-[100px]">{challan.subtotal.toFixed(2)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-1 text-right font-bold">GST @{gstRate.toFixed(2)}%</td>
+                                        <td className="py-1 text-right">{challan.gstAmount.toFixed(2)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-1 text-right font-bold">SHIPPING/HANDLING</td>
+                                        <td className="py-1 text-right">{challan.shipping.toFixed(2)}</td>
+                                    </tr>
+                                        <tr>
+                                        <td className="py-1 text-right font-bold">OTHER</td>
+                                        <td className="py-1 text-right">{challan.other.toFixed(2)}</td>
+                                    </tr>
+                                    <tr className="font-bold text-lg">
+                                        <td className="py-2 text-right border-t border-black">TOTAL</td>
+                                        <td className="py-2 text-right border-t border-black">{challan.total.toFixed(2)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            {activeProfile && (
+                                <div className='flex flex-col justify-end items-center h-full text-sm mt-8'>
+                                    <div className='text-center w-full'>
+                                        <p className="mb-2">For {activeProfile.companyName}</p>
+                                        
+                                        <div style={{ position: 'relative', width: '110px', height: '80px', margin: '0 auto' }}>
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img src="/sigwithsign.png" alt="Company Stamp" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
+                                        </div>
+                                        <p className="pt-2 -mt-2">Authorized Signature</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                     <CardFooter className="p-4 text-center text-xs text-gray-500 border-t border-gray-200 mt-4">
                        <div className='w-full'>
                            <p>For questions concerning this invoice, please contact: </p>
                            <p>Satish Varma, (91) 7709632898, thegutguru.in@gmail.com | www.thegutguru.in</p>

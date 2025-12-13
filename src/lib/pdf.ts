@@ -14,10 +14,9 @@ export async function generateAndSavePdf(element: HTMLElement, fileName:string) 
 
     if (!bodyElement || !footerElement) {
         console.error("PDF generation failed: body or footer element not found.");
-        return;
+        throw new Error("Required PDF structure (body or footer) not found.");
     }
     
-    // Find and temporarily remove the manifest link to prevent CORS issues with html2canvas
     const manifestLink = document.querySelector('link[rel="manifest"]');
     if (manifestLink) {
         manifestLink.remove();
@@ -33,63 +32,43 @@ export async function generateAndSavePdf(element: HTMLElement, fileName:string) 
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
         const canvasOptions = { scale: 2, useCORS: true, logging: false };
-        const jpegQuality = 0.9; // High quality JPEG
 
         // 1. Process Body
         const bodyCanvas = await html2canvas(bodyElement, canvasOptions);
-        const bodyImgData = bodyCanvas.toDataURL('image/jpeg', jpegQuality);
-        const bodyCanvasWidth = bodyCanvas.width;
-        const bodyCanvasHeight = bodyCanvas.height;
-        const bodyAspectRatio = bodyCanvasWidth / bodyCanvasHeight;
-        const bodyImgHeightInPdf = pdfWidth / bodyAspectRatio;
+        const bodyImgData = bodyCanvas.toDataURL('image/jpeg', 0.95);
+        const bodyImgHeight = (bodyCanvas.height * pdfWidth) / bodyCanvas.width;
 
-        let heightLeft = bodyImgHeightInPdf;
+        let heightLeft = bodyImgHeight;
         let position = 0;
 
-        pdf.addImage(bodyImgData, 'JPEG', 0, position, pdfWidth, bodyImgHeightInPdf, undefined, 'FAST');
+        pdf.addImage(bodyImgData, 'JPEG', 0, position, pdfWidth, bodyImgHeight, undefined, 'FAST');
         heightLeft -= pdfHeight;
 
         while (heightLeft > 0) {
-            position = heightLeft - bodyImgHeightInPdf;
+            position = heightLeft - bodyImgHeight;
             pdf.addPage();
-            pdf.addImage(bodyImgData, 'JPEG', 0, position, pdfWidth, bodyImgHeightInPdf, undefined, 'FAST');
+            pdf.addImage(bodyImgData, 'JPEG', 0, position, pdfWidth, bodyImgHeight, undefined, 'FAST');
             heightLeft -= pdfHeight;
         }
 
         // 2. Process Footer
         const footerCanvas = await html2canvas(footerElement, canvasOptions);
-        const footerImgData = footerCanvas.toDataURL('image/jpeg', jpegQuality);
-        const footerCanvasWidth = footerCanvas.width;
-        const footerCanvasHeight = footerCanvas.height;
-        const footerAspectRatio = footerCanvasWidth / footerCanvasHeight;
-        const footerImgHeightInPdf = pdfWidth / footerAspectRatio;
-
+        const footerImgData = footerCanvas.toDataURL('image/jpeg', 0.95);
+        const footerImgHeight = (footerCanvas.height * pdfWidth) / footerCanvas.width;
+        
         // 3. Calculate position for the footer
-        const totalBodyPages = Math.ceil(bodyImgHeightInPdf / pdfHeight);
-        const lastPageNumber = pdf.getNumberOfPages();
-        if (lastPageNumber !== totalBodyPages) {
-            // This case should ideally not happen with the loop above, but as a safeguard.
-        }
+        const lastPage = pdf.getNumberOfPages();
+        pdf.setPage(lastPage);
         
-        const bodyHeightOnLastPage = bodyImgHeightInPdf % pdfHeight;
-        
-        let effectiveBodyHeightOnLastPage = bodyHeightOnLastPage;
-        if (bodyHeightOnLastPage === 0 && bodyImgHeightInPdf > 0) {
-            effectiveBodyHeightOnLastPage = pdfHeight; // The body perfectly filled the last page
-        }
+        const bodyHeightOnLastPage = bodyImgHeight % pdfHeight || (bodyImgHeight > 0 ? pdfHeight : 0);
+        const spaceLeftOnLastPage = pdfHeight - bodyHeightOnLastPage;
 
-        const spaceLeftOnLastPage = pdfHeight - effectiveBodyHeightOnLastPage;
-
-        pdf.setPage(lastPageNumber); // Make sure we are on the last page
-
-        if (footerImgHeightInPdf > spaceLeftOnLastPage) {
+        if (footerImgHeight > spaceLeftOnLastPage) {
             pdf.addPage();
-            position = pdfHeight - footerImgHeightInPdf; // Position at the bottom of the new page
+            pdf.addImage(footerImgData, 'JPEG', 0, 0, pdfWidth, footerImgHeight, undefined, 'FAST');
         } else {
-            position = effectiveBodyHeightOnLastPage; // Position right after the body content on the same page
+            pdf.addImage(footerImgData, 'JPEG', 0, bodyHeightOnLastPage, pdfWidth, footerImgHeight, undefined, 'FAST');
         }
-
-        pdf.addImage(footerImgData, 'JPEG', 0, position, pdfWidth, footerImgHeightInPdf, undefined, 'FAST');
 
         // 4. Save PDF
         pdf.save(fileName);
@@ -98,7 +77,6 @@ export async function generateAndSavePdf(element: HTMLElement, fileName:string) 
         console.error("Error generating PDF:", error);
         throw new Error("Failed to generate PDF.");
     } finally {
-        // Re-add the manifest link after PDF generation is complete
         if (manifestLink) {
             document.head.appendChild(manifestLink);
         }

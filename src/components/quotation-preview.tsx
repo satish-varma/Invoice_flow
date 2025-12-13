@@ -162,13 +162,13 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                                 </table>
                             </div>
                         </div>
-                        <div className='text-sm mt-4'>
-                            <span className='font-bold'>In Words:</span> {inWords(quotation.total)}
-                        </div>
-                        
-                        {activeProfile && (
-                            <div className='flex justify-end items-end h-full text-sm pt-8'>
-                                 <div className='text-center w-full max-w-xs'>
+
+                        <div className="flex justify-between items-end mt-8 text-sm">
+                            <div className='w-3/5'>
+                                <span className='font-bold'>In Words:</span> {inWords(quotation.total)}
+                            </div>
+                             {activeProfile && (
+                                <div className='text-center w-2/5'>
                                     <p className="mb-2">For {activeProfile.companyName}</p>
                                     
                                     <div style={{ position: 'relative', width: '110px', height: '80px', margin: '0 auto' }}>
@@ -177,8 +177,8 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                                     </div>
                                     <p className="pt-2">Authorized Signature</p>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </CardContent>
                 </div>
                 

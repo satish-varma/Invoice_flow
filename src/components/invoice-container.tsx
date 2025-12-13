@@ -87,11 +87,9 @@ export function InvoiceContainer() {
             }
         };
 
-        // Delay generation slightly to ensure component is fully rendered with the correct data
-        if (invoiceToDownload) {
-            setTimeout(createPdf, 50);
-        }
-    }, [invoiceToDownload, settings, toast]);
+        createPdf();
+
+    }, [invoiceToDownload, settings, toast, invoicePreviewRef.current]);
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

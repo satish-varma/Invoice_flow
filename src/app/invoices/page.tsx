@@ -102,12 +102,9 @@ export default function InvoicesPage() {
         }
     };
 
-    // Use a timeout to ensure the DOM is fully updated before capturing
-    if(invoiceToGenerate) {
-      setTimeout(generatePdf, 100);
-    }
+    generatePdf();
     
-  }, [invoiceToGenerate, pdfAction, settings, toast, isBulkDownloading]);
+  }, [invoiceToGenerate, pdfAction, settings, toast, isBulkDownloading, invoicePreviewRef.current]);
 
   const handlePreview = (invoice: Invoice) => {
     closePreview(); // Close any existing preview first

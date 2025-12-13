@@ -87,11 +87,10 @@ export default function QuotationPage() {
             }
         };
 
-        // Delay generation slightly to ensure component is fully rendered with the correct data
-        if (quotationToDownload) {
-            setTimeout(createPdf, 50);
-        }
-    }, [quotationToDownload, settings, toast]);
+        // This effect runs when the ref is attached and the data is ready.
+        createPdf();
+
+    }, [quotationToDownload, settings, toast, quotationPreviewRef.current]); // Dependency on the ref's current value
 
     return (
         <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">

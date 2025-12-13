@@ -87,11 +87,9 @@ export default function DeliveryChallanPage() {
             }
         };
 
-        // Delay generation slightly to ensure component is fully rendered with the correct data
-        if (challanToDownload) {
-            setTimeout(createPdf, 50);
-        }
-    }, [challanToDownload, settings, toast]);
+        createPdf();
+
+    }, [challanToDownload, settings, toast, challanPreviewRef.current]);
 
     return (
         <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">

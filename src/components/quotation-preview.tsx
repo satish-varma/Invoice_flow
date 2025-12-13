@@ -133,21 +133,6 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                                     <p className='font-semibold'>Terms and Conditions</p>
                                     <p className='whitespace-pre-wrap'>{quotation.terms}</p>
                                 </div>
-                                {activeProfile && activeProfile.bankBeneficiary && (
-                                    <div className='text-xs mt-4'>
-                                        <p className='font-semibold mb-2'>BANK DETAILS</p>
-                                        <div className='grid grid-cols-[100px_1fr]'>
-                                            <div className='font-bold'>Name:</div>
-                                            <div>{activeProfile.bankBeneficiary}</div>
-                                            <div className='font-bold'>Account No:</div>
-                                            <div>{activeProfile.bankAccount}</div>
-                                            <div className='font-bold'>IFSC:</div>
-                                            <div>{activeProfile.bankIfsc}</div>
-                                            <div className='font-bold'>Bank:</div>
-                                            <div>{activeProfile.bankName}</div>
-                                        </div>
-                                    </div>
-                                )}
                              </div>
                              <div className="w-2/5 max-w-sm text-sm">
                                 <table className="w-full">
@@ -163,25 +148,24 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                         <div className='text-sm mt-4'>
                             <span className='font-bold'>In Words:</span> {inWords(quotation.total)}
                         </div>
+                        
+                        {activeProfile && (
+                            <div className='flex justify-end items-end h-full text-sm pt-8'>
+                                 <div className='text-center w-full max-w-xs'>
+                                    <p className="mb-2">For {activeProfile.companyName}</p>
+                                    
+                                    <div style={{ position: 'relative', width: '110px', height: '80px', margin: '0 auto' }}>
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src="/sigwithsign.png" alt="Company Signature" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
+                                    </div>
+                                    <p className="pt-2">Authorized Signature</p>
+                                </div>
+                            </div>
+                        )}
                     </CardContent>
                 </div>
                 
                  <div data-pdf-signature className="pt-8">
-                    {activeProfile && (
-                        <div className='flex justify-end items-end h-full text-sm pl-[50%]'>
-                             <div className='text-center w-full max-w-xs'>
-                                <p className="mb-2">For {activeProfile.companyName}</p>
-                                
-                                {activeProfile.stampLogoUrl && (
-                                <div style={{ position: 'relative', width: '110px', height: '80px', margin: '0 auto' }}>
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={activeProfile.stampLogoUrl} alt="Company Stamp" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
-                                </div>
-                                )}
-                                <p className="pt-2">Authorized Signature</p>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 <div data-pdf-footer>

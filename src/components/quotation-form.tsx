@@ -39,8 +39,8 @@ type CombinedContact = (BillToContact & { type: 'billTo' }) | (ShipToContact & {
 
 export function QuotationForm({ initialData, onQuotationSave, onAddNew }: QuotationFormProps) {
     const [quotationNumber, setQuotationNumber] = useState('');
-    const [quotationDate, setQuotationDate] = useState<Date | undefined>(new Date());
-    const [validityDate, setValidityDate] = useState<Date | undefined>(new Date());
+    const [quotationDate, setQuotationDate] = useState<Date | undefined>(undefined);
+    const [validityDate, setValidityDate] = useState<Date | undefined>(undefined);
     
     const [billToName, setBillToName] = useState('');
     const [billToAddress, setBillToAddress] = useState('');
@@ -77,6 +77,12 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
         return subtotal + gstAmount + Number(shipping) + Number(other);
     }, [subtotal, gstAmount, shipping, other]);
     
+    useEffect(() => {
+        if(!initialData){
+            setQuotationDate(new Date());
+            setValidityDate(new Date());
+        }
+    }, [initialData]);
 
     useEffect(() => {
         async function loadSettingsAndApplyDefaults() {
@@ -577,3 +583,5 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     </>
   );
 }
+
+    

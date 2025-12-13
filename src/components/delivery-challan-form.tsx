@@ -39,7 +39,7 @@ type CombinedContact = (BillToContact & { type: 'billTo' }) | (ShipToContact & {
 
 export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: DeliveryChallanFormProps) {
     const [dcNumber, setDcNumber] = useState('');
-    const [dcDate, setDcDate] = useState<Date | undefined>(new Date());
+    const [dcDate, setDcDate] = useState<Date | undefined>(undefined);
     
     const [billToName, setBillToName] = useState('');
     const [billToAddress, setBillToAddress] = useState('');
@@ -78,6 +78,12 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     const total = useMemo(() => {
         return subtotal + gstAmount + Number(shipping) + Number(other);
     }, [subtotal, gstAmount, shipping, other]);
+
+    useEffect(() => {
+        if (!initialData) {
+            setDcDate(new Date());
+        }
+    }, [initialData]);
 
     useEffect(() => {
         async function loadSettingsAndApplyDefaults() {
@@ -598,3 +604,5 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     </>
   );
 }
+
+    

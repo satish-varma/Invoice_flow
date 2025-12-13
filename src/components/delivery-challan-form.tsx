@@ -508,36 +508,44 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 </Button>
               </div>
             </CardContent>
-            <CardFooter className="bg-muted/20 p-4 sm:p-6 flex-col items-end gap-4">
-                <div className="grid grid-cols-2 gap-x-8 gap-y-2 w-full max-w-sm text-sm">
-                    <span className="text-muted-foreground text-right">Subtotal</span>
-                    <span className='font-medium text-right'>{subtotal.toFixed(2)}</span>
-                    
-                    <span className="text-muted-foreground text-right">GST @5%</span>
-                    <Input type="number" value={gstAmount} onChange={e => setGstAmount(parseFloat(e.target.value) || 0)} className="h-8 text-right" />
-
-                    <span className="text-muted-foreground text-right">Shipping/Handling</span>
-                    <Input type="number" value={shipping} onChange={e => setShipping(parseFloat(e.target.value) || 0)} className="h-8 text-right" />
-
-                    <span className="text-muted-foreground text-right">Other</span>
-                    <Input type="number" value={other} onChange={e => setOther(parseFloat(e.target.value) || 0)} className="h-8 text-right" />
-                    
-                    <span className="font-bold text-lg border-t pt-2 mt-2 text-right">Total</span>
-                    <span className="font-bold text-lg border-t pt-2 mt-2 text-right">{total.toFixed(2)}</span>
+            <CardFooter className="bg-muted/20 p-4 sm:p-6 flex justify-between items-start gap-8">
+                <div className="w-full space-y-4">
+                    {activeCompanyProfile?.bankBeneficiary && (
+                        <div className='text-xs text-muted-foreground'>
+                            <p className='font-semibold'>Bank Details</p>
+                            <p>Name: {activeCompanyProfile.bankBeneficiary}</p>
+                            <p>Account No: {activeCompanyProfile.bankAccount}</p>
+                            <p>IFSC: {activeCompanyProfile.bankIfsc}</p>
+                            <p>Bank: {activeCompanyProfile.bankName}</p>
+                        </div>
+                    )}
+                    <div>
+                        <Label>Note</Label>
+                        <Textarea value={note} onChange={e => setNote(e.target.value)} />
+                    </div>
                 </div>
-                <div className='w-full mt-4'>
-                    <Label>Note</Label>
-                    <Textarea value={note} onChange={e => setNote(e.target.value)} />
+                <div className="w-full max-w-sm space-y-2 text-sm">
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span className='font-medium'>{subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">GST @5%</span>
+                        <Input type="number" value={gstAmount} onChange={e => setGstAmount(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Shipping/Handling</span>
+                         <Input type="number" value={shipping} onChange={e => setShipping(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Other</span>
+                        <Input type="number" value={other} onChange={e => setOther(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
+                    </div>
+                    <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
+                      <span>Total</span>
+                      <span>{total.toFixed(2)}</span>
+                    </div>
                 </div>
-               {activeCompanyProfile?.bankBeneficiary && (
-                  <div className='text-xs text-muted-foreground text-left w-full pt-4 border-t'>
-                      <p className='font-semibold'>Bank Details</p>
-                      <p>Name: {activeCompanyProfile.bankBeneficiary}</p>
-                      <p>Account No: {activeCompanyProfile.bankAccount}</p>
-                      <p>IFSC: {activeCompanyProfile.bankIfsc}</p>
-                      <p>Bank: {activeCompanyProfile.bankName}</p>
-                  </div>
-               )}
             </CardFooter>
           </Card>
     </>

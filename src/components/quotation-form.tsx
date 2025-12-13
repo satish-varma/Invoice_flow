@@ -50,6 +50,10 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     ]);
     const [terms, setTerms] = useState('1. Price: Inclusive of all taxes\n2. Delivery: 2-3 days from the date of receipt of purchase order\n3. Payment: 100% advance along with purchase order');
     
+    const [gstRate, setGstRate] = useState(5);
+    const [shipping, setShipping] = useState(0);
+    const [other, setOther] = useState(0);
+
     const [isExtracting, setIsExtracting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -61,9 +65,17 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
 
     const { toast } = useToast();
 
-    const total = useMemo(() => {
+    const subtotal = useMemo(() => {
         return lineItems.reduce((acc, item) => acc + item.total, 0);
     }, [lineItems]);
+    
+    const gstAmount = useMemo(() => {
+        return (subtotal * gstRate) / 100;
+    }, [subtotal, gstRate]);
+
+    const total = useMemo(() => {
+        return subtotal + gstAmount + Number(shipping) + Number(other);
+    }, [subtotal, gstAmount, shipping, other]);
     
 
     useEffect(() => {
@@ -112,6 +124,10 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                 unitPrice: item.unitPrice || 0,
                 total: item.total || 0,
             })));
+            const calculatedGstRate = initialData.subtotal > 0 ? (initialData.gstAmount / initialData.subtotal) * 100 : 5;
+            setGstRate(calculatedGstRate);
+            setShipping(initialData.shipping || 0);
+            setOther(initialData.other || 0);
             setTerms(initialData.terms || '1. Price: Inclusive of all taxes\n2. Delivery: 2-3 days from the date of receipt of purchase order\n3. Payment: 100% advance along with purchase order');
         } else {
             handleClearForm(false);
@@ -146,6 +162,9 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
         setBillToName('');
         setBillToAddress('');
         setLineItems([{ id: Date.now(), name: '', hsnCode: '', quantity: 1, unitPrice: 0, total: 0 }]);
+        setGstRate(5);
+        setShipping(0);
+        setOther(0);
         setTerms('1. Price: Inclusive of all taxes\n2. Delivery: 2-3 days from the date of receipt of purchase order\n3. Payment: 100% advance along with purchase order');
         if (shouldCallback) {
             onAddNew();
@@ -171,6 +190,10 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                 billToName,
                 billToAddress,
                 lineItems: lineItems.map(({ id, ...item }) => item),
+                subtotal,
+                gstAmount,
+                shipping: Number(shipping),
+                other: Number(other),
                 total,
                 terms,
             };
@@ -223,6 +246,15 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                     total: item.quantity * item.unitPrice,
                 })));
             }
+             if (result.subtotal) { /* Not setting subtotal directly */ }
+            if (result.gstAmount) {
+                 const extractedSubtotal = result.subtotal || subtotal;
+                if(extractedSubtotal > 0) {
+                    setGstRate((result.gstAmount / extractedSubtotal) * 100);
+                }
+            }
+            if (result.shipping) setShipping(result.shipping);
+            if (result.other) setOther(result.other);
             if(result.terms) setTerms(result.terms);
 
             toast({
@@ -509,6 +541,32 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                     )}
                 </div>
                 <div className="w-full max-w-sm space-y-2 text-sm">
+                     <div className="flex justify-between">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span className='font-medium'>{subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                         <div className="flex items-center gap-1">
+                            <span className="text-muted-foreground">GST @</span>
+                            <Input 
+                                type="number" 
+                                value={gstRate} 
+                                onChange={e => setGstRate(parseFloat(e.target.value) || 0)} 
+                                className="h-8 text-right w-16"
+                                placeholder="5"
+                            />
+                            <span className="text-muted-foreground">%</span>
+                        </div>
+                        <span className='font-medium'>{gstAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Shipping/Handling</span>
+                         <Input type="number" value={shipping} onChange={e => setShipping(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Other</span>
+                        <Input type="number" value={other} onChange={e => setOther(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
+                    </div>
                     <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
                       <span>Total</span>
                       <span>{total.toFixed(2)}</span>

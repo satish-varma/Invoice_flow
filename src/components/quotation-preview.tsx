@@ -15,6 +15,7 @@ interface QuotationPreviewProps {
 export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPreviewProps>(({ quotation, settings }, ref) => {
     
     const activeProfile = settings.companyProfiles?.find(p => p.id === quotation.companyProfileId);
+    const gstRate = quotation.subtotal > 0 ? (quotation.gstAmount / quotation.subtotal) * 100 : 0;
 
     const inWords = (num: number): string => {
         const a = ['','one ','two ','three ','four ', 'five ','six ','seven ','eight ','nine ','ten ','eleven ','twelve ','thirteen ','fourteen ','fifteen ','sixteen ','seventeen ','eighteen ','nineteen '];
@@ -137,9 +138,25 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                              <div className="w-2/5 max-w-sm text-sm">
                                 <table className="w-full">
                                     <tbody>
+                                        <tr>
+                                            <td className="py-1 text-right font-bold">SUBTOTAL</td>
+                                            <td className="py-1 text-right w-[100px]">{quotation.subtotal.toFixed(2)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="py-1 text-right font-bold">GST @{gstRate.toFixed(2)}%</td>
+                                            <td className="py-1 text-right">{quotation.gstAmount.toFixed(2)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="py-1 text-right font-bold">SHIPPING/HANDLING</td>
+                                            <td className="py-1 text-right">{quotation.shipping.toFixed(2)}</td>
+                                        </tr>
+                                            <tr>
+                                            <td className="py-1 text-right font-bold">OTHER</td>
+                                            <td className="py-1 text-right">{quotation.other.toFixed(2)}</td>
+                                        </tr>
                                         <tr className="font-bold text-lg">
                                             <td className="py-2 text-right border-t border-black">TOTAL</td>
-                                            <td className="py-2 text-right border-t border-black w-[100px]">{quotation.total.toFixed(2)}</td>
+                                            <td className="py-2 text-right border-t border-black">{quotation.total.toFixed(2)}</td>
                                         </tr>
                                     </tbody>
                                 </table>

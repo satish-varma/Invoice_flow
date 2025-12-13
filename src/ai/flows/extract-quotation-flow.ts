@@ -32,12 +32,16 @@ export type ExtractQuotationInput = z.infer<
 const ExtractQuotationOutputSchema = z.object({
   quotationNumber: z.string().optional().describe('The Quotation number.'),
   quotationDate: z.string().optional().describe('The date of the quotation in YYYY-MM-DD format.'),
-  validityDate: z.string().optional().describe('The validity date of the quotation in YYYY-MM-DD format.'),
+  validityDate: z.string().optional().describe('The validity date of the quotation in Y-MM-DD format.'),
   billToName: z.string().optional().describe('The name of the customer or who the quotation is billed to.'),
   billToAddress: z.string().optional().describe('The full address of the "Bill To" party.'),
   lineItems: z.array(QuotationLineItemSchema).optional().describe('An array of line items from the quotation.'),
-  terms: z.string().optional().describe('The terms and conditions of the quotation.'),
+  subtotal: z.number().optional().describe('The subtotal amount before taxes and other charges.'),
+  gstAmount: z.number().optional().describe('The calculated GST amount.'),
+  shipping: z.number().optional().describe('The shipping or handling charges.'),
+  other: z.number().optional().describe('Any other miscellaneous charges.'),
   total: z.number().optional().describe('The final total amount.'),
+  terms: z.string().optional().describe('The terms and conditions of the quotation.'),
 });
 export type ExtractQuotationOutput = z.infer<
   typeof ExtractQuotationOutputSchema
@@ -54,7 +58,7 @@ const prompt = ai.definePrompt({
   input: {schema: ExtractQuotationInputSchema},
   output: {schema: ExtractQuotationOutputSchema},
   prompt: `You are an expert at extracting structured data from images of corporate quotations for food items.
-Extract the Quotation number, quotation date, validity date, bill to name, bill to address, all line items, terms and conditions, and total amount.
+Extract the Quotation number, quotation date, validity date, bill to name, bill to address, all line items, terms and conditions, subtotal, GST, shipping, other charges, and the total amount.
 For the dates, please format it as YYYY-MM-DD. If the year is not specified, assume the current year.
 For each line item, extract the description, HSN code, quantity, and unit price.
 

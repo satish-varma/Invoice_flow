@@ -19,6 +19,10 @@ export interface Quotation {
   quotationDate: string; // Storing date as ISO string
   validityDate: string; // Storing date as ISO string
   lineItems: QuotationLineItem[];
+  subtotal: number;
+  gstAmount: number;
+  shipping: number;
+  other: number;
   total: number;
   terms?: string;
   createdAt?: any;

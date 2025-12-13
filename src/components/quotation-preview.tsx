@@ -168,7 +168,7 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                                 <span className='font-bold'>In Words:</span> {inWords(quotation.total)}
                             </div>
                              {activeProfile && (
-                                <div className='text-center w-2/5 self-end'>
+                                <div className='text-center w-2/5'>
                                     <p className="mb-2">For {activeProfile.companyName}</p>
                                     
                                     <div style={{ position: 'relative', width: '110px', height: '80px', margin: '0 auto' }}>
@@ -186,7 +186,7 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                 </div>
 
                 <div data-pdf-footer>
-                     <CardFooter className="p-4 text-center text-xs text-gray-500 border-t border-gray-200 mt-4">
+                     <CardFooter className="p-2 text-center text-xs text-gray-500 border-t border-gray-200">
                        <div className='w-full'>
                            <p>For questions concerning this invoice, please contact: </p>
                            <p>Satish Varma, (91) 7709632898, thegutguru.in@gmail.com | www.thegutguru.in</p>

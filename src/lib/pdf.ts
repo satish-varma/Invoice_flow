@@ -65,14 +65,28 @@ export async function generateAndSavePdf(element: HTMLElement, fileName:string) 
         const footerImgHeightInPdf = pdfWidth / footerAspectRatio;
 
         // 3. Calculate position for the footer
-        const bodyHeightOnLastPage = bodyImgHeightInPdf % pdfHeight || pdfHeight; // Use pdfHeight if it's a full page
-        const spaceLeftOnLastPage = pdfHeight - bodyHeightOnLastPage;
+        const totalBodyPages = Math.ceil(bodyImgHeightInPdf / pdfHeight);
+        const lastPageNumber = pdf.getNumberOfPages();
+        if (lastPageNumber !== totalBodyPages) {
+            // This case should ideally not happen with the loop above, but as a safeguard.
+        }
+        
+        const bodyHeightOnLastPage = bodyImgHeightInPdf % pdfHeight;
+        
+        let effectiveBodyHeightOnLastPage = bodyHeightOnLastPage;
+        if (bodyHeightOnLastPage === 0 && bodyImgHeightInPdf > 0) {
+            effectiveBodyHeightOnLastPage = pdfHeight; // The body perfectly filled the last page
+        }
+
+        const spaceLeftOnLastPage = pdfHeight - effectiveBodyHeightOnLastPage;
+
+        pdf.setPage(lastPageNumber); // Make sure we are on the last page
 
         if (footerImgHeightInPdf > spaceLeftOnLastPage) {
             pdf.addPage();
-            position = 0; // Top of the new page
+            position = pdfHeight - footerImgHeightInPdf; // Position at the bottom of the new page
         } else {
-            position = bodyHeightOnLastPage;
+            position = effectiveBodyHeightOnLastPage; // Position right after the body content on the same page
         }
 
         pdf.addImage(footerImgData, 'JPEG', 0, position, pdfWidth, footerImgHeightInPdf, undefined, 'FAST');

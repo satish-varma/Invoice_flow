@@ -5,7 +5,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from "date-fns";
 import { Separator } from './ui/separator';
 import type { Settings } from '@/services/settingsService';
-import Image from 'next/image';
 import { Challan } from '@/services/challanService';
 
 interface DeliveryChallanPreviewProps {

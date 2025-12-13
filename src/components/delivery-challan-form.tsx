@@ -251,6 +251,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 setLineItems(result.lineItems.map((item, index) => ({
                     id: Date.now() + index,
                     ...item,
+                    hsnCode: item.hsnCode || '',
                     total: item.quantity * item.unitPrice,
                 })));
             }

@@ -8,7 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText } from 'lucide-react';
 import { format } from "date-fns"
 import { extractInvoiceData, ExtractInvoiceDataOutput } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
@@ -411,6 +411,9 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
           <nav className="flex items-center gap-1 flex-wrap">
               <Button variant="ghost" onClick={handleNewClick}>
                   <FilePlus /> New Invoice
+              </Button>
+               <Button asChild variant="ghost" className={pathname === '/quotation' ? 'text-primary' : ''}>
+                  <Link href="/quotation"><FileText /> New Quotation</Link>
               </Button>
               <Button asChild variant="ghost" className={pathname === '/invoices' ? 'text-primary' : ''}>
                   <Link href="/invoices"><ListOrdered /> Saved Invoices</Link>

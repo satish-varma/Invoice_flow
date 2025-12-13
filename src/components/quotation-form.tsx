@@ -10,19 +10,19 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText } from 'lucide-react';
 import { format } from "date-fns"
-import { extractChallanData, ExtractChallanOutput } from '@/ai/flows/extract-challan-flow';
+import { extractQuotationData, ExtractQuotationOutput } from '@/ai/flows/extract-quotation-flow';
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
-import { Challan, saveChallan, ChallanLineItem } from '@/services/challanService';
+import { Quotation, saveQuotation, QuotationLineItem } from '@/services/quotationService';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getSettings, Settings, CompanyProfile, BillToContact, ShipToContact } from '@/services/settingsService';
 
-interface DeliveryChallanFormProps {
-    initialData?: Challan | null;
-    onChallanSave: (savedChallan?: Challan) => void;
+interface QuotationFormProps {
+    initialData?: Quotation | null;
+    onQuotationSave: (savedQuotation?: Quotation) => void;
     onAddNew: () => void;
 }
 
@@ -37,25 +37,19 @@ function fileToDataUri(file: File): Promise<string> {
 
 type CombinedContact = (BillToContact & { type: 'billTo' }) | (ShipToContact & { type: 'shipTo' });
 
-export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: DeliveryChallanFormProps) {
-    const [dcNumber, setDcNumber] = useState('');
-    const [dcDate, setDcDate] = useState<Date | undefined>(new Date());
+export function QuotationForm({ initialData, onQuotationSave, onAddNew }: QuotationFormProps) {
+    const [quotationNumber, setQuotationNumber] = useState('');
+    const [quotationDate, setQuotationDate] = useState<Date | undefined>(new Date());
+    const [validityDate, setValidityDate] = useState<Date | undefined>(new Date());
     
     const [billToName, setBillToName] = useState('');
     const [billToAddress, setBillToAddress] = useState('');
-
-    const [shipToName, setShipToName] = useState('');
-    const [shipToAddress, setShipToAddress] = useState('');
     
-    const [lineItems, setLineItems] = useState<ChallanLineItem[]>([
+    const [lineItems, setLineItems] = useState<QuotationLineItem[]>([
         { id: 1, name: '', hsnCode: '', quantity: 1, unitPrice: 0, total: 0 },
     ]);
-    const [note, setNote] = useState('The above goods sent on returnable basis not for sale');
+    const [terms, setTerms] = useState('1. Price: Inclusive of all taxes\n2. Delivery: 2-3 days from the date of receipt of purchase order\n3. Payment: 100% advance along with purchase order');
     
-    const [gstRate, setGstRate] = useState(5);
-    const [shipping, setShipping] = useState(0);
-    const [other, setOther] = useState(0);
-
     const [isExtracting, setIsExtracting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -67,17 +61,10 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
 
     const { toast } = useToast();
 
-    const subtotal = useMemo(() => {
+    const total = useMemo(() => {
         return lineItems.reduce((acc, item) => acc + item.total, 0);
     }, [lineItems]);
     
-    const gstAmount = useMemo(() => {
-        return (subtotal * gstRate) / 100;
-    }, [subtotal, gstRate]);
-
-    const total = useMemo(() => {
-        return subtotal + gstAmount + Number(shipping) + Number(other);
-    }, [subtotal, gstAmount, shipping, other]);
 
     useEffect(() => {
         async function loadSettingsAndApplyDefaults() {
@@ -105,13 +92,6 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                         setBillToAddress(defaultContact.address);
                     }
                 }
-                if (loadedSettings.defaultShipToContact && loadedSettings.shipToContacts) {
-                    const defaultContact = loadedSettings.shipToContacts.find(c => c.id === loadedSettings.defaultShipToContact);
-                    if (defaultContact) {
-                        setShipToName(defaultContact.name);
-                        setShipToAddress(defaultContact.address);
-                    }
-                }
             }
         }
         loadSettingsAndApplyDefaults();
@@ -119,12 +99,11 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
 
     useEffect(() => {
         if (initialData) {
-            setDcNumber(initialData.dcNumber);
-            setDcDate(new Date(initialData.dcDate));
+            setQuotationNumber(initialData.quotationNumber);
+            setQuotationDate(new Date(initialData.quotationDate));
+            setValidityDate(new Date(initialData.validityDate));
             setBillToName(initialData.billToName || '');
             setBillToAddress(initialData.billToAddress || '');
-            setShipToName(initialData.shipToName || '');
-            setShipToAddress(initialData.shipToAddress || '');
             setLineItems(initialData.lineItems.map((item, index) => ({
                 id: item.id || Date.now() + index,
                 name: item.name || '',
@@ -133,11 +112,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 unitPrice: item.unitPrice || 0,
                 total: item.total || 0,
             })));
-             const calculatedGstRate = initialData.subtotal > 0 ? (initialData.gstAmount / initialData.subtotal) * 100 : 5;
-            setGstRate(calculatedGstRate);
-            setShipping(initialData.shipping || 0);
-            setOther(initialData.other || 0);
-            setNote(initialData.note || 'The above goods sent on returnable basis not for sale');
+            setTerms(initialData.terms || '1. Price: Inclusive of all taxes\n2. Delivery: 2-3 days from the date of receipt of purchase order\n3. Payment: 100% advance along with purchase order');
         } else {
             handleClearForm(false);
         }
@@ -158,30 +133,26 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         setLineItems(lineItems.filter(item => item.id !== id));
     };
 
-    const handleItemChange = (id: number, field: keyof Omit<ChallanLineItem, 'id' | 'total'>, value: string | number) => {
+    const handleItemChange = (id: number, field: keyof Omit<QuotationLineItem, 'id' | 'total'>, value: string | number) => {
         setLineItems(lineItems.map(item =>
             item.id === id ? { ...item, [field]: value } : item
         ));
     };
     
     const handleClearForm = (shouldCallback = true) => {
-        setDcNumber('');
-        setDcDate(new Date());
+        setQuotationNumber('');
+        setQuotationDate(new Date());
+        setValidityDate(new Date());
         setBillToName('');
         setBillToAddress('');
-        setShipToName('');
-        setShipToAddress('');
         setLineItems([{ id: Date.now(), name: '', hsnCode: '', quantity: 1, unitPrice: 0, total: 0 }]);
-        setGstRate(5);
-        setShipping(0);
-        setOther(0);
-        setNote('The above goods sent on returnable basis not for sale');
+        setTerms('1. Price: Inclusive of all taxes\n2. Delivery: 2-3 days from the date of receipt of purchase order\n3. Payment: 100% advance along with purchase order');
         if (shouldCallback) {
             onAddNew();
         }
     };
   
-    const handleSaveChallan = async (andDownload = false) => {
+    const handleSaveQuotation = async (andDownload = false) => {
         if(!billToName) {
             toast({ variant: "destructive", title: "Bill To Name is required" });
             return;
@@ -193,41 +164,36 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
 
         setIsSaving(true);
         try {
-            const challanData: Omit<Challan, 'dcNumber' | 'createdAt'> & {id?: string} = {
-                dcDate: dcDate?.toISOString() || new Date().toISOString(),
+            const quotationData: Omit<Quotation, 'quotationNumber' | 'createdAt'> & {id?: string} = {
+                quotationDate: quotationDate?.toISOString() || new Date().toISOString(),
+                validityDate: validityDate?.toISOString() || new Date().toISOString(),
                 companyProfileId: activeCompanyProfile.id,
                 billToName,
                 billToAddress,
-                shipToName: shipToName || billToName,
-                shipToAddress: shipToAddress || billToAddress,
                 lineItems: lineItems.map(({ id, ...item }) => item),
-                subtotal,
-                gstAmount,
-                shipping: Number(shipping),
-                other: Number(other),
                 total,
-                note,
+                terms,
             };
 
             if(initialData?.id) {
-                challanData.id = initialData.id;
+                quotationData.id = initialData.id;
             }
 
-            const savedChallan = await saveChallan(challanData);
+            const savedQuotation = await saveQuotation(quotationData);
             toast({
-                title: initialData ? "Challan Updated" : "Challan Saved",
-                description: `Your challan has been successfully ${initialData ? 'updated' : 'saved'}.`,
+                title: initialData ? "Quotation Updated" : "Quotation Saved",
+                description: `Your quotation has been successfully ${initialData ? 'updated' : 'saved'}.`,
             });
             
             if (andDownload) {
-                onChallanSave(savedChallan);
+                onQuotationSave(savedQuotation);
             } else {
-                onChallanSave();
+                onQuotationSave();
             }
 
         } catch (error) {
-            console.error("Failed to save challan:", error);
-            const errorMessage = error instanceof Error ? error.message : "Could not save the challan. Please try again.";
+            console.error("Failed to save quotation:", error);
+            const errorMessage = error instanceof Error ? error.message : "Could not save the quotation. Please try again.";
             toast({ variant: "destructive", title: "Save Failed", description: errorMessage });
         } finally {
             setIsSaving(false);
@@ -241,17 +207,13 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         setIsExtracting(true);
         try {
             const dataUri = await fileToDataUri(file);
-            const result: ExtractChallanOutput = await extractChallanData({ photoDataUri: dataUri });
+            const result: ExtractQuotationOutput = await extractQuotationData({ photoDataUri: dataUri });
             
-            if (result.dcNumber) setDcNumber(result.dcNumber);
-            if (result.dcDate) setDcDate(new Date(result.dcDate));
+            if (result.quotationNumber) setQuotationNumber(result.quotationNumber);
+            if (result.quotationDate) setQuotationDate(new Date(result.quotationDate));
+            if (result.validityDate) setValidityDate(new Date(result.validityDate));
             if (result.billToName) setBillToName(result.billToName);
             if (result.billToAddress) setBillToAddress(result.billToAddress);
-            if (result.shipToName) setShipToName(result.shipToName);
-            if (result.shipToAddress) setShipToAddress(result.shipToAddress);
-            
-            if (!result.shipToName && result.billToName) setShipToName(result.billToName);
-            if (!result.shipToAddress && result.billToAddress) setShipToAddress(result.billToAddress);
 
             if (result.lineItems && result.lineItems.length > 0) {
                 setLineItems(result.lineItems.map((item, index) => ({
@@ -261,21 +223,14 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                     total: item.quantity * item.unitPrice,
                 })));
             }
-            if (result.subtotal) { /* Not setting subtotal directly */ }
-            if (result.gstAmount) {
-                 const extractedSubtotal = result.subtotal || subtotal;
-                if(extractedSubtotal > 0) {
-                    setGstRate((result.gstAmount / extractedSubtotal) * 100);
-                }
-            }
-            if (result.total) { /* Not setting total directly */ }
+            if(result.terms) setTerms(result.terms);
 
             toast({
                 title: "Extraction Complete",
-                description: "Challan data has been filled in.",
+                description: "Quotation data has been filled in.",
             });
         } catch (error) {
-            console.error("Failed to extract challan data:", error);
+            console.error("Failed to extract quotation data:", error);
             toast({
                 variant: "destructive",
                 title: "Extraction Failed",
@@ -296,18 +251,13 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     }, [settings.billToContacts, settings.shipToContacts]);
 
 
-    const handleContactSelect = (value: string, section: 'billTo' | 'shipTo') => {
+    const handleContactSelect = (value: string) => {
         const [id, type] = value.split('|');
         const contact = combinedContacts.find(c => c.id === id && c.type === type);
         
         if (contact) {
-            if (section === 'billTo') {
-                setBillToName(contact.name);
-                setBillToAddress(contact.address);
-            } else { // 'shipTo'
-                setShipToName(contact.name);
-                setShipToAddress(contact.address);
-            }
+            setBillToName(contact.name);
+            setBillToAddress(contact.address);
         }
     };
   
@@ -319,8 +269,8 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     }
 
     const handleNewClick = () => {
-        if (pathname !== '/delivery-challan') {
-          router.push('/delivery-challan');
+        if (pathname !== '/quotation') {
+          router.push('/quotation');
         }
         onAddNew();
     };
@@ -331,10 +281,10 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4'>
             <div>
               <h1 className="text-4xl font-headline font-bold text-primary">
-                Delivery Challan
+                Quotation
               </h1>
               <p className="text-muted-foreground text-sm sm:text-base">
-                {initialData ? `Editing DC #${initialData.dcNumber}` : 'Create a new delivery challan.'}
+                {initialData ? `Editing Quotation #${initialData.quotationNumber}` : 'Create a new quotation.'}
               </p>
             </div>
         </div>
@@ -343,11 +293,11 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
               <Button asChild variant="ghost" className={pathname === '/' ? 'text-primary' : ''}>
                   <Link href="/"><FilePlus /> New Invoice</Link>
               </Button>
-               <Button asChild variant="ghost" className={pathname === '/quotation' ? 'text-primary' : ''}>
-                  <Link href="/quotation"><FileText /> New Quotation</Link>
-              </Button>
               <Button variant="ghost" onClick={handleNewClick}>
-                  <Truck /> New Challan
+                  <FileText /> New Quotation
+              </Button>
+              <Button asChild variant="ghost" className={pathname === '/delivery-challan' ? 'text-primary' : ''}>
+                  <Link href="/delivery-challan"><Truck /> Delivery Challan</Link>
               </Button>
               <Button asChild variant="ghost" className={pathname === '/settings' ? 'text-primary' : ''}>
                   <Link href="/settings"><SettingsIcon /> Settings</Link>
@@ -361,11 +311,11 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                       <><Wand2 /> Autofill</>
                   )}
               </Button>
-              <Button onClick={() => handleSaveChallan(false)} disabled={isSaving} variant="secondary">
+              <Button onClick={() => handleSaveQuotation(false)} disabled={isSaving} variant="secondary">
                   {isSaving ? <Loader className="animate-spin" /> : <Save />}
                   {initialData ? 'Update' : 'Save'}
               </Button>
-              <Button onClick={() => handleSaveChallan(true)} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
+              <Button onClick={() => handleSaveQuotation(true)} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
                   {isSaving ? <Loader className="animate-spin" /> : <Save />}
                   Save &amp; Download
               </Button>
@@ -382,7 +332,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
       />
           <Card className="w-full shadow-lg">
             <CardHeader className="bg-muted/20 p-4 sm:p-6">
-              <CardTitle>Challan Details</CardTitle>
+              <CardTitle>Quotation Details</CardTitle>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Left Column */}
@@ -412,11 +362,11 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                     </div>
                 )}
                 
-                <h3 className="font-bold text-lg mb-4 mt-8">Bill To</h3>
+                <h3 className="font-bold text-lg mb-4 mt-8">To (Company)</h3>
                  <div className="space-y-2">
                     <div>
                         <Label>Select Saved Contact</Label>
-                        <Select onValueChange={(value) => handleContactSelect(value, 'billTo')}>
+                        <Select onValueChange={(value) => handleContactSelect(value)}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a contact" />
                             </SelectTrigger>
@@ -444,10 +394,11 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
               <div>
                 <div className="space-y-4">
                     <div className='flex items-center gap-2'>
-                        <Label htmlFor="dcNumber" className="text-sm font-medium w-24">DC #</Label>
-                        <Input id="dcNumber" value={dcNumber} onChange={e => setDcNumber(e.target.value)} className="max-w-[200px]" readOnly placeholder="Auto-generated" />
+                        <Label htmlFor="quotationNumber" className="text-sm font-medium w-28">Quotation #</Label>
+                        <Input id="quotationNumber" value={quotationNumber} onChange={e => setQuotationNumber(e.target.value)} className="max-w-[200px]" readOnly placeholder="Auto-generated" />
                     </div>
                     <div>
+                        <Label>Quotation Date</Label>
                         <Popover>
                             <PopoverTrigger asChild>
                             <Button
@@ -456,45 +407,41 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 className="w-full justify-start text-left font-normal"
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {dcDate ? format(dcDate, "PPP") : <span>Pick a date</span>}
+                                {quotationDate ? format(quotationDate, "PPP") : <span>Pick a date</span>}
                             </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="end">
                             <Calendar
                                 mode="single"
-                                selected={dcDate}
-                                onSelect={setDcDate}
+                                selected={quotationDate}
+                                onSelect={setQuotationDate}
                                 initialFocus
                             />
                             </PopoverContent>
                         </Popover>
                     </div>
-                </div>
-
-                <h3 className="font-bold text-lg mb-4 mt-8">Ship To</h3>
-                <div className="space-y-2">
                     <div>
-                        <Label>Select Saved Contact</Label>
-                        <Select onValueChange={(value) => handleContactSelect(value, 'shipTo')}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a contact" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {combinedContacts.map((c) => 
-                                <SelectItem key={`${c.id}-${c.type}-ship`} value={`${c.id}|${c.type}`}>
-                                    {c.displayName} ({c.type === 'billTo' ? 'Bill' : 'Ship'})
-                                </SelectItem>
-                                )}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div>
-                        <Label htmlFor='shipToName'>Name</Label>
-                        <Input id="shipToName" placeholder="Shipping Company Name" value={shipToName} onChange={e => setShipToName(e.target.value)} />
-                    </div>
-                    <div>
-                        <Label htmlFor='shipToAddress'>Address</Label>
-                        <Textarea id="shipToAddress" placeholder="Shipping Address" value={shipToAddress} onChange={e => setShipToAddress(e.target.value)} />
+                        <Label>Validity Date</Label>
+                         <Popover>
+                            <PopoverTrigger asChild>
+                            <Button
+                                id="validityDate"
+                                variant={"outline"}
+                                className="w-full justify-start text-left font-normal"
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {validityDate ? format(validityDate, "PPP") : <span>Pick a date</span>}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="end">
+                            <Calendar
+                                mode="single"
+                                selected={validityDate}
+                                onSelect={setValidityDate}
+                                initialFocus
+                            />
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 </div>
               </div>
@@ -547,6 +494,10 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
             </CardContent>
             <CardFooter className="bg-muted/20 p-4 sm:p-6 flex justify-between items-start gap-8">
                 <div className="w-full space-y-4">
+                     <div>
+                        <Label>Terms &amp; Conditions</Label>
+                        <Textarea value={terms} onChange={e => setTerms(e.target.value)} rows={5}/>
+                    </div>
                     {activeCompanyProfile?.bankBeneficiary && (
                         <div className='text-xs text-muted-foreground'>
                             <p className='font-semibold'>Bank Details</p>
@@ -556,38 +507,8 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                             <p>Bank: {activeCompanyProfile.bankName}</p>
                         </div>
                     )}
-                    <div>
-                        <Label>Note</Label>
-                        <Textarea value={note} onChange={e => setNote(e.target.value)} />
-                    </div>
                 </div>
                 <div className="w-full max-w-sm space-y-2 text-sm">
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Subtotal</span>
-                        <span className='font-medium'>{subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                         <div className="flex items-center gap-1">
-                            <span className="text-muted-foreground">GST @</span>
-                            <Input 
-                                type="number" 
-                                value={gstRate} 
-                                onChange={e => setGstRate(parseFloat(e.target.value) || 0)} 
-                                className="h-8 text-right w-16"
-                                placeholder="5"
-                            />
-                            <span className="text-muted-foreground">%</span>
-                        </div>
-                        <span className='font-medium'>{gstAmount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Shipping/Handling</span>
-                         <Input type="number" value={shipping} onChange={e => setShipping(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Other</span>
-                        <Input type="number" value={other} onChange={e => setOther(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
-                    </div>
                     <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
                       <span>Total</span>
                       <span>{total.toFixed(2)}</span>

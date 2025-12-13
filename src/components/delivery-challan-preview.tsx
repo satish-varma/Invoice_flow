@@ -137,7 +137,8 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                                     <div className='flex flex-col justify-end items-center h-full text-sm mt-8'>
                                         <div className='text-center w-full'>
                                             <p className="mb-2">For {activeProfile.companyName}</p>
-                                            <div className='relative w-[80px] h-[80px] mx-auto'>
+                                            
+                                            <div className='relative w-[90px] h-[80px] mx-auto'>
                                                 <Image src="/sigwithsign.png" alt="Company Stamp" fill sizes="80px" className="object-contain" priority />
                                             </div>
                                             <p className="pt-2 -mt-2">Authorized Signature</p>

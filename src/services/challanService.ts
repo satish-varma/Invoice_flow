@@ -3,7 +3,6 @@
 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc, deleteDoc, writeBatch, getDoc, Timestamp } from 'firebase/firestore';
-import { getSettings, CompanyProfile } from './settingsService';
 
 export interface ChallanLineItem {
   id: number;
@@ -154,3 +153,5 @@ export async function deleteChallans(ids: string[]): Promise<void> {
         throw new Error("Failed to delete challans.");
     }
 }
+
+    

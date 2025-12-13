@@ -16,6 +16,7 @@ interface DeliveryChallanPreviewProps {
 export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryChallanPreviewProps>(({ challan, settings }, ref) => {
     
     const activeProfile = settings.companyProfiles?.find(p => p.id === challan.companyProfileId);
+    const gstRate = challan.subtotal > 0 ? (challan.gstAmount / challan.subtotal) * 100 : 0;
 
     return (
         <div ref={ref} className="invoice-preview-container bg-white text-black p-8">
@@ -53,11 +54,13 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                         <div className="grid grid-cols-2 gap-8 items-start py-6">
                             <div className="space-y-1">
                                 <p className='font-bold text-gray-500'>BILL TO</p>
+                                <p className='font-bold'>{challan.billToName}</p>
                                 <p className='text-sm' style={{whiteSpace: 'pre-wrap'}}>{challan.billToAddress}</p>
                             </div>
                             <div className='space-y-1'>
                                 <p className='font-bold text-gray-500'>SHIP TO</p>
-                                <p className='text-sm' style={{whiteSpace: 'pre-wrap'}}>{challan.shipToAddress}</p>
+                                 <p className='font-bold'>{challan.shipToName || challan.billToName}</p>
+                                <p className='text-sm' style={{whiteSpace: 'pre-wrap'}}>{challan.shipToAddress || challan.billToAddress}</p>
                             </div>
                         </div>
                         
@@ -116,7 +119,7 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                                             <td className="py-1 text-right w-[100px]">{challan.subtotal.toFixed(2)}</td>
                                         </tr>
                                         <tr>
-                                            <td className="py-1 text-right font-bold">GST @5%</td>
+                                            <td className="py-1 text-right font-bold">GST @{gstRate.toFixed(2)}%</td>
                                             <td className="py-1 text-right">{challan.gstAmount.toFixed(2)}</td>
                                         </tr>
                                         <tr>
@@ -152,9 +155,8 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                 <div data-pdf-footer>
                     <CardFooter className="p-6 text-center text-xs text-gray-500 border-t border-gray-200 mt-8">
                        <div className='w-full'>
-                           <p>For questions concerning this invoice, please contact:
-                            <br/>
-                           Satish Varma, (91) 7709632898, thegutguru.in@gmail.com | www.thegutguru.in</p>
+                           <p>For questions concerning this invoice, please contact:</p>
+                           <p>Satish Varma, (91) 7709632898, thegutguru.in@gmail.com | www.thegutguru.in</p>
                        </div>
                     </CardFooter>
                 </div>
@@ -163,3 +165,5 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
     );
 });
 DeliveryChallanPreview.displayName = "DeliveryChallanPreview";
+
+    

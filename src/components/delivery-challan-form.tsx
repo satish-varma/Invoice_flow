@@ -50,7 +50,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     ]);
     const [note, setNote] = useState('The above goods sent on returnable basis not for sale');
     
-    const [gstAmount, setGstAmount] = useState(0);
+    const [gstRate, setGstRate] = useState(5);
     const [shipping, setShipping] = useState(0);
     const [other, setOther] = useState(0);
 
@@ -69,8 +69,12 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         return lineItems.reduce((acc, item) => acc + item.total, 0);
     }, [lineItems]);
     
+    const gstAmount = useMemo(() => {
+        return (subtotal * gstRate) / 100;
+    }, [subtotal, gstRate]);
+
     const total = useMemo(() => {
-        return subtotal + Number(gstAmount) + Number(shipping) + Number(other);
+        return subtotal + gstAmount + Number(shipping) + Number(other);
     }, [subtotal, gstAmount, shipping, other]);
 
     useEffect(() => {
@@ -123,7 +127,8 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 id: item.id || Date.now() + index,
                 ...item
             })));
-            setGstAmount(initialData.gstAmount || 0);
+             const calculatedGstRate = initialData.subtotal > 0 ? (initialData.gstAmount / initialData.subtotal) * 100 : 5;
+            setGstRate(calculatedGstRate);
             setShipping(initialData.shipping || 0);
             setOther(initialData.other || 0);
             setNote(initialData.note || 'The above goods sent on returnable basis not for sale');
@@ -161,7 +166,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         setShipToName('');
         setShipToAddress('');
         setLineItems([{ id: Date.now(), name: '', mrp: 0, quantity: 1, discountPrice: 0, total: 0 }]);
-        setGstAmount(0);
+        setGstRate(5);
         setShipping(0);
         setOther(0);
         setNote('The above goods sent on returnable basis not for sale');
@@ -191,7 +196,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 shipToAddress,
                 lineItems: lineItems.map(({ id, ...item }) => item),
                 subtotal,
-                gstAmount: Number(gstAmount),
+                gstAmount,
                 shipping: Number(shipping),
                 other: Number(other),
                 total,
@@ -246,7 +251,12 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 })));
             }
             if (result.subtotal) { /* Not setting subtotal directly */ }
-            if (result.gstAmount) setGstAmount(result.gstAmount);
+            if (result.gstAmount) {
+                 const extractedSubtotal = result.subtotal || subtotal;
+                if(extractedSubtotal > 0) {
+                    setGstRate((result.gstAmount / extractedSubtotal) * 100);
+                }
+            }
             if (result.total) { /* Not setting total directly */ }
 
             toast({
@@ -530,8 +540,18 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                         <span className='font-medium'>{subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">GST @5%</span>
-                        <Input type="number" value={gstAmount} onChange={e => setGstAmount(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
+                         <div className="flex items-center gap-1">
+                            <span className="text-muted-foreground">GST @</span>
+                            <Input 
+                                type="number" 
+                                value={gstRate} 
+                                onChange={e => setGstRate(parseFloat(e.target.value) || 0)} 
+                                className="h-8 text-right w-16"
+                                placeholder="5"
+                            />
+                            <span className="text-muted-foreground">%</span>
+                        </div>
+                        <span className='font-medium'>{gstAmount.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Shipping/Handling</span>
@@ -551,3 +571,5 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     </>
   );
 }
+
+    

@@ -13,9 +13,9 @@ import {z} from 'genkit';
 
 const ChallanLineItemSchema = z.object({
   name: z.string().describe('The name or description of the line item.'),
-  mrp: z.number().describe('The MRP of the line item.'),
+  hsnCode: z.string().describe('The HSN code of the line item.'),
   quantity: z.number().describe('The quantity of the line item.'),
-  discountPrice: z.number().describe('The discounted price of a single unit of the line item.'),
+  unitPrice: z.number().describe('The unit price of a single unit of the line item.'),
 });
 
 const ExtractChallanInputSchema = z.object({
@@ -58,7 +58,7 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert at extracting structured data from images of delivery challans.
 Extract the DC number, DC date, bill to name, bill to address, ship to name, ship to address, all line items, subtotal, GST amount, and total amount.
 For the date, please format it as YYYY-MM-DD. If the year is not specified, assume the current year.
-For each line item, extract the description, MRP, quantity, and discount price.
+For each line item, extract the description, HSN code, quantity, and unit price.
 
 IMPORTANT: When parsing numbers, treat commas (,) as thousand separators and dots (.) as decimal separators. Ensure the entire number is captured as a single value.
 

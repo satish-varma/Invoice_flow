@@ -7,9 +7,9 @@ import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, quer
 export interface ChallanLineItem {
   id: number;
   name: string;
-  mrp: number;
+  hsnCode: string;
   quantity: number;
-  discountPrice: number;
+  unitPrice: number;
   total: number;
 }
 
@@ -153,5 +153,3 @@ export async function deleteChallans(ids: string[]): Promise<void> {
         throw new Error("Failed to delete challans.");
     }
 }
-
-    

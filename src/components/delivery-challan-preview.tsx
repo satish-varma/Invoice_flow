@@ -70,9 +70,9 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                                 <TableRow className='border-b border-gray-300 bg-gray-50'>
                                     <TableHead className="w-[50px] font-bold text-black">S.NO.</TableHead>
                                     <TableHead className="w-2/5 font-bold text-black">ITEM NAME</TableHead>
-                                    <TableHead className="text-right font-bold text-black">MRP</TableHead>
+                                    <TableHead className="font-bold text-black">HSN CODE</TableHead>
                                     <TableHead className="text-right font-bold text-black">QTY</TableHead>
-                                    <TableHead className="text-right font-bold text-black">DISCOUNT PRICE</TableHead>
+                                    <TableHead className="text-right font-bold text-black">UNIT PRICE</TableHead>
                                     <TableHead className="text-right font-bold text-black">TOTAL</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -81,9 +81,9 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                                 <TableRow key={index} className="border-b-0">
                                     <TableCell>{index + 1}</TableCell>
                                     <TableCell>{item.name}</TableCell>
-                                    <TableCell className="text-right">{item.mrp.toFixed(2)}</TableCell>
+                                    <TableCell>{item.hsnCode}</TableCell>
                                     <TableCell className="text-right">{item.quantity}</TableCell>
-                                    <TableCell className="text-right">{item.discountPrice.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">{item.unitPrice.toFixed(2)}</TableCell>
                                     <TableCell className="font-medium text-right">{item.total.toFixed(2)}</TableCell>
                                 </TableRow>
                                 ))}
@@ -155,7 +155,7 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                 <div data-pdf-footer>
                     <CardFooter className="p-6 text-center text-xs text-gray-500 border-t border-gray-200 mt-8">
                        <div className='w-full'>
-                           <p>For questions concerning this invoice, please contact:</p>
+                           <p>For questions concerning this invoice, please contact: </p>
                            <p>Satish Varma, (91) 7709632898, thegutguru.in@gmail.com | www.thegutguru.in</p>
                        </div>
                     </CardFooter>
@@ -165,5 +165,3 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
     );
 });
 DeliveryChallanPreview.displayName = "DeliveryChallanPreview";
-
-    

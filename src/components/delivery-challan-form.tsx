@@ -46,7 +46,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     const [shipToAddress, setShipToAddress] = useState('');
 
     const [lineItems, setLineItems] = useState<ChallanLineItem[]>([
-        { id: 1, name: '', mrp: 0, quantity: 1, discountPrice: 0, total: 0 },
+        { id: 1, name: '', hsnCode: '', quantity: 1, unitPrice: 0, total: 0 },
     ]);
     const [note, setNote] = useState('The above goods sent on returnable basis not for sale');
     
@@ -125,6 +125,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
             setShipToAddress(initialData.shipToAddress || '');
             setLineItems(initialData.lineItems.map((item, index) => ({
                 id: item.id || Date.now() + index,
+                hsnCode: '', // Old data won't have this
                 ...item
             })));
              const calculatedGstRate = initialData.subtotal > 0 ? (initialData.gstAmount / initialData.subtotal) * 100 : 5;
@@ -140,12 +141,12 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     useEffect(() => {
         setLineItems(items => items.map(item => ({
             ...item,
-            total: (Number(item.quantity) || 0) * (Number(item.discountPrice) || 0)
+            total: (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)
         })));
-    }, [lineItems.map(i => i.quantity || i.discountPrice).join(',')]);
+    }, [lineItems.map(i => i.quantity || i.unitPrice).join(',')]);
 
     const handleAddItem = () => {
-        setLineItems([...lineItems, { id: Date.now(), name: '', mrp: 0, quantity: 1, discountPrice: 0, total: 0 }]);
+        setLineItems([...lineItems, { id: Date.now(), name: '', hsnCode: '', quantity: 1, unitPrice: 0, total: 0 }]);
     };
 
     const handleRemoveItem = (id: number) => {
@@ -165,7 +166,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         setBillToAddress('');
         setShipToName('');
         setShipToAddress('');
-        setLineItems([{ id: Date.now(), name: '', mrp: 0, quantity: 1, discountPrice: 0, total: 0 }]);
+        setLineItems([{ id: Date.now(), name: '', hsnCode: '', quantity: 1, unitPrice: 0, total: 0 }]);
         setGstRate(5);
         setShipping(0);
         setOther(0);
@@ -247,7 +248,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 setLineItems(result.lineItems.map((item, index) => ({
                     id: Date.now() + index,
                     ...item,
-                    total: item.quantity * item.discountPrice,
+                    total: item.quantity * item.unitPrice,
                 })));
             }
             if (result.subtotal) { /* Not setting subtotal directly */ }
@@ -479,9 +480,9 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-2/5">Item Name</TableHead>
-                      <TableHead className="w-[100px] text-right">MRP</TableHead>
+                      <TableHead className="w-[120px]">HSN Code</TableHead>
                       <TableHead className="w-[100px] text-right">Qty</TableHead>
-                      <TableHead className="w-[150px] text-right">Discount Price</TableHead>
+                      <TableHead className="w-[150px] text-right">Unit Price</TableHead>
                       <TableHead className="w-[120px] text-right">Total</TableHead>
                       <TableHead className="text-right no-print w-[80px]">Actions</TableHead>
                     </TableRow>
@@ -492,14 +493,14 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                         <TableCell>
                           <Input placeholder="Item description" value={item.name} onChange={e => handleItemChange(item.id, 'name', e.target.value)} />
                         </TableCell>
-                        <TableCell>
-                          <Input className="text-right" type="number" value={item.mrp} onChange={e => handleItemChange(item.id, 'mrp', parseFloat(e.target.value) || 0)} min="0" step="0.01" />
+                         <TableCell>
+                          <Input placeholder="HSN Code" value={item.hsnCode} onChange={e => handleItemChange(item.id, 'hsnCode', e.target.value)} />
                         </TableCell>
                         <TableCell>
                           <Input className="text-right" type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="0" />
                         </TableCell>
                         <TableCell>
-                          <Input className="text-right" type="number" value={item.discountPrice} onChange={e => handleItemChange(item.id, 'discountPrice', parseFloat(e.target.value) || 0)} min="0" step="0.01" />
+                          <Input className="text-right" type="number" value={item.unitPrice} onChange={e => handleItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} min="0" step="0.01" />
                         </TableCell>
                         <TableCell className="font-medium text-right">{item.total.toFixed(2)}</TableCell>
                         <TableCell className="text-right no-print">
@@ -571,5 +572,3 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     </>
   );
 }
-
-    

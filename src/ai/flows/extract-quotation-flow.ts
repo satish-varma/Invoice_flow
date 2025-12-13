@@ -13,7 +13,7 @@ import {z} from 'genkit';
 
 const QuotationLineItemSchema = z.object({
   name: z.string().describe('The name or description of the line item.'),
-  hsnCode: z.string().describe('The HSN code of the line item.'),
+  unit: z.string().describe('The unit of the line item (e.g., kg, pcs, box).'),
   quantity: z.number().describe('The quantity of the line item.'),
   unitPrice: z.number().describe('The unit price of a single unit of the line item.'),
 });
@@ -60,7 +60,7 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert at extracting structured data from images of corporate quotations for food items.
 Extract the Quotation number, quotation date, validity date, bill to name, bill to address, all line items, terms and conditions, subtotal, GST, shipping, other charges, and the total amount.
 For the dates, please format it as YYYY-MM-DD. If the year is not specified, assume the current year.
-For each line item, extract the description, HSN code, quantity, and unit price.
+For each line item, extract the description, unit, quantity, and unit price.
 
 IMPORTANT: When parsing numbers, treat commas (,) as thousand separators and dots (.) as decimal separators. Ensure the entire number is captured as a single value.
 

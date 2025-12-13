@@ -46,7 +46,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     const [billToAddress, setBillToAddress] = useState('');
     
     const [lineItems, setLineItems] = useState<QuotationLineItem[]>([
-        { id: 1, name: '', hsnCode: '', quantity: 1, unitPrice: 0, total: 0 },
+        { id: 1, name: '', unit: '', quantity: 1, unitPrice: 0, total: 0 },
     ]);
     const [terms, setTerms] = useState('1. Price: Inclusive of all taxes\n2. Delivery: 2-3 days from the date of receipt of purchase order\n3. Payment: 100% advance along with purchase order');
     
@@ -125,7 +125,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
             setLineItems(initialData.lineItems.map((item, index) => ({
                 id: item.id || Date.now() + index,
                 name: item.name || '',
-                hsnCode: item.hsnCode || '',
+                unit: item.unit || '',
                 quantity: item.quantity || 0,
                 unitPrice: item.unitPrice || 0,
                 total: item.total || 0,
@@ -148,7 +148,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     }, [lineItems.map(i => `${i.quantity}-${i.unitPrice}`).join(',')]);
 
     const handleAddItem = () => {
-        setLineItems([...lineItems, { id: Date.now(), name: '', hsnCode: '', quantity: 1, unitPrice: 0, total: 0 }]);
+        setLineItems([...lineItems, { id: Date.now(), name: '', unit: '', quantity: 1, unitPrice: 0, total: 0 }]);
     };
 
     const handleRemoveItem = (id: number) => {
@@ -167,7 +167,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
         setValidityDate(new Date());
         setBillToName('');
         setBillToAddress('');
-        setLineItems([{ id: Date.now(), name: '', hsnCode: '', quantity: 1, unitPrice: 0, total: 0 }]);
+        setLineItems([{ id: Date.now(), name: '', unit: '', quantity: 1, unitPrice: 0, total: 0 }]);
         setGstRate(5);
         setShipping(0);
         setOther(0);
@@ -248,7 +248,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                 setLineItems(result.lineItems.map((item, index) => ({
                     id: Date.now() + index,
                     ...item,
-                    hsnCode: item.hsnCode || '',
+                    unit: item.unit || '',
                     total: item.quantity * item.unitPrice,
                 })));
             }
@@ -490,8 +490,8 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-2/5">Item Name</TableHead>
-                      <TableHead className="w-[120px]">HSN Code</TableHead>
+                      <TableHead className="w-2/5">Item Name/Description</TableHead>
+                      <TableHead className="w-[120px]">Unit</TableHead>
                       <TableHead className="w-[100px] text-right">Qty</TableHead>
                       <TableHead className="w-[150px] text-right">Unit Price</TableHead>
                       <TableHead className="w-[120px] text-right">Total</TableHead>
@@ -505,7 +505,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                           <Input placeholder="Item description" value={item.name || ''} onChange={e => handleItemChange(item.id, 'name', e.target.value)} />
                         </TableCell>
                          <TableCell>
-                          <Input placeholder="HSN Code" value={item.hsnCode || ''} onChange={e => handleItemChange(item.id, 'hsnCode', e.target.value)} />
+                          <Input placeholder="Unit" value={item.unit || ''} onChange={e => handleItemChange(item.id, 'unit', e.target.value)} />
                         </TableCell>
                         <TableCell>
                           <Input className="text-right" type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="0" />
@@ -583,5 +583,3 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     </>
   );
 }
-
-    

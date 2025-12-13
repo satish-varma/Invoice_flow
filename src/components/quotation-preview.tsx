@@ -107,8 +107,8 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                             <TableHeader>
                                 <TableRow className='border-b border-gray-300 bg-gray-50'>
                                     <TableHead className="w-[50px] font-bold text-black">S.NO.</TableHead>
-                                    <TableHead className="w-2/5 font-bold text-black">ITEM NAME</TableHead>
-                                    <TableHead className="font-bold text-black">HSN CODE</TableHead>
+                                    <TableHead className="w-2/5 font-bold text-black">Item Name/Description</TableHead>
+                                    <TableHead className="font-bold text-black">Unit</TableHead>
                                     <TableHead className="text-right font-bold text-black">QTY</TableHead>
                                     <TableHead className="text-right font-bold text-black">UNIT PRICE</TableHead>
                                     <TableHead className="text-right font-bold text-black">TOTAL</TableHead>
@@ -119,7 +119,7 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                                 <TableRow key={index} className="border-b-0">
                                     <TableCell>{index + 1}</TableCell>
                                     <TableCell>{item.name}</TableCell>
-                                    <TableCell>{item.hsnCode}</TableCell>
+                                    <TableCell>{item.unit}</TableCell>
                                     <TableCell className="text-right">{item.quantity}</TableCell>
                                     <TableCell className="text-right">{item.unitPrice.toFixed(2)}</TableCell>
                                     <TableCell className="font-medium text-right">{item.total.toFixed(2)}</TableCell>

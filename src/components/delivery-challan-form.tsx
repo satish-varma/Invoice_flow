@@ -125,8 +125,11 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
             setShipToAddress(initialData.shipToAddress || '');
             setLineItems(initialData.lineItems.map((item, index) => ({
                 id: item.id || Date.now() + index,
-                hsnCode: '', // Old data won't have this
-                ...item
+                name: item.name || '',
+                hsnCode: item.hsnCode || '',
+                quantity: item.quantity || 0,
+                unitPrice: item.unitPrice || 0,
+                total: item.total || 0,
             })));
              const calculatedGstRate = initialData.subtotal > 0 ? (initialData.gstAmount / initialData.subtotal) * 100 : 5;
             setGstRate(calculatedGstRate);
@@ -143,7 +146,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
             ...item,
             total: (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)
         })));
-    }, [lineItems.map(i => i.quantity || i.unitPrice).join(',')]);
+    }, [lineItems.map(i => `${i.quantity}-${i.unitPrice}`).join(',')]);
 
     const handleAddItem = () => {
         setLineItems([...lineItems, { id: Date.now(), name: '', hsnCode: '', quantity: 1, unitPrice: 0, total: 0 }]);
@@ -153,7 +156,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         setLineItems(lineItems.filter(item => item.id !== id));
     };
 
-    const handleItemChange = (id: number, field: keyof Omit<ChallanLineItem, 'id'>, value: string | number) => {
+    const handleItemChange = (id: number, field: keyof Omit<ChallanLineItem, 'id' | 'total'>, value: string | number) => {
         setLineItems(lineItems.map(item =>
             item.id === id ? { ...item, [field]: value } : item
         ));
@@ -491,10 +494,10 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                     {lineItems.map((item, index) => (
                       <TableRow key={item.id} className="animate-fade-in-down hover:bg-muted/20">
                         <TableCell>
-                          <Input placeholder="Item description" value={item.name} onChange={e => handleItemChange(item.id, 'name', e.target.value)} />
+                          <Input placeholder="Item description" value={item.name || ''} onChange={e => handleItemChange(item.id, 'name', e.target.value)} />
                         </TableCell>
                          <TableCell>
-                          <Input placeholder="HSN Code" value={item.hsnCode} onChange={e => handleItemChange(item.id, 'hsnCode', e.target.value)} />
+                          <Input placeholder="HSN Code" value={item.hsnCode || ''} onChange={e => handleItemChange(item.id, 'hsnCode', e.target.value)} />
                         </TableCell>
                         <TableCell>
                           <Input className="text-right" type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="0" />
@@ -572,3 +575,5 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     </>
   );
 }
+
+    

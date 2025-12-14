@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from "date-fns";
 import { Separator } from './ui/separator';
 import type { Settings } from '@/services/settingsService';
-import { Quotation } from '@/services/quotationService';
+import { Quotation, QuotationLineItem } from '@/services/quotationService';
 
 interface QuotationPreviewProps {
     quotation: Quotation;
@@ -16,6 +16,18 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
     
     const activeProfile = settings.companyProfiles?.find(p => p.id === quotation.companyProfileId);
     const gstRate = quotation.subtotal > 0 ? (quotation.gstAmount / quotation.subtotal) * 100 : 0;
+
+    const getCustomColumns = (lineItems: QuotationLineItem[]): string[] => {
+        const columnSet = new Set<string>();
+        lineItems.forEach(item => {
+            if (item.customFields) {
+                Object.keys(item.customFields).forEach(key => columnSet.add(key));
+            }
+        });
+        return Array.from(columnSet);
+    };
+
+    const customColumns = getCustomColumns(quotation.lineItems);
 
     const inWords = (num: number): string => {
         const a = ['','one ','two ','three ','four ', 'five ','six ','seven ','eight ','nine ','ten ','eleven ','twelve ','thirteen ','fourteen ','fifteen ','sixteen ','seventeen ','eighteen ','nineteen '];
@@ -109,6 +121,7 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                                     <TableHead className="w-[50px] font-bold text-black">S.NO.</TableHead>
                                     <TableHead className="w-2/5 font-bold text-black">Item Name/Description</TableHead>
                                     <TableHead className="font-bold text-black">Unit</TableHead>
+                                    {customColumns.map(col => <TableHead key={col} className="font-bold text-black">{col}</TableHead>)}
                                     <TableHead className="text-right font-bold text-black">QTY</TableHead>
                                     <TableHead className="text-right font-bold text-black">UNIT PRICE</TableHead>
                                     <TableHead className="text-right font-bold text-black">TOTAL</TableHead>
@@ -120,6 +133,7 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                                     <TableCell>{index + 1}</TableCell>
                                     <TableCell>{item.name}</TableCell>
                                     <TableCell>{item.unit}</TableCell>
+                                    {customColumns.map(col => <TableCell key={col}>{item.customFields?.[col] || ''}</TableCell>)}
                                     <TableCell className="text-right">{item.quantity}</TableCell>
                                     <TableCell className="text-right">{item.unitPrice.toFixed(2)}</TableCell>
                                     <TableCell className="font-medium text-right">{item.total.toFixed(2)}</TableCell>
@@ -163,7 +177,7 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                             </div>
                         </div>
 
-                        <div className="flex justify-between mt-8 text-sm">
+                        <div className="flex justify-between items-center mt-8 text-sm">
                             <div className='w-3/5 self-center'>
                                 <span className='font-bold'>In Words:</span> {inWords(quotation.total)}
                             </div>

@@ -8,7 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, X } from 'lucide-react';
 import { format } from "date-fns"
 import { extractQuotationData, ExtractQuotationOutput } from '@/ai/flows/extract-quotation-flow';
 import { useToast } from "@/hooks/use-toast"
@@ -19,6 +19,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getSettings, Settings, CompanyProfile, BillToContact, ShipToContact } from '@/services/settingsService';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+
 
 interface QuotationFormProps {
     initialData?: Quotation | null;
@@ -46,7 +48,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     const [billToAddress, setBillToAddress] = useState('');
     
     const [lineItems, setLineItems] = useState<QuotationLineItem[]>([
-        { id: 1, name: '', unit: '', quantity: 1, unitPrice: 0, total: 0 },
+        { id: 1, name: '', unit: '', quantity: 1, unitPrice: 0, total: 0, customFields: {} },
     ]);
     const [terms, setTerms] = useState('1. Price: Inclusive of all taxes\n2. Delivery: 2-3 days from the date of receipt of purchase order\n3. Payment: 100% advance along with purchase order');
     
@@ -62,6 +64,10 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     
     const [settings, setSettings] = useState<Settings>({ companyProfiles: [], billToContacts: [], shipToContacts: [] });
     const [activeCompanyProfile, setActiveCompanyProfile] = useState<CompanyProfile | null>(null);
+
+    const [customColumns, setCustomColumns] = useState<string[]>([]);
+    const [isColumnDialog, setIsColumnDialog] = useState(false);
+    const [newColumnName, setNewColumnName] = useState('');
 
     const { toast } = useToast();
 
@@ -122,6 +128,15 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
             setValidityDate(new Date(initialData.validityDate));
             setBillToName(initialData.billToName || '');
             setBillToAddress(initialData.billToAddress || '');
+            
+            // Extract custom columns from the first line item that has them
+            const firstItemWithCustomFields = initialData.lineItems.find(item => item.customFields && Object.keys(item.customFields).length > 0);
+            if (firstItemWithCustomFields) {
+                setCustomColumns(Object.keys(firstItemWithCustomFields.customFields!));
+            } else {
+                setCustomColumns([]);
+            }
+
             setLineItems(initialData.lineItems.map((item, index) => ({
                 id: item.id || Date.now() + index,
                 name: item.name || '',
@@ -129,6 +144,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                 quantity: item.quantity || 0,
                 unitPrice: item.unitPrice || 0,
                 total: item.total || 0,
+                customFields: item.customFields || {},
             })));
             const calculatedGstRate = initialData.subtotal > 0 ? (initialData.gstAmount / initialData.subtotal) * 100 : 5;
             setGstRate(calculatedGstRate);
@@ -148,17 +164,32 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     }, [lineItems.map(i => `${i.quantity}-${i.unitPrice}`).join(',')]);
 
     const handleAddItem = () => {
-        setLineItems([...lineItems, { id: Date.now(), name: '', unit: '', quantity: 1, unitPrice: 0, total: 0 }]);
+        setLineItems([...lineItems, { id: Date.now(), name: '', unit: '', quantity: 1, unitPrice: 0, total: 0, customFields: {} }]);
     };
 
     const handleRemoveItem = (id: number) => {
         setLineItems(lineItems.filter(item => item.id !== id));
     };
 
-    const handleItemChange = (id: number, field: keyof Omit<QuotationLineItem, 'id' | 'total'>, value: string | number) => {
+    const handleItemChange = (id: number, field: keyof Omit<QuotationLineItem, 'id' | 'total' | 'customFields'>, value: string | number) => {
         setLineItems(lineItems.map(item =>
             item.id === id ? { ...item, [field]: value } : item
         ));
+    };
+
+    const handleCustomFieldChange = (id: number, fieldName: string, value: string | number) => {
+        setLineItems(lineItems.map(item => {
+            if (item.id === id) {
+                return {
+                    ...item,
+                    customFields: {
+                        ...item.customFields,
+                        [fieldName]: value
+                    }
+                };
+            }
+            return item;
+        }));
     };
     
     const handleClearForm = (shouldCallback = true) => {
@@ -167,11 +198,12 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
         setValidityDate(new Date());
         setBillToName('');
         setBillToAddress('');
-        setLineItems([{ id: Date.now(), name: '', unit: '', quantity: 1, unitPrice: 0, total: 0 }]);
+        setLineItems([{ id: Date.now(), name: '', unit: '', quantity: 1, unitPrice: 0, total: 0, customFields: {} }]);
         setGstRate(5);
         setShipping(0);
         setOther(0);
         setTerms('1. Price: Inclusive of all taxes\n2. Delivery: 2-3 days from the date of receipt of purchase order\n3. Payment: 100% advance along with purchase order');
+        setCustomColumns([]);
         if (shouldCallback) {
             onAddNew();
         }
@@ -250,6 +282,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                     ...item,
                     unit: item.unit || '',
                     total: item.quantity * item.unitPrice,
+                    customFields: {},
                 })));
             }
              if (result.subtotal) { /* Not setting subtotal directly */ }
@@ -311,6 +344,30 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
           router.push('/quotation');
         }
         onAddNew();
+    };
+
+    const handleAddColumn = () => {
+        if (newColumnName && !customColumns.includes(newColumnName)) {
+            setCustomColumns([...customColumns, newColumnName]);
+            setIsColumnDialog(false);
+            setNewColumnName('');
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Invalid Column Name',
+                description: 'Column name cannot be empty or a duplicate.',
+            });
+        }
+    };
+
+    const handleRemoveColumn = (columnToRemove: string) => {
+        setCustomColumns(customColumns.filter(col => col !== columnToRemove));
+        // Also remove the data for this column from all line items
+        setLineItems(items => items.map(item => {
+            const newCustomFields = { ...item.customFields };
+            delete newCustomFields[columnToRemove];
+            return { ...item, customFields: newCustomFields };
+        }));
     };
 
   return (
@@ -492,6 +549,16 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                     <TableRow>
                       <TableHead className="w-2/5">Item Name/Description</TableHead>
                       <TableHead className="w-[120px]">Unit</TableHead>
+                      {customColumns.map(col => (
+                        <TableHead key={col} className="w-[150px]">
+                            <div className="flex items-center justify-between gap-2">
+                                {col}
+                                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleRemoveColumn(col)}>
+                                    <X className="h-3 w-3 text-destructive" />
+                                </Button>
+                            </div>
+                        </TableHead>
+                      ))}
                       <TableHead className="w-[100px] text-right">Qty</TableHead>
                       <TableHead className="w-[150px] text-right">Unit Price</TableHead>
                       <TableHead className="w-[120px] text-right">Total</TableHead>
@@ -507,6 +574,15 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                          <TableCell>
                           <Input placeholder="Unit" value={item.unit || ''} onChange={e => handleItemChange(item.id, 'unit', e.target.value)} />
                         </TableCell>
+                        {customColumns.map(col => (
+                            <TableCell key={col}>
+                                <Input
+                                    placeholder={col}
+                                    value={item.customFields?.[col] || ''}
+                                    onChange={e => handleCustomFieldChange(item.id, col, e.target.value)}
+                                />
+                            </TableCell>
+                        ))}
                         <TableCell>
                           <Input className="text-right" type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="0" />
                         </TableCell>
@@ -524,9 +600,12 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                   </TableBody>
                 </Table>
               </div>
-              <div className="mt-4 no-print">
+              <div className="mt-4 no-print flex gap-2">
                 <Button onClick={handleAddItem} variant="outline" size="sm" className="bg-transparent hover:bg-accent/10 active:scale-95">
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+                </Button>
+                <Button onClick={() => setIsColumnDialog(true)} variant="outline" size="sm" className="bg-transparent hover:bg-accent/10 active:scale-95">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add Column
                 </Button>
               </div>
             </CardContent>
@@ -580,8 +659,28 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                 </div>
             </CardFooter>
           </Card>
+        
+        {/* Add Column Dialog */}
+        <Dialog open={isColumnDialog} onOpenChange={setIsColumnDialog}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add New Column</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                    <Label htmlFor="newColumnName">Column Name</Label>
+                    <Input
+                        id="newColumnName"
+                        value={newColumnName}
+                        onChange={(e) => setNewColumnName(e.target.value)}
+                        placeholder="e.g., Color, Size, Batch No."
+                    />
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="outline" onClick={() => setNewColumnName('')}>Cancel</Button></DialogClose>
+                    <Button onClick={handleAddColumn}>Add Column</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </>
   );
 }
-
-    

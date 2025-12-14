@@ -11,6 +11,7 @@ export interface QuotationLineItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  customFields?: { [key: string]: string | number };
 }
 
 export interface Quotation {

@@ -44,6 +44,7 @@ const defaultColumns: ColumnDef[] = [
     { id: 'unit', label: 'Unit' },
     { id: 'quantity', label: 'Qty' },
     { id: 'unitPrice', label: 'Unit Price' },
+    { id: 'discount', label: 'Discount' },
 ];
 
 export function QuotationForm({ initialData, onQuotationSave, onAddNew }: QuotationFormProps) {
@@ -55,7 +56,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     const [billToAddress, setBillToAddress] = useState('');
     
     const [lineItems, setLineItems] = useState<QuotationLineItem[]>([
-        { id: 1, name: '', unit: '', quantity: 1, unitPrice: 0, total: 0, customFields: {} },
+        { id: 1, name: '', unit: '', quantity: 1, unitPrice: 0, discount: 0, total: 0, customFields: {} },
     ]);
     const [terms, setTerms] = useState('1. Price: Inclusive of all taxes\n2. Delivery: 2-3 days from the date of receipt of purchase order\n3. Payment: 100% advance along with purchase order');
     
@@ -79,17 +80,19 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
 
     const { toast } = useToast();
 
-    const subtotal = useMemo(() => {
-        return lineItems.reduce((acc, item) => acc + item.total, 0);
+    const { subtotal, totalDiscount } = useMemo(() => {
+        const sub = lineItems.reduce((acc, item) => acc + (Number(item.quantity) * Number(item.unitPrice)), 0);
+        const discount = lineItems.reduce((acc, item) => acc + (Number(item.discount) || 0), 0);
+        return { subtotal: sub, totalDiscount: discount };
     }, [lineItems]);
     
     const gstAmount = useMemo(() => {
-        return (subtotal * gstRate) / 100;
-    }, [subtotal, gstRate]);
+        return ((subtotal - totalDiscount) * gstRate) / 100;
+    }, [subtotal, totalDiscount, gstRate]);
 
     const total = useMemo(() => {
-        return subtotal + gstAmount + Number(shipping) + Number(other);
-    }, [subtotal, gstAmount, shipping, other]);
+        return (subtotal - totalDiscount) + gstAmount + Number(shipping) + Number(other);
+    }, [subtotal, totalDiscount, gstAmount, shipping, other]);
     
     useEffect(() => {
         if(!initialData){
@@ -146,10 +149,11 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                 unit: item.unit || '',
                 quantity: item.quantity || 0,
                 unitPrice: item.unitPrice || 0,
+                discount: item.discount || 0,
                 total: item.total || 0,
                 customFields: item.customFields || {},
             })));
-            const calculatedGstRate = initialData.subtotal > 0 ? (initialData.gstAmount / initialData.subtotal) * 100 : 5;
+            const calculatedGstRate = initialData.subtotal > 0 ? (initialData.gstAmount / (initialData.subtotal - (initialData.totalDiscount || 0))) * 100 : 5;
             setGstRate(calculatedGstRate);
             setShipping(initialData.shipping || 0);
             setOther(initialData.other || 0);
@@ -160,14 +164,19 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     }, [initialData]);
     
     useEffect(() => {
-        setLineItems(items => items.map(item => ({
-            ...item,
-            total: (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)
-        })));
-    }, [lineItems.map(i => `${i.quantity}-${i.unitPrice}`).join(',')]);
+        setLineItems(items => items.map(item => {
+            const quantity = Number(item.quantity) || 0;
+            const unitPrice = Number(item.unitPrice) || 0;
+            const discount = Number(item.discount) || 0;
+            return {
+                ...item,
+                total: (quantity * unitPrice) - discount
+            }
+        }));
+    }, [lineItems.map(i => `${i.quantity}-${i.unitPrice}-${i.discount}`).join(',')]);
 
     const handleAddItem = () => {
-        setLineItems([...lineItems, { id: Date.now(), name: '', unit: '', quantity: 1, unitPrice: 0, total: 0, customFields: {} }]);
+        setLineItems([...lineItems, { id: Date.now(), name: '', unit: '', quantity: 1, unitPrice: 0, discount: 0, total: 0, customFields: {} }]);
     };
 
     const handleRemoveItem = (id: number) => {
@@ -177,14 +186,15 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     const handleItemChange = (id: number, field: string, value: string | number) => {
          setLineItems(lineItems.map(item => {
             if (item.id === id) {
-                // Check if the field is a default field
-                if (['name', 'unit', 'quantity', 'unitPrice'].includes(field)) {
-                    return { ...item, [field]: value };
+                const isNumericField = ['quantity', 'unitPrice', 'discount'].includes(field) || columns.find(c => c.id === field && c.id.startsWith('custom_'));
+                const processedValue = isNumericField ? (Number(value) || 0) : value;
+
+                if (['name', 'unit', 'quantity', 'unitPrice', 'discount'].includes(field)) {
+                    return { ...item, [field]: processedValue };
                 }
-                // Otherwise, it's a custom field
                 return {
                     ...item,
-                    customFields: { ...item.customFields, [field]: value }
+                    customFields: { ...item.customFields, [field]: processedValue }
                 };
             }
             return item;
@@ -197,7 +207,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
         setValidityDate(new Date());
         setBillToName('');
         setBillToAddress('');
-        setLineItems([{ id: Date.now(), name: '', unit: '', quantity: 1, unitPrice: 0, total: 0, customFields: {} }]);
+        setLineItems([{ id: Date.now(), name: '', unit: '', quantity: 1, unitPrice: 0, discount: 0, total: 0, customFields: {} }]);
         setGstRate(5);
         setShipping(0);
         setOther(0);
@@ -230,6 +240,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                 columns,
                 lineItems: lineItems.map(({ id, ...item }) => item),
                 subtotal,
+                totalDiscount,
                 gstAmount,
                 shipping: Number(shipping),
                 other: Number(other),
@@ -284,15 +295,17 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                     unit: item.unit || '',
                     quantity: item.quantity || 0,
                     unitPrice: item.unitPrice || 0,
-                    total: (item.quantity || 0) * (item.unitPrice || 0),
+                    discount: item.discount || 0,
+                    total: ((item.quantity || 0) * (item.unitPrice || 0)) - (item.discount || 0),
                     customFields: {},
                 })));
             }
              if (result.subtotal) { /* Not setting subtotal directly */ }
             if (result.gstAmount) {
                  const extractedSubtotal = result.subtotal || subtotal;
+                 const extractedDiscount = result.lineItems?.reduce((acc, item) => acc + (item.discount || 0), 0) || totalDiscount;
                 if(extractedSubtotal > 0) {
-                    setGstRate((result.gstAmount / extractedSubtotal) * 100);
+                    setGstRate((result.gstAmount / (extractedSubtotal - extractedDiscount)) * 100);
                 }
             }
             if (result.shipping) setShipping(result.shipping);
@@ -477,9 +490,9 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                 <h3 className="font-bold text-lg mb-4">From</h3>
                 {settings.companyProfiles && settings.companyProfiles.length > 0 && (
                   <div className='mb-4'>
-                    <Label>Select Company Profile</Label>
+                    <Label htmlFor="company-profile-select">Select Company Profile</Label>
                     <Select onValueChange={handleCompanyProfileSelect} value={activeCompanyProfile?.id}>
-                        <SelectTrigger>
+                        <SelectTrigger id="company-profile-select">
                             <SelectValue placeholder="Select a company profile..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -502,9 +515,9 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                 <h3 className="font-bold text-lg mb-4 mt-4">To (Company)</h3>
                  <div className="space-y-2">
                     <div>
-                        <Label>Select Saved Contact</Label>
+                        <Label htmlFor="contact-select">Select Saved Contact</Label>
                         <Select onValueChange={(value) => handleContactSelect(value)}>
-                            <SelectTrigger>
+                            <SelectTrigger id="contact-select">
                                 <SelectValue placeholder="Select a contact" />
                             </SelectTrigger>
                             <SelectContent>
@@ -590,7 +603,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                   <TableHeader>
                     <TableRow>
                       {columns.map((col) => (
-                        <TableHead key={col.id} className={['quantity', 'unitPrice', 'total'].includes(col.id) ? 'text-right' : ''}>{col.label}</TableHead>
+                        <TableHead key={col.id} className={['quantity', 'unitPrice', 'total', 'discount'].includes(col.id) ? 'text-right' : ''}>{col.label}</TableHead>
                       ))}
                       <TableHead className="w-[120px] text-right">Total</TableHead>
                       <TableHead className="text-right no-print w-[80px]">Actions</TableHead>
@@ -601,12 +614,14 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                       <TableRow key={item.id} className="animate-fade-in-down hover:bg-muted/20">
                         {columns.map(col => (
                             <TableCell key={col.id}>
+                                <Label htmlFor={`${col.id}-${item.id}`} className="sr-only">{col.label}</Label>
                                 <Input
+                                    id={`${col.id}-${item.id}`}
                                     placeholder={col.label}
-                                    value={['name', 'unit', 'quantity', 'unitPrice'].includes(col.id) ? (item as any)[col.id] : item.customFields?.[col.id] || ''}
+                                    value={['name', 'unit', 'quantity', 'unitPrice', 'discount'].includes(col.id) ? (item as any)[col.id] : item.customFields?.[col.id] || ''}
                                     onChange={e => handleItemChange(item.id, col.id, e.target.value)}
-                                    type={['quantity', 'unitPrice'].includes(col.id) ? 'number' : 'text'}
-                                    className={['quantity', 'unitPrice'].includes(col.id) ? 'text-right' : ''}
+                                    type={['quantity', 'unitPrice', 'discount'].includes(col.id) || col.id.startsWith('custom_') ? 'number' : 'text'}
+                                    className={['quantity', 'unitPrice', 'discount'].includes(col.id) ? 'text-right' : ''}
                                 />
                             </TableCell>
                         ))}
@@ -633,8 +648,8 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
             <CardFooter className="bg-muted/20 p-4 sm:p-6 flex justify-between items-start gap-8">
                 <div className="w-full space-y-4">
                      <div>
-                        <Label>Terms &amp; Conditions</Label>
-                        <Textarea value={terms} onChange={e => setTerms(e.target.value)} rows={5}/>
+                        <Label htmlFor="terms-conditions">Terms &amp; Conditions</Label>
+                        <Textarea id="terms-conditions" value={terms} onChange={e => setTerms(e.target.value)} rows={5}/>
                     </div>
                     {activeCompanyProfile?.bankBeneficiary && (
                         <div className='text-xs text-muted-foreground'>
@@ -651,10 +666,17 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                         <span className="text-muted-foreground">Subtotal</span>
                         <span className='font-medium'>{subtotal.toFixed(2)}</span>
                     </div>
+                    {totalDiscount > 0 && (
+                        <div className="flex justify-between text-destructive">
+                            <span className="text-muted-foreground">Discount</span>
+                            <span className='font-medium'>-{totalDiscount.toFixed(2)}</span>
+                        </div>
+                    )}
                     <div className="flex justify-between items-center">
                          <div className="flex items-center gap-1">
-                            <span className="text-muted-foreground">GST @</span>
+                            <Label htmlFor="gst-rate" className="text-muted-foreground">GST @</Label>
                             <Input 
+                                id="gst-rate"
                                 type="number" 
                                 value={gstRate} 
                                 onChange={e => setGstRate(parseFloat(e.target.value) || 0)} 
@@ -666,12 +688,12 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                         <span className='font-medium'>{gstAmount.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Shipping/Handling</span>
-                         <Input type="number" value={shipping} onChange={e => setShipping(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
+                        <Label htmlFor="shipping-charges" className="text-muted-foreground">Shipping/Handling</Label>
+                         <Input id="shipping-charges" type="number" value={shipping} onChange={e => setShipping(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
                     </div>
                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Other</span>
-                        <Input type="number" value={other} onChange={e => setOther(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
+                        <Label htmlFor="other-charges" className="text-muted-foreground">Other</Label>
+                        <Input id="other-charges" type="number" value={other} onChange={e => setOther(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
                     </div>
                     <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
                       <span>Total</span>
@@ -691,7 +713,9 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                     <div className="space-y-2">
                         {tempColumns.map((col, index) => (
                             <div key={col.id} className="flex items-center gap-2 p-2 border rounded-md">
+                                <Label htmlFor={`col-label-${col.id}`} className="sr-only">Column Label</Label>
                                 <Input
+                                    id={`col-label-${col.id}`}
                                     value={col.label}
                                     onChange={(e) => handleTempColumnLabelChange(col.id, e.target.value)}
                                     className="flex-grow"
@@ -711,7 +735,9 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                         ))}
                     </div>
                     <div className="flex items-center gap-2 pt-4 border-t">
+                        <Label htmlFor="new-col-name" className="sr-only">New column name</Label>
                         <Input
+                            id="new-col-name"
                             placeholder="New column name..."
                             value={newColumnName}
                             onChange={(e) => setNewColumnName(e.target.value)}
@@ -728,5 +754,3 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     </>
   );
 }
-
-    

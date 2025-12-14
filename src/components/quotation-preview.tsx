@@ -15,14 +15,19 @@ interface QuotationPreviewProps {
 export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPreviewProps>(({ quotation, settings }, ref) => {
     
     const activeProfile = settings.companyProfiles?.find(p => p.id === quotation.companyProfileId);
-    const gstRate = quotation.subtotal > 0 ? (quotation.gstAmount / quotation.subtotal) * 100 : 0;
+    const gstRate = quotation.subtotal > 0 ? (quotation.gstAmount / (quotation.subtotal - (quotation.totalDiscount || 0))) * 100 : 0;
     
     const columns = quotation.columns || [
         { id: 'name', label: 'Item Name/Description' },
         { id: 'unit', label: 'Unit' },
         { id: 'quantity', label: 'Qty' },
         { id: 'unitPrice', label: 'Unit Price' },
+        { id: 'discount', label: 'Discount'},
     ];
+
+    const hasDiscount = quotation.lineItems.some(item => item.discount && item.discount > 0);
+    const previewColumns = hasDiscount ? columns : columns.filter(c => c.id !== 'discount');
+
 
     const inWords = (num: number): string => {
         const a = ['','one ','two ','three ','four ', 'five ','six ','seven ','eight ','nine ','ten ','eleven ','twelve ','thirteen ','fourteen ','fifteen ','sixteen ','seventeen ','eighteen ','nineteen '];
@@ -114,8 +119,8 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                             <TableHeader>
                                 <TableRow className='border-b border-gray-300 bg-gray-50'>
                                     <TableHead className="w-[50px] font-bold text-black">S.NO.</TableHead>
-                                    {columns.map(col => (
-                                        <TableHead key={col.id} className={`font-bold text-black ${['quantity', 'unitPrice'].includes(col.id) ? 'text-right' : ''}`}>{col.label}</TableHead>
+                                    {previewColumns.map(col => (
+                                        <TableHead key={col.id} className={`font-bold text-black ${['quantity', 'unitPrice', 'discount'].includes(col.id) ? 'text-right' : ''}`}>{col.label}</TableHead>
                                     ))}
                                     <TableHead className="text-right font-bold text-black">TOTAL</TableHead>
                                 </TableRow>
@@ -124,11 +129,18 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                                 {quotation.lineItems.map((item, index) => (
                                 <TableRow key={index} className="border-b-0">
                                     <TableCell>{index + 1}</TableCell>
-                                    {columns.map(col => (
-                                         <TableCell key={col.id} className={['quantity', 'unitPrice'].includes(col.id) ? 'text-right' : ''}>
-                                            {['name', 'unit', 'quantity', 'unitPrice'].includes(col.id) ? (item as any)[col.id] : item.customFields?.[col.id] || ''}
-                                         </TableCell>
-                                    ))}
+                                    {previewColumns.map(col => {
+                                        const isDefault = ['name', 'unit', 'quantity', 'unitPrice', 'discount'].includes(col.id);
+                                        const value = isDefault ? (item as any)[col.id] : item.customFields?.[col.id] || '';
+                                        const isNumeric = ['quantity', 'unitPrice', 'discount'].includes(col.id);
+                                        const displayValue = isNumeric ? (Number(value) || 0).toFixed(2) : value;
+
+                                         return (
+                                             <TableCell key={col.id} className={isNumeric ? 'text-right' : ''}>
+                                                {displayValue}
+                                             </TableCell>
+                                         );
+                                    })}
                                     <TableCell className="font-medium text-right">{item.total.toFixed(2)}</TableCell>
                                 </TableRow>
                                 ))}
@@ -149,6 +161,12 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                                             <td className="py-1 text-right font-bold">SUBTOTAL</td>
                                             <td className="py-1 text-right w-[100px]">{quotation.subtotal.toFixed(2)}</td>
                                         </tr>
+                                        {quotation.totalDiscount && quotation.totalDiscount > 0 && (
+                                            <tr>
+                                                <td className="py-1 text-right font-bold">TOTAL DISCOUNT</td>
+                                                <td className="py-1 text-right text-red-600">-{quotation.totalDiscount.toFixed(2)}</td>
+                                            </tr>
+                                        )}
                                         <tr>
                                             <td className="py-1 text-right font-bold">GST @{gstRate.toFixed(2)}%</td>
                                             <td className="py-1 text-right">{quotation.gstAmount.toFixed(2)}</td>
@@ -205,5 +223,3 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
     );
 });
 QuotationPreview.displayName = "QuotationPreview";
-
-    

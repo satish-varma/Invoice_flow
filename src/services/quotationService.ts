@@ -17,6 +17,7 @@ export interface QuotationLineItem {
   unitPrice: number;
   total: number;
   customFields?: { [key: string]: string | number };
+  discount?: number;
 }
 
 export interface Quotation {
@@ -30,6 +31,7 @@ export interface Quotation {
   gstAmount: number;
   shipping: number;
   other: number;
+  totalDiscount?: number;
   total: number;
   terms?: string;
   createdAt?: any;
@@ -158,5 +160,3 @@ export async function deleteQuotations(ids: string[]): Promise<void> {
         throw new Error("Failed to delete quotations.");
     }
 }
-
-    

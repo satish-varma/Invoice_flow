@@ -4,6 +4,11 @@
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc, deleteDoc, writeBatch, getDoc, Timestamp } from 'firebase/firestore';
 
+export interface ColumnDef {
+  id: string;
+  label: string;
+}
+
 export interface QuotationLineItem {
   id: number;
   name: string;
@@ -19,6 +24,7 @@ export interface Quotation {
   quotationNumber: string;
   quotationDate: string; // Storing date as ISO string
   validityDate: string; // Storing date as ISO string
+  columns?: ColumnDef[];
   lineItems: QuotationLineItem[];
   subtotal: number;
   gstAmount: number;
@@ -152,3 +158,5 @@ export async function deleteQuotations(ids: string[]): Promise<void> {
         throw new Error("Failed to delete quotations.");
     }
 }
+
+    

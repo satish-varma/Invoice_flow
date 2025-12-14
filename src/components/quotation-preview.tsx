@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from "date-fns";
 import { Separator } from './ui/separator';
 import type { Settings } from '@/services/settingsService';
-import { Quotation, QuotationLineItem } from '@/services/quotationService';
+import { Quotation, ColumnDef } from '@/services/quotationService';
 
 interface QuotationPreviewProps {
     quotation: Quotation;
@@ -16,18 +16,13 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
     
     const activeProfile = settings.companyProfiles?.find(p => p.id === quotation.companyProfileId);
     const gstRate = quotation.subtotal > 0 ? (quotation.gstAmount / quotation.subtotal) * 100 : 0;
-
-    const getCustomColumns = (lineItems: QuotationLineItem[]): string[] => {
-        const columnSet = new Set<string>();
-        lineItems.forEach(item => {
-            if (item.customFields) {
-                Object.keys(item.customFields).forEach(key => columnSet.add(key));
-            }
-        });
-        return Array.from(columnSet);
-    };
-
-    const customColumns = getCustomColumns(quotation.lineItems);
+    
+    const columns = quotation.columns || [
+        { id: 'name', label: 'Item Name/Description' },
+        { id: 'unit', label: 'Unit' },
+        { id: 'quantity', label: 'Qty' },
+        { id: 'unitPrice', label: 'Unit Price' },
+    ];
 
     const inWords = (num: number): string => {
         const a = ['','one ','two ','three ','four ', 'five ','six ','seven ','eight ','nine ','ten ','eleven ','twelve ','thirteen ','fourteen ','fifteen ','sixteen ','seventeen ','eighteen ','nineteen '];
@@ -119,11 +114,9 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                             <TableHeader>
                                 <TableRow className='border-b border-gray-300 bg-gray-50'>
                                     <TableHead className="w-[50px] font-bold text-black">S.NO.</TableHead>
-                                    <TableHead className="w-2/5 font-bold text-black">Item Name/Description</TableHead>
-                                    <TableHead className="font-bold text-black">Unit</TableHead>
-                                    {customColumns.map(col => <TableHead key={col} className="font-bold text-black">{col}</TableHead>)}
-                                    <TableHead className="text-right font-bold text-black">QTY</TableHead>
-                                    <TableHead className="text-right font-bold text-black">UNIT PRICE</TableHead>
+                                    {columns.map(col => (
+                                        <TableHead key={col.id} className={`font-bold text-black ${['quantity', 'unitPrice'].includes(col.id) ? 'text-right' : ''}`}>{col.label}</TableHead>
+                                    ))}
                                     <TableHead className="text-right font-bold text-black">TOTAL</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -131,11 +124,11 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                                 {quotation.lineItems.map((item, index) => (
                                 <TableRow key={index} className="border-b-0">
                                     <TableCell>{index + 1}</TableCell>
-                                    <TableCell>{item.name}</TableCell>
-                                    <TableCell>{item.unit}</TableCell>
-                                    {customColumns.map(col => <TableCell key={col}>{item.customFields?.[col] || ''}</TableCell>)}
-                                    <TableCell className="text-right">{item.quantity}</TableCell>
-                                    <TableCell className="text-right">{item.unitPrice.toFixed(2)}</TableCell>
+                                    {columns.map(col => (
+                                         <TableCell key={col.id} className={['quantity', 'unitPrice'].includes(col.id) ? 'text-right' : ''}>
+                                            {['name', 'unit', 'quantity', 'unitPrice'].includes(col.id) ? (item as any)[col.id] : item.customFields?.[col.id] || ''}
+                                         </TableCell>
+                                    ))}
                                     <TableCell className="font-medium text-right">{item.total.toFixed(2)}</TableCell>
                                 </TableRow>
                                 ))}
@@ -212,3 +205,5 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
     );
 });
 QuotationPreview.displayName = "QuotationPreview";
+
+    

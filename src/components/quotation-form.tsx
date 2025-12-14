@@ -8,12 +8,12 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, X } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, FileText, Truck, Settings as SettingsIcon, X, ArrowLeft, ArrowRight, Columns } from 'lucide-react';
 import { format } from "date-fns"
 import { extractQuotationData, ExtractQuotationOutput } from '@/ai/flows/extract-quotation-flow';
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
-import { Quotation, saveQuotation, QuotationLineItem } from '@/services/quotationService';
+import { Quotation, saveQuotation, QuotationLineItem, ColumnDef } from '@/services/quotationService';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Label } from './ui/label';
@@ -38,6 +38,13 @@ function fileToDataUri(file: File): Promise<string> {
 }
 
 type CombinedContact = (BillToContact & { type: 'billTo' }) | (ShipToContact & { type: 'shipTo' });
+
+const defaultColumns: ColumnDef[] = [
+    { id: 'name', label: 'Item Name/Description' },
+    { id: 'unit', label: 'Unit' },
+    { id: 'quantity', label: 'Qty' },
+    { id: 'unitPrice', label: 'Unit Price' },
+];
 
 export function QuotationForm({ initialData, onQuotationSave, onAddNew }: QuotationFormProps) {
     const [quotationNumber, setQuotationNumber] = useState('');
@@ -65,8 +72,9 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     const [settings, setSettings] = useState<Settings>({ companyProfiles: [], billToContacts: [], shipToContacts: [] });
     const [activeCompanyProfile, setActiveCompanyProfile] = useState<CompanyProfile | null>(null);
 
-    const [customColumns, setCustomColumns] = useState<string[]>([]);
+    const [columns, setColumns] = useState<ColumnDef[]>(defaultColumns);
     const [isColumnDialog, setIsColumnDialog] = useState(false);
+    const [tempColumns, setTempColumns] = useState<ColumnDef[]>(defaultColumns);
     const [newColumnName, setNewColumnName] = useState('');
 
     const { toast } = useToast();
@@ -129,13 +137,8 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
             setBillToName(initialData.billToName || '');
             setBillToAddress(initialData.billToAddress || '');
             
-            // Extract custom columns from the first line item that has them
-            const firstItemWithCustomFields = initialData.lineItems.find(item => item.customFields && Object.keys(item.customFields).length > 0);
-            if (firstItemWithCustomFields) {
-                setCustomColumns(Object.keys(firstItemWithCustomFields.customFields!));
-            } else {
-                setCustomColumns([]);
-            }
+            setColumns(initialData.columns || defaultColumns);
+            setTempColumns(initialData.columns || defaultColumns);
 
             setLineItems(initialData.lineItems.map((item, index) => ({
                 id: item.id || Date.now() + index,
@@ -171,21 +174,17 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
         setLineItems(lineItems.filter(item => item.id !== id));
     };
 
-    const handleItemChange = (id: number, field: keyof Omit<QuotationLineItem, 'id' | 'total' | 'customFields'>, value: string | number) => {
-        setLineItems(lineItems.map(item =>
-            item.id === id ? { ...item, [field]: value } : item
-        ));
-    };
-
-    const handleCustomFieldChange = (id: number, fieldName: string, value: string | number) => {
-        setLineItems(lineItems.map(item => {
+    const handleItemChange = (id: number, field: string, value: string | number) => {
+         setLineItems(lineItems.map(item => {
             if (item.id === id) {
+                // Check if the field is a default field
+                if (['name', 'unit', 'quantity', 'unitPrice'].includes(field)) {
+                    return { ...item, [field]: value };
+                }
+                // Otherwise, it's a custom field
                 return {
                     ...item,
-                    customFields: {
-                        ...item.customFields,
-                        [fieldName]: value
-                    }
+                    customFields: { ...item.customFields, [field]: value }
                 };
             }
             return item;
@@ -203,7 +202,8 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
         setShipping(0);
         setOther(0);
         setTerms('1. Price: Inclusive of all taxes\n2. Delivery: 2-3 days from the date of receipt of purchase order\n3. Payment: 100% advance along with purchase order');
-        setCustomColumns([]);
+        setColumns(defaultColumns);
+        setTempColumns(defaultColumns);
         if (shouldCallback) {
             onAddNew();
         }
@@ -227,6 +227,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                 companyProfileId: activeCompanyProfile.id,
                 billToName,
                 billToAddress,
+                columns,
                 lineItems: lineItems.map(({ id, ...item }) => item),
                 subtotal,
                 gstAmount,
@@ -279,9 +280,11 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
             if (result.lineItems && result.lineItems.length > 0) {
                 setLineItems(result.lineItems.map((item, index) => ({
                     id: Date.now() + index,
-                    ...item,
+                    name: item.name || '',
                     unit: item.unit || '',
-                    total: item.quantity * item.unitPrice,
+                    quantity: item.quantity || 0,
+                    unitPrice: item.unitPrice || 0,
+                    total: (item.quantity || 0) * (item.unitPrice || 0),
                     customFields: {},
                 })));
             }
@@ -346,10 +349,20 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
         onAddNew();
     };
 
-    const handleAddColumn = () => {
-        if (newColumnName && !customColumns.includes(newColumnName)) {
-            setCustomColumns([...customColumns, newColumnName]);
-            setIsColumnDialog(false);
+    // Column Management Dialog Functions
+    const openColumnDialog = () => {
+        setTempColumns([...columns]); // Make a copy for editing
+        setIsColumnDialog(true);
+    };
+
+    const handleAddTempColumn = () => {
+        if (newColumnName && !tempColumns.some(c => c.label === newColumnName)) {
+            const newId = `custom_${newColumnName.toLowerCase().replace(/\s/g, '_')}`;
+            if (tempColumns.some(c => c.id === newId)) {
+                toast({ variant: 'destructive', title: 'Column ID already exists' });
+                return;
+            }
+            setTempColumns([...tempColumns, { id: newId, label: newColumnName }]);
             setNewColumnName('');
         } else {
             toast({
@@ -360,14 +373,43 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
         }
     };
 
-    const handleRemoveColumn = (columnToRemove: string) => {
-        setCustomColumns(customColumns.filter(col => col !== columnToRemove));
-        // Also remove the data for this column from all line items
-        setLineItems(items => items.map(item => {
-            const newCustomFields = { ...item.customFields };
-            delete newCustomFields[columnToRemove];
-            return { ...item, customFields: newCustomFields };
-        }));
+    const handleRemoveTempColumn = (idToRemove: string) => {
+        setTempColumns(tempColumns.filter(col => col.id !== idToRemove));
+    };
+
+    const handleTempColumnLabelChange = (id: string, newLabel: string) => {
+        setTempColumns(tempColumns.map(col => col.id === id ? { ...col, label: newLabel } : col));
+    };
+
+    const handleMoveColumn = (index: number, direction: 'left' | 'right') => {
+        const newColumns = [...tempColumns];
+        const targetIndex = direction === 'left' ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= newColumns.length) return;
+
+        const [movedItem] = newColumns.splice(index, 1);
+        newColumns.splice(targetIndex, 0, movedItem);
+        setTempColumns(newColumns);
+    };
+
+    const applyColumnChanges = () => {
+        // Find deleted columns
+        const deletedColumns = columns.filter(c => !tempColumns.some(tc => tc.id === c.id));
+        
+        // Remove data from deleted columns in lineItems
+        if (deletedColumns.length > 0) {
+            const deletedColumnIds = deletedColumns.map(c => c.id);
+            setLineItems(items => items.map(item => {
+                const newCustomFields = { ...item.customFields };
+                deletedColumnIds.forEach(id => {
+                    if (id.startsWith('custom_')) {
+                        delete newCustomFields[id];
+                    }
+                });
+                return { ...item, customFields: newCustomFields };
+            }));
+        }
+        setColumns(tempColumns);
+        setIsColumnDialog(false);
     };
 
   return (
@@ -457,7 +499,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                     </div>
                 )}
                 
-                <h3 className="font-bold text-lg mb-4">To (Company)</h3>
+                <h3 className="font-bold text-lg mb-4 mt-4">To (Company)</h3>
                  <div className="space-y-2">
                     <div>
                         <Label>Select Saved Contact</Label>
@@ -547,48 +589,27 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-2/5">Item Name/Description</TableHead>
-                      <TableHead className="w-[120px]">Unit</TableHead>
-                      {customColumns.map(col => (
-                        <TableHead key={col} className="w-[150px]">
-                            <div className="flex items-center justify-between gap-2">
-                                {col}
-                                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleRemoveColumn(col)}>
-                                    <X className="h-3 w-3 text-destructive" />
-                                </Button>
-                            </div>
-                        </TableHead>
+                      {columns.map((col) => (
+                        <TableHead key={col.id} className={['quantity', 'unitPrice', 'total'].includes(col.id) ? 'text-right' : ''}>{col.label}</TableHead>
                       ))}
-                      <TableHead className="w-[100px] text-right">Qty</TableHead>
-                      <TableHead className="w-[150px] text-right">Unit Price</TableHead>
                       <TableHead className="w-[120px] text-right">Total</TableHead>
                       <TableHead className="text-right no-print w-[80px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {lineItems.map((item, index) => (
+                    {lineItems.map((item) => (
                       <TableRow key={item.id} className="animate-fade-in-down hover:bg-muted/20">
-                        <TableCell>
-                          <Input placeholder="Item description" value={item.name || ''} onChange={e => handleItemChange(item.id, 'name', e.target.value)} />
-                        </TableCell>
-                         <TableCell>
-                          <Input placeholder="Unit" value={item.unit || ''} onChange={e => handleItemChange(item.id, 'unit', e.target.value)} />
-                        </TableCell>
-                        {customColumns.map(col => (
-                            <TableCell key={col}>
+                        {columns.map(col => (
+                            <TableCell key={col.id}>
                                 <Input
-                                    placeholder={col}
-                                    value={item.customFields?.[col] || ''}
-                                    onChange={e => handleCustomFieldChange(item.id, col, e.target.value)}
+                                    placeholder={col.label}
+                                    value={['name', 'unit', 'quantity', 'unitPrice'].includes(col.id) ? (item as any)[col.id] : item.customFields?.[col.id] || ''}
+                                    onChange={e => handleItemChange(item.id, col.id, e.target.value)}
+                                    type={['quantity', 'unitPrice'].includes(col.id) ? 'number' : 'text'}
+                                    className={['quantity', 'unitPrice'].includes(col.id) ? 'text-right' : ''}
                                 />
                             </TableCell>
                         ))}
-                        <TableCell>
-                          <Input className="text-right" type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="0" />
-                        </TableCell>
-                        <TableCell>
-                          <Input className="text-right" type="number" value={item.unitPrice} onChange={e => handleItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} min="0" step="0.01" />
-                        </TableCell>
                         <TableCell className="font-medium text-right">{item.total.toFixed(2)}</TableCell>
                         <TableCell className="text-right no-print">
                           <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} aria-label="Remove item" className="active:scale-95">
@@ -604,8 +625,8 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                 <Button onClick={handleAddItem} variant="outline" size="sm" className="bg-transparent hover:bg-accent/10 active:scale-95">
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                 </Button>
-                <Button onClick={() => setIsColumnDialog(true)} variant="outline" size="sm" className="bg-transparent hover:bg-accent/10 active:scale-95">
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add Column
+                <Button onClick={openColumnDialog} variant="outline" size="sm" className="bg-transparent hover:bg-accent/10 active:scale-95">
+                  <Columns className="mr-2 h-4 w-4" /> Manage Columns
                 </Button>
               </div>
             </CardContent>
@@ -660,27 +681,52 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
             </CardFooter>
           </Card>
         
-        {/* Add Column Dialog */}
+        {/* Manage Columns Dialog */}
         <Dialog open={isColumnDialog} onOpenChange={setIsColumnDialog}>
-            <DialogContent>
+            <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>Add New Column</DialogTitle>
+                    <DialogTitle>Manage Table Columns</DialogTitle>
                 </DialogHeader>
-                <div className="py-4">
-                    <Label htmlFor="newColumnName">Column Name</Label>
-                    <Input
-                        id="newColumnName"
-                        value={newColumnName}
-                        onChange={(e) => setNewColumnName(e.target.value)}
-                        placeholder="e.g., Color, Size, Batch No."
-                    />
+                <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto">
+                    <div className="space-y-2">
+                        {tempColumns.map((col, index) => (
+                            <div key={col.id} className="flex items-center gap-2 p-2 border rounded-md">
+                                <Input
+                                    value={col.label}
+                                    onChange={(e) => handleTempColumnLabelChange(col.id, e.target.value)}
+                                    className="flex-grow"
+                                />
+                                <Button variant="ghost" size="icon" onClick={() => handleMoveColumn(index, 'left')} disabled={index === 0}>
+                                    <ArrowLeft className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleMoveColumn(index, 'right')} disabled={index === tempColumns.length - 1}>
+                                    <ArrowRight className="h-4 w-4" />
+                                </Button>
+                                {!defaultColumns.some(dc => dc.id === col.id) && (
+                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveTempColumn(col.id)} className="text-destructive">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex items-center gap-2 pt-4 border-t">
+                        <Input
+                            placeholder="New column name..."
+                            value={newColumnName}
+                            onChange={(e) => setNewColumnName(e.target.value)}
+                        />
+                        <Button onClick={handleAddTempColumn}>Add Column</Button>
+                    </div>
                 </div>
                 <DialogFooter>
-                    <DialogClose asChild><Button variant="outline" onClick={() => setNewColumnName('')}>Cancel</Button></DialogClose>
-                    <Button onClick={handleAddColumn}>Add Column</Button>
+                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                    <Button onClick={applyColumnChanges}>Apply Changes</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     </>
   );
 }
+
+    

@@ -175,7 +175,7 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                                             <td className="py-1 text-right font-bold">SHIPPING/HANDLING</td>
                                             <td className="py-1 text-right">{quotation.shipping.toFixed(2)}</td>
                                         </tr>
-                                            <tr>
+                                        <tr>
                                             <td className="py-1 text-right font-bold">OTHER</td>
                                             <td className="py-1 text-right">{quotation.other.toFixed(2)}</td>
                                         </tr>
@@ -223,3 +223,4 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
     );
 });
 QuotationPreview.displayName = "QuotationPreview";
+

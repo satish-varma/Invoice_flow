@@ -163,24 +163,30 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                                             <td className="py-1 text-right font-bold">SUBTOTAL</td>
                                             <td className="py-1 text-right w-[100px]">{quotation.subtotal.toFixed(2)}</td>
                                         </tr>
-                                        {quotation.totalDiscount && quotation.totalDiscount > 0 && (
+                                        {quotation.totalDiscount && quotation.totalDiscount > 0 ? (
                                             <tr>
                                                 <td className="py-1 text-right font-bold">TOTAL DISCOUNT</td>
                                                 <td className="py-1 text-right text-red-600">-{quotation.totalDiscount.toFixed(2)}</td>
                                             </tr>
-                                        )}
-                                        <tr>
-                                            <td className="py-1 text-right font-bold">GST @{gstRate.toFixed(2)}%</td>
-                                            <td className="py-1 text-right">{quotation.gstAmount.toFixed(2)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="py-1 text-right font-bold">SHIPPING/HANDLING</td>
-                                            <td className="py-1 text-right">{quotation.shipping.toFixed(2)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="py-1 text-right font-bold">OTHER</td>
-                                            <td className="py-1 text-right">{quotation.other.toFixed(2)}</td>
-                                        </tr>
+                                        ) : null}
+                                        {gstRate > 0 ? (
+                                            <tr>
+                                                <td className="py-1 text-right font-bold">GST @{gstRate.toFixed(2)}%</td>
+                                                <td className="py-1 text-right">{quotation.gstAmount.toFixed(2)}</td>
+                                            </tr>
+                                        ) : null}
+                                        {quotation.shipping > 0 ? (
+                                            <tr>
+                                                <td className="py-1 text-right font-bold">SHIPPING/HANDLING</td>
+                                                <td className="py-1 text-right">{quotation.shipping.toFixed(2)}</td>
+                                            </tr>
+                                        ) : null}
+                                        {quotation.other > 0 ? (
+                                            <tr>
+                                                <td className="py-1 text-right font-bold">OTHER</td>
+                                                <td className="py-1 text-right">{quotation.other.toFixed(2)}</td>
+                                            </tr>
+                                        ) : null}
                                         <tr className="font-bold text-lg">
                                             <td className="py-2 text-right border-t border-black">TOTAL</td>
                                             <td className="py-2 text-right border-t border-black">{quotation.total.toFixed(2)}</td>

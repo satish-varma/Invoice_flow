@@ -116,18 +116,24 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                                             <td className="py-1 text-right font-bold">SUBTOTAL</td>
                                             <td className="py-1 text-right w-[100px]">{challan.subtotal.toFixed(2)}</td>
                                         </tr>
-                                        <tr>
-                                            <td className="py-1 text-right font-bold">GST @{gstRate.toFixed(2)}%</td>
-                                            <td className="py-1 text-right">{challan.gstAmount.toFixed(2)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="py-1 text-right font-bold">SHIPPING/HANDLING</td>
-                                            <td className="py-1 text-right">{challan.shipping.toFixed(2)}</td>
-                                        </tr>
+                                        {gstRate > 0 ? (
                                             <tr>
-                                            <td className="py-1 text-right font-bold">OTHER</td>
-                                            <td className="py-1 text-right">{challan.other.toFixed(2)}</td>
-                                        </tr>
+                                                <td className="py-1 text-right font-bold">GST @{gstRate.toFixed(2)}%</td>
+                                                <td className="py-1 text-right">{challan.gstAmount.toFixed(2)}</td>
+                                            </tr>
+                                        ) : null}
+                                        {challan.shipping > 0 ? (
+                                            <tr>
+                                                <td className="py-1 text-right font-bold">SHIPPING/HANDLING</td>
+                                                <td className="py-1 text-right">{challan.shipping.toFixed(2)}</td>
+                                            </tr>
+                                        ) : null}
+                                        {challan.other > 0 ? (
+                                            <tr>
+                                                <td className="py-1 text-right font-bold">OTHER</td>
+                                                <td className="py-1 text-right">{challan.other.toFixed(2)}</td>
+                                            </tr>
+                                        ) : null}
                                         <tr className="font-bold text-lg">
                                             <td className="py-2 text-right border-t border-black">TOTAL</td>
                                             <td className="py-2 text-right border-t border-black">{challan.total.toFixed(2)}</td>

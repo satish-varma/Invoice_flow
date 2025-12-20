@@ -86,14 +86,18 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                                     <div>{invoice.invoiceNumber}</div>
                                     <div className='font-bold'>Invoice Date:</div>
                                     <div>{invoice.date ? format(new Date(invoice.date), "P") : ''}</div>
-                                    {invoice.period && <>
+                                    {invoice.period ? (
+                                    <>
                                         <div className='font-bold'>Period:</div>
                                         <div>{invoice.period}</div>
-                                    </>}
-                                    {invoice.delivery && <>
-                                    <div className='font-bold'>Delivery:</div>
-                                    <div>{invoice.delivery}</div>
-                                    </>}
+                                    </>
+                                    ) : null}
+                                    {invoice.delivery ? (
+                                    <>
+                                        <div className='font-bold'>Delivery:</div>
+                                        <div>{invoice.delivery}</div>
+                                    </>
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
@@ -121,7 +125,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                             <TableHeader>
                                 <TableRow className='border-b border-gray-300 bg-gray-50'>
                                     <TableHead className="w-[50px] font-bold text-black">S.No</TableHead>
-                                    <TableHead className="w-1/2 font-bold text-black">Item & Description</TableHead>
+                                    <TableHead className="w-1/2 font-bold text-black">Item &amp; Description</TableHead>
                                     <TableHead className="w-[100px] text-right font-bold text-black">Qty</TableHead>
                                     <TableHead className="w-[120px] text-right font-bold text-black">Rate</TableHead>
                                     <TableHead className="w-[120px] text-right font-bold text-black">Amount</TableHead>
@@ -213,5 +217,3 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
     );
 });
 InvoicePreview.displayName = "InvoicePreview";
-
-    

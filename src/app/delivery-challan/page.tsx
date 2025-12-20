@@ -67,29 +67,30 @@ export default function DeliveryChallanPage() {
     };
 
     useEffect(() => {
-        const createPdf = async () => {
-            if (challanToDownload && challanPreviewRef.current && settings) {
-                const element = challanPreviewRef.current;
-                const fileName = `challan-${challanToDownload.dcNumber || 'untitled'}.pdf`;
-                
-                try {
-                    await generateAndSavePdf(element, fileName);
-                } catch(error) {
-                     console.error("Error generating PDF:", error);
-                     toast({
-                         variant: 'destructive',
-                         title: 'Download Failed',
-                         description: 'There was an error generating the PDF for download.',
-                     });
-                } finally {
-                    setChallanToDownload(null);
+        if (challanToDownload && settings) {
+            const timer = setTimeout(async () => {
+                if (challanPreviewRef.current) {
+                    const element = challanPreviewRef.current;
+                    const fileName = `challan-${challanToDownload.dcNumber || 'untitled'}.pdf`;
+                    
+                    try {
+                        await generateAndSavePdf(element, fileName);
+                    } catch(error) {
+                         console.error("Error generating PDF:", error);
+                         toast({
+                             variant: 'destructive',
+                             title: 'Download Failed',
+                             description: 'There was an error generating the PDF for download.',
+                         });
+                    } finally {
+                        setChallanToDownload(null);
+                    }
                 }
-            }
-        };
+            }, 100);
 
-        createPdf();
-
-    }, [challanToDownload, settings, toast, challanPreviewRef.current]);
+            return () => clearTimeout(timer);
+        }
+    }, [challanToDownload, settings, toast]);
 
     return (
         <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">

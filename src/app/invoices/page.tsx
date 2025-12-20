@@ -61,50 +61,52 @@ export default function InvoicesPage() {
   }, []);
   
   useEffect(() => {
-    const generatePdf = async () => {
-        if (!invoiceToGenerate || !pdfAction || !invoicePreviewRef.current || !settings) {
-            return;
-        }
-
-        const input = invoicePreviewRef.current;
-        if (!input) return;
-
-        setIsGeneratingPdf(true);
-
-        try {
-            if (pdfAction === 'save') {
-                await generateAndSavePdf(input, `invoice-${invoiceToGenerate.invoiceNumber || 'untitled'}.pdf`);
+    if (invoiceToGenerate && settings && pdfAction) {
+      const timer = setTimeout(async () => {
+        if (invoicePreviewRef.current) {
+          const input = invoicePreviewRef.current;
+          
+          if (pdfAction === 'save') {
+              try {
+                  await generateAndSavePdf(input, `invoice-${invoiceToGenerate.invoiceNumber || 'untitled'}.pdf`);
+              } catch (error) {
+                  console.error("Error saving PDF:", error);
+                  toast({ variant: "destructive", title: "PDF Generation Failed", description: "There was an error saving the PDF." });
+              } finally {
                  if (!isBulkDownloading) {
-                    setInvoiceToGenerate(null);
-                    setPdfAction(null);
-                }
-            } else { // 'preview'
-                const canvas = await html2canvas(input, { scale: 1.5, useCORS: true });
-                const imgData = canvas.toDataURL('image/jpeg', 0.9);
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-                const url = pdf.output('datauristring');
-                setPdfUrl(url);
-            }
-        } catch (error) {
-            console.error("Error generating PDF:", error);
-            toast({ variant: "destructive", title: "PDF Generation Failed", description: "There was an error generating the PDF." });
-        } finally {
-            if (pdfAction === 'preview') {
-              setIsGeneratingPdf(false); // Only stop generating indicator for preview
-            }
-            if (!isBulkDownloading) {
-              setInvoiceToGenerate(null); // Reset after single action
-              setPdfAction(null);
-            }
+                      setInvoiceToGenerate(null);
+                      setPdfAction(null);
+                  }
+              }
+          } else { // 'preview'
+              setIsGeneratingPdf(true);
+              try {
+                  const canvas = await html2canvas(input, { scale: 1.5, useCORS: true });
+                  const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                  const pdf = new jsPDF('p', 'mm', 'a4');
+                  const pdfWidth = pdf.internal.pageSize.getWidth();
+                  const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                  pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                  const url = pdf.output('datauristring');
+                  setPdfUrl(url);
+              } catch (error) {
+                  console.error("Error generating PDF preview:", error);
+                  toast({ variant: "destructive", title: "PDF Preview Failed", description: "There was an error generating the PDF preview." });
+              } finally {
+                  setIsGeneratingPdf(false);
+                  if (!isBulkDownloading) {
+                      setInvoiceToGenerate(null);
+                      setPdfAction(null);
+                  }
+              }
+          }
         }
-    };
+      }, 100);
 
-    generatePdf();
+      return () => clearTimeout(timer);
+    }
     
-  }, [invoiceToGenerate, pdfAction, settings, toast, isBulkDownloading, invoicePreviewRef.current]);
+  }, [invoiceToGenerate, pdfAction, settings, toast, isBulkDownloading]);
 
   const handlePreview = (invoice: Invoice) => {
     closePreview(); // Close any existing preview first

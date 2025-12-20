@@ -67,30 +67,31 @@ export default function QuotationPage() {
     };
 
     useEffect(() => {
-        const createPdf = async () => {
-            if (quotationToDownload && quotationPreviewRef.current && settings) {
-                const element = quotationPreviewRef.current;
-                const fileName = `quotation-${quotationToDownload.quotationNumber || 'untitled'}.pdf`;
-                
-                try {
-                    await generateAndSavePdf(element, fileName);
-                } catch(error) {
-                     console.error("Error generating PDF:", error);
-                     toast({
-                         variant: 'destructive',
-                         title: 'Download Failed',
-                         description: 'There was an error generating the PDF for download.',
-                     });
-                } finally {
-                    setQuotationToDownload(null);
+        if (quotationToDownload && settings) {
+            // Use a timeout to ensure the ref is current and the component has rendered.
+            const timer = setTimeout(async () => {
+                if (quotationPreviewRef.current) {
+                    const element = quotationPreviewRef.current;
+                    const fileName = `quotation-${quotationToDownload.quotationNumber || 'untitled'}.pdf`;
+                    
+                    try {
+                        await generateAndSavePdf(element, fileName);
+                    } catch(error) {
+                         console.error("Error generating PDF:", error);
+                         toast({
+                             variant: 'destructive',
+                             title: 'Download Failed',
+                             description: 'There was an error generating the PDF for download.',
+                         });
+                    } finally {
+                        setQuotationToDownload(null);
+                    }
                 }
-            }
-        };
+            }, 100); // 100ms delay
 
-        // This effect runs when the ref is attached and the data is ready.
-        createPdf();
-
-    }, [quotationToDownload, settings, toast, quotationPreviewRef.current]); // Dependency on the ref's current value
+            return () => clearTimeout(timer);
+        }
+    }, [quotationToDownload, settings, toast]);
 
     return (
         <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">

@@ -15,7 +15,9 @@ interface QuotationPreviewProps {
 export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPreviewProps>(({ quotation, settings }, ref) => {
     
     const activeProfile = settings.companyProfiles?.find(p => p.id === quotation.companyProfileId);
-    const gstRate = quotation.subtotal > 0 ? (quotation.gstAmount / (quotation.subtotal - (quotation.totalDiscount || 0))) * 100 : 0;
+    const gstRate = quotation.subtotal > 0 && (quotation.subtotal - (quotation.totalDiscount || 0)) > 0 
+        ? (quotation.gstAmount / (quotation.subtotal - (quotation.totalDiscount || 0))) * 100 
+        : 0;
     
     const columns = quotation.columns || [
         { id: 'name', label: 'Item Name/Description' },
@@ -223,5 +225,3 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
     );
 });
 QuotationPreview.displayName = "QuotationPreview";
-
-    

@@ -141,13 +141,13 @@ export async function getInvoices(): Promise<Invoice[]> {
     const invoices: Invoice[] = [];
     querySnapshot.forEach((doc) => {
         const data = doc.data();
-        invoices.push({ 
+        invoices.push({
             id: doc.id,
             ...data,
             customerName: data.billToName || data.customerName, // Fallback for old data
-            // Convert Firestore Timestamp to a serializable format if needed
-            date: new Date(data.date).toISOString(),
-            createdAt: data.createdAt?.toDate().toISOString(),
+            // Convert Firestore Timestamp to a serializable format
+            date: data.date instanceof Timestamp ? data.date.toDate().toISOString() : new Date(data.date).toISOString(),
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : (data.createdAt ? new Date(data.createdAt).toISOString() : undefined),
         } as Invoice);
     });
     return invoices;

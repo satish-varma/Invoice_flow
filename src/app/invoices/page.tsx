@@ -47,13 +47,23 @@ export default function InvoicesPage() {
 
   const loadData = async () => {
     setIsLoading(true);
-    const [invoices, settingsData] = await Promise.all([
-      getInvoices(),
-      getSettings()
-    ]);
-    setData(invoices);
-    setSettings(settingsData);
-    setIsLoading(false);
+    try {
+        const [invoices, settingsData] = await Promise.all([
+            getInvoices(),
+            getSettings()
+        ]);
+        setData(invoices);
+        setSettings(settingsData);
+    } catch (error) {
+        console.error(error);
+        toast({
+            variant: 'destructive',
+            title: 'Failed to fetch data',
+            description: 'There was an error loading your data. Please try again later.',
+        });
+    } finally {
+        setIsLoading(false);
+    }
   }
 
   useEffect(() => {

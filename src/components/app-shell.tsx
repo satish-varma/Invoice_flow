@@ -10,6 +10,7 @@ import {
   SidebarInset,
   SidebarTrigger,
   useSidebar,
+  SidebarProvider,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import {
@@ -22,11 +23,10 @@ import {
   User,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
 import { useAuth, useUser } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const auth = useAuth();
   const { user } = useUser();
@@ -119,5 +119,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </SidebarInset>
     </>
+  );
+}
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <SidebarProvider>
+      <AppShellContent>{children}</AppShellContent>
+    </SidebarProvider>
   );
 }

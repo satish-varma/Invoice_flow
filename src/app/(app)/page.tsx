@@ -10,6 +10,7 @@ import { Loader } from 'lucide-react';
 import { InvoicePreview } from '@/components/invoice-preview';
 import { getSettings, Settings } from '@/services/settingsService';
 import { generateAndSavePdf } from '@/lib/pdf';
+import { AppShell } from '@/components/app-shell';
 
 export default function Home() {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -94,45 +95,47 @@ export default function Home() {
     }, [invoiceToDownload, settings, toast]);
 
     return (
-        <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
-            <div className="w-full max-w-7xl mx-auto">
-                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2">
-                        {isLoading || !settings ? (
-                             <div className="flex items-center justify-center h-[500px]">
-                                <Loader className="h-8 w-8 animate-spin" />
-                            </div>
-                        ) : (
-                            <InvoiceForm 
-                                key={selectedInvoice?.id || 'new'} 
-                                initialData={selectedInvoice} 
-                                onInvoiceSave={handleInvoiceSave} 
-                                onAddNew={handleAddNew}
-                                settings={settings}
-                            />
-                        )}
-                    </div>
-                    <div className="lg:col-span-1">
-                        {isLoading ? (
-                            <div className="flex items-center justify-center h-full">
-                                <Loader className="h-8 w-8 animate-spin" />
-                            </div>
-                        ) : (
-                            <InvoiceList 
-                                invoices={invoices} 
-                                onSelectInvoice={handleSelectInvoice}
-                                onDownloadInvoice={handleDownload}
-                            />
-                        )}
-                    </div>
-                    {/* This component is rendered off-screen and used for PDF generation */}
-                    {invoiceToDownload && settings && (
-                        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', zIndex: -1 }}>
-                            <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToDownload} settings={settings} />
+        <AppShell>
+            <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
+                <div className="w-full max-w-7xl mx-auto">
+                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2">
+                            {isLoading || !settings ? (
+                                 <div className="flex items-center justify-center h-[500px]">
+                                    <Loader className="h-8 w-8 animate-spin" />
+                                </div>
+                            ) : (
+                                <InvoiceForm 
+                                    key={selectedInvoice?.id || 'new'} 
+                                    initialData={selectedInvoice} 
+                                    onInvoiceSave={handleInvoiceSave} 
+                                    onAddNew={handleAddNew}
+                                    settings={settings}
+                                />
+                            )}
                         </div>
-                    )}
+                        <div className="lg:col-span-1">
+                            {isLoading ? (
+                                <div className="flex items-center justify-center h-full">
+                                    <Loader className="h-8 w-8 animate-spin" />
+                                </div>
+                            ) : (
+                                <InvoiceList 
+                                    invoices={invoices} 
+                                    onSelectInvoice={handleSelectInvoice}
+                                    onDownloadInvoice={handleDownload}
+                                />
+                            )}
+                        </div>
+                        {/* This component is rendered off-screen and used for PDF generation */}
+                        {invoiceToDownload && settings && (
+                            <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', zIndex: -1 }}>
+                                <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToDownload} settings={settings} />
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
-        </main>
+            </main>
+        </AppShell>
     );
 }

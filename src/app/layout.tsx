@@ -14,7 +14,6 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'InvoiceFlow',
   description: 'Generate, manage, and download professional-looking invoices.',
-  manifest: '/manifest.json'
 };
 
 export default function RootLayout({

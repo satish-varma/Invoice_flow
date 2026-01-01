@@ -141,16 +141,45 @@ export async function getInvoices(): Promise<Invoice[]> {
     const invoices: Invoice[] = [];
     querySnapshot.forEach((doc) => {
         const data = doc.data();
+        
+        // Safely handle date conversion
+        let dateStr: string;
+        try {
+            if (data.date instanceof Timestamp) {
+                dateStr = data.date.toDate().toISOString();
+            } else if (data.date) {
+                dateStr = new Date(data.date).toISOString();
+            } else {
+                dateStr = new Date().toISOString(); // Fallback if missing
+            }
+        } catch (e) {
+             console.error(`Invalid date for invoice ${doc.id}:`, data.date);
+             dateStr = new Date().toISOString();
+        }
+
+        // Safely handle createdAt conversion
+        let createdAtStr: string | undefined;
+        try {
+            if (data.createdAt instanceof Timestamp) {
+                createdAtStr = data.createdAt.toDate().toISOString();
+            } else if (data.createdAt) {
+                createdAtStr = new Date(data.createdAt).toISOString();
+            }
+        } catch (e) {
+             console.error(`Invalid createdAt for invoice ${doc.id}:`, data.createdAt);
+        }
+
         invoices.push({
             id: doc.id,
             ...data,
-            customerName: data.billToName || data.customerName, // Fallback for old data
-            // Convert Firestore Timestamp to a serializable format
-            date: data.date instanceof Timestamp ? data.date.toDate().toISOString() : new Date(data.date).toISOString(),
-            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : (data.createdAt ? new Date(data.createdAt).toISOString() : undefined),
+            customerName: data.billToName || data.customerName || "",
+            date: dateStr,
+            createdAt: createdAtStr,
         } as Invoice);
     });
-    return invoices;
+    
+    // Ensure deep serialization to avoid any hidden non-serializable objects
+    return JSON.parse(JSON.stringify(invoices));
 }
 
 export async function deleteInvoice(id: string): Promise<void> {

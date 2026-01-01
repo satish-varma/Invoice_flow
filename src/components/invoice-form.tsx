@@ -18,7 +18,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getSettings, Settings, CompanyProfile } from '@/services/settingsService';
+import { getSettings, Settings, CompanyProfile, BillToContact, ShipToContact } from '@/services/settingsService';
 import { availableTaxes } from '@/app/settings/page';
 
 
@@ -48,6 +48,8 @@ const months = [
     "January", "February", "March", "April", "May", "June", 
     "July", "August", "September", "October", "November", "December"
 ];
+
+type CombinedContact = (BillToContact & { type: 'billTo' }) | (ShipToContact & { type: 'shipTo' });
 
 export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFormProps) {
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -345,22 +347,27 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     }
   };
 
-  const handleContactSelect = (type: 'billTo' | 'shipTo', id: string) => {
-    if (type === 'billTo') {
-        const contact = settings.billToContacts?.find(c => c.id === id);
-        if (contact) {
+  const combinedContacts = useMemo(() => {
+        const billTo = (settings.billToContacts || []).map(c => ({...c, type: 'billTo' as const}));
+        const shipTo = (settings.shipToContacts || []).map(c => ({...c, type: 'shipTo' as const}));
+        return [...billTo, ...shipTo];
+  }, [settings.billToContacts, settings.shipToContacts]);
+
+  const handleContactSelect = (value: string, section: 'billTo' | 'shipTo') => {
+    const [id, type] = value.split('|');
+    const contact = combinedContacts.find(c => c.id === id && c.type === type);
+    
+    if (contact) {
+        if (section === 'billTo') {
             setBillToName(contact.name);
             setBillToAddress(contact.address);
-            setBillToGst(contact.gst);
-        }
-    } else { // 'shipTo'
-        const contact = settings.shipToContacts?.find(c => c.id === id);
-        if (contact) {
+            if ('gst' in contact) setBillToGst(contact.gst);
+        } else { // 'shipTo'
             setShipToName(contact.name);
             setShipToAddress(contact.address);
-            setShipToGst(contact.gst);
+            if ('gst' in contact) setShipToGst(contact.gst);
             // Auto-populate taxes from the selected ship-to contact
-            if (contact.taxes && contact.taxes.length > 0) {
+            if ('taxes' in contact && contact.taxes && contact.taxes.length > 0) {
                 const taxesToApply = availableTaxes
                     .filter(taxDef => contact.taxes!.includes(taxDef.id))
                     .map((taxDef, index) => ({
@@ -494,12 +501,16 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                  <div className="space-y-2">
                     <div>
                         <Label>Select Saved Contact</Label>
-                        <Select onValueChange={(value) => handleContactSelect('billTo', value)}>
+                        <Select onValueChange={(value) => handleContactSelect(value, 'billTo')}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a billing contact" />
                             </SelectTrigger>
                             <SelectContent>
-                                {settings.billToContacts && settings.billToContacts.map((c, index) => <SelectItem key={`${c.id}-${index}`} value={c.id}>{c.displayName}</SelectItem>)}
+                                {combinedContacts.map((c) => 
+                                <SelectItem key={`${c.id}-${c.type}`} value={`${c.id}|${c.type}`}>
+                                    {c.displayName} ({c.type === 'billTo' ? 'Bill' : 'Ship'})
+                                </SelectItem>
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
@@ -575,12 +586,16 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 <div className="space-y-2">
                     <div>
                          <Label>Select Saved Contact</Label>
-                        <Select onValueChange={(value) => handleContactSelect('shipTo', value)}>
+                        <Select onValueChange={(value) => handleContactSelect(value, 'shipTo')}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a shipping contact" />
                             </SelectTrigger>
                             <SelectContent>
-                                {settings.shipToContacts && settings.shipToContacts.map((c, index) => <SelectItem key={`${c.id}-${index}`} value={c.id}>{c.displayName}</SelectItem>)}
+                                {combinedContacts.map((c) => 
+                                <SelectItem key={`${c.id}-${c.type}-ship`} value={`${c.id}|${c.type}`}>
+                                    {c.displayName} ({c.type === 'billTo' ? 'Bill' : 'Ship'})
+                                </SelectItem>
+                                )}
                             </SelectContent>
                         </Select>
                     </div>

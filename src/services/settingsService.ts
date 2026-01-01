@@ -61,10 +61,12 @@ export async function getSettings(): Promise<Settings> {
             shipToContacts: [],
         };
 
+        let result: Settings;
+
         if (docSnap.exists()) {
             const data = docSnap.data() as Settings;
             // Ensure arrays exist to prevent downstream errors
-            return {
+            result = {
                 ...defaultSettings,
                 ...data,
             };
@@ -72,8 +74,12 @@ export async function getSettings(): Promise<Settings> {
             // The document doesn't exist. Instead of writing here, we return a default object.
             // The component that calls this function will handle the creation if necessary.
             console.log("Settings document not found, returning default settings.");
-            return defaultSettings;
+            result = defaultSettings;
         }
+        
+        // Ensure deep serialization to avoid any hidden non-serializable objects
+        return JSON.parse(JSON.stringify(result));
+
     } catch (error) {
         console.error("Error fetching settings: ", error);
         // Return a safe default object in case of any error

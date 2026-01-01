@@ -55,30 +55,28 @@ export async function getSettings(): Promise<Settings> {
         const docRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const docSnap = await getDoc(docRef);
 
+        const defaultSettings: Settings = { 
+            companyProfiles: [],
+            billToContacts: [], 
+            shipToContacts: [],
+        };
+
         if (docSnap.exists()) {
-            // Ensure companyProfiles is at least an empty array
             const data = docSnap.data() as Settings;
-            if (!data.companyProfiles) {
-                data.companyProfiles = [];
-            }
-             if (!data.billToContacts) {
-                data.billToContacts = [];
-            }
-            if (!data.shipToContacts) {
-                data.shipToContacts = [];
-            }
-            return data;
-        } else {
-            const initialSettings: Settings = { 
-                companyProfiles: [],
-                billToContacts: [], 
-                shipToContacts: [],
+            // Ensure arrays exist to prevent downstream errors
+            return {
+                ...defaultSettings,
+                ...data,
             };
-            await setDoc(docRef, initialSettings);
-            return initialSettings;
+        } else {
+            // The document doesn't exist. Instead of writing here, we return a default object.
+            // The component that calls this function will handle the creation if necessary.
+            console.log("Settings document not found, returning default settings.");
+            return defaultSettings;
         }
     } catch (error) {
         console.error("Error fetching settings: ", error);
+        // Return a safe default object in case of any error
         return { companyProfiles: [], billToContacts: [], shipToContacts: [] };
     }
 }

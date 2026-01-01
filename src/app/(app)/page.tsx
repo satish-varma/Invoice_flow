@@ -21,41 +21,33 @@ export default function Home() {
     const [invoiceToDownload, setInvoiceToDownload] = useState<Invoice | null>(null);
     const [settings, setSettings] = useState<Settings | null>(null);
 
-
-    useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const [fetchedInvoices, fetchedSettings] = await Promise.all([
-                    getInvoices(),
-                    getSettings()
-                ]);
-                setInvoices(fetchedInvoices);
-                setSettings(fetchedSettings);
-            } catch (error) {
-                console.error(error);
-                toast({
-                    variant: 'destructive',
-                    title: 'Failed to fetch data',
-                    description: 'There was an error loading your data. Please try again later.',
-                });
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchData();
-    }, [toast]);
-
-    const handleInvoiceSave = (savedInvoice?: Invoice) => {
-        const fetchData = async () => {
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
             const [fetchedInvoices, fetchedSettings] = await Promise.all([
                 getInvoices(),
                 getSettings()
             ]);
             setInvoices(fetchedInvoices);
             setSettings(fetchedSettings);
+        } catch (error) {
+            console.error(error);
+            toast({
+                variant: 'destructive',
+                title: 'Failed to fetch data',
+                description: 'There was an error loading your data. Please try again later.',
+            });
+        } finally {
+            setIsLoading(false);
         }
+    };
+    
+    useEffect(() => {
         fetchData();
+    }, []);
+
+    const handleInvoiceSave = (savedInvoice?: Invoice) => {
+        fetchData(); // Refetch all data
         setSelectedInvoice(null); // Clear form after saving
         if (savedInvoice) {
             handleDownload(savedInvoice);

@@ -22,32 +22,39 @@ export default function Home() {
     const [settings, setSettings] = useState<Settings | null>(null);
 
 
-    const fetchData = async () => {
-        setIsLoading(true);
-        try {
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const [fetchedInvoices, fetchedSettings] = await Promise.all([
+                    getInvoices(),
+                    getSettings()
+                ]);
+                setInvoices(fetchedInvoices);
+                setSettings(fetchedSettings);
+            } catch (error) {
+                console.error(error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Failed to fetch data',
+                    description: 'There was an error loading your data. Please try again later.',
+                });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchData();
+    }, [toast]);
+
+    const handleInvoiceSave = (savedInvoice?: Invoice) => {
+        const fetchData = async () => {
             const [fetchedInvoices, fetchedSettings] = await Promise.all([
                 getInvoices(),
                 getSettings()
             ]);
             setInvoices(fetchedInvoices);
             setSettings(fetchedSettings);
-        } catch (error) {
-            console.error(error);
-            toast({
-                variant: 'destructive',
-                title: 'Failed to fetch data',
-                description: 'There was an error loading your data. Please try again later.',
-            });
-        } finally {
-            setIsLoading(false);
         }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    const handleInvoiceSave = (savedInvoice?: Invoice) => {
         fetchData();
         setSelectedInvoice(null); // Clear form after saving
         if (savedInvoice) {

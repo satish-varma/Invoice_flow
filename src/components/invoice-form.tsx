@@ -31,6 +31,7 @@ type LineItem = {
 
 interface InvoiceFormProps {
     initialData?: Invoice | null;
+    settings: Settings;
     onInvoiceSave: (savedInvoice?: Invoice) => void;
     onAddNew: () => void;
 }
@@ -49,7 +50,7 @@ const months = [
     "July", "August", "September", "October", "November", "December"
 ];
 
-export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFormProps) {
+export function InvoiceForm({ initialData, settings, onInvoiceSave, onAddNew }: InvoiceFormProps) {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [date, setDate] = useState<Date | undefined>(undefined);
   
@@ -75,7 +76,6 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
   const pathname = usePathname();
   const router = useRouter();
   
-  const [settings, setSettings] = useState<Settings>({ companyProfiles: [], billToContacts: [], shipToContacts: [] });
   const [activeCompanyProfile, setActiveCompanyProfile] = useState<CompanyProfile | null>(null);
 
   const { toast } = useToast();
@@ -108,58 +108,53 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
       setDelivery(prevMonthName);
     }
     
-    async function loadSettingsAndApplyDefaults() {
-        const loadedSettings = await getSettings();
-        setSettings(loadedSettings);
+    // Determine which profile to use
+    let profileToApply: CompanyProfile | undefined;
+    if (initialData?.companyProfileId) {
+        profileToApply = settings.companyProfiles?.find(p => p.id === initialData.companyProfileId);
+    } else if (settings.defaultCompanyProfile) {
+        profileToApply = settings.companyProfiles?.find(p => p.id === settings.defaultCompanyProfile);
+    } else if (settings.companyProfiles && settings.companyProfiles.length > 0) {
+        profileToApply = settings.companyProfiles[0];
+    }
 
-        // Determine which profile to use
-        let profileToApply: CompanyProfile | undefined;
-        if (initialData?.companyProfileId) {
-            profileToApply = loadedSettings.companyProfiles?.find(p => p.id === initialData.companyProfileId);
-        } else if (loadedSettings.defaultCompanyProfile) {
-            profileToApply = loadedSettings.companyProfiles?.find(p => p.id === loadedSettings.defaultCompanyProfile);
-        } else if (loadedSettings.companyProfiles && loadedSettings.companyProfiles.length > 0) {
-            profileToApply = loadedSettings.companyProfiles[0];
-        }
+    if (profileToApply) {
+        setActiveCompanyProfile(profileToApply);
+    }
 
-        if (profileToApply) {
-            setActiveCompanyProfile(profileToApply);
-        }
-
-        // Apply contact defaults only for new invoices
-        if (!initialData) {
-            if (loadedSettings.defaultBillToContact && loadedSettings.billToContacts) {
-                const defaultContact = loadedSettings.billToContacts.find(c => c.id === loadedSettings.defaultBillToContact);
-                if (defaultContact) {
-                    setBillToName(defaultContact.name);
-                    setBillToAddress(defaultContact.address);
-                    setBillToGst(defaultContact.gst);
-                }
+    // Apply contact defaults only for new invoices
+    if (!initialData) {
+        if (settings.defaultBillToContact && settings.billToContacts) {
+            const defaultContact = settings.billToContacts.find(c => c.id === settings.defaultBillToContact);
+            if (defaultContact) {
+                setBillToName(defaultContact.name);
+                setBillToAddress(defaultContact.address);
+                setBillToGst(defaultContact.gst);
             }
-             if (loadedSettings.defaultShipToContact && loadedSettings.shipToContacts) {
-                const defaultContact = loadedSettings.shipToContacts.find(c => c.id === loadedSettings.defaultShipToContact);
-                if (defaultContact) {
-                    setShipToName(defaultContact.name);
-                    setShipToAddress(defaultContact.address);
-                    setShipToGst(defaultContact.gst);
-                    // Also apply taxes from the default ship to contact
-                    if (defaultContact.taxes && defaultContact.taxes.length > 0) {
-                        const taxesToApply = availableTaxes
-                            .filter(tax => defaultContact.taxes!.includes(tax.id))
-                            .map((tax, index) => ({
-                                id: Date.now() + index,
-                                name: tax.name,
-                                rate: tax.rate,
-                                amount: (subtotal * tax.rate) / 100
-                            }));
-                        setAppliedTaxes(taxesToApply);
-                    }
+        }
+         if (settings.defaultShipToContact && settings.shipToContacts) {
+            const defaultContact = settings.shipToContacts.find(c => c.id === settings.defaultShipToContact);
+            if (defaultContact) {
+                setShipToName(defaultContact.name);
+                setShipToAddress(defaultContact.address);
+                setShipToGst(defaultContact.gst);
+                // Also apply taxes from the default ship to contact
+                if (defaultContact.taxes && defaultContact.taxes.length > 0) {
+                    const taxesToApply = availableTaxes
+                        .filter(tax => defaultContact.taxes!.includes(tax.id))
+                        .map((tax, index) => ({
+                            id: Date.now() + index,
+                            name: tax.name,
+                            rate: tax.rate,
+                            amount: (subtotal * tax.rate) / 100
+                        }));
+                    setAppliedTaxes(taxesToApply);
                 }
             }
         }
     }
-    loadSettingsAndApplyDefaults();
-  }, [initialData, subtotal]); // Add subtotal as dependency to re-calculate taxes on default load
+    
+  }, [initialData, settings, subtotal]); // Add subtotal as dependency to re-calculate taxes on default load
 
   useEffect(() => {
       if (initialData) {
@@ -699,5 +694,3 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     </>
   );
 }
-
-    

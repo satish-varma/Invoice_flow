@@ -80,11 +80,11 @@ async function getNextInvoiceNumber(prefix: string): Promise<string> {
 export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & {id?: string}): Promise<Invoice> {
   try {
     let finalInvoiceData: any;
-    let newInvoiceNumber: string | null = null;
+    let docRef;
 
     if (invoice.id) {
       // Update existing invoice
-      const docRef = doc(db, INVOICES_COLLECTION, invoice.id);
+      docRef = doc(db, INVOICES_COLLECTION, invoice.id);
       const { id, ...invoiceData } = invoice;
       await updateDoc(docRef, {
         ...invoiceData,
@@ -102,14 +102,14 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
           }
       }
 
-      newInvoiceNumber = await getNextInvoiceNumber(prefix);
+      const newInvoiceNumber = await getNextInvoiceNumber(prefix);
       const { id, ...invoiceData } = invoice;
       const completeInvoiceData = {
         ...invoiceData,
         invoiceNumber: newInvoiceNumber,
         createdAt: serverTimestamp(),
       }
-      const docRef = await addDoc(collection(db, INVOICES_COLLECTION), completeInvoiceData);
+      docRef = await addDoc(collection(db, INVOICES_COLLECTION), completeInvoiceData);
       
       const newDocSnap = await getDoc(docRef);
       finalInvoiceData = { id: docRef.id, ...newDocSnap.data() };
@@ -119,7 +119,7 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
     const serializableInvoice: Invoice = {
       ...finalInvoiceData,
       // Ensure the invoice number is correctly assigned for new invoices
-      invoiceNumber: newInvoiceNumber || finalInvoiceData.invoiceNumber,
+      invoiceNumber: finalInvoiceData.invoiceNumber,
       // Convert Firestore Timestamp or Date object to ISO string
       date: finalInvoiceData.date instanceof Timestamp ? finalInvoiceData.date.toDate().toISOString() : new Date(finalInvoiceData.date).toISOString(),
       createdAt: finalInvoiceData.createdAt instanceof Timestamp ? finalInvoiceData.createdAt.toDate().toISOString() : new Date().toISOString(),

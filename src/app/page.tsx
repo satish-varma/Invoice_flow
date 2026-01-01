@@ -1,12 +1,12 @@
 
-import { InvoiceContainer } from '@/components/invoice-container';
+import AppLayout from "./(app)/layout";
+import Home from "./(app)/page";
 
-export default function Home() {
+
+export default function App() {
   return (
-    <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
-      <div className="w-full max-w-7xl mx-auto">
-        <InvoiceContainer />
-      </div>
-    </main>
+    <AppLayout>
+      <Home />
+    </AppLayout>
   );
 }

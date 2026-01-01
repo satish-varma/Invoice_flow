@@ -69,11 +69,11 @@ async function getNextChallanNumber(prefix: string): Promise<string> {
 export async function saveChallan(challan: Omit<Challan, 'dcNumber' | 'createdAt'> & {id?: string}): Promise<Challan> {
   try {
     let finalChallanData: any;
-    let newChallanNumber: string | null = null;
+    let docRef;
 
     if (challan.id) {
       // Update existing challan
-      const docRef = doc(db, CHALLANS_COLLECTION, challan.id);
+      docRef = doc(db, CHALLANS_COLLECTION, challan.id);
       const { id, ...challanData } = challan;
       await updateDoc(docRef, {
         ...challanData,
@@ -84,14 +84,14 @@ export async function saveChallan(challan: Omit<Challan, 'dcNumber' | 'createdAt
       // Create new challan
       // Assuming a prefix for challan numbers. This could be stored in settings.
       const prefix = "TGG/SL/";
-      newChallanNumber = await getNextChallanNumber(prefix);
+      const newChallanNumber = await getNextChallanNumber(prefix);
       const { id, ...challanData } = challan;
       const completeChallanData = {
         ...challanData,
         dcNumber: newChallanNumber,
         createdAt: serverTimestamp(),
       }
-      const docRef = await addDoc(collection(db, CHALLANS_COLLECTION), completeChallanData);
+      docRef = await addDoc(collection(db, CHALLANS_COLLECTION), completeChallanData);
       
       const newDocSnap = await getDoc(docRef);
       finalChallanData = { id: docRef.id, ...newDocSnap.data() };
@@ -99,7 +99,7 @@ export async function saveChallan(challan: Omit<Challan, 'dcNumber' | 'createdAt
 
     const serializableChallan: Challan = {
       ...finalChallanData,
-      dcNumber: newChallanNumber || finalChallanData.dcNumber,
+      dcNumber: finalChallanData.dcNumber,
       dcDate: finalChallanData.dcDate instanceof Timestamp ? finalChallanData.dcDate.toDate().toISOString() : new Date(finalChallanData.dcDate).toISOString(),
       createdAt: finalChallanData.createdAt instanceof Timestamp ? finalChallanData.createdAt.toDate().toISOString() : new Date().toISOString(),
     };

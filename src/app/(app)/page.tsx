@@ -107,19 +107,12 @@ export default function Home() {
                 <div className="w-full max-w-7xl mx-auto">
                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2">
-                            {isLoading || !settings ? (
-                                 <div className="flex items-center justify-center h-[500px]">
-                                    <Loader className="h-8 w-8 animate-spin" />
-                                </div>
-                            ) : (
-                                <InvoiceForm 
-                                    key={selectedInvoice?.id || 'new'} 
-                                    initialData={selectedInvoice} 
-                                    onInvoiceSave={handleInvoiceSave} 
-                                    onAddNew={handleAddNew}
-                                    settings={settings}
-                                />
-                            )}
+                            <InvoiceForm 
+                                key={selectedInvoice?.id || 'new'} 
+                                initialData={selectedInvoice} 
+                                onInvoiceSave={handleInvoiceSave} 
+                                onAddNew={handleAddNew}
+                            />
                         </div>
                         <div className="lg:col-span-1">
                             {isLoading ? (

@@ -25,6 +25,8 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Optional: Ensure traces are ignored or handled if they cause issues
+# RUN rm -rf .next/standalone/.next/server/app/**/*.js.nft.json || true
 
 USER nextjs
 EXPOSE 3000

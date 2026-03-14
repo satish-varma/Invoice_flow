@@ -1,0 +1,14 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/invoice-flow:$SHORT_SHA', '.']
+
+  # Push the container image to the registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/invoice-flow:$SHORT_SHA']
+
+images:
+  - 'gcr.io/$PROJECT_ID/invoice-flow:$SHORT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

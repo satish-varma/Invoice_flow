@@ -24,24 +24,45 @@ export default function Home() {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const [fetchedInvoices, fetchedSettings] = await Promise.all([
-                getInvoices(),
-                getSettings()
-            ]);
-            setInvoices(fetchedInvoices);
-            setSettings(fetchedSettings);
+            console.log("Fetching home data...");
+
+            // Try fetching invoices
+            try {
+                const fetchedInvoices = await getInvoices();
+                setInvoices(fetchedInvoices);
+            } catch (invError) {
+                console.error("Error fetching invoices:", invError);
+                toast({
+                    variant: 'destructive',
+                    title: 'Invoices Load Failed',
+                    description: 'Could not load recent invoices.',
+                });
+            }
+
+            // Try fetching settings
+            try {
+                const fetchedSettings = await getSettings();
+                setSettings(fetchedSettings);
+            } catch (setError) {
+                console.error("Error fetching settings:", setError);
+                toast({
+                    variant: 'destructive',
+                    title: 'Settings Load Failed',
+                    description: 'Could not load application settings.',
+                });
+            }
         } catch (error) {
-            console.error(error);
+            console.error("Unexpected error in fetchData:", error);
             toast({
                 variant: 'destructive',
-                title: 'Failed to fetch data',
-                description: 'There was an error loading your data. Please try again later.',
+                title: 'Data Load Critical Error',
+                description: 'An unexpected error occurred while loading home data.',
             });
         } finally {
             setIsLoading(false);
         }
     };
-    
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -57,7 +78,7 @@ export default function Home() {
     const handleSelectInvoice = (invoice: Invoice) => {
         setSelectedInvoice(invoice);
     }
-    
+
     const handleAddNew = () => {
         setSelectedInvoice(null);
     }
@@ -73,16 +94,16 @@ export default function Home() {
                 if (invoicePreviewRef.current) {
                     const element = invoicePreviewRef.current;
                     const fileName = `invoice-${invoiceToDownload.invoiceNumber || 'untitled'}.pdf`;
-                    
+
                     try {
                         await generateAndSavePdf(element, fileName);
-                    } catch(error) {
-                         console.error("Error generating PDF:", error);
-                         toast({
-                             variant: 'destructive',
-                             title: 'Download Failed',
-                             description: 'There was an error generating the PDF for download.',
-                         });
+                    } catch (error) {
+                        console.error("Error generating PDF:", error);
+                        toast({
+                            variant: 'destructive',
+                            title: 'Download Failed',
+                            description: 'There was an error generating the PDF for download.',
+                        });
                     } finally {
                         setInvoiceToDownload(null);
                     }
@@ -97,12 +118,12 @@ export default function Home() {
         <AppShell>
             <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
                 <div className="w-full max-w-7xl mx-auto">
-                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2">
-                            <InvoiceForm 
-                                key={selectedInvoice?.id || 'new'} 
-                                initialData={selectedInvoice} 
-                                onInvoiceSave={handleInvoiceSave} 
+                            <InvoiceForm
+                                key={selectedInvoice?.id || 'new'}
+                                initialData={selectedInvoice}
+                                onInvoiceSave={handleInvoiceSave}
                                 onAddNew={handleAddNew}
                             />
                         </div>
@@ -112,8 +133,8 @@ export default function Home() {
                                     <Loader className="h-8 w-8 animate-spin" />
                                 </div>
                             ) : (
-                                <InvoiceList 
-                                    invoices={invoices} 
+                                <InvoiceList
+                                    invoices={invoices}
                                     onSelectInvoice={handleSelectInvoice}
                                     onDownloadInvoice={handleDownload}
                                 />

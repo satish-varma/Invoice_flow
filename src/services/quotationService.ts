@@ -178,7 +178,8 @@ export async function getQuotations(): Promise<Quotation[]> {
     return JSON.parse(JSON.stringify(quotations));
   } catch (error) {
     console.error("Error in getQuotations:", error);
-    throw error;
+    // Return an empty array on error to prevent crashing the client
+    return [];
   }
 }
 

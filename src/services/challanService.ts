@@ -158,7 +158,8 @@ export async function getChallans(): Promise<Challan[]> {
     return JSON.parse(JSON.stringify(challans));
   } catch (error) {
     console.error("Error in getChallans:", error);
-    throw error;
+    // Return an empty array on error to prevent crashing the client
+    return [];
   }
 }
 

@@ -65,11 +65,42 @@ export async function getSettings(): Promise<Settings> {
         let result: Settings;
 
         if (docSnap.exists()) {
-            const data = docSnap.data() as Settings;
-            // Ensure arrays exist to prevent downstream errors
+            const data = docSnap.data();
+            // Ensure arrays exist to prevent downstream errors and explicitly pick fields
             result = {
-                ...defaultSettings,
-                ...data,
+                companyProfiles: (data.companyProfiles || []).map((p: any) => ({
+                    id: p.id || "",
+                    profileName: p.profileName || "",
+                    companyName: p.companyName || "",
+                    companyAddress: p.companyAddress || "",
+                    companyGstin: p.companyGstin || "",
+                    companyPan: p.companyPan || "",
+                    invoicePrefix: p.invoicePrefix || "",
+                    bankBeneficiary: p.bankBeneficiary || "",
+                    bankName: p.bankName || "",
+                    bankAccount: p.bankAccount || "",
+                    bankIfsc: p.bankIfsc || "",
+                    bankBranch: p.bankBranch || "",
+                    stampLogoUrl: p.stampLogoUrl || "",
+                })),
+                defaultCompanyProfile: data.defaultCompanyProfile || "",
+                billToContacts: (data.billToContacts || []).map((c: any) => ({
+                    id: c.id || "",
+                    displayName: c.displayName || "",
+                    name: c.name || "",
+                    address: c.address || "",
+                    gst: c.gst || "",
+                })),
+                shipToContacts: (data.shipToContacts || []).map((c: any) => ({
+                    id: c.id || "",
+                    displayName: c.displayName || "",
+                    name: c.name || "",
+                    address: c.address || "",
+                    gst: c.gst || "",
+                    taxes: c.taxes || [],
+                })),
+                defaultBillToContact: data.defaultBillToContact || "",
+                defaultShipToContact: data.defaultShipToContact || "",
             };
         } else {
             // The document doesn't exist. Instead of writing here, we return a default object.
@@ -83,8 +114,13 @@ export async function getSettings(): Promise<Settings> {
 
     } catch (error) {
         console.error("Error fetching settings: ", error);
-        // Return a safe default object in case of any error
-        return { companyProfiles: [], billToContacts: [], shipToContacts: [] };
+        // Return a safe default object in case of any error instead of throwing
+        // This ensures the client always gets a valid response structure
+        return {
+            companyProfiles: [],
+            billToContacts: [],
+            shipToContacts: []
+        };
     }
 }
 

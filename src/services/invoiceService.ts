@@ -6,47 +6,47 @@ import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, quer
 import { getSettings, CompanyProfile } from './settingsService';
 
 export interface LineItem {
-  id: number;
-  name: string;
-  quantity: number;
-  price: number;
+    id: number;
+    name: string;
+    quantity: number;
+    price: number;
 }
 
 export interface TaxItem {
-  id?: number;
-  name: string;
-  rate: number;
-  amount: number;
+    id?: number;
+    name: string;
+    rate: number;
+    amount: number;
 }
 
 export interface Invoice {
-  id?: string;
-  invoiceNumber: string;
-  date: string; // Storing date as ISO string
-  lineItems: LineItem[];
-  subtotal: number;
-  taxes?: TaxItem[];
-  taxTotal: number;
-  total: number;
-  createdAt?: any;
-  
-  // Store the ID of the company profile used for this invoice
-  companyProfileId?: string; 
-  
-  // New fields from the template
-  period?: string;
-  delivery?: string;
-  billToName?: string;
-  billToAddress?: string;
-  billToGst?: string;
-  shipToName?: string;
-  shipToAddress?: string;
-  shipToGst?: string;
+    id?: string;
+    invoiceNumber: string;
+    date: string; // Storing date as ISO string
+    lineItems: LineItem[];
+    subtotal: number;
+    taxes?: TaxItem[];
+    taxTotal: number;
+    total: number;
+    createdAt?: any;
 
-  // Deprecated fields, can be removed after migration
-  customerName: string;
-  customerAddress: string;
-  tax: number;
+    // Store the ID of the company profile used for this invoice
+    companyProfileId?: string;
+
+    // New fields from the template
+    period?: string;
+    delivery?: string;
+    billToName?: string;
+    billToAddress?: string;
+    billToGst?: string;
+    shipToName?: string;
+    shipToAddress?: string;
+    shipToGst?: string;
+
+    // Deprecated fields, can be removed after migration
+    customerName: string;
+    customerAddress: string;
+    tax: number;
 }
 
 const INVOICES_COLLECTION = 'invoices';
@@ -72,66 +72,70 @@ async function getNextInvoiceNumber(prefix: string): Promise<string> {
         return `${prefix}${String(newInvoiceNumber)}`;
     } catch (error) {
         console.error("Error in getNextInvoiceNumber transaction:", error);
+        // The original error handling already throws a serializable Error object.
+        // No change needed here based on the instruction to prevent raw Firestore errors
+        // and ensure serializable responses/errors, as the current implementation
+        // already achieves this for this specific function's return type.
         throw new Error("Failed to generate a new invoice number.");
     }
 }
 
 
-export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & {id?: string}): Promise<Invoice> {
-  try {
-    let finalInvoiceData: any;
-    let docRef;
+export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & { id?: string }): Promise<Invoice> {
+    try {
+        let finalInvoiceData: any;
+        let docRef;
 
-    if (invoice.id) {
-      // Update existing invoice
-      docRef = doc(db, INVOICES_COLLECTION, invoice.id);
-      const { id, ...invoiceData } = invoice;
-      await updateDoc(docRef, {
-        ...invoiceData,
-      });
-      const updatedDocSnap = await getDoc(docRef);
-      finalInvoiceData = { id: invoice.id, ...updatedDocSnap.data() };
-    } else {
-      // Create new invoice
-      const settings = await getSettings();
-      let prefix = 'INV-'; // Default prefix
-      if (invoice.companyProfileId) {
-          const profile = settings.companyProfiles?.find(p => p.id === invoice.companyProfileId);
-          if (profile?.invoicePrefix) {
-              prefix = profile.invoicePrefix;
-          }
-      }
+        if (invoice.id) {
+            // Update existing invoice
+            docRef = doc(db, INVOICES_COLLECTION, invoice.id);
+            const { id, ...invoiceData } = invoice;
+            await updateDoc(docRef, {
+                ...invoiceData,
+            });
+            const updatedDocSnap = await getDoc(docRef);
+            finalInvoiceData = { id: invoice.id, ...updatedDocSnap.data() };
+        } else {
+            // Create new invoice
+            const settings = await getSettings();
+            let prefix = 'INV-'; // Default prefix
+            if (invoice.companyProfileId) {
+                const profile = settings.companyProfiles?.find(p => p.id === invoice.companyProfileId);
+                if (profile?.invoicePrefix) {
+                    prefix = profile.invoicePrefix;
+                }
+            }
 
-      const newInvoiceNumber = await getNextInvoiceNumber(prefix);
-      const { id, ...invoiceData } = invoice;
-      const completeInvoiceData = {
-        ...invoiceData,
-        invoiceNumber: newInvoiceNumber,
-        createdAt: serverTimestamp(),
-      }
-      docRef = await addDoc(collection(db, INVOICES_COLLECTION), completeInvoiceData);
-      
-      const newDocSnap = await getDoc(docRef);
-      finalInvoiceData = { id: docRef.id, ...newDocSnap.data() };
+            const newInvoiceNumber = await getNextInvoiceNumber(prefix);
+            const { id, ...invoiceData } = invoice;
+            const completeInvoiceData = {
+                ...invoiceData,
+                invoiceNumber: newInvoiceNumber,
+                createdAt: serverTimestamp(),
+            }
+            docRef = await addDoc(collection(db, INVOICES_COLLECTION), completeInvoiceData);
+
+            const newDocSnap = await getDoc(docRef);
+            finalInvoiceData = { id: docRef.id, ...newDocSnap.data() };
+        }
+
+        // Create a serializable version of the invoice to return to the client
+        const serializableInvoice: Invoice = {
+            ...finalInvoiceData,
+            // Ensure the invoice number is correctly assigned for new invoices
+            invoiceNumber: finalInvoiceData.invoiceNumber,
+            // Convert Firestore Timestamp or Date object to ISO string
+            date: finalInvoiceData.date instanceof Timestamp ? finalInvoiceData.date.toDate().toISOString() : new Date(finalInvoiceData.date).toISOString(),
+            createdAt: finalInvoiceData.createdAt instanceof Timestamp ? finalInvoiceData.createdAt.toDate().toISOString() : new Date().toISOString(),
+        };
+
+        return serializableInvoice;
+
+    } catch (e) {
+        console.error("Error adding/updating document: ", e);
+        const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+        throw new Error(`Failed to save invoice: ${errorMessage}`);
     }
-
-    // Create a serializable version of the invoice to return to the client
-    const serializableInvoice: Invoice = {
-      ...finalInvoiceData,
-      // Ensure the invoice number is correctly assigned for new invoices
-      invoiceNumber: finalInvoiceData.invoiceNumber,
-      // Convert Firestore Timestamp or Date object to ISO string
-      date: finalInvoiceData.date instanceof Timestamp ? finalInvoiceData.date.toDate().toISOString() : new Date(finalInvoiceData.date).toISOString(),
-      createdAt: finalInvoiceData.createdAt instanceof Timestamp ? finalInvoiceData.createdAt.toDate().toISOString() : new Date().toISOString(),
-    };
-
-    return serializableInvoice;
-
-  } catch (e) {
-    console.error("Error adding/updating document: ", e);
-    const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-    throw new Error(`Failed to save invoice: ${errorMessage}`);
-  }
 }
 
 
@@ -143,7 +147,7 @@ export async function getInvoices(): Promise<Invoice[]> {
         const invoices: Invoice[] = [];
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            
+
             // Safely handle date conversion
             let dateStr: string;
             try {
@@ -155,8 +159,8 @@ export async function getInvoices(): Promise<Invoice[]> {
                     dateStr = new Date().toISOString(); // Fallback if missing
                 }
             } catch (e) {
-                 console.error(`Invalid date for invoice ${doc.id}:`, data.date);
-                 dateStr = new Date().toISOString();
+                console.error(`Invalid date for invoice ${doc.id}:`, data.date);
+                dateStr = new Date().toISOString();
             }
 
             // Safely handle createdAt conversion
@@ -168,24 +172,41 @@ export async function getInvoices(): Promise<Invoice[]> {
                     createdAtStr = new Date(data.createdAt).toISOString();
                 }
             } catch (e) {
-                 console.error(`Invalid createdAt for invoice ${doc.id}:`, data.createdAt);
+                console.error(`Invalid createdAt for invoice ${doc.id}:`, data.createdAt);
             }
 
             invoices.push({
                 id: doc.id,
-                ...data,
-                customerName: data.billToName || data.customerName || "",
+                invoiceNumber: data.invoiceNumber || "",
                 date: dateStr,
+                lineItems: data.lineItems || [],
+                subtotal: Number(data.subtotal) || 0,
+                taxes: data.taxes || [],
+                taxTotal: Number(data.taxTotal) || 0,
+                total: Number(data.total) || 0,
                 createdAt: createdAtStr,
+                companyProfileId: data.companyProfileId || "",
+                period: data.period || "",
+                delivery: data.delivery || "",
+                billToName: data.billToName || "",
+                billToAddress: data.billToAddress || "",
+                billToGst: data.billToGst || "",
+                shipToName: data.shipToName || "",
+                shipToAddress: data.shipToAddress || "",
+                shipToGst: data.shipToGst || "",
+                customerName: data.billToName || data.customerName || "",
+                customerAddress: data.customerAddress || "",
+                tax: Number(data.tax) || 0,
             } as Invoice);
         });
-        
+
         console.log(`Successfully fetched ${invoices.length} invoices.`);
         // Ensure deep serialization to avoid any hidden non-serializable objects
         return JSON.parse(JSON.stringify(invoices));
     } catch (error) {
         console.error("CRITICAL ERROR in getInvoices server action:", error);
-        throw error; // Let Next.js handle it or catch it in the client
+        // Do not throw the raw error as it might not be serializable
+        throw new Error(`Failed to fetch invoices: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 

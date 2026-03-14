@@ -35,7 +35,7 @@ export default function Home() {
                 toast({
                     variant: 'destructive',
                     title: 'Invoices Load Failed',
-                    description: 'Could not load recent invoices.',
+                    description: invError instanceof Error ? invError.message : 'Could not load recent invoices.',
                 });
             }
 
@@ -48,7 +48,7 @@ export default function Home() {
                 toast({
                     variant: 'destructive',
                     title: 'Settings Load Failed',
-                    description: 'Could not load application settings.',
+                    description: setError instanceof Error ? setError.message : 'Could not load application settings.',
                 });
             }
         } catch (error) {
@@ -56,7 +56,7 @@ export default function Home() {
             toast({
                 variant: 'destructive',
                 title: 'Data Load Critical Error',
-                description: 'An unexpected error occurred while loading home data.',
+                description: error instanceof Error ? error.message : 'An unexpected error occurred while loading home data.',
             });
         } finally {
             setIsLoading(false);

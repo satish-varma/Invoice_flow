@@ -45,6 +45,8 @@ export interface Settings {
     defaultShipToContact?: string; // Storing ID of the default contact
     currency?: string; // e.g., "INR", "USD"
     currencySymbol?: string; // e.g., "₹", "$"
+    pdfTemplate?: string; // e.g., "classic", "modern", "minimal"
+    primaryColor?: string; // Hex color
 }
 
 const SETTINGS_COLLECTION = 'settings';
@@ -103,6 +105,8 @@ export async function getSettings(): Promise<Settings> {
                 defaultShipToContact: data.defaultShipToContact || "",
                 currency: data.currency || "INR",
                 currencySymbol: data.currencySymbol || "₹",
+                pdfTemplate: data.pdfTemplate || "classic",
+                primaryColor: data.primaryColor || "#3b82f6", // Default blue-500
             };
         } else {
             // The document doesn't exist. Instead of writing here, we return a default object.

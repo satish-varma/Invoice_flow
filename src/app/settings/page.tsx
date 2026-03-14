@@ -618,26 +618,79 @@ export default function SettingsPage() {
                                 <CardDescription>Manage global settings like currency and locale.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label>Currency</Label>
-                                        <Select
-                                            value={settings.currency || 'INR'}
-                                            onValueChange={(val) => {
-                                                const symbol = val === 'USD' ? '$' : val === 'EUR' ? '€' : val === 'GBP' ? '£' : '₹';
-                                                handleSaveGeneralSettings({ currency: val, currencySymbol: symbol });
-                                            }}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select currency" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="INR">Indian Rupee (₹)</SelectItem>
-                                                <SelectItem value="USD">US Dollar ($)</SelectItem>
-                                                <SelectItem value="EUR">Euro (€)</SelectItem>
-                                                <SelectItem value="GBP">British Pound (£)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                <div className="grid md:grid-cols-2 gap-8">
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label>Currency</Label>
+                                            <Select
+                                                value={settings.currency || 'INR'}
+                                                onValueChange={(val) => {
+                                                    const symbol = val === 'USD' ? '$' : val === 'EUR' ? '€' : val === 'GBP' ? '£' : '₹';
+                                                    handleSaveGeneralSettings({ currency: val, currencySymbol: symbol });
+                                                }}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select currency" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="INR">Indian Rupee (₹)</SelectItem>
+                                                    <SelectItem value="USD">US Dollar ($)</SelectItem>
+                                                    <SelectItem value="EUR">Euro (€)</SelectItem>
+                                                    <SelectItem value="GBP">British Pound (£)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label>PDF Template</Label>
+                                            <Select
+                                                value={settings.pdfTemplate || 'classic'}
+                                                onValueChange={(val) => handleSaveGeneralSettings({ pdfTemplate: val })}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select template" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="classic">Classic (Traditional)</SelectItem>
+                                                    <SelectItem value="modern">Modern (Professional)</SelectItem>
+                                                    <SelectItem value="minimal">Minimal (Clean)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <p className='text-xs text-muted-foreground'>Choose the layout for your generated invoices.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label>Brand Color</Label>
+                                            <div className='flex flex-wrap gap-2 mb-4'>
+                                                {['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#000000'].map(color => (
+                                                    <button
+                                                        key={color}
+                                                        className={`w-8 h-8 rounded-full border-2 transition-all ${settings.primaryColor === color ? 'border-primary scale-110 shadow-md' : 'border-transparent'}`}
+                                                        style={{ backgroundColor: color }}
+                                                        onClick={() => handleSaveGeneralSettings({ primaryColor: color })}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <div className='flex items-center gap-2'>
+                                                <Input
+                                                    type="text"
+                                                    value={settings.primaryColor || '#3b82f6'}
+                                                    onChange={e => setSettings(prev => ({ ...prev, primaryColor: e.target.value }))}
+                                                    className='w-32 font-mono h-8'
+                                                />
+                                                <Button
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    onClick={() => handleSaveGeneralSettings({ primaryColor: settings.primaryColor })}
+                                                    className='h-8'
+                                                >
+                                                    Apply
+                                                </Button>
+                                            </div>
+                                            <p className='text-xs text-muted-foreground mt-2'>This color will be used for headings and accents in 'Modern' template.</p>
+                                        </div>
                                     </div>
                                 </div>
                             </CardContent>

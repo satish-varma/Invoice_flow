@@ -43,6 +43,8 @@ export interface Settings {
     shipToContacts?: ShipToContact[];
     defaultBillToContact?: string; // Storing ID of the default contact
     defaultShipToContact?: string; // Storing ID of the default contact
+    currency?: string; // e.g., "INR", "USD"
+    currencySymbol?: string; // e.g., "₹", "$"
 }
 
 const SETTINGS_COLLECTION = 'settings';
@@ -99,6 +101,8 @@ export async function getSettings(): Promise<Settings> {
                 })),
                 defaultBillToContact: data.defaultBillToContact || "",
                 defaultShipToContact: data.defaultShipToContact || "",
+                currency: data.currency || "INR",
+                currencySymbol: data.currencySymbol || "₹",
             };
         } else {
             // The document doesn't exist. Instead of writing here, we return a default object.
@@ -364,3 +368,12 @@ export async function setDefaultShipToContact(id: string): Promise<void> {
 
 
 
+export async function saveGeneralSettings(updates: Partial<Settings>): Promise<void> {
+    try {
+        const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
+        await setDoc(settingsRef, updates, { merge: true });
+    } catch (error) {
+        console.error("Error saving general settings: ", error);
+        throw new Error("Failed to save settings.");
+    }
+}

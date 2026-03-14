@@ -12,7 +12,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'InvoiceFlow v2.2',
+  title: 'InvoiceFlow',
   description: 'Generate, manage, and download professional-looking invoices.',
 };
 

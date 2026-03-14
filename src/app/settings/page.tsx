@@ -24,7 +24,8 @@ import {
     BillToContact,
     ShipToContact,
     Settings,
-    CompanyProfile
+    CompanyProfile,
+    saveGeneralSettings
 } from '@/services/settingsService';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Loader, PlusCircle, Pencil, Trash2, Star, Save } from 'lucide-react';
@@ -34,6 +35,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 export const availableTaxes = [
@@ -66,25 +68,25 @@ const initialCompanyProfile: Omit<CompanyProfile, 'id'> = {
     stampLogoUrl: '',
 };
 
-const initialBillToState: Omit<BillToContact, 'id'> = { 
+const initialBillToState: Omit<BillToContact, 'id'> = {
     displayName: '', name: '', address: '', gst: ''
 };
 
-const initialShipToState: Omit<ShipToContact, 'id'> = { 
-    displayName: '', name: '', address: '', gst: '', taxes: [] 
+const initialShipToState: Omit<ShipToContact, 'id'> = {
+    displayName: '', name: '', address: '', gst: '', taxes: []
 };
 
 
 export default function SettingsPage() {
     const [settings, setSettings] = useState<Settings>({ companyProfiles: [], billToContacts: [], shipToContacts: [] });
-    
+
     const [newBillTo, setNewBillTo] = useState<Omit<BillToContact, 'id'>>(initialBillToState);
     const [newShipTo, setNewShipTo] = useState<Omit<ShipToContact, 'id'>>(initialShipToState);
-    
+
     const [editingContact, setEditingContact] = useState<BillToContact | ShipToContact | null>(null);
     const [editingContactType, setEditingContactType] = useState<ContactType | null>(null);
     const [isContactEditDialogOpen, setIsContactEditDialogOpen] = useState(false);
-    
+
     const [editingProfile, setEditingProfile] = useState<CompanyProfile | null>(null);
     const [isProfileEditDialogOpen, setIsProfileEditDialogOpen] = useState(false);
     const [stampPreview, setStampPreview] = useState<string | null>(null);
@@ -100,7 +102,7 @@ export default function SettingsPage() {
             const loadedSettings = await getSettings();
             setSettings(loadedSettings);
         } catch (e) {
-            toast({ variant: 'destructive', title: 'Failed to load settings.'})
+            toast({ variant: 'destructive', title: 'Failed to load settings.' })
         } finally {
             setIsLoading(false);
         }
@@ -126,7 +128,7 @@ export default function SettingsPage() {
             setEditingContact(updater);
         }
     };
-    
+
     const renderTaxesSelector = (form: 'newShipTo' | 'editContact', contactData: any) => (
         <div className="space-y-2">
             <Label>Applicable Taxes</Label>
@@ -237,7 +239,7 @@ export default function SettingsPage() {
             setIsSaving(false);
         }
     };
-    
+
     const handleDeleteContact = async (type: ContactType, id: string) => {
         setIsSaving(true);
         try {
@@ -267,20 +269,20 @@ export default function SettingsPage() {
             await loadSettings();
             toast({ title: "Default Set", description: `The default ${type === 'billTo' ? '"Bill To"' : '"Ship To"'} contact has been updated.` });
         } catch (error) {
-             console.error(`Failed to set default ${type} contact:`, error);
+            console.error(`Failed to set default ${type} contact:`, error);
             toast({ variant: "destructive", title: "Update Failed", description: `Could not set the default contact. Please try again.` });
         } finally {
             setIsSaving(false);
         }
     }
-    
+
     // Company Profile handlers
     const handleAddNewProfile = () => {
-        setEditingProfile({ ...initialCompanyProfile, id: ''});
+        setEditingProfile({ ...initialCompanyProfile, id: '' });
         setStampPreview(null);
         setIsProfileEditDialogOpen(true);
     }
-    
+
     const handleEditProfileClick = (profile: CompanyProfile) => {
         setEditingProfile(JSON.parse(JSON.stringify(profile)));
         setStampPreview(profile.stampLogoUrl);
@@ -327,7 +329,7 @@ export default function SettingsPage() {
             setIsSaving(false);
         }
     };
-    
+
     const handleSetDefaultProfile = async (id: string) => {
         setIsSaving(true);
         try {
@@ -341,6 +343,18 @@ export default function SettingsPage() {
             setIsSaving(false);
         }
     }
+    const handleSaveGeneralSettings = async (updates: Partial<Settings>) => {
+        setIsSaving(true);
+        try {
+            await saveGeneralSettings(updates);
+            setSettings(prev => ({ ...prev, ...updates }));
+            toast({ title: "Settings Saved", description: "Your general preferences have been updated." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to save general settings." });
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const renderProfileForm = (profile: CompanyProfile | Omit<CompanyProfile, 'id'>) => {
         return (
@@ -370,14 +384,14 @@ export default function SettingsPage() {
                         </div>
                     </AccordionContent>
                 </AccordionItem>
-                 <AccordionItem value="item-2">
+                <AccordionItem value="item-2">
                     <AccordionTrigger>Invoice Numbering</AccordionTrigger>
                     <AccordionContent className="pt-4">
-                         <div className="space-y-2">
+                        <div className="space-y-2">
                             <Label>Invoice Number Prefix</Label>
                             <Input value={profile.invoicePrefix ?? ''} onChange={e => handleProfileInputChange('invoicePrefix', e.target.value)} placeholder="e.g., INV-2024-" />
                             <p className='text-xs text-muted-foreground'>The invoice number will be this prefix followed by an auto-incrementing number.</p>
-                         </div>
+                        </div>
                     </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-3">
@@ -393,12 +407,12 @@ export default function SettingsPage() {
                 <AccordionItem value="item-4">
                     <AccordionTrigger>Company Stamp/Logo</AccordionTrigger>
                     <AccordionContent className="pt-4">
-                         <div className="space-y-2">
+                        <div className="space-y-2">
                             <Label>Upload Image</Label>
                             <Input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg" />
                             <p className='text-xs text-muted-foreground'>Upload a PNG or JPG file. This will appear on the invoice.</p>
                             {stampPreview && <img src={stampPreview} alt="Stamp Preview" className="mt-4 max-h-24 border p-2 rounded-md" />}
-                         </div>
+                        </div>
                     </AccordionContent>
                 </AccordionItem>
             </Accordion>
@@ -419,7 +433,7 @@ export default function SettingsPage() {
             <div className="w-full max-w-6xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                         <Button variant="outline" asChild>
+                        <Button variant="outline" asChild>
                             <Link href="/">
                                 <ArrowLeft className="mr-2 h-4 w-4" />
                                 Back to Create
@@ -434,10 +448,11 @@ export default function SettingsPage() {
                     <TabsList className='mb-4'>
                         <TabsTrigger value="company">Company Profiles</TabsTrigger>
                         <TabsTrigger value="contacts">Contacts</TabsTrigger>
+                        <TabsTrigger value="general">General</TabsTrigger>
                     </TabsList>
                     <TabsContent value="company">
                         <Card>
-                             <CardHeader>
+                            <CardHeader>
                                 <CardTitle>Company Profiles</CardTitle>
                                 <CardDescription>Manage the "From" details that appear on your invoices. You can create multiple profiles.</CardDescription>
                             </CardHeader>
@@ -460,7 +475,7 @@ export default function SettingsPage() {
                                     <div className="text-center text-muted-foreground py-8">No company profiles created yet.</div>
                                 )}
                             </CardContent>
-                             <CardFooter>
+                            <CardFooter>
                                 <Button onClick={handleAddNewProfile} disabled={isSaving}>
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Add New Profile
@@ -478,7 +493,7 @@ export default function SettingsPage() {
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div className="p-4 border rounded-lg space-y-4">
-                                       <h3 className="font-bold">Add New "Bill To" Contact</h3>
+                                        <h3 className="font-bold">Add New "Bill To" Contact</h3>
                                         <div className="space-y-2">
                                             <Label htmlFor="billToDisplayName">Display Name (Unique)</Label>
                                             <Input id="billToDisplayName" placeholder="e.g., Main Client" value={newBillTo.displayName} onChange={e => handleInputChange('newBillTo', 'displayName', e.target.value)} />
@@ -499,7 +514,7 @@ export default function SettingsPage() {
                                             {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />} Add Bill To
                                         </Button>
                                     </div>
-                                     <div className="space-y-2">
+                                    <div className="space-y-2">
                                         <h3 className="font-bold">Saved "Bill To" Contacts</h3>
                                         <div className="rounded-md border overflow-x-auto">
                                             <Table>
@@ -532,15 +547,15 @@ export default function SettingsPage() {
                                 </CardContent>
                             </Card>
 
-                             {/* Ship To Section */}
+                            {/* Ship To Section */}
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Manage "Ship To" Contacts</CardTitle>
                                     <CardDescription>Add, view, and remove shipping contacts.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                     <div className="p-4 border rounded-lg space-y-4">
-                                       <h3 className="font-bold">Add New "Ship To" Contact</h3>
+                                    <div className="p-4 border rounded-lg space-y-4">
+                                        <h3 className="font-bold">Add New "Ship To" Contact</h3>
                                         <div className="space-y-2">
                                             <Label htmlFor="shipToDisplayName">Display Name (Unique)</Label>
                                             <Input id="shipToDisplayName" placeholder="e.g., Warehouse" value={newShipTo.displayName} onChange={e => handleInputChange('newShipTo', 'displayName', e.target.value)} />
@@ -580,7 +595,7 @@ export default function SettingsPage() {
                                                             <TableCell className="font-medium">{c.displayName}</TableCell>
                                                             <TableCell>{c.name}</TableCell>
                                                             <TableCell className="text-right">
-                                                                 <Button variant="ghost" size="icon" onClick={() => handleSetDefaultContact('shipTo', c.id)} disabled={isSaving} title="Make Default">
+                                                                <Button variant="ghost" size="icon" onClick={() => handleSetDefaultContact('shipTo', c.id)} disabled={isSaving} title="Make Default">
                                                                     <Star className={`h-4 w-4 ${settings.defaultShipToContact === c.id ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'}`} />
                                                                 </Button>
                                                                 <Button variant="ghost" size="icon" onClick={() => handleEditContactClick(c, 'shipTo')} disabled={isSaving}><Pencil className="h-4 w-4" /></Button>
@@ -596,6 +611,38 @@ export default function SettingsPage() {
                             </Card>
                         </div>
                     </TabsContent>
+                    <TabsContent value="general">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>General Preferences</CardTitle>
+                                <CardDescription>Manage global settings like currency and locale.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <Label>Currency</Label>
+                                        <Select
+                                            value={settings.currency || 'INR'}
+                                            onValueChange={(val) => {
+                                                const symbol = val === 'USD' ? '$' : val === 'EUR' ? '€' : val === 'GBP' ? '£' : '₹';
+                                                handleSaveGeneralSettings({ currency: val, currencySymbol: symbol });
+                                            }}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select currency" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="INR">Indian Rupee (₹)</SelectItem>
+                                                <SelectItem value="USD">US Dollar ($)</SelectItem>
+                                                <SelectItem value="EUR">Euro (€)</SelectItem>
+                                                <SelectItem value="GBP">British Pound (£)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
                 </Tabs>
 
             </div>
@@ -607,7 +654,7 @@ export default function SettingsPage() {
                             <DialogTitle>{editingProfile.id ? 'Edit' : 'Add New'} Company Profile</DialogTitle>
                         </DialogHeader>
                         <div className="max-h-[70vh] overflow-y-auto p-1">
-                          {renderProfileForm(editingProfile)}
+                            {renderProfileForm(editingProfile)}
                         </div>
                         <DialogFooter>
                             <DialogClose asChild><Button variant="outline" onClick={() => setEditingProfile(null)}>Cancel</Button></DialogClose>
@@ -643,7 +690,7 @@ export default function SettingsPage() {
                                 <Label htmlFor="editGst">GSTIN</Label>
                                 <Input id="editGst" value={editingContact.gst} onChange={e => handleInputChange('editContact', 'gst', e.target.value)} />
                             </div>
-                             {editingContactType === 'shipTo' && renderTaxesSelector('editContact', editingContact)}
+                            {editingContactType === 'shipTo' && renderTaxesSelector('editContact', editingContact)}
                         </div>
                         <DialogFooter>
                             <DialogClose asChild><Button variant="outline" onClick={() => setEditingContact(null)}>Cancel</Button></DialogClose>

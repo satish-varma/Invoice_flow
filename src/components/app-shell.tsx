@@ -54,7 +54,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
         <SidebarHeader>
           <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
             <h1 className="text-xl font-bold text-sidebar-primary group-data-[collapsible=icon]:hidden">
-              InvoiceFlow v2.2
+              InvoiceFlow
             </h1>
             <SidebarTrigger className="group-data-[collapsible=icon]:hidden" />
           </div>
@@ -114,7 +114,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
       <SidebarInset>
         <header className="flex items-center p-2 border-b md:hidden">
           <SidebarTrigger />
-          <h1 className="text-lg font-bold ml-2">InvoiceFlow v2.2</h1>
+          <h1 className="text-lg font-bold ml-2">InvoiceFlow</h1>
         </header>
         {children}
       </SidebarInset>

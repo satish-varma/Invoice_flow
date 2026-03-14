@@ -25,9 +25,9 @@ export interface Challan {
   total: number;
   note?: string;
   createdAt?: any;
-  
-  companyProfileId?: string; 
-  
+
+  companyProfileId?: string;
+
   billToName?: string;
   billToAddress?: string;
   shipToName?: string;
@@ -38,35 +38,35 @@ const CHALLANS_COLLECTION = 'challans';
 const COUNTER_DOCUMENT = 'challanCounter';
 
 async function getNextChallanNumber(prefix: string): Promise<string> {
-    const counterRef = doc(db, 'counters', COUNTER_DOCUMENT);
+  const counterRef = doc(db, 'counters', COUNTER_DOCUMENT);
 
-    try {
-        const newChallanNumber = await runTransaction(db, async (transaction) => {
-            const counterDoc = await transaction.get(counterRef);
-            let nextNumber = 1;
-            if (counterDoc.exists()) {
-                const data = counterDoc.data();
-                const currentNumber = data?.currentNumber ?? 0;
-                nextNumber = currentNumber + 1;
-            }
-            transaction.set(counterRef, { currentNumber: nextNumber }, { merge: true });
-            return nextNumber;
-        });
-        
-        // Format to TGG/SL/24-25/2210 style, assuming prefix is TGG/SL/ and we need to format number
-        const year = new Date().getFullYear().toString().slice(-2);
-        const nextYear = (parseInt(year) + 1).toString();
-        // This is a simplified version. A real app might need more robust logic for the number part.
-        return `${prefix}${year}-${nextYear}/${newChallanNumber}`;
+  try {
+    const newChallanNumber = await runTransaction(db, async (transaction) => {
+      const counterDoc = await transaction.get(counterRef);
+      let nextNumber = 1;
+      if (counterDoc.exists()) {
+        const data = counterDoc.data();
+        const currentNumber = data?.currentNumber ?? 0;
+        nextNumber = currentNumber + 1;
+      }
+      transaction.set(counterRef, { currentNumber: nextNumber }, { merge: true });
+      return nextNumber;
+    });
 
-    } catch (error) {
-        console.error("Error in getNextChallanNumber transaction:", error);
-        throw new Error("Failed to generate a new challan number.");
-    }
+    // Format to TGG/SL/24-25/2210 style, assuming prefix is TGG/SL/ and we need to format number
+    const year = new Date().getFullYear().toString().slice(-2);
+    const nextYear = (parseInt(year) + 1).toString();
+    // This is a simplified version. A real app might need more robust logic for the number part.
+    return `${prefix}${year}-${nextYear}/${newChallanNumber}`;
+
+  } catch (error) {
+    console.error("Error in getNextChallanNumber transaction:", error);
+    throw new Error("Failed to generate a new challan number.");
+  }
 }
 
 
-export async function saveChallan(challan: Omit<Challan, 'dcNumber' | 'createdAt'> & {id?: string}): Promise<Challan> {
+export async function saveChallan(challan: Omit<Challan, 'dcNumber' | 'createdAt'> & { id?: string }): Promise<Challan> {
   try {
     let finalChallanData: any;
     let docRef;
@@ -92,7 +92,7 @@ export async function saveChallan(challan: Omit<Challan, 'dcNumber' | 'createdAt
         createdAt: serverTimestamp(),
       }
       docRef = await addDoc(collection(db, CHALLANS_COLLECTION), completeChallanData);
-      
+
       const newDocSnap = await getDoc(docRef);
       finalChallanData = { id: docRef.id, ...newDocSnap.data() };
     }
@@ -115,41 +115,73 @@ export async function saveChallan(challan: Omit<Challan, 'dcNumber' | 'createdAt
 
 
 export async function getChallans(): Promise<Challan[]> {
+  try {
+    console.log("Fetching challans from Firestore...");
     const q = query(collection(db, CHALLANS_COLLECTION), orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(q);
     const challans: Challan[] = [];
     querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        challans.push({ 
-            id: doc.id,
-            ...data,
-            dcDate: new Date(data.dcDate).toISOString(),
-            createdAt: data.createdAt?.toDate().toISOString(),
-        } as Challan);
+      const data = doc.data();
+
+      // Safe date handling
+      let dDate: string;
+      try {
+        if (data.dcDate instanceof Timestamp) {
+          dDate = data.dcDate.toDate().toISOString();
+        } else if (data.dcDate) {
+          dDate = new Date(data.dcDate).toISOString();
+        } else {
+          dDate = new Date().toISOString();
+        }
+      } catch (e) {
+        dDate = new Date().toISOString();
+      }
+
+      let cAt: string | undefined;
+      try {
+        if (data.createdAt instanceof Timestamp) {
+          cAt = data.createdAt.toDate().toISOString();
+        } else if (data.createdAt) {
+          cAt = new Date(data.createdAt).toISOString();
+        }
+      } catch (e) { }
+
+      challans.push({
+        id: doc.id,
+        ...data,
+        dcDate: dDate,
+        createdAt: cAt,
+      } as Challan);
     });
-    return challans;
+
+    console.log(`Successfully fetched ${challans.length} challans.`);
+    return JSON.parse(JSON.stringify(challans));
+  } catch (error) {
+    console.error("Error in getChallans:", error);
+    throw error;
+  }
 }
 
 export async function deleteChallan(id: string): Promise<void> {
-    try {
-        const docRef = doc(db, CHALLANS_COLLECTION, id);
-        await deleteDoc(docRef);
-    } catch (e) {
-        console.error("Error deleting document: ", e);
-        throw new Error("Failed to delete challan.");
-    }
+  try {
+    const docRef = doc(db, CHALLANS_COLLECTION, id);
+    await deleteDoc(docRef);
+  } catch (e) {
+    console.error("Error deleting document: ", e);
+    throw new Error("Failed to delete challan.");
+  }
 }
 
 export async function deleteChallans(ids: string[]): Promise<void> {
-    try {
-        const batch = writeBatch(db);
-        ids.forEach(id => {
-            const docRef = doc(db, CHALLANS_COLLECTION, id);
-            batch.delete(docRef);
-        });
-        await batch.commit();
-    } catch (e) {
-        console.error("Error deleting documents in batch: ", e);
-        throw new Error("Failed to delete challans.");
-    }
+  try {
+    const batch = writeBatch(db);
+    ids.forEach(id => {
+      const docRef = doc(db, CHALLANS_COLLECTION, id);
+      batch.delete(docRef);
+    });
+    await batch.commit();
+  } catch (e) {
+    console.error("Error deleting documents in batch: ", e);
+    throw new Error("Failed to delete challans.");
+  }
 }

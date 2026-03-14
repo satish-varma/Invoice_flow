@@ -35,9 +35,9 @@ export interface Quotation {
   total: number;
   terms?: string;
   createdAt?: any;
-  
-  companyProfileId?: string; 
-  
+
+  companyProfileId?: string;
+
   billToName?: string;
   billToAddress?: string;
 }
@@ -46,33 +46,33 @@ const QUOTATIONS_COLLECTION = 'quotations';
 const COUNTER_DOCUMENT = 'quotationCounter';
 
 async function getNextQuotationNumber(prefix: string): Promise<string> {
-    const counterRef = doc(db, 'counters', COUNTER_DOCUMENT);
+  const counterRef = doc(db, 'counters', COUNTER_DOCUMENT);
 
-    try {
-        const newQuotationNumber = await runTransaction(db, async (transaction) => {
-            const counterDoc = await transaction.get(counterRef);
-            let nextNumber = 1;
-            if (counterDoc.exists()) {
-                const data = counterDoc.data();
-                const currentNumber = data?.currentNumber ?? 0;
-                nextNumber = currentNumber + 1;
-            }
-            transaction.set(counterRef, { currentNumber: nextNumber }, { merge: true });
-            return nextNumber;
-        });
-        
-        const year = new Date().getFullYear().toString().slice(-2);
-        const nextYear = (parseInt(year) + 1).toString();
-        return `${prefix}${year}-${nextYear}/${newQuotationNumber}`;
+  try {
+    const newQuotationNumber = await runTransaction(db, async (transaction) => {
+      const counterDoc = await transaction.get(counterRef);
+      let nextNumber = 1;
+      if (counterDoc.exists()) {
+        const data = counterDoc.data();
+        const currentNumber = data?.currentNumber ?? 0;
+        nextNumber = currentNumber + 1;
+      }
+      transaction.set(counterRef, { currentNumber: nextNumber }, { merge: true });
+      return nextNumber;
+    });
 
-    } catch (error) {
-        console.error("Error in getNextQuotationNumber transaction:", error);
-        throw new Error("Failed to generate a new quotation number.");
-    }
+    const year = new Date().getFullYear().toString().slice(-2);
+    const nextYear = (parseInt(year) + 1).toString();
+    return `${prefix}${year}-${nextYear}/${newQuotationNumber}`;
+
+  } catch (error) {
+    console.error("Error in getNextQuotationNumber transaction:", error);
+    throw new Error("Failed to generate a new quotation number.");
+  }
 }
 
 
-export async function saveQuotation(quotation: Omit<Quotation, 'quotationNumber' | 'createdAt'> & {id?: string}): Promise<Quotation> {
+export async function saveQuotation(quotation: Omit<Quotation, 'quotationNumber' | 'createdAt'> & { id?: string }): Promise<Quotation> {
   try {
     let finalQuotationData: any;
     let newQuotationNumber: string | null = null;
@@ -97,7 +97,7 @@ export async function saveQuotation(quotation: Omit<Quotation, 'quotationNumber'
         createdAt: serverTimestamp(),
       }
       const docRef = await addDoc(collection(db, QUOTATIONS_COLLECTION), completeQuotationData);
-      
+
       const newDocSnap = await getDoc(docRef);
       finalQuotationData = { id: docRef.id, ...newDocSnap.data() };
     }
@@ -121,42 +121,87 @@ export async function saveQuotation(quotation: Omit<Quotation, 'quotationNumber'
 
 
 export async function getQuotations(): Promise<Quotation[]> {
+  try {
+    console.log("Fetching quotations from Firestore...");
     const q = query(collection(db, QUOTATIONS_COLLECTION), orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(q);
     const quotations: Quotation[] = [];
     querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        quotations.push({ 
-            id: doc.id,
-            ...data,
-            quotationDate: new Date(data.quotationDate).toISOString(),
-            validityDate: new Date(data.validityDate).toISOString(),
-            createdAt: data.createdAt?.toDate().toISOString(),
-        } as Quotation);
+      const data = doc.data();
+
+      // Safe date handling
+      let qDate: string;
+      try {
+        if (data.quotationDate instanceof Timestamp) {
+          qDate = data.quotationDate.toDate().toISOString();
+        } else if (data.quotationDate) {
+          qDate = new Date(data.quotationDate).toISOString();
+        } else {
+          qDate = new Date().toISOString();
+        }
+      } catch (e) {
+        qDate = new Date().toISOString();
+      }
+
+      let vDate: string;
+      try {
+        if (data.validityDate instanceof Timestamp) {
+          vDate = data.validityDate.toDate().toISOString();
+        } else if (data.validityDate) {
+          vDate = new Date(data.validityDate).toISOString();
+        } else {
+          vDate = new Date().toISOString();
+        }
+      } catch (e) {
+        vDate = new Date().toISOString();
+      }
+
+      let cAt: string | undefined;
+      try {
+        if (data.createdAt instanceof Timestamp) {
+          cAt = data.createdAt.toDate().toISOString();
+        } else if (data.createdAt) {
+          cAt = new Date(data.createdAt).toISOString();
+        }
+      } catch (e) { }
+
+      quotations.push({
+        id: doc.id,
+        ...data,
+        quotationDate: qDate,
+        validityDate: vDate,
+        createdAt: cAt,
+      } as Quotation);
     });
-    return quotations;
+
+    console.log(`Successfully fetched ${quotations.length} quotations.`);
+    return JSON.parse(JSON.stringify(quotations));
+  } catch (error) {
+    console.error("Error in getQuotations:", error);
+    throw error;
+  }
 }
 
 export async function deleteQuotation(id: string): Promise<void> {
-    try {
-        const docRef = doc(db, QUOTATIONS_COLLECTION, id);
-        await deleteDoc(docRef);
-    } catch (e) {
-        console.error("Error deleting document: ", e);
-        throw new Error("Failed to delete quotation.");
-    }
+  try {
+    const docRef = doc(db, QUOTATIONS_COLLECTION, id);
+    await deleteDoc(docRef);
+  } catch (e) {
+    console.error("Error deleting document: ", e);
+    throw new Error("Failed to delete quotation.");
+  }
 }
 
 export async function deleteQuotations(ids: string[]): Promise<void> {
-    try {
-        const batch = writeBatch(db);
-        ids.forEach(id => {
-            const docRef = doc(db, QUOTATIONS_COLLECTION, id);
-            batch.delete(docRef);
-        });
-        await batch.commit();
-    } catch (e) {
-        console.error("Error deleting documents in batch: ", e);
-        throw new Error("Failed to delete quotations.");
-    }
+  try {
+    const batch = writeBatch(db);
+    ids.forEach(id => {
+      const docRef = doc(db, QUOTATIONS_COLLECTION, id);
+      batch.delete(docRef);
+    });
+    await batch.commit();
+  } catch (e) {
+    console.error("Error deleting documents in batch: ", e);
+    throw new Error("Failed to delete quotations.");
+  }
 }

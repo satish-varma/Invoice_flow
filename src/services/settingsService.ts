@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 export interface BillToContact {
-    id: string; 
+    id: string;
     displayName: string;
     name: string;
     address: string;
@@ -13,7 +13,7 @@ export interface BillToContact {
 }
 
 export interface ShipToContact {
-    id: string; 
+    id: string;
     displayName: string;
     name: string;
     address: string;
@@ -52,12 +52,13 @@ const SINGLETON_DOC_ID = 'invoiceDefaults';
 
 export async function getSettings(): Promise<Settings> {
     try {
+        console.log("Fetching settings from Firestore...");
         const docRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const docSnap = await getDoc(docRef);
 
-        const defaultSettings: Settings = { 
+        const defaultSettings: Settings = {
             companyProfiles: [],
-            billToContacts: [], 
+            billToContacts: [],
             shipToContacts: [],
         };
 
@@ -76,7 +77,7 @@ export async function getSettings(): Promise<Settings> {
             console.log("Settings document not found, returning default settings.");
             result = defaultSettings;
         }
-        
+
         // Ensure deep serialization to avoid any hidden non-serializable objects
         return JSON.parse(JSON.stringify(result));
 
@@ -91,11 +92,11 @@ export async function saveCompanyProfile(profile: Omit<CompanyProfile, 'id'>): P
     const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
     const settings = await getSettings();
     const profiles = settings.companyProfiles || [];
-    
+
     if (profiles.some(p => p.profileName === profile.profileName)) {
         throw new Error("A company profile with this name already exists.");
     }
-    
+
     const newProfile: CompanyProfile = {
         ...profile,
         id: `${Date.now()}-${Math.random()}`,
@@ -103,12 +104,12 @@ export async function saveCompanyProfile(profile: Omit<CompanyProfile, 'id'>): P
 
     const updatedProfiles = [...profiles, newProfile];
     await setDoc(settingsRef, { companyProfiles: updatedProfiles }, { merge: true });
-    
+
     // If this is the first profile, make it the default
     if (updatedProfiles.length === 1) {
         await setDefaultCompanyProfile(newProfile.id);
     }
-    
+
     return newProfile.id;
 }
 
@@ -131,9 +132,9 @@ export async function deleteCompanyProfile(id: string): Promise<void> {
     const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
     const settings = await getSettings();
     const profiles = settings.companyProfiles || [];
-    
+
     const updatedProfiles = profiles.filter(p => p.id !== id);
-    
+
     const updatePayload: { companyProfiles: CompanyProfile[]; defaultCompanyProfile?: string } = {
         companyProfiles: updatedProfiles
     };
@@ -162,16 +163,16 @@ export async function saveBillToContact(contact: Omit<BillToContact, 'id'>): Pro
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const settings = await getSettings();
-        
+
         if (await contactExists(settings.billToContacts, contact.displayName)) {
-           throw new Error("A Bill To contact with this Display Name already exists.");
+            throw new Error("A Bill To contact with this Display Name already exists.");
         }
 
         const newContact: BillToContact = {
             ...contact,
             id: `${Date.now()}-${Math.random()}`, // Assign a more unique ID
         };
-        
+
         const updatedContacts = [...(settings.billToContacts || []), newContact];
         await setDoc(settingsRef, { ...settings, billToContacts: updatedContacts }, { merge: true });
 
@@ -185,19 +186,19 @@ export async function saveBillToContact(contact: Omit<BillToContact, 'id'>): Pro
 }
 
 export async function saveShipToContact(contact: Omit<ShipToContact, 'id'>): Promise<void> {
-     try {
+    try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const settings = await getSettings();
-        
+
         if (await contactExists(settings.shipToContacts, contact.displayName)) {
-           throw new Error("A Ship To contact with this Display Name already exists.");
+            throw new Error("A Ship To contact with this Display Name already exists.");
         }
 
         const newContact: ShipToContact = {
             ...contact,
             id: `${Date.now()}-${Math.random()}`, // Assign a more unique ID
         };
-        
+
         const updatedContacts = [...(settings.shipToContacts || []), newContact];
         await setDoc(settingsRef, { ...settings, shipToContacts: updatedContacts }, { merge: true });
 
@@ -218,9 +219,9 @@ export async function deleteBillToContact(id: string): Promise<void> {
         if (!settings || !settings.billToContacts) {
             throw new Error("Settings or contacts not found");
         }
-        
+
         const updatedContacts = settings.billToContacts.filter(c => c.id !== id);
-        
+
         await updateDoc(settingsRef, { billToContacts: updatedContacts });
 
     } catch (error) {
@@ -233,12 +234,12 @@ export async function deleteShipToContact(id: string): Promise<void> {
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const settings = await getSettings();
-         if (!settings || !settings.shipToContacts) {
+        if (!settings || !settings.shipToContacts) {
             throw new Error("Settings or contacts not found");
         }
 
         const updatedContacts = settings.shipToContacts.filter(c => c.id !== id);
-        
+
         await updateDoc(settingsRef, { shipToContacts: updatedContacts });
 
     } catch (error) {
@@ -258,10 +259,10 @@ export async function updateBillToContact(contact: BillToContact): Promise<void>
         // Check for duplicate display name, excluding the current contact being edited
         const otherContacts = settings.billToContacts.filter(c => c.id !== contact.id);
         if (await contactExists(otherContacts, contact.displayName)) {
-           throw new Error("A Bill To contact with this Display Name already exists.");
+            throw new Error("A Bill To contact with this Display Name already exists.");
         }
 
-        const updatedContacts = settings.billToContacts.map(c => 
+        const updatedContacts = settings.billToContacts.map(c =>
             c.id === contact.id ? contact : c
         );
         await updateDoc(settingsRef, { billToContacts: updatedContacts });
@@ -283,11 +284,11 @@ export async function updateShipToContact(contact: ShipToContact): Promise<void>
         }
 
         const otherContacts = settings.shipToContacts.filter(c => c.id !== contact.id);
-         if (await contactExists(otherContacts, contact.displayName)) {
-           throw new Error("A Ship To contact with this Display Name already exists.");
+        if (await contactExists(otherContacts, contact.displayName)) {
+            throw new Error("A Ship To contact with this Display Name already exists.");
         }
 
-        const updatedContacts = settings.shipToContacts.map(c => 
+        const updatedContacts = settings.shipToContacts.map(c =>
             c.id === contact.id ? contact : c
         );
         await updateDoc(settingsRef, { shipToContacts: updatedContacts });
@@ -326,6 +327,6 @@ export async function setDefaultShipToContact(id: string): Promise<void> {
     }
 }
 
-    
 
-    
+
+

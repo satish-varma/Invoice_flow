@@ -136,50 +136,57 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
 
 
 export async function getInvoices(): Promise<Invoice[]> {
-    const q = query(collection(db, INVOICES_COLLECTION), orderBy("createdAt", "desc"));
-    const querySnapshot = await getDocs(q);
-    const invoices: Invoice[] = [];
-    querySnapshot.forEach((doc) => {
-        const data = doc.data();
+    try {
+        console.log("Fetching invoices from Firestore...");
+        const q = query(collection(db, INVOICES_COLLECTION), orderBy("createdAt", "desc"));
+        const querySnapshot = await getDocs(q);
+        const invoices: Invoice[] = [];
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            
+            // Safely handle date conversion
+            let dateStr: string;
+            try {
+                if (data.date instanceof Timestamp) {
+                    dateStr = data.date.toDate().toISOString();
+                } else if (data.date) {
+                    dateStr = new Date(data.date).toISOString();
+                } else {
+                    dateStr = new Date().toISOString(); // Fallback if missing
+                }
+            } catch (e) {
+                 console.error(`Invalid date for invoice ${doc.id}:`, data.date);
+                 dateStr = new Date().toISOString();
+            }
+
+            // Safely handle createdAt conversion
+            let createdAtStr: string | undefined;
+            try {
+                if (data.createdAt instanceof Timestamp) {
+                    createdAtStr = data.createdAt.toDate().toISOString();
+                } else if (data.createdAt) {
+                    createdAtStr = new Date(data.createdAt).toISOString();
+                }
+            } catch (e) {
+                 console.error(`Invalid createdAt for invoice ${doc.id}:`, data.createdAt);
+            }
+
+            invoices.push({
+                id: doc.id,
+                ...data,
+                customerName: data.billToName || data.customerName || "",
+                date: dateStr,
+                createdAt: createdAtStr,
+            } as Invoice);
+        });
         
-        // Safely handle date conversion
-        let dateStr: string;
-        try {
-            if (data.date instanceof Timestamp) {
-                dateStr = data.date.toDate().toISOString();
-            } else if (data.date) {
-                dateStr = new Date(data.date).toISOString();
-            } else {
-                dateStr = new Date().toISOString(); // Fallback if missing
-            }
-        } catch (e) {
-             console.error(`Invalid date for invoice ${doc.id}:`, data.date);
-             dateStr = new Date().toISOString();
-        }
-
-        // Safely handle createdAt conversion
-        let createdAtStr: string | undefined;
-        try {
-            if (data.createdAt instanceof Timestamp) {
-                createdAtStr = data.createdAt.toDate().toISOString();
-            } else if (data.createdAt) {
-                createdAtStr = new Date(data.createdAt).toISOString();
-            }
-        } catch (e) {
-             console.error(`Invalid createdAt for invoice ${doc.id}:`, data.createdAt);
-        }
-
-        invoices.push({
-            id: doc.id,
-            ...data,
-            customerName: data.billToName || data.customerName || "",
-            date: dateStr,
-            createdAt: createdAtStr,
-        } as Invoice);
-    });
-    
-    // Ensure deep serialization to avoid any hidden non-serializable objects
-    return JSON.parse(JSON.stringify(invoices));
+        console.log(`Successfully fetched ${invoices.length} invoices.`);
+        // Ensure deep serialization to avoid any hidden non-serializable objects
+        return JSON.parse(JSON.stringify(invoices));
+    } catch (error) {
+        console.error("CRITICAL ERROR in getInvoices server action:", error);
+        throw error; // Let Next.js handle it or catch it in the client
+    }
 }
 
 export async function deleteInvoice(id: string): Promise<void> {

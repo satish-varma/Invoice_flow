@@ -21,6 +21,7 @@ import {
   ListOrdered,
   LogOut,
   User,
+  Package,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@/firebase';
@@ -45,6 +46,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     { href: '/quotation', label: 'New Quotation', icon: FileText },
     { href: '/delivery-challan', label: 'Delivery Challan', icon: Truck },
     { href: '/invoices', label: 'Saved Invoices', icon: ListOrdered },
+    { href: '/products', label: 'Products', icon: Package },
+    { href: '/clients', label: 'Clients', icon: User },
     { href: '/settings', label: 'Settings', icon: Settings },
   ];
 

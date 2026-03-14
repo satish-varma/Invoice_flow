@@ -7,14 +7,17 @@
  * - ExtractInvoiceDataOutput - The return type for the extractInvoiceData function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const LineItemSchema = z.object({
   name: z.string().describe('The name or description of the line item.'),
+  unit: z.string().optional().describe('The unit of the line item (e.g., kg, pcs, box, service).'),
   quantity: z.number().describe('The quantity of the line item.'),
-  price: z.number().describe('The price or rate of a single unit of the line item.'),
+  unitPrice: z.number().describe('The unit price or rate of a single unit of the line item.'),
+  hsnCode: z.string().optional().describe('The HSN or SAC code of the line item.'),
 });
+
 
 const ExtractInvoiceDataInputSchema = z.object({
   photoDataUri: z
@@ -45,12 +48,12 @@ export async function extractInvoiceData(
 
 const prompt = ai.definePrompt({
   name: 'extractInvoiceDataPrompt',
-  input: {schema: ExtractInvoiceDataInputSchema},
-  output: {schema: ExtractInvoiceDataOutputSchema},
+  input: { schema: ExtractInvoiceDataInputSchema },
+  output: { schema: ExtractInvoiceDataOutputSchema },
   prompt: `You are an expert at extracting structured data from images of invoices.
 Extract the invoice number, customer name, date, and all line items from the provided invoice image.
 For the date, please format it as YYYY-MM-DD. If the year is not specified, assume the current year.
-For each line item, extract the description, quantity, and unit price.
+For each line item, extract the description, unit, quantity, unit price, and HSN/SAC code if available.
 
 IMPORTANT: When parsing numbers for quantity and price, treat commas (,) as thousand separators and dots (.) as decimal separators. Ensure the entire number is captured as a single value.
 
@@ -64,7 +67,7 @@ const extractInvoiceDataFlow = ai.defineFlow(
     outputSchema: ExtractInvoiceDataOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const { output } = await prompt(input);
     return output!;
   }
 );

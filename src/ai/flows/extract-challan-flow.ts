@@ -8,15 +8,17 @@
  * - ExtractChallanOutput - The return type for the extractChallanData function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const ChallanLineItemSchema = z.object({
   name: z.string().describe('The name or description of the line item.'),
   hsnCode: z.string().describe('The HSN code of the line item.'),
+  unit: z.string().optional().describe('The unit of the line item (e.g., kg, pcs, box).'),
   quantity: z.number().describe('The quantity of the line item.'),
   unitPrice: z.number().describe('The unit price of a single unit of the line item.'),
 });
+
 
 const ExtractChallanInputSchema = z.object({
   photoDataUri: z
@@ -53,12 +55,12 @@ export async function extractChallanData(
 
 const prompt = ai.definePrompt({
   name: 'extractChallanDataPrompt',
-  input: {schema: ExtractChallanInputSchema},
-  output: {schema: ExtractChallanOutputSchema},
+  input: { schema: ExtractChallanInputSchema },
+  output: { schema: ExtractChallanOutputSchema },
   prompt: `You are an expert at extracting structured data from images of delivery challans.
 Extract the DC number, DC date, bill to name, bill to address, ship to name, ship to address, all line items, subtotal, GST amount, and total amount.
 For the date, please format it as YYYY-MM-DD. If the year is not specified, assume the current year.
-For each line item, extract the description, HSN code, quantity, and unit price.
+For each line item, extract the description, HSN code, unit, quantity, and unit price.
 
 IMPORTANT: When parsing numbers, treat commas (,) as thousand separators and dots (.) as decimal separators. Ensure the entire number is captured as a single value.
 
@@ -72,7 +74,7 @@ const extractChallanDataFlow = ai.defineFlow(
     outputSchema: ExtractChallanOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const { output } = await prompt(input);
     return output!;
   }
 );

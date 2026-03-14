@@ -3,12 +3,13 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 /**
- * Generates and saves a multi-page PDF from an HTML element with discrete body, signature, and footer sections.
- * This ensures that the signature block is not split across pages and the footer is always at the bottom.
+ * Generates a multi-page PDF from an HTML element with discrete body, signature, and footer sections.
  * @param element The HTML element to render into the PDF.
- * @param fileName The desired name of the output PDF file.
+ * @param fileName The desired name of the output PDF file (used only in 'save' mode).
+ * @param mode 'save' to trigger download, 'preview' to return data URI.
+ * @returns Promise<string | void> Data URI if mode is 'preview', void otherwise.
  */
-export async function generateAndSavePdf(element: HTMLElement, fileName:string) {
+export async function generateAndSavePdf(element: HTMLElement, fileName: string, mode: 'save' | 'preview' = 'save'): Promise<string | void> {
     const bodyElement = element.querySelector('[data-pdf-body]') as HTMLElement;
     const signatureElement = element.querySelector('[data-pdf-signature]') as HTMLElement;
     const footerElement = element.querySelector('[data-pdf-footer]') as HTMLElement;
@@ -91,8 +92,12 @@ export async function generateAndSavePdf(element: HTMLElement, fileName:string) 
         }
 
 
-        // 4. Save PDF
-        pdf.save(fileName);
+        // 4. Save or Return
+        if (mode === 'save') {
+            pdf.save(fileName);
+        } else {
+            return pdf.output('datauristring');
+        }
 
     } catch (error) {
         console.error("Error generating PDF:", error);
@@ -104,3 +109,4 @@ export async function generateAndSavePdf(element: HTMLElement, fileName:string) 
         }
     }
 }
+

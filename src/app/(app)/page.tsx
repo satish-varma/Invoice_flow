@@ -13,9 +13,13 @@ import { generateAndSavePdf } from '@/lib/pdf';
 import { AppShell } from '@/components/app-shell';
 import { DashboardOverview } from '@/components/dashboard-overview';
 import { RevenueChart } from '@/components/revenue-chart';
+import { getQuotations, Quotation } from '@/services/quotationService';
+import { getChallans, Challan } from '@/services/challanService';
 
 export default function Home() {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [quotations, setQuotations] = useState<Quotation[]>([]);
+    const [challans, setChallans] = useState<Challan[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
     const { toast } = useToast();
@@ -34,11 +38,22 @@ export default function Home() {
                 setInvoices(fetchedInvoices);
             } catch (invError) {
                 console.error("Error fetching invoices:", invError);
-                toast({
-                    variant: 'destructive',
-                    title: 'Invoices Load Failed',
-                    description: invError instanceof Error ? invError.message : 'Could not load recent invoices.',
-                });
+            }
+
+            // Fetch Quotations
+            try {
+                const fetchedQuotations = await getQuotations();
+                setQuotations(fetchedQuotations);
+            } catch (qError) {
+                console.error("Error fetching quotations:", qError);
+            }
+
+            // Fetch Challans
+            try {
+                const fetchedChallans = await getChallans();
+                setChallans(fetchedChallans);
+            } catch (cError) {
+                console.error("Error fetching challans:", cError);
             }
 
             // Try fetching settings
@@ -120,7 +135,12 @@ export default function Home() {
         <AppShell>
             <main className="min-h-screen bg-transparent flex flex-col items-center p-4 sm:p-8">
                 <div className="w-full max-w-7xl mx-auto space-y-8">
-                    <DashboardOverview invoices={invoices} settings={settings} />
+                    <DashboardOverview
+                        invoices={invoices}
+                        quotations={quotations}
+                        challans={challans}
+                        settings={settings}
+                    />
 
                     <div className="grid grid-cols-1 gap-8">
                         <RevenueChart invoices={invoices} settings={settings} />

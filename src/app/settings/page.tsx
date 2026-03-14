@@ -59,6 +59,8 @@ const initialCompanyProfile: Omit<CompanyProfile, 'id'> = {
     companyAddress: '',
     companyGstin: '',
     companyPan: '',
+    companyPhone: '',
+    companyEmail: '',
     invoicePrefix: '',
     bankBeneficiary: '',
     bankName: '',
@@ -66,6 +68,7 @@ const initialCompanyProfile: Omit<CompanyProfile, 'id'> = {
     bankIfsc: '',
     bankBranch: '',
     stampLogoUrl: '',
+    logoUrl: '',
 };
 
 const initialBillToState: Omit<BillToContact, 'id'> = {
@@ -90,7 +93,9 @@ export default function SettingsPage() {
     const [editingProfile, setEditingProfile] = useState<CompanyProfile | null>(null);
     const [isProfileEditDialogOpen, setIsProfileEditDialogOpen] = useState(false);
     const [stampPreview, setStampPreview] = useState<string | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const logoInputRef = useRef<HTMLInputElement>(null);
 
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -166,14 +171,19 @@ export default function SettingsPage() {
         setEditingProfile(prev => prev ? { ...prev, [field]: value } : null);
     }
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'stamp' | 'logo') => {
         const file = e.target.files?.[0];
         if (file && editingProfile) {
             const reader = new FileReader();
             reader.onloadend = () => {
                 const dataUri = reader.result as string;
-                setStampPreview(dataUri);
-                handleProfileInputChange('stampLogoUrl', dataUri);
+                if (type === 'stamp') {
+                    setStampPreview(dataUri);
+                    handleProfileInputChange('stampLogoUrl', dataUri);
+                } else {
+                    setLogoPreview(dataUri);
+                    handleProfileInputChange('logoUrl', dataUri);
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -280,12 +290,14 @@ export default function SettingsPage() {
     const handleAddNewProfile = () => {
         setEditingProfile({ ...initialCompanyProfile, id: '' });
         setStampPreview(null);
+        setLogoPreview(null);
         setIsProfileEditDialogOpen(true);
     }
 
     const handleEditProfileClick = (profile: CompanyProfile) => {
         setEditingProfile(JSON.parse(JSON.stringify(profile)));
         setStampPreview(profile.stampLogoUrl);
+        setLogoPreview(profile.logoUrl);
         setIsProfileEditDialogOpen(true);
     };
 
@@ -307,6 +319,8 @@ export default function SettingsPage() {
             await loadSettings();
             setIsProfileEditDialogOpen(false);
             setEditingProfile(null);
+            setStampPreview(null);
+            setLogoPreview(null);
         } catch (error) {
             console.error("Failed to save profile:", error);
             const errorMessage = error instanceof Error ? error.message : "Could not save profile.";
@@ -358,7 +372,7 @@ export default function SettingsPage() {
 
     const renderProfileForm = (profile: CompanyProfile | Omit<CompanyProfile, 'id'>) => {
         return (
-            <Accordion type="multiple" defaultValue={['item-1', 'item-2', 'item-3', 'item-4']} className="w-full">
+            <Accordion type="multiple" defaultValue={['item-1', 'item-2', 'item-3', 'item-4', 'item-5']} className="w-full">
                 <div className="space-y-2 mb-6">
                     <Label>Profile Name (for your reference)</Label>
                     <Input value={profile.profileName ?? ''} onChange={e => handleProfileInputChange('profileName', e.target.value)} placeholder="e.g., Main Business, Side Hustle" />
@@ -381,6 +395,14 @@ export default function SettingsPage() {
                         <div className="space-y-2">
                             <Label>PAN</Label>
                             <Input value={profile.companyPan ?? ''} onChange={e => handleProfileInputChange('companyPan', e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Phone</Label>
+                            <Input value={profile.companyPhone ?? ''} onChange={e => handleProfileInputChange('companyPhone', e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Email</Label>
+                            <Input value={profile.companyEmail ?? ''} onChange={e => handleProfileInputChange('companyEmail', e.target.value)} />
                         </div>
                     </AccordionContent>
                 </AccordionItem>
@@ -405,13 +427,62 @@ export default function SettingsPage() {
                     </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-4">
-                    <AccordionTrigger>Company Stamp/Logo</AccordionTrigger>
+                    <AccordionTrigger>Company Logo (Header)</AccordionTrigger>
                     <AccordionContent className="pt-4">
-                        <div className="space-y-2">
-                            <Label>Upload Image</Label>
-                            <Input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg" />
-                            <p className='text-xs text-muted-foreground'>Upload a PNG or JPG file. This will appear on the invoice.</p>
-                            {stampPreview && <img src={stampPreview} alt="Stamp Preview" className="mt-4 max-h-24 border p-2 rounded-md" />}
+                        <div className="space-y-4">
+                            <div className='flex items-center gap-4'>
+                                <div className='flex-1 space-y-2'>
+                                    <Label>Upload Logo</Label>
+                                    <Input type="file" ref={logoInputRef} onChange={e => handleFileChange(e, 'logo')} accept="image/png, image/jpeg" />
+                                    <p className='text-xs text-muted-foreground'>This logo will appear in the top header of your invoices and quotations.</p>
+                                </div>
+                                {logoPreview && (
+                                    <div className='relative w-24 h-24 border rounded-md p-2 bg-white flex items-center justify-center'>
+                                        <img src={logoPreview} alt="Logo Preview" className="max-w-full max-h-full object-contain" />
+                                        <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            className='absolute -top-2 -right-2 h-6 w-6 rounded-full'
+                                            onClick={() => {
+                                                setLogoPreview(null);
+                                                handleProfileInputChange('logoUrl', '');
+                                            }}
+                                        >
+                                            <Trash2 className='h-3 w-3' />
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="item-5">
+                    <AccordionTrigger>Authorized Stamp (Footer)</AccordionTrigger>
+                    <AccordionContent className="pt-4">
+                        <div className="space-y-4">
+                            <div className='flex items-center gap-4'>
+                                <div className='flex-1 space-y-2'>
+                                    <Label>Upload Stamp</Label>
+                                    <Input type="file" ref={fileInputRef} onChange={e => handleFileChange(e, 'stamp')} accept="image/png, image/jpeg" />
+                                    <p className='text-xs text-muted-foreground'>This will appear above the "Authorized Signatory" text in the footer.</p>
+                                </div>
+                                {stampPreview && (
+                                    <div className='relative w-24 h-24 border rounded-md p-2 bg-white flex items-center justify-center'>
+                                        <img src={stampPreview} alt="Stamp Preview" className="max-w-full max-h-full object-contain" />
+                                        <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            className='absolute -top-2 -right-2 h-6 w-6 rounded-full'
+                                            onClick={() => {
+                                                setStampPreview(null);
+                                                handleProfileInputChange('stampLogoUrl', '');
+                                            }}
+                                        >
+                                            <Trash2 className='h-3 w-3' />
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </AccordionContent>
                 </AccordionItem>

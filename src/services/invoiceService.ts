@@ -7,8 +7,13 @@ export interface LineItem {
     id: number;
     name: string;
     quantity: number;
-    price: number;
+    unitPrice: number;
+    unit?: string;
+    hsnCode?: string;
+    total?: number;
 }
+
+
 
 export interface TaxItem {
     id?: number;
@@ -41,10 +46,13 @@ export interface Invoice {
     shipToAddress?: string;
     shipToGst?: string;
 
-    // Deprecated fields, can be removed after migration
-    customerName: string;
-    customerAddress: string;
-    tax: number;
+    // Status tracking
+    status?: 'pending' | 'paid' | 'cancelled';
+
+    // For backward compatibility
+    customerName?: string;
+    customerAddress?: string;
+    tax?: number;
 }
 
 const INVOICES_COLLECTION = 'invoices';

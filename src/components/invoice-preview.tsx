@@ -86,10 +86,17 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                             {activeProfile.companyPan && <p><span className='font-bold'>PAN:</span> {activeProfile.companyPan}</p>}
                         </div>
                     </div>
-                    <div className="text-right space-y-1">
-                        <h1 className='text-4xl font-black uppercase tracking-tighter' style={{ color: primaryColor }}>Invoice</h1>
-                        <p className='text-sm font-bold'>#{invoice.invoiceNumber}</p>
-                        <p className='text-sm text-gray-500'>{invoice.date ? format(new Date(invoice.date), "MMMM dd, yyyy") : ''}</p>
+                    <div className="flex flex-col items-end gap-2">
+                        {activeProfile.logoUrl && (
+                            <div className='relative w-32 h-16 mb-2'>
+                                <Image src={activeProfile.logoUrl} alt="Company Logo" fill sizes="128px" className="object-contain object-right" priority />
+                            </div>
+                        )}
+                        <div className="text-right space-y-1">
+                            <h1 className='text-4xl font-black uppercase tracking-tighter' style={{ color: primaryColor }}>Invoice</h1>
+                            <p className='text-sm font-bold'>#{invoice.invoiceNumber}</p>
+                            <p className='text-sm text-gray-500'>{invoice.date ? format(new Date(invoice.date), "MMMM dd, yyyy") : ''}</p>
+                        </div>
                     </div>
                 </div>
             );
@@ -98,6 +105,11 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
         if (template === 'minimal') {
             return (
                 <div className='text-center space-y-4 pb-8 border-b'>
+                    {activeProfile.logoUrl && (
+                        <div className='relative w-24 h-24 mx-auto mb-2'>
+                            <Image src={activeProfile.logoUrl} alt="Company Logo" fill sizes="96px" className="object-contain" priority />
+                        </div>
+                    )}
                     <h1 className='text-sm uppercase tracking-[0.2em] text-gray-400'>Bill of Supply</h1>
                     <p className='font-light text-5xl tracking-tight'>{activeProfile.companyName}</p>
                     <p className='text-xs uppercase text-gray-500 max-w-md mx-auto'>{activeProfile.companyAddress}</p>
@@ -119,6 +131,11 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                 </div>
                 <div className='flex justify-between items-start'>
                     <div className="space-y-1">
+                        {activeProfile.logoUrl && (
+                            <div className='relative w-32 h-16 mb-4'>
+                                <Image src={activeProfile.logoUrl} alt="Company Logo" fill sizes="128px" className="object-contain object-left" priority />
+                            </div>
+                        )}
                         <p className='font-bold text-xl'>{activeProfile.companyName}</p>
                         <p className='text-sm w-64' style={{ whiteSpace: 'pre-wrap' }}>{activeProfile.companyAddress}</p>
                         <div className='text-sm mt-1 text-gray-600'>
@@ -172,6 +189,12 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                                     <TableRow className={`border-b ${template === 'minimal' ? 'bg-transparent' : 'bg-gray-50'}`} style={{ borderBottomColor: template === 'modern' ? primaryColor : undefined }}>
                                         <TableHead className="w-[50px] font-bold text-black uppercase text-[10px] tracking-widest">S.No</TableHead>
                                         <TableHead className="w-1/2 font-bold text-black uppercase text-[10px] tracking-widest">Item &amp; Description</TableHead>
+                                        {invoice.lineItems.some(item => item.hsnCode) && (
+                                            <TableHead className="font-bold text-black uppercase text-[10px] tracking-widest">HSN/SAC</TableHead>
+                                        )}
+                                        {invoice.lineItems.some(item => item.unit) && (
+                                            <TableHead className="font-bold text-black uppercase text-[10px] tracking-widest">Unit</TableHead>
+                                        )}
                                         <TableHead className="w-[100px] text-right font-bold text-black uppercase text-[10px] tracking-widest">Qty</TableHead>
                                         <TableHead className="w-[120px] text-right font-bold text-black uppercase text-[10px] tracking-widest">Rate ({currencySymbol})</TableHead>
                                         <TableHead className="w-[120px] text-right font-bold text-black uppercase text-[10px] tracking-widest">Amount ({currencySymbol})</TableHead>
@@ -182,9 +205,15 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                                         <TableRow key={index} className="border-b-0 hover:bg-transparent">
                                             <TableCell className='py-4'>{index + 1}</TableCell>
                                             <TableCell className='py-4 font-medium'>{item.name}</TableCell>
+                                            {invoice.lineItems.some(i => i.hsnCode) && (
+                                                <TableCell className='py-4 text-gray-500 text-[11px]'>{item.hsnCode || '-'}</TableCell>
+                                            )}
+                                            {invoice.lineItems.some(i => i.unit) && (
+                                                <TableCell className='py-4 text-gray-500 text-[11px]'>{item.unit || '-'}</TableCell>
+                                            )}
                                             <TableCell className="text-right py-4">{item.quantity}</TableCell>
-                                            <TableCell className="text-right py-4">{currencySymbol} {item.price.toFixed(2)}</TableCell>
-                                            <TableCell className="font-bold text-right py-4">{currencySymbol} {(item.quantity * item.price).toFixed(2)}</TableCell>
+                                            <TableCell className="text-right py-4">{currencySymbol} {item.unitPrice.toFixed(2)}</TableCell>
+                                            <TableCell className="font-bold text-right py-4">{currencySymbol} {(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -250,6 +279,13 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                                         )}
                                         <p className="mt-2 text-gray-600 italic">For {activeProfile.companyName}</p>
                                     </div>
+                                </div>
+                            </div>
+                            <div className='w-full border-t border-gray-100 pt-4 flex justify-between items-center text-[9px] text-gray-400'>
+                                <p>Thank you for your business!</p>
+                                <div className='flex gap-4'>
+                                    {activeProfile.companyPhone && <span><span className='font-bold'>Tel:</span> {activeProfile.companyPhone}</span>}
+                                    {activeProfile.companyEmail && <span><span className='font-bold'>Email:</span> {activeProfile.companyEmail}</span>}
                                 </div>
                             </div>
                         </CardFooter>

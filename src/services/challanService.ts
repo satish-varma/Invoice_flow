@@ -6,6 +6,7 @@ export interface ChallanLineItem {
   id: number;
   name: string;
   hsnCode: string;
+  unit?: string;
   quantity: number;
   unitPrice: number;
   total: number;

@@ -26,6 +26,8 @@ export interface CompanyProfile {
     companyAddress: string;
     companyGstin: string;
     companyPan: string;
+    companyPhone: string;
+    companyEmail: string;
     invoicePrefix: string;
     bankBeneficiary: string;
     bankName: string;
@@ -33,6 +35,7 @@ export interface CompanyProfile {
     bankIfsc: string;
     bankBranch: string;
     stampLogoUrl: string;
+    logoUrl: string;
 }
 
 
@@ -77,6 +80,8 @@ export async function getSettings(): Promise<Settings> {
                     companyAddress: p.companyAddress || "",
                     companyGstin: p.companyGstin || "",
                     companyPan: p.companyPan || "",
+                    companyPhone: p.companyPhone || "",
+                    companyEmail: p.companyEmail || "",
                     invoicePrefix: p.invoicePrefix || "",
                     bankBeneficiary: p.bankBeneficiary || "",
                     bankName: p.bankName || "",
@@ -84,6 +89,7 @@ export async function getSettings(): Promise<Settings> {
                     bankIfsc: p.bankIfsc || "",
                     bankBranch: p.bankBranch || "",
                     stampLogoUrl: p.stampLogoUrl || "",
+                    logoUrl: p.logoUrl || "",
                 })),
                 defaultCompanyProfile: data.defaultCompanyProfile || "",
                 billToContacts: (data.billToContacts || []).map((c: any) => ({

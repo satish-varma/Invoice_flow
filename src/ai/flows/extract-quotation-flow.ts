@@ -8,8 +8,8 @@
  * - ExtractQuotationOutput - The return type for the extractQuotationData function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const QuotationLineItemSchema = z.object({
   name: z.string().describe('The name or description of the line item.'),
@@ -17,7 +17,9 @@ const QuotationLineItemSchema = z.object({
   quantity: z.number().describe('The quantity of the line item.'),
   unitPrice: z.number().describe('The unit price of a single unit of the line item.'),
   discount: z.number().optional().describe('The discount amount for the line item.'),
+  hsnCode: z.string().optional().describe('The HSN/SAC code of the line item.'),
 });
+
 
 const ExtractQuotationInputSchema = z.object({
   photoDataUri: z
@@ -56,12 +58,12 @@ export async function extractQuotationData(
 
 const prompt = ai.definePrompt({
   name: 'extractQuotationDataPrompt',
-  input: {schema: ExtractQuotationInputSchema},
-  output: {schema: ExtractQuotationOutputSchema},
+  input: { schema: ExtractQuotationInputSchema },
+  output: { schema: ExtractQuotationOutputSchema },
   prompt: `You are an expert at extracting structured data from images of corporate quotations for food items.
 Extract the Quotation number, quotation date, validity date, bill to name, bill to address, all line items, terms and conditions, subtotal, GST, shipping, other charges, and the total amount.
 For the dates, please format it as YYYY-MM-DD. If the year is not specified, assume the current year.
-For each line item, extract the description, unit, quantity, unit price, and any discount.
+For each line item, extract the description, unit, quantity, unit price, any discount, and HSN/SAC code.
 
 IMPORTANT: When parsing numbers, treat commas (,) as thousand separators and dots (.) as decimal separators. Ensure the entire number is captured as a single value.
 
@@ -75,7 +77,7 @@ const extractQuotationDataFlow = ai.defineFlow(
     outputSchema: ExtractQuotationOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const { output } = await prompt(input);
     return output!;
   }
 );

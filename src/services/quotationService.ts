@@ -13,6 +13,7 @@ export interface QuotationLineItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  hsnCode?: string;
   customFields?: { [key: string]: string | number };
   discount?: number;
 }

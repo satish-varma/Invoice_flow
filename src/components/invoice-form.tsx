@@ -19,15 +19,21 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getSettings, Settings, CompanyProfile, BillToContact, ShipToContact } from '@/services/settingsService';
+import { getClients, saveClient, Client } from '@/services/clientService';
+import { Checkbox } from './ui/checkbox';
 import { availableTaxes } from '@/app/settings/page';
-
+import { getProducts, Product } from '@/services/productService';
 
 type LineItem = {
     id: number;
     name: string;
     quantity: number;
-    price: number;
+    unitPrice: number;
+    unit?: string;
+    hsnCode?: string;
+    total?: number;
 };
+
 
 interface InvoiceFormProps {
     initialData?: Invoice | null;
@@ -65,12 +71,16 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     const [shipToName, setShipToName] = useState('');
     const [shipToAddress, setShipToAddress] = useState('');
     const [shipToGst, setShipToGst] = useState('');
+    const [status, setStatus] = useState<'pending' | 'paid' | 'cancelled'>('pending');
 
     const [appliedTaxes, setAppliedTaxes] = useState<TaxItem[]>([]);
 
     const [lineItems, setLineItems] = useState<LineItem[]>([
-        { id: 1, name: '', quantity: 1, price: 0 },
+        { id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0 }
     ]);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [saveAsClient, setSaveAsClient] = useState(false);
     const [isExtracting, setIsExtracting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,8 +92,9 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
 
     const { toast } = useToast();
 
-    const subtotal = useMemo(() => {
-        return lineItems.reduce((acc, item) => acc + Number(item.quantity) * Number(item.price), 0);
+    const { subtotal } = useMemo(() => {
+        const sub = lineItems.reduce((acc, item) => acc + (Number(item.quantity) * Number(item.unitPrice)), 0);
+        return { subtotal: sub };
     }, [lineItems]);
 
     useEffect(() => {
@@ -115,6 +126,12 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             if (profileToApply) {
                 setActiveCompanyProfile(profileToApply);
             }
+
+            const loadedClients = await getClients();
+            setClients(loadedClients);
+
+            const loadedProducts = await getProducts();
+            setProducts(loadedProducts);
 
             if (!initialData) {
                 if (loadedSettings.defaultBillToContact && loadedSettings.billToContacts) {
@@ -174,9 +191,12 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             setShipToAddress(initialData.shipToAddress || '');
             setShipToGst(initialData.shipToGst || '');
             setAppliedTaxes(initialData.taxes?.map((t, index) => ({ ...t, id: t.id || Date.now() + index, rate: t.rate || 0 })) || []);
+            setStatus(initialData.status || 'pending');
             setLineItems(initialData.lineItems.map((item, index) => ({
                 ...item,
-                id: item.id || Date.now() + index
+                id: item.id || Date.now() + index,
+                unitPrice: item.unitPrice || (item as any).price || 0, // Ensure unitPrice is set, fallback to old 'price'
+                total: (item.quantity || 0) * (item.unitPrice || (item as any).price || 0) // Calculate total
             })));
         } else {
             handleClearForm(false); // Don't call onAddNew here to prevent loop
@@ -184,17 +204,59 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     }, [initialData]);
 
     const handleAddItem = () => {
-        setLineItems([...lineItems, { id: Date.now(), name: '', quantity: 1, price: 0 }]);
+        setLineItems([...lineItems, { id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0 }]);
     };
 
     const handleRemoveItem = (id: number) => {
         setLineItems(lineItems.filter(item => item.id !== id));
     };
 
-    const handleItemChange = (id: number, field: keyof Omit<LineItem, 'id'>, value: string | number) => {
-        setLineItems(lineItems.map(item =>
-            item.id === id ? { ...item, [field]: value } : item
-        ));
+    const handleItemChange = (id: number, field: keyof LineItem, value: string | number) => {
+        setLineItems(lineItems.map(item => {
+            if (item.id === id) {
+                const updatedItem = { ...item, [field]: value };
+                if (field === 'quantity' || field === 'unitPrice') {
+                    updatedItem.total = Number(updatedItem.quantity) * Number(updatedItem.unitPrice);
+                }
+                return updatedItem;
+            }
+            return item;
+        }));
+    };
+
+
+    const handleProductSelect = (id: number, productId: string) => {
+        const product = products.find(p => p.id === productId);
+        if (product) {
+            setLineItems(lineItems.map(item =>
+                item.id === id ? {
+                    ...item,
+                    name: product.name,
+                    unitPrice: product.unitPrice,
+                    unit: product.unit || '',
+                    hsnCode: product.hsnCode || '',
+                    total: product.unitPrice * (item.quantity || 1)
+                } : item
+            ));
+
+
+            // Auto-apply taxes if product has a tax category that matches available taxes
+            if (product.taxCategory) {
+                const taxDef = availableTaxes.find(t => t.name === product.taxCategory);
+                if (taxDef) {
+                    // Check if this tax is already applied
+                    const isApplied = appliedTaxes.some(t => t.name === taxDef.name);
+                    if (!isApplied) {
+                        setAppliedTaxes([...appliedTaxes, {
+                            id: Date.now(),
+                            name: taxDef.name,
+                            rate: taxDef.rate,
+                            amount: (subtotal * taxDef.rate) / 100
+                        }]);
+                    }
+                }
+            }
+        }
     };
 
     const handleAddTax = () => {
@@ -232,13 +294,15 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         setShipToAddress('');
         setShipToGst('');
         setAppliedTaxes([]);
-        setLineItems([{ id: Date.now(), name: '', quantity: 1, price: 0 }]);
+        setLineItems([{ id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0 }]);
+        setStatus('pending');
         if (shouldCallback) {
             onAddNew();
         }
     };
 
-    const handleSaveInvoice = async (andDownload = false) => {
+    const handleSaveInvoice = async (mode: 'save' | 'preview' = 'save') => {
+        const andDownload = mode === 'save';
         if (!billToName) {
             toast({
                 variant: "destructive",
@@ -270,6 +334,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 shipToGst,
                 lineItems: lineItems,
                 subtotal,
+                status,
                 taxes: appliedTaxes.map(({ id, ...tax }) => tax),
                 taxTotal,
                 total,
@@ -284,6 +349,23 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             }
 
             const savedInvoice = await saveInvoice(invoiceData);
+
+            // Save client if checkbox is checked and it's a new name
+            if (saveAsClient && billToName) {
+                const existingClient = clients.find(c => c.name.toLowerCase() === billToName.toLowerCase());
+                if (!existingClient) {
+                    await saveClient({
+                        name: billToName,
+                        address: billToAddress,
+                        gst: billToGst,
+                        type: 'business'
+                    });
+                    // Refresh clients
+                    const updatedClients = await getClients();
+                    setClients(updatedClients);
+                }
+            }
+
             toast({
                 title: initialData ? "Invoice Updated" : "Invoice Saved",
                 description: `Your invoice has been successfully ${initialData ? 'updated' : 'saved'}.`,
@@ -321,12 +403,21 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             if (result.customerName) setBillToName(result.customerName);
 
             if (result.lineItems && result.lineItems.length > 0) {
-                setLineItems(result.lineItems.map((item, index) => ({
-                    id: Date.now() + index,
-                    ...item,
-                })));
-            } else {
-                setLineItems([{ id: Date.now(), name: '', quantity: 1, price: 0 }]);
+                setLineItems(result.lineItems.map((item: any, index: number) => {
+                    const price = item.unitPrice || item.price || 0;
+                    return {
+                        id: Date.now() + index,
+                        name: item.name || '',
+                        quantity: item.quantity || 0,
+                        unitPrice: price,
+                        unit: item.unit || '',
+                        hsnCode: item.hsnCode || '',
+                        total: (item.quantity || 0) * price
+                    };
+                }));
+            }
+            else {
+                setLineItems([{ id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0 }]);
             }
             toast({
                 title: "Extraction Complete",
@@ -347,29 +438,32 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         }
     };
 
-    const combinedContacts = useMemo(() => {
+    const allSavedClients = useMemo(() => {
         const billTo = (settings.billToContacts || []).map(c => ({ ...c, type: 'billTo' as const }));
         const shipTo = (settings.shipToContacts || []).map(c => ({ ...c, type: 'shipTo' as const }));
-        return [...billTo, ...shipTo];
-    }, [settings.billToContacts, settings.shipToContacts]);
+        const dbClients = clients.map(c => ({ id: c.id!, displayName: c.name, name: c.name, address: c.address, gst: c.gst, type: 'client' as const }));
+        return [...billTo, ...shipTo, ...dbClients];
+    }, [settings.billToContacts, settings.shipToContacts, clients]);
 
     const handleContactSelect = (value: string, section: 'billTo' | 'shipTo') => {
         const [id, type] = value.split('|');
-        const contact = combinedContacts.find(c => c.id === id && c.type === type);
+        const contact = allSavedClients.find(c => c.id === id && c.type === type);
 
         if (contact) {
             if (section === 'billTo') {
-                setBillToName(contact.name);
-                setBillToAddress(contact.address);
-                if ('gst' in contact) setBillToGst(contact.gst);
+                setBillToName(contact.name || '');
+                setBillToAddress(contact.address || '');
+                if ('gst' in contact) setBillToGst(contact.gst || '');
             } else { // 'shipTo'
-                setShipToName(contact.name);
-                setShipToAddress(contact.address);
-                if ('gst' in contact) setShipToGst(contact.gst);
+                setShipToName(contact.name || '');
+                setShipToAddress(contact.address || '');
+                if ('gst' in contact) setShipToGst(contact.gst || '');
+
                 // Auto-populate taxes from the selected ship-to contact
-                if ('taxes' in contact && contact.taxes && contact.taxes.length > 0) {
+                const taxes = (contact as any).taxes;
+                if (taxes && Array.isArray(taxes) && taxes.length > 0) {
                     const taxesToApply = availableTaxes
-                        .filter(taxDef => contact.taxes!.includes(taxDef.id))
+                        .filter(taxDef => taxes.includes(taxDef.id))
                         .map((taxDef, index) => ({
                             id: Date.now() + index,
                             name: taxDef.name,
@@ -438,13 +532,13 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 <><Wand2 /> Autofill</>
                             )}
                         </Button>
-                        <Button onClick={() => handleSaveInvoice(false)} disabled={isSaving} variant="secondary">
+                        <Button onClick={() => handleSaveInvoice('save')} disabled={isSaving} variant="secondary">
                             {isSaving ? <Loader className="animate-spin" /> : <Save />}
                             {initialData ? 'Update' : 'Save'}
                         </Button>
-                        <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
-                            {isSaving ? <Loader className="animate-spin" /> : <Save />}
-                            Save &amp; Download
+                        <Button onClick={() => handleSaveInvoice('preview')} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
+                            {isSaving ? <Loader className="animate-spin" /> : <Wand2 />}
+                            Preview PDF
                         </Button>
                     </div>
                 </div>
@@ -506,9 +600,9 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                         <SelectValue placeholder="Select a billing contact" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {combinedContacts.map((c) =>
+                                        {allSavedClients.map((c) =>
                                             <SelectItem key={`${c.id}-${c.type}`} value={`${c.id}|${c.type}`}>
-                                                {c.displayName} ({c.type === 'billTo' ? 'Bill' : 'Ship'})
+                                                {c.displayName} ({c.type === 'client' ? 'Client' : c.type === 'billTo' ? 'Bill' : 'Ship'})
                                             </SelectItem>
                                         )}
                                     </SelectContent>
@@ -525,6 +619,16 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                             <div>
                                 <Label htmlFor='billToGst'>GSTIN</Label>
                                 <Input id="billToGst" placeholder="GST Number" value={billToGst} onChange={e => setBillToGst(e.target.value)} />
+                            </div>
+                            <div className="flex items-center space-x-2 pt-2">
+                                <Checkbox
+                                    id="saveClient"
+                                    checked={saveAsClient}
+                                    onCheckedChange={(checked) => setSaveAsClient(!!checked)}
+                                />
+                                <Label htmlFor="saveClient" className="text-sm font-medium leading-none cursor-pointer">
+                                    Save as new client in database
+                                </Label>
                             </div>
                         </div>
                     </div>
@@ -591,9 +695,9 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                         <SelectValue placeholder="Select a shipping contact" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {combinedContacts.map((c) =>
+                                        {allSavedClients.map((c) =>
                                             <SelectItem key={`${c.id}-${c.type}-ship`} value={`${c.id}|${c.type}`}>
-                                                {c.displayName} ({c.type === 'billTo' ? 'Bill' : 'Ship'})
+                                                {c.displayName} ({c.type === 'client' ? 'Client' : c.type === 'billTo' ? 'Bill' : 'Ship'})
                                             </SelectItem>
                                         )}
                                     </SelectContent>
@@ -611,6 +715,27 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 <Label htmlFor='shipToGst'>GSTIN</Label>
                                 <Input id="shipToGst" placeholder="Shipping GSTIN" value={shipToGst} onChange={e => setShipToGst(e.target.value)} />
                             </div>
+
+                            <div className="space-y-4 pt-4 border-t border-dashed">
+                                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Invoice Status</Label>
+                                <div className="flex gap-2">
+                                    {(['pending', 'paid', 'cancelled'] as const).map((s) => (
+                                        <Button
+                                            key={s}
+                                            type="button"
+                                            variant={status === s ? 'default' : 'outline'}
+                                            size="sm"
+                                            onClick={() => setStatus(s)}
+                                            className={`flex-1 capitalize text-xs h-8 ${status === s
+                                                ? s === 'paid' ? 'bg-emerald-600 hover:bg-emerald-700' : s === 'cancelled' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-amber-600 hover:bg-amber-700'
+                                                : ''
+                                                }`}
+                                        >
+                                            {s}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </CardContent>
@@ -620,7 +745,10 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-1/2">Item &amp; Description</TableHead>
+                                    <TableHead className="w-[200px]">Product / Service</TableHead>
+                                    <TableHead className="w-1/3">Item Details</TableHead>
+                                    <TableHead className="w-[100px]">HSN/SAC</TableHead>
+                                    <TableHead className="w-[80px]">Unit</TableHead>
                                     <TableHead className="w-[100px] text-right">Quantity</TableHead>
                                     <TableHead className="w-[120px] text-right">Rate ({settings.currencySymbol || '₹'})</TableHead>
                                     <TableHead className="w-[120px] text-right">Amount ({settings.currencySymbol || '₹'})</TableHead>
@@ -631,15 +759,34 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 {lineItems.map((item, index) => (
                                     <TableRow key={item.id} className="animate-fade-in-down hover:bg-muted/20">
                                         <TableCell>
+                                            <Select onValueChange={(val) => handleProductSelect(item.id, val)}>
+                                                <SelectTrigger className="h-9">
+                                                    <SelectValue placeholder="Quick select..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {products.map(p => (
+                                                        <SelectItem key={p.id} value={p.id!}>{p.name}</SelectItem>
+                                                    ))}
+                                                    <SelectItem value="none" className='text-muted-foreground italic font-normal'>Manual entry...</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </TableCell>
+                                        <TableCell>
                                             <Input placeholder="Item description" value={item.name} onChange={e => handleItemChange(item.id, 'name', e.target.value)} />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Input placeholder="HSN" value={item.hsnCode} onChange={e => handleItemChange(item.id, 'hsnCode', e.target.value)} />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Input placeholder="Unit" value={item.unit || ''} onChange={e => handleItemChange(item.id, 'unit', e.target.value)} />
                                         </TableCell>
                                         <TableCell>
                                             <Input className="text-right" type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="0" />
                                         </TableCell>
                                         <TableCell>
-                                            <Input className="text-right" type="number" value={item.price} onChange={e => handleItemChange(item.id, 'price', parseFloat(e.target.value) || 0)} min="0" step="0.01" placeholder="0.00" />
+                                            <Input className="text-right" type="number" value={item.unitPrice} onChange={e => handleItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} min="0" step="0.01" placeholder="0.00" />
                                         </TableCell>
-                                        <TableCell className="font-medium text-right">{!isNaN(item.quantity) && !isNaN(item.price) ? (Number(item.quantity) * Number(item.price)).toFixed(2) : '0.00'}</TableCell>
+                                        <TableCell className="font-medium text-right">{!isNaN(item.quantity) && !isNaN(item.unitPrice) ? (Number(item.quantity) * Number(item.unitPrice)).toFixed(2) : '0.00'}</TableCell>
                                         <TableCell className="text-right no-print">
                                             <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} aria-label="Remove item" className="active:scale-95">
                                                 <Trash2 className="h-4 w-4 text-destructive" />

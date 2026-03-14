@@ -12,6 +12,7 @@ import { getSettings, Settings } from '@/services/settingsService';
 import { generateAndSavePdf } from '@/lib/pdf';
 import { AppShell } from '@/components/app-shell';
 import { DashboardOverview } from '@/components/dashboard-overview';
+import { RevenueChart } from '@/components/revenue-chart';
 
 export default function Home() {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -118,8 +119,13 @@ export default function Home() {
     return (
         <AppShell>
             <main className="min-h-screen bg-transparent flex flex-col items-center p-4 sm:p-8">
-                <div className="w-full max-w-7xl mx-auto">
+                <div className="w-full max-w-7xl mx-auto space-y-8">
                     <DashboardOverview invoices={invoices} settings={settings} />
+
+                    <div className="grid grid-cols-1 gap-8">
+                        <RevenueChart invoices={invoices} settings={settings} />
+                    </div>
+
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2">
                             <InvoiceForm

@@ -1,5 +1,5 @@
 
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
@@ -12,7 +12,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'InvoiceFlow',
+  title: 'InvoiceFlow v2',
   description: 'Generate, manage, and download professional-looking invoices.',
 };
 
@@ -23,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={inter.variable}>
-       <head>
+      <head>
         <meta name="theme-color" content="#f43f5e" />
       </head>
       <body className="font-body antialiased">

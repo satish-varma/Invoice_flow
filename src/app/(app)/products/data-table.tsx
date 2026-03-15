@@ -25,12 +25,16 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
+import { FileSpreadsheet } from "lucide-react"
+import { exportToCSV } from "@/lib/export"
+
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[]
     data: TData[]
     searchPlaceholder?: string
     searchColumn?: string
     noResultsMessage?: string
+    exportFileName?: string
 }
 
 export function DataTable<TData, TValue>({
@@ -38,7 +42,8 @@ export function DataTable<TData, TValue>({
     data,
     searchPlaceholder = "Search...",
     searchColumn = "name",
-    noResultsMessage = "No results found."
+    noResultsMessage = "No results found.",
+    exportFileName = "export.csv"
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -60,15 +65,19 @@ export function DataTable<TData, TValue>({
 
     return (
         <div>
-            <div className="flex items-center py-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
                 <Input
                     placeholder={searchPlaceholder}
                     value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ""}
                     onChange={(event) =>
                         table.getColumn(searchColumn)?.setFilterValue(event.target.value)
                     }
-                    className="max-w-sm"
+                    className="max-w-sm w-full"
                 />
+                <Button variant="outline" onClick={() => exportToCSV(data, exportFileName)}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Export CSV
+                </Button>
             </div>
             <div className="rounded-md border">
                 <Table>

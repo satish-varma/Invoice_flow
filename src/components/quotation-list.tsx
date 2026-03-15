@@ -7,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Quotation } from '@/services/quotationService';
 import { format } from 'date-fns';
-import { Download } from 'lucide-react';
+import { Download, FileSpreadsheet } from 'lucide-react';
+import { exportToCSV } from '@/lib/export';
 
 interface QuotationListProps {
     quotations: Quotation[];
@@ -16,16 +17,22 @@ interface QuotationListProps {
 }
 
 export function QuotationList({ quotations, onSelectQuotation, onDownloadQuotation }: QuotationListProps) {
-    
+
     const handleDownloadClick = (e: React.MouseEvent, quotation: Quotation) => {
         e.stopPropagation(); // Prevent row click event
         onDownloadQuotation(quotation);
     };
-    
+
     return (
         <Card className="h-full">
-            <CardHeader>
-                <CardTitle>Recent Quotations</CardTitle>
+            <CardHeader className="pb-3">
+                <div className="flex justify-between items-center">
+                    <CardTitle className="text-xl font-bold">Recent Quotations</CardTitle>
+                    <Button variant="outline" size="sm" className="h-9" onClick={() => exportToCSV(quotations, 'recent-quotations.csv')}>
+                        <FileSpreadsheet className="h-4 w-4 mr-1" />
+                        CSV
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -47,15 +54,15 @@ export function QuotationList({ quotations, onSelectQuotation, onDownloadQuotati
                             </TableRow>
                         )}
                         {quotations.map((quotation) => (
-                            <TableRow 
-                                key={quotation.id} 
+                            <TableRow
+                                key={quotation.id}
                                 onClick={() => onSelectQuotation(quotation)}
                                 className="cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] hover:bg-muted/50"
                             >
                                 <TableCell className="font-medium">{quotation.quotationNumber}</TableCell>
                                 <TableCell>{quotation.billToName}</TableCell>
                                 <TableCell>{format(new Date(quotation.quotationDate), 'PPP')}</TableCell>
-                                <TableCell className="text-right">{quotation.total.toFixed(2)}</TableCell>
+                                <TableCell className="text-right">{(Number(quotation.total) || 0).toFixed(2)}</TableCell>
                                 <TableCell className="text-right">
                                     <Button
                                         variant="ghost"

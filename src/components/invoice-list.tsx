@@ -7,10 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Invoice } from '@/services/invoiceService';
 import { format } from 'date-fns';
-import { Download, Search, Filter } from 'lucide-react';
+import { Download, Search, Filter, FileSpreadsheet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { exportToCSV } from '@/lib/export';
 
 
 interface InvoiceListProps {
@@ -68,6 +69,10 @@ export function InvoiceList({ invoices, onSelectInvoice, onDownloadInvoice }: In
                                 <SelectItem value="cancelled">Cancelled</SelectItem>
                             </SelectContent>
                         </Select>
+                        <Button variant="outline" size="sm" className="h-9 px-2" onClick={() => exportToCSV(filteredInvoices, 'recent-invoices.csv')}>
+                            <FileSpreadsheet className="h-4 w-4 mr-1" />
+                            CSV
+                        </Button>
                     </div>
                 </div>
             </CardHeader>
@@ -108,7 +113,7 @@ export function InvoiceList({ invoices, onSelectInvoice, onDownloadInvoice }: In
                                                 {badgeStyle.label}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-right font-semibold">₹{invoice.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
+                                        <TableCell className="text-right font-semibold">₹{(Number(invoice.total) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</TableCell>
                                         <TableCell className="text-right">
                                             <Button
                                                 variant="ghost"

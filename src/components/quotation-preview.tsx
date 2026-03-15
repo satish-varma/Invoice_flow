@@ -150,7 +150,7 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                                                     </TableCell>
                                                 );
                                             })}
-                                            <TableCell className="font-medium text-right">{item.total.toFixed(2)}</TableCell>
+                                            <TableCell className="font-medium text-right">{(Number(item.total) || 0).toFixed(2)}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -172,35 +172,35 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                                     <tbody>
                                         <tr>
                                             <td className="py-1 text-right font-bold">SUBTOTAL</td>
-                                            <td className="py-1 text-right w-[100px]">{quotation.subtotal.toFixed(2)}</td>
+                                            <td className="py-1 text-right w-[100px]">{(Number(quotation.subtotal) || 0).toFixed(2)}</td>
                                         </tr>
                                         {quotation.totalDiscount && quotation.totalDiscount > 0 ? (
                                             <tr>
                                                 <td className="py-1 text-right font-bold">TOTAL DISCOUNT</td>
-                                                <td className="py-1 text-right text-red-600">-{quotation.totalDiscount.toFixed(2)}</td>
+                                                <td className="py-1 text-right text-red-600">-{(Number(quotation.totalDiscount) || 0).toFixed(2)}</td>
                                             </tr>
                                         ) : null}
                                         {gstRate > 0 ? (
                                             <tr>
-                                                <td className="py-1 text-right font-bold">GST @{gstRate.toFixed(2)}%</td>
-                                                <td className="py-1 text-right">{quotation.gstAmount.toFixed(2)}</td>
+                                                <td className="py-1 text-right font-bold">GST @{(Number(gstRate) || 0).toFixed(2)}%</td>
+                                                <td className="py-1 text-right">{(Number(quotation.gstAmount) || 0).toFixed(2)}</td>
                                             </tr>
                                         ) : null}
                                         {quotation.shipping > 0 ? (
                                             <tr>
                                                 <td className="py-1 text-right font-bold">SHIPPING/HANDLING</td>
-                                                <td className="py-1 text-right">{quotation.shipping.toFixed(2)}</td>
+                                                <td className="py-1 text-right">{(Number(quotation.shipping) || 0).toFixed(2)}</td>
                                             </tr>
                                         ) : null}
                                         {quotation.other > 0 ? (
                                             <tr>
                                                 <td className="py-1 text-right font-bold">OTHER</td>
-                                                <td className="py-1 text-right">{quotation.other.toFixed(2)}</td>
+                                                <td className="py-1 text-right">{(Number(quotation.other) || 0).toFixed(2)}</td>
                                             </tr>
                                         ) : null}
                                         <tr className="font-bold text-lg">
                                             <td className="py-2 text-right border-t border-black">TOTAL</td>
-                                            <td className="py-2 text-right border-t border-black">{quotation.total.toFixed(2)}</td>
+                                            <td className="py-2 text-right border-t border-black">{(Number(quotation.total) || 0).toFixed(2)}</td>
                                         </tr>
                                     </tbody>
                                 </table>

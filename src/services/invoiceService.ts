@@ -148,7 +148,7 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
 export async function getInvoices(): Promise<Invoice[]> {
     try {
         console.log("Fetching invoices from Firestore...");
-        const q = query(collection(db, INVOICES_COLLECTION));
+        const q = query(collection(db, INVOICES_COLLECTION), orderBy('createdAt', 'desc'));
         const querySnapshot = await getDocs(q);
         const invoices: Invoice[] = [];
         querySnapshot.forEach((doc) => {

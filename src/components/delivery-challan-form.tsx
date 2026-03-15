@@ -612,7 +612,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                         <TableCell>
                                             <Input className="text-right" type="number" value={item.unitPrice} onChange={e => handleItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} min="0" step="0.01" />
                                         </TableCell>
-                                        <TableCell className="font-medium text-right">{item.total.toFixed(2)}</TableCell>
+                                        <TableCell className="font-medium text-right">{(Number(item.total) || 0).toFixed(2)}</TableCell>
                                         <TableCell className="text-right no-print">
                                             <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} aria-label="Remove item" className="active:scale-95">
                                                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -648,7 +648,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                     <div className="w-full max-w-sm space-y-2 text-sm">
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Subtotal</span>
-                            <span className='font-medium'>{subtotal.toFixed(2)}</span>
+                            <span className='font-medium'>{(Number(subtotal) || 0).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center">
                             <div className="flex items-center gap-1">
@@ -662,7 +662,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 />
                                 <span className="text-muted-foreground">%</span>
                             </div>
-                            <span className='font-medium'>{gstAmount.toFixed(2)}</span>
+                            <span className='font-medium'>{(Number(gstAmount) || 0).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">Shipping/Handling</span>
@@ -674,7 +674,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                         </div>
                         <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
                             <span>Total</span>
-                            <span>{total.toFixed(2)}</span>
+                            <span>{(Number(total) || 0).toFixed(2)}</span>
                         </div>
                     </div>
                 </CardFooter>

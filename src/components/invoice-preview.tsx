@@ -212,8 +212,8 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                                                 <TableCell className='py-4 text-gray-500 text-[11px]'>{item.unit || '-'}</TableCell>
                                             )}
                                             <TableCell className="text-right py-4">{item.quantity}</TableCell>
-                                            <TableCell className="text-right py-4">{currencySymbol} {item.unitPrice.toFixed(2)}</TableCell>
-                                            <TableCell className="font-bold text-right py-4">{currencySymbol} {(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
+                                            <TableCell className="text-right py-4">{currencySymbol} {(Number(item.unitPrice) || 0).toFixed(2)}</TableCell>
+                                            <TableCell className="font-bold text-right py-4">{currencySymbol} {(Number(item.quantity || 0) * Number(item.unitPrice || 0)).toFixed(2)}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -233,17 +233,17 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                                         <tbody className='space-y-2'>
                                             <tr>
                                                 <td className="py-1 text-gray-500 font-medium">Subtotal</td>
-                                                <td className="py-1 text-right font-bold">{currencySymbol} {invoice.subtotal.toFixed(2)}</td>
+                                                <td className="py-1 text-right font-bold">{currencySymbol} {(Number(invoice.subtotal) || 0).toFixed(2)}</td>
                                             </tr>
                                             {invoice.taxes?.map((tax, index) => (
                                                 <tr key={index}>
                                                     <td className="py-1 text-gray-500 font-medium">{tax.name}</td>
-                                                    <td className="py-1 text-right font-bold">{currencySymbol} {tax.amount.toFixed(2)}</td>
+                                                    <td className="py-1 text-right font-bold">{currencySymbol} {(Number(tax.amount) || 0).toFixed(2)}</td>
                                                 </tr>
                                             ))}
                                             <tr className="border-t-2" style={{ borderTopColor: template === 'modern' ? primaryColor : undefined }}>
                                                 <td className="py-3 font-bold text-lg uppercase tracking-wider" style={{ color: template === 'modern' ? primaryColor : undefined }}>Grand Total</td>
-                                                <td className="py-3 text-right font-black text-xl" style={{ color: template === 'modern' ? primaryColor : undefined }}>{currencySymbol} {invoice.total.toFixed(2)}</td>
+                                                <td className="py-3 text-right font-black text-xl" style={{ color: template === 'modern' ? primaryColor : undefined }}>{currencySymbol} {(Number(invoice.total) || 0).toFixed(2)}</td>
                                             </tr>
                                         </tbody>
                                     </table>

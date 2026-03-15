@@ -94,8 +94,8 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                                             )}
                                             <TableCell>{item.unit || '-'}</TableCell>
                                             <TableCell className="text-right">{item.quantity}</TableCell>
-                                            <TableCell className="text-right">{item.unitPrice.toFixed(2)}</TableCell>
-                                            <TableCell className="font-medium text-right">{item.total.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right">{(Number(item.unitPrice) || 0).toFixed(2)}</TableCell>
+                                            <TableCell className="font-medium text-right">{(Number(item.total) || 0).toFixed(2)}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -127,29 +127,29 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                                     <tbody>
                                         <tr>
                                             <td className="py-1 text-right font-bold uppercase text-xs text-gray-500">Subtotal</td>
-                                            <td className="py-1 text-right w-[100px]">{challan.subtotal.toFixed(2)}</td>
+                                            <td className="py-1 text-right w-[100px]">{(Number(challan.subtotal) || 0).toFixed(2)}</td>
                                         </tr>
                                         {gstRate > 0 ? (
                                             <tr>
-                                                <td className="py-1 text-right font-bold uppercase text-xs text-gray-500">GST @{gstRate.toFixed(2)}%</td>
-                                                <td className="py-1 text-right">{challan.gstAmount.toFixed(2)}</td>
+                                                <td className="py-1 text-right font-bold uppercase text-xs text-gray-500">GST @{(Number(gstRate) || 0).toFixed(2)}%</td>
+                                                <td className="py-1 text-right">{(Number(challan.gstAmount) || 0).toFixed(2)}</td>
                                             </tr>
                                         ) : null}
                                         {challan.shipping > 0 ? (
                                             <tr>
                                                 <td className="py-1 text-right font-bold uppercase text-xs text-gray-500">Shipping</td>
-                                                <td className="py-1 text-right">{challan.shipping.toFixed(2)}</td>
+                                                <td className="py-1 text-right">{(Number(challan.shipping) || 0).toFixed(2)}</td>
                                             </tr>
                                         ) : null}
                                         {challan.other > 0 ? (
                                             <tr>
                                                 <td className="py-1 text-right font-bold uppercase text-xs text-gray-500">Other</td>
-                                                <td className="py-1 text-right">{challan.other.toFixed(2)}</td>
+                                                <td className="py-1 text-right">{(Number(challan.other) || 0).toFixed(2)}</td>
                                             </tr>
                                         ) : null}
                                         <tr className="font-bold text-lg">
                                             <td className="py-2 text-right border-t border-black uppercase">Total</td>
-                                            <td className="py-2 text-right border-t border-black">{challan.total.toFixed(2)}</td>
+                                            <td className="py-2 text-right border-t border-black">{(Number(challan.total) || 0).toFixed(2)}</td>
                                         </tr>
                                     </tbody>
                                 </table>

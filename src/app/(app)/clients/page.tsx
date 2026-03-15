@@ -163,7 +163,13 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="bg-card rounded-lg border shadow-sm p-4">
-                    <DataTable columns={columns} data={clients} />
+                    <DataTable
+                        columns={columns}
+                        data={clients}
+                        searchPlaceholder="Search clients..."
+                        noResultsMessage="No clients found in your registry."
+                        exportFileName="clients-export.csv"
+                    />
                 </div>
             </div>
 

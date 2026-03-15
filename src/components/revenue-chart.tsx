@@ -54,7 +54,7 @@ export function RevenueChart({ invoices, settings }: RevenueChartProps) {
                 <div className="bg-background border rounded-lg shadow-lg p-3">
                     <p className="font-bold text-sm mb-1">{label}</p>
                     <p className="text-primary font-medium">
-                        {currencySymbol}{payload[0].value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {currencySymbol}{(Number(payload[0].value) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </p>
                 </div>
             );

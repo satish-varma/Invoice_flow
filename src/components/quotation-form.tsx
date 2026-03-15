@@ -703,7 +703,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                                                 />
                                             </TableCell>
                                         ))}
-                                        <TableCell className="font-medium text-right">{item.total.toFixed(2)}</TableCell>
+                                        <TableCell className="font-medium text-right">{(Number(item.total) || 0).toFixed(2)}</TableCell>
                                         <TableCell className="text-right no-print">
                                             <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} aria-label="Remove item" className="active:scale-95">
                                                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -742,12 +742,12 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                     <div className="w-full max-w-sm space-y-2 text-sm">
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Subtotal</span>
-                            <span className='font-medium'>{subtotal.toFixed(2)}</span>
+                            <span className='font-medium'>{(Number(subtotal) || 0).toFixed(2)}</span>
                         </div>
                         {totalDiscount > 0 && (
                             <div className="flex justify-between text-destructive">
                                 <span className="text-muted-foreground">Discount</span>
-                                <span className='font-medium'>-{totalDiscount.toFixed(2)}</span>
+                                <span className='font-medium'>-{(Number(totalDiscount) || 0).toFixed(2)}</span>
                             </div>
                         )}
                         <div className="flex justify-between items-center">
@@ -763,7 +763,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                                 />
                                 <span className="text-muted-foreground">%</span>
                             </div>
-                            <span className='font-medium'>{gstAmount.toFixed(2)}</span>
+                            <span className='font-medium'>{(Number(gstAmount) || 0).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center">
                             <Label htmlFor="shipping-charges" className="text-muted-foreground">Shipping/Handling</Label>
@@ -775,7 +775,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                         </div>
                         <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
                             <span>Total</span>
-                            <span>{total.toFixed(2)}</span>
+                            <span>{(Number(total) || 0).toFixed(2)}</span>
                         </div>
                     </div>
                 </CardFooter>

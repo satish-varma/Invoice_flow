@@ -26,7 +26,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Invoice } from "@/services/invoiceService"
-import { Download, Trash2 } from "lucide-react"
+import { Download, Trash2, FileSpreadsheet } from "lucide-react"
+import { exportToCSV } from "@/lib/export"
 
 
 interface DataTableProps<TData extends Invoice, TValue> {
@@ -97,18 +98,25 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
                         className="w-full sm:w-48"
                     />
                 </div>
-                {table.getSelectedRowModel().rows.length > 0 && (
-                    <div className="flex w-full sm:w-auto items-center gap-2">
-                        <Button variant="outline" onClick={handleDownload} className="w-full sm:w-auto">
-                            <Download className="mr-2 h-4 w-4" />
-                            Download ({table.getSelectedRowModel().rows.length})
-                        </Button>
-                        <Button variant="destructive" onClick={handleDelete} className="w-full sm:w-auto">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete ({table.getSelectedRowModel().rows.length})
-                        </Button>
-                    </div>
-                )}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button variant="outline" onClick={() => exportToCSV(table.getSelectedRowModel().rows.length > 0 ? table.getSelectedRowModel().rows.map(r => r.original) : data, `invoices-export-${new Date().toISOString().split('T')[0]}.csv`)} className="w-full sm:w-auto">
+                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                        Export CSV {table.getSelectedRowModel().rows.length > 0 ? `(${table.getSelectedRowModel().rows.length})` : '(All)'}
+                    </Button>
+
+                    {table.getSelectedRowModel().rows.length > 0 && (
+                        <div className="flex w-full sm:w-auto items-center gap-2">
+                            <Button variant="outline" onClick={handleDownload} className="w-full sm:w-auto">
+                                <Download className="mr-2 h-4 w-4" />
+                                Download ({table.getSelectedRowModel().rows.length})
+                            </Button>
+                            <Button variant="destructive" onClick={handleDelete} className="w-full sm:w-auto">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete ({table.getSelectedRowModel().rows.length})
+                            </Button>
+                        </div>
+                    )}
+                </div>
             </div>
             <div className="rounded-md border overflow-x-auto">
                 <Table>

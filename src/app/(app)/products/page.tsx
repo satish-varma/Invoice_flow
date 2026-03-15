@@ -179,6 +179,7 @@ export default function ProductsPage() {
                         data={products}
                         searchPlaceholder="Search products or services..."
                         noResultsMessage="No products or services found in your library."
+                        exportFileName="products-export.csv"
                     />
                 </div>
             </div>

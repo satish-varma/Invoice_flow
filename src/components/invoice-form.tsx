@@ -807,7 +807,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                     <div className="w-full max-w-sm text-sm space-y-2">
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Subtotal</span>
-                            <span className='font-medium'>{settings.currencySymbol || '₹'} {subtotal.toFixed(2)}</span>
+                            <span className='font-medium'>{settings.currencySymbol || '₹'} {(Number(subtotal) || 0).toFixed(2)}</span>
                         </div>
 
                         {/* Manual Tax Section */}
@@ -847,7 +847,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
 
                         <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
                             <span>Total Amount</span>
-                            <span>{settings.currencySymbol || '₹'} {total.toFixed(2)}</span>
+                            <span>{settings.currencySymbol || '₹'} {(Number(total) || 0).toFixed(2)}</span>
                         </div>
                     </div>
                     {activeCompanyProfile?.bankBeneficiary && (

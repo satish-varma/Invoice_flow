@@ -46,6 +46,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     { href: '/quotation', label: 'New Quotation', icon: FileText },
     { href: '/delivery-challan', label: 'Delivery Challan', icon: Truck },
     { href: '/invoices', label: 'Saved Invoices', icon: ListOrdered },
+    { href: '/quotations', label: 'Saved Quotations', icon: ListOrdered },
+    { href: '/delivery-challans', label: 'Saved Challans', icon: ListOrdered },
     { href: '/products', label: 'Products', icon: Package },
     { href: '/clients', label: 'Clients', icon: User },
     { href: '/settings', label: 'Settings', icon: Settings },

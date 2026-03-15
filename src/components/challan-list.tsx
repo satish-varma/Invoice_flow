@@ -7,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Challan } from '@/services/challanService';
 import { format } from 'date-fns';
-import { Download } from 'lucide-react';
+import { Download, FileSpreadsheet } from 'lucide-react';
+import { exportToCSV } from '@/lib/export';
 
 interface ChallanListProps {
     challans: Challan[];
@@ -16,16 +17,22 @@ interface ChallanListProps {
 }
 
 export function ChallanList({ challans, onSelectChallan, onDownloadChallan }: ChallanListProps) {
-    
+
     const handleDownloadClick = (e: React.MouseEvent, challan: Challan) => {
         e.stopPropagation(); // Prevent row click event
         onDownloadChallan(challan);
     };
-    
+
     return (
         <Card className="h-full">
-            <CardHeader>
-                <CardTitle>Recent Delivery Challans</CardTitle>
+            <CardHeader className="pb-3">
+                <div className="flex justify-between items-center">
+                    <CardTitle className="text-xl font-bold">Recent Challans</CardTitle>
+                    <Button variant="outline" size="sm" className="h-9" onClick={() => exportToCSV(challans, 'recent-challans.csv')}>
+                        <FileSpreadsheet className="h-4 w-4 mr-1" />
+                        CSV
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -47,15 +54,15 @@ export function ChallanList({ challans, onSelectChallan, onDownloadChallan }: Ch
                             </TableRow>
                         )}
                         {challans.map((challan) => (
-                            <TableRow 
-                                key={challan.id} 
+                            <TableRow
+                                key={challan.id}
                                 onClick={() => onSelectChallan(challan)}
                                 className="cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] hover:bg-muted/50"
                             >
                                 <TableCell className="font-medium">{challan.dcNumber}</TableCell>
                                 <TableCell>{challan.billToName}</TableCell>
                                 <TableCell>{format(new Date(challan.dcDate), 'PPP')}</TableCell>
-                                <TableCell className="text-right">{challan.total.toFixed(2)}</TableCell>
+                                <TableCell className="text-right">{(Number(challan.total) || 0).toFixed(2)}</TableCell>
                                 <TableCell className="text-right">
                                     <Button
                                         variant="ghost"

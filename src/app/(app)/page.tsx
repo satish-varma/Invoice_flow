@@ -146,8 +146,8 @@ export default function Home() {
                         <RevenueChart invoices={invoices} settings={settings} />
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div className="lg:col-span-2">
+                    <div className="grid grid-cols-1 gap-8">
+                        <div className="w-full">
                             <InvoiceForm
                                 key={selectedInvoice?.id || 'new'}
                                 initialData={selectedInvoice}
@@ -155,9 +155,9 @@ export default function Home() {
                                 onAddNew={handleAddNew}
                             />
                         </div>
-                        <div className="lg:col-span-1">
+                        <div className="w-full">
                             {isLoading ? (
-                                <div className="flex items-center justify-center h-full">
+                                <div className="flex items-center justify-center p-12">
                                     <Loader className="h-8 w-8 animate-spin" />
                                 </div>
                             ) : (

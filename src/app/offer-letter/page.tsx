@@ -92,8 +92,8 @@ export default function OfferLetterPage() {
         <AppShell>
             <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
                 <div className="w-full max-w-7xl mx-auto">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div className="lg:col-span-2">
+                    <div className="grid grid-cols-1 gap-8">
+                        <div className="w-full">
                             <OfferLetterForm 
                                 key={selectedOffer?.id || 'new'} 
                                 initialData={selectedOffer} 
@@ -101,7 +101,7 @@ export default function OfferLetterPage() {
                                 onAddNew={() => setSelectedOffer(null)}
                             />
                         </div>
-                        <div className="lg:col-span-1">
+                        <div className="w-full">
                             {isLoading ? (
                                 <div className="flex items-center justify-center p-12">
                                     <Loader className="h-8 w-8 animate-spin" />

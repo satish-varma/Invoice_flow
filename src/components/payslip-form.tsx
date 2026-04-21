@@ -115,6 +115,7 @@ export function PayslipForm({ initialData, onPayslipSave, onAddNew }: PayslipFor
         try {
             const payload = {
                 ...values,
+                employeeId: values.employeeId || '',
                 grossEarnings,
                 totalDeductions,
                 netPay,

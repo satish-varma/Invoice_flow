@@ -97,8 +97,8 @@ export default function DeliveryChallanPage() {
         <AppShell>
             <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
                 <div className="w-full max-w-7xl mx-auto">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div className="lg:col-span-2">
+                    <div className="grid grid-cols-1 gap-8">
+                        <div className="w-full">
                             <DeliveryChallanForm
                             key={selectedChallan?.id || 'new'} 
                             initialData={selectedChallan} 
@@ -106,9 +106,9 @@ export default function DeliveryChallanPage() {
                             onAddNew={handleAddNew}
                             />
                         </div>
-                        <div className="lg:col-span-1">
+                        <div className="w-full">
                             {isLoading ? (
-                                <div className="flex items-center justify-center h-full">
+                                <div className="flex items-center justify-center p-12">
                                     <Loader className="h-8 w-8 animate-spin" />
                                 </div>
                             ) : (

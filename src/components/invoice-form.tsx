@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getSettings, Settings, CompanyProfile, BillToContact, ShipToContact } from '@/services/settingsService';
 import { getClients, saveClient, Client } from '@/services/clientService';
 import { Checkbox } from './ui/checkbox';
-import { availableTaxes } from '@/app/settings/page';
+import { availableTaxes } from '@/lib/tax-constants';
 import { getProducts, Product } from '@/services/productService';
 
 type LineItem = {

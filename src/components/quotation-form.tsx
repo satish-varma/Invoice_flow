@@ -51,7 +51,7 @@ const defaultColumns: ColumnDef[] = [
 ];
 
 import { getProducts, Product } from '@/services/productService';
-import { availableTaxes } from '@/app/settings/page';
+import { availableTaxes } from '@/lib/tax-constants';
 
 export function QuotationForm({ initialData, onQuotationSave, onAddNew }: QuotationFormProps) {
     const [quotationNumber, setQuotationNumber] = useState('');

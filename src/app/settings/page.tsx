@@ -378,7 +378,7 @@ export default function SettingsPage() {
                     <Input value={profile.profileName ?? ''} onChange={e => handleProfileInputChange('profileName', e.target.value)} placeholder="e.g., Main Business, Side Hustle" />
                 </div>
                 <AccordionItem value="item-1">
-                    <AccordionTrigger>Company Details ("From" Address)</AccordionTrigger>
+                    <AccordionTrigger>Company Details (&quot;From&quot; Address)</AccordionTrigger>
                     <AccordionContent className="grid md:grid-cols-2 gap-4 pt-4">
                         <div className="space-y-2 md:col-span-2">
                             <Label>Company Name</Label>
@@ -464,7 +464,7 @@ export default function SettingsPage() {
                                 <div className='flex-1 space-y-2'>
                                     <Label>Upload Stamp</Label>
                                     <Input type="file" ref={fileInputRef} onChange={e => handleFileChange(e, 'stamp')} accept="image/png, image/jpeg" />
-                                    <p className='text-xs text-muted-foreground'>This will appear above the "Authorized Signatory" text in the footer.</p>
+                                    <p className='text-xs text-muted-foreground'>This will appear above the &quot;Authorized Signatory&quot; text in the footer.</p>
                                 </div>
                                 {stampPreview && (
                                     <div className='relative w-24 h-24 border rounded-md p-2 bg-white flex items-center justify-center'>
@@ -525,7 +525,7 @@ export default function SettingsPage() {
                         <Card>
                             <CardHeader>
                                 <CardTitle>Company Profiles</CardTitle>
-                                <CardDescription>Manage the "From" details that appear on your invoices. You can create multiple profiles.</CardDescription>
+                                <CardDescription>Manage the &quot;From&quot; details that appear on your invoices. You can create multiple profiles.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 {settings.companyProfiles?.map(profile => (
@@ -559,12 +559,12 @@ export default function SettingsPage() {
                             {/* Bill To Section */}
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Manage "Bill To" Contacts</CardTitle>
+                                    <CardTitle>Manage &quot;Bill To&quot; Contacts</CardTitle>
                                     <CardDescription>Add, view, and remove billing contacts.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div className="p-4 border rounded-lg space-y-4">
-                                        <h3 className="font-bold">Add New "Bill To" Contact</h3>
+                                        <h3 className="font-bold">Add New &quot;Bill To&quot; Contact</h3>
                                         <div className="space-y-2">
                                             <Label htmlFor="billToDisplayName">Display Name (Unique)</Label>
                                             <Input id="billToDisplayName" placeholder="e.g., Main Client" value={newBillTo.displayName} onChange={e => handleInputChange('newBillTo', 'displayName', e.target.value)} />
@@ -586,7 +586,7 @@ export default function SettingsPage() {
                                         </Button>
                                     </div>
                                     <div className="space-y-2">
-                                        <h3 className="font-bold">Saved "Bill To" Contacts</h3>
+                                        <h3 className="font-bold">Saved &quot;Bill To&quot; Contacts</h3>
                                         <div className="rounded-md border overflow-x-auto">
                                             <Table>
                                                 <TableHeader>
@@ -621,12 +621,12 @@ export default function SettingsPage() {
                             {/* Ship To Section */}
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Manage "Ship To" Contacts</CardTitle>
+                                    <CardTitle>Manage &quot;Ship To&quot; Contacts</CardTitle>
                                     <CardDescription>Add, view, and remove shipping contacts.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div className="p-4 border rounded-lg space-y-4">
-                                        <h3 className="font-bold">Add New "Ship To" Contact</h3>
+                                        <h3 className="font-bold">Add New &quot;Ship To&quot; Contact</h3>
                                         <div className="space-y-2">
                                             <Label htmlFor="shipToDisplayName">Display Name (Unique)</Label>
                                             <Input id="shipToDisplayName" placeholder="e.g., Warehouse" value={newShipTo.displayName} onChange={e => handleInputChange('newShipTo', 'displayName', e.target.value)} />
@@ -649,7 +649,7 @@ export default function SettingsPage() {
                                         </Button>
                                     </div>
                                     <div className="space-y-2">
-                                        <h3 className="font-bold">Saved "Ship To" Contacts</h3>
+                                        <h3 className="font-bold">Saved &quot;Ship To&quot; Contacts</h3>
                                         <div className="rounded-md border overflow-x-auto">
                                             <Table>
                                                 <TableHeader>
@@ -760,7 +760,7 @@ export default function SettingsPage() {
                                                     Apply
                                                 </Button>
                                             </div>
-                                            <p className='text-xs text-muted-foreground mt-2'>This color will be used for headings and accents in 'Modern' template.</p>
+                                            <p className='text-xs text-muted-foreground mt-2'>This color will be used for headings and accents in &apos;Modern&apos; template.</p>
                                         </div>
                                     </div>
                                 </div>

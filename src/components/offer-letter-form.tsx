@@ -235,7 +235,7 @@ export function OfferLetterForm({ initialData, onOfferSave, onAddNew }: OfferLet
                   <FormItem>
                     <FormLabel>Annual CTC (₹)</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="600000" {...field} />
+                      <Input type="number" placeholder="600000" {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -310,7 +310,7 @@ export function OfferLetterForm({ initialData, onOfferSave, onAddNew }: OfferLet
                     <FormItem>
                         <FormLabel>Annual Leaves</FormLabel>
                         <FormControl>
-                        <Input type="number" {...field} />
+                        <Input type="number" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>

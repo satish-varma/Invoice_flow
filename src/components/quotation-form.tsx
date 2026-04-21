@@ -62,7 +62,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     const [billToAddress, setBillToAddress] = useState('');
 
     const [lineItems, setLineItems] = useState<QuotationLineItem[]>([
-        { id: 1, name: '', unit: '', quantity: 1, unitPrice: 0, discount: 0, total: 0, hsnCode: '', customFields: {} },
+        { id: 1, name: '', unit: '', quantity: 0, unitPrice: 0, discount: 0, total: 0, hsnCode: '', customFields: {} },
     ]);
     const [terms, setTerms] = useState('1. Price: Inclusive of all taxes\n2. Delivery: 2-3 days from the date of receipt of purchase order\n3. Payment: 100% advance along with purchase order');
     const [clients, setClients] = useState<Client[]>([]);
@@ -191,7 +191,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     }, [lineItems.map(i => `${i.quantity}-${i.unitPrice}-${i.discount}`).join(',')]);
 
     const handleAddItem = () => {
-        setLineItems([...lineItems, { id: Date.now(), name: '', unit: '', hsnCode: '', quantity: 1, unitPrice: 0, discount: 0, total: 0, customFields: {} }]);
+        setLineItems([...lineItems, { id: Date.now(), name: '', unit: '', hsnCode: '', quantity: 0, unitPrice: 0, discount: 0, total: 0, customFields: {} }]);
     };
 
     const handleRemoveItem = (id: number) => {
@@ -245,7 +245,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
         setValidityDate(new Date());
         setBillToName('');
         setBillToAddress('');
-        setLineItems([{ id: Date.now(), name: '', unit: '', quantity: 1, unitPrice: 0, discount: 0, total: 0, customFields: {} }]);
+        setLineItems([{ id: Date.now(), name: '', unit: '', quantity: 0, unitPrice: 0, discount: 0, total: 0, customFields: {} }]);
         setGstRate(5);
         setShipping(0);
         setOther(0);
@@ -696,7 +696,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                                                 <Input
                                                     id={`${col.id}-${item.id}`}
                                                     placeholder={col.label}
-                                                    value={['name', 'unit', 'hsnCode', 'quantity', 'unitPrice', 'discount'].includes(col.id) ? (item as any)[col.id] : item.customFields?.[col.id] || ''}
+                                                    value={['name', 'unit', 'hsnCode', 'quantity', 'unitPrice', 'discount'].includes(col.id) ? ((item as any)[col.id] || '') : (item.customFields?.[col.id] || '')}
                                                     onChange={e => handleItemChange(item.id, col.id, e.target.value)}
                                                     type={['quantity', 'unitPrice', 'discount'].includes(col.id) || col.id.startsWith('custom_') ? 'number' : 'text'}
                                                     className={['quantity', 'unitPrice', 'discount'].includes(col.id) ? 'text-right' : ''}
@@ -756,7 +756,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                                 <Input
                                     id="gst-rate"
                                     type="number"
-                                    value={gstRate}
+                                    value={gstRate || ''}
                                     onChange={e => setGstRate(parseFloat(e.target.value) || 0)}
                                     className="h-8 text-right w-16"
                                     placeholder="5"
@@ -767,11 +767,11 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                         </div>
                         <div className="flex justify-between items-center">
                             <Label htmlFor="shipping-charges" className="text-muted-foreground">Shipping/Handling</Label>
-                            <Input id="shipping-charges" type="number" value={shipping} onChange={e => setShipping(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
+                            <Input id="shipping-charges" type="number" value={shipping || ''} onChange={e => setShipping(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
                         </div>
                         <div className="flex justify-between items-center">
                             <Label htmlFor="other-charges" className="text-muted-foreground">Other</Label>
-                            <Input id="other-charges" type="number" value={other} onChange={e => setOther(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
+                            <Input id="other-charges" type="number" value={other || ''} onChange={e => setOther(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
                         </div>
                         <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
                             <span>Total</span>

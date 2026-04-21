@@ -76,7 +76,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     const [appliedTaxes, setAppliedTaxes] = useState<TaxItem[]>([]);
 
     const [lineItems, setLineItems] = useState<LineItem[]>([
-        { id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0 }
+        { id: Date.now(), name: '', quantity: 0, unitPrice: 0, unit: '', hsnCode: '', total: 0 }
     ]);
     const [clients, setClients] = useState<Client[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
@@ -204,7 +204,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     }, [initialData]);
 
     const handleAddItem = () => {
-        setLineItems([...lineItems, { id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0 }]);
+        setLineItems([...lineItems, { id: Date.now(), name: '', quantity: 0, unitPrice: 0, unit: '', hsnCode: '', total: 0 }]);
     };
 
     const handleRemoveItem = (id: number) => {
@@ -294,7 +294,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         setShipToAddress('');
         setShipToGst('');
         setAppliedTaxes([]);
-        setLineItems([{ id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0 }]);
+        setLineItems([{ id: Date.now(), name: '', quantity: 0, unitPrice: 0, unit: '', hsnCode: '', total: 0 }]);
         setStatus('pending');
         if (shouldCallback) {
             onAddNew();
@@ -417,7 +417,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 }));
             }
             else {
-                setLineItems([{ id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0 }]);
+                setLineItems([{ id: Date.now(), name: '', quantity: 0, unitPrice: 0, unit: '', hsnCode: '', total: 0 }]);
             }
             toast({
                 title: "Extraction Complete",
@@ -781,10 +781,10 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                             <Input placeholder="Unit" value={item.unit || ''} onChange={e => handleItemChange(item.id, 'unit', e.target.value)} />
                                         </TableCell>
                                         <TableCell>
-                                            <Input className="text-right" type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="0" />
+                                            <Input className="text-right" type="number" value={item.quantity || ''} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="0" />
                                         </TableCell>
                                         <TableCell>
-                                            <Input className="text-right" type="number" value={item.unitPrice} onChange={e => handleItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} min="0" step="0.01" placeholder="0.00" />
+                                            <Input className="text-right" type="number" value={item.unitPrice || ''} onChange={e => handleItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} min="0" step="0.01" placeholder="0.00" />
                                         </TableCell>
                                         <TableCell className="font-medium text-right">{!isNaN(item.quantity) && !isNaN(item.unitPrice) ? (Number(item.quantity) * Number(item.unitPrice)).toFixed(2) : '0.00'}</TableCell>
                                         <TableCell className="text-right no-print">

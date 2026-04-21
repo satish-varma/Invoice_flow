@@ -177,7 +177,7 @@ export function PayslipForm({ initialData, onPayslipSave, onAddNew }: PayslipFor
                             <FormField control={form.control} name="payPeriodYear" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Year</FormLabel>
-                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                    <FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
@@ -222,13 +222,13 @@ export function PayslipForm({ initialData, onPayslipSave, onAddNew }: PayslipFor
                         <p className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Attendance</p>
                         <div className="grid grid-cols-3 gap-4">
                             <FormField control={form.control} name="workingDays" render={({ field }) => (
-                                <FormItem><FormLabel>Working Days</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Working Days</FormLabel><FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={form.control} name="paidDays" render={({ field }) => (
-                                <FormItem><FormLabel>Paid Days</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Paid Days</FormLabel><FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={form.control} name="lopDays" render={({ field }) => (
-                                <FormItem><FormLabel>LOP Days</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>LOP Days</FormLabel><FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
                             )} />
                         </div>
 
@@ -248,7 +248,7 @@ export function PayslipForm({ initialData, onPayslipSave, onAddNew }: PayslipFor
                                         <FormItem className="flex-1"><FormLabel className={i > 0 ? 'sr-only' : ''}>Component</FormLabel><FormControl><Input placeholder="e.g. Basic Salary" {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
                                     <FormField control={form.control} name={`earnings.${i}.amount`} render={({ field }) => (
-                                        <FormItem className="w-36"><FormLabel className={i > 0 ? 'sr-only' : ''}>Amount (₹)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                        <FormItem className="w-36"><FormLabel className={i > 0 ? 'sr-only' : ''}>Amount (₹)</FormLabel><FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
                                     )} />
                                     <Button type="button" variant="ghost" size="icon" className="text-destructive mb-0" onClick={() => earningsArray.remove(i)}>
                                         <Trash2 className="h-4 w-4" />
@@ -276,7 +276,7 @@ export function PayslipForm({ initialData, onPayslipSave, onAddNew }: PayslipFor
                                         <FormItem className="flex-1"><FormLabel className={i > 0 ? 'sr-only' : ''}>Component</FormLabel><FormControl><Input placeholder="e.g. Provident Fund" {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
                                     <FormField control={form.control} name={`deductions.${i}.amount`} render={({ field }) => (
-                                        <FormItem className="w-36"><FormLabel className={i > 0 ? 'sr-only' : ''}>Amount (₹)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                        <FormItem className="w-36"><FormLabel className={i > 0 ? 'sr-only' : ''}>Amount (₹)</FormLabel><FormControl><Input type="number" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
                                     )} />
                                     <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => deductionsArray.remove(i)}>
                                         <Trash2 className="h-4 w-4" />

@@ -24,6 +24,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { generateAndSavePdf } from "@/lib/pdf";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { AppShell } from "@/components/app-shell";
 
 
 export default function QuotationsPage() {
@@ -202,7 +203,7 @@ export default function QuotationsPage() {
     }
 
     return (
-        <>
+        <AppShell>
             <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
                 <div className="w-full max-w-7xl mx-auto">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between mb-8 gap-4">
@@ -273,6 +274,6 @@ export default function QuotationsPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </>
+        </AppShell>
     );
 }

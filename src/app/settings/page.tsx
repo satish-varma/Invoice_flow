@@ -36,6 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AppShell } from '@/components/app-shell';
 
 
 export const availableTaxes = [
@@ -500,22 +501,23 @@ export default function SettingsPage() {
     }
 
     return (
-        <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
-            <div className="w-full max-w-6xl mx-auto">
-                <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <Button variant="outline" asChild>
-                            <Link href="/">
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                Back to Create
-                            </Link>
-                        </Button>
-                        <h1 className="text-3xl sm:text-4xl font-headline font-bold text-primary mt-4">Settings</h1>
-                        <p className="text-muted-foreground text-sm sm:text-base">Manage your company profiles, invoice settings, and customer contacts.</p>
+        <AppShell>
+            <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
+                <div className="w-full max-w-6xl mx-auto">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <Button variant="outline" asChild className="mb-4">
+                                <Link href="/">
+                                    <ArrowLeft className="mr-2 h-4 w-4" />
+                                    Back to Create
+                                </Link>
+                            </Button>
+                            <h1 className="text-3xl sm:text-4xl font-headline font-bold text-primary mt-4">Settings</h1>
+                            <p className="text-muted-foreground text-sm sm:text-base">Manage your company profiles, invoice settings, and customer contacts.</p>
+                        </div>
                     </div>
-                </div>
 
-                <Tabs defaultValue="company" className="w-full">
+                    <Tabs defaultValue="company" className="w-full">
                     <TabsList className='mb-4'>
                         <TabsTrigger value="company">Company Profiles</TabsTrigger>
                         <TabsTrigger value="contacts">Contacts</TabsTrigger>
@@ -817,7 +819,7 @@ export default function SettingsPage() {
                             {editingContactType === 'shipTo' && renderTaxesSelector('editContact', editingContact)}
                         </div>
                         <DialogFooter>
-                            <DialogClose asChild><Button variant="outline" onClick={() => setEditingContact(null)}>Cancel</Button></DialogClose>
+                            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
                             <Button onClick={handleUpdateContact} disabled={isSaving}>
                                 {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : 'Save Changes'}
                             </Button>
@@ -825,6 +827,7 @@ export default function SettingsPage() {
                     </DialogContent>
                 </Dialog>
             )}
-        </main>
+            </main>
+        </AppShell>
     );
 }

@@ -22,6 +22,8 @@ import {
   LogOut,
   User,
   Package,
+  Briefcase,
+  Receipt,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@/firebase';
@@ -45,6 +47,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     { href: '/', label: 'New Invoice', icon: FilePlus },
     { href: '/quotation', label: 'New Quotation', icon: FileText },
     { href: '/delivery-challan', label: 'Delivery Challan', icon: Truck },
+    { href: '/offer-letter', label: 'Offer Letter', icon: Briefcase },
+    { href: '/payslip', label: 'Payslip', icon: Receipt },
     { href: '/invoices', label: 'Saved Invoices', icon: ListOrdered },
     { href: '/quotations', label: 'Saved Quotations', icon: ListOrdered },
     { href: '/delivery-challans', label: 'Saved Challans', icon: ListOrdered },

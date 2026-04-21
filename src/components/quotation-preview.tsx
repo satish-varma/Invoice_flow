@@ -217,10 +217,13 @@ export const QuotationPreview = React.forwardRef<HTMLDivElement, QuotationPrevie
                                     <p className="mb-2 italic text-xs">For {activeProfile.companyName}</p>
 
                                     <div style={{ position: 'relative', width: '110px', height: '80px', margin: '0 auto' }}>
-                                        {activeProfile.stampLogoUrl && (
-                                            /* eslint-disable-next-line @next/next/no-img-element */
-                                            <img src={activeProfile.stampLogoUrl} alt="Company Signature" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
-                                        )}
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img 
+                                            src="/sigwithsign.png" 
+                                            alt="Company Signature" 
+                                            style={{ objectFit: 'contain', width: '100%', height: '100%' }} 
+                                            crossOrigin="anonymous"
+                                        />
                                     </div>
                                 </div>
                             )}

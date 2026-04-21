@@ -84,8 +84,11 @@ export default function InvoicesPage() {
               toast({ variant: "destructive", title: "PDF Generation Failed", description: "There was an error saving the PDF." });
             } finally {
               if (!isBulkDownloading) {
-                setInvoiceToGenerate(null);
-                setPdfAction(null);
+                // Wait a bit to ensure the browser has handled the download trigger
+                setTimeout(() => {
+                  setInvoiceToGenerate(null);
+                  setPdfAction(null);
+                }, 500);
               }
             }
           } else { // 'preview'
@@ -238,9 +241,10 @@ export default function InvoicesPage() {
           />
         </div>
       </main>
-      {previewingInvoice && (
+      {previewingInvoice && settings && (
         <InvoicePreviewDialog
           invoice={previewingInvoice}
+          settings={settings}
           isOpen={!!previewingInvoice}
           onOpenChange={(isOpen) => {
             if (!isOpen) {
@@ -253,7 +257,21 @@ export default function InvoicesPage() {
       )}
       {/* This component is rendered off-screen and used for PDF generation */}
       {invoiceToGenerate && settings && (
-        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', zIndex: -1 }}>
+        <div
+          id="pdf-capture-container"
+          style={{ 
+            position: 'fixed',
+            top: 0,
+            left: 0, 
+            width: '800px', // Exact width of the card
+            height: 'auto',
+            background: 'white',
+            opacity: 0, // Fully invisible but still rendered
+            pointerEvents: 'none',
+            zIndex: -9999,
+            overflow: 'visible'
+          }}
+        >
           <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToGenerate} settings={settings} />
         </div>
       )}

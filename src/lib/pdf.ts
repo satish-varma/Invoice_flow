@@ -10,103 +10,74 @@ import html2canvas from 'html2canvas';
  * @returns Promise<string | void> Data URI if mode is 'preview', void otherwise.
  */
 export async function generateAndSavePdf(element: HTMLElement, fileName: string, mode: 'save' | 'preview' = 'save'): Promise<string | void> {
-    const bodyElement = element.querySelector('[data-pdf-body]') as HTMLElement;
-    const signatureElement = element.querySelector('[data-pdf-signature]') as HTMLElement;
-    const footerElement = element.querySelector('[data-pdf-footer]') as HTMLElement;
-
-    if (!bodyElement || !footerElement) {
-        console.error("PDF generation failed: body or footer element not found.");
-        throw new Error("Required PDF structure (body or footer) not found.");
-    }
+    console.log("Starting PDF generation for:", fileName);
     
-    // Temporarily remove manifest link to prevent CORS issues with html2canvas
-    const manifestLink = document.querySelector('link[rel="manifest"]');
-    if (manifestLink) {
-        manifestLink.remove();
-    }
+    // 0. Wait for all images to be loaded
+    const images = Array.from(element.querySelectorAll('img'));
+    console.log(`Waiting for ${images.length} images to load...`);
+    await Promise.all(images.map(img => {
+        if (img.complete) return Promise.resolve(null);
+        return new Promise((resolve) => {
+            img.onload = () => resolve(null);
+            img.onerror = () => resolve(null);
+        });
+    }));
 
     try {
-        const pdf = new jsPDF({
-            orientation: 'p',
-            unit: 'mm',
-            format: 'a4'
+        console.log("Starting Capture...");
+        const canvas = await html2canvas(element, {
+            scale: 1.5, // 1.5 is a sweet spot for high res without hitting memory limits
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+            imageTimeout: 15000,
+            ignoreElements: (el) => el.classList.contains('no-print')
         });
 
+        console.log("Canvas captured. Size:", canvas.width, "x", canvas.height);
+        
+        const pdf = new jsPDF('p', 'mm', 'a4', true); // Use compression
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
-        const canvasOptions = { scale: 2, useCORS: true, logging: false };
-
-        // 1. Process Body
-        const bodyCanvas = await html2canvas(bodyElement, canvasOptions);
-        const bodyImgData = bodyCanvas.toDataURL('image/jpeg', 0.95);
-        const bodyImgHeight = (bodyCanvas.height * pdfWidth) / bodyCanvas.width;
-
-        let heightLeft = bodyImgHeight;
+        
+        // Calculate the height of the image in mm to match PDF width
+        const imgWidth = canvas.width;
+        const imgHeight = (canvas.height * pdfWidth) / imgWidth;
+        
+        let heightLeft = imgHeight;
         let position = 0;
 
-        pdf.addImage(bodyImgData, 'JPEG', 0, position, pdfWidth, bodyImgHeight, undefined, 'FAST');
+        // Use JPEG for PDF embedding - much more stable for large files
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pdfHeight;
 
         while (heightLeft > 0) {
-            position = heightLeft - bodyImgHeight;
+            position = heightLeft - imgHeight;
             pdf.addPage();
-            pdf.addImage(bodyImgData, 'JPEG', 0, position, pdfWidth, bodyImgHeight, undefined, 'FAST');
+            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight, undefined, 'FAST');
             heightLeft -= pdfHeight;
         }
-        
-        let lastElementBottom = (bodyImgHeight % pdfHeight);
-        if (lastElementBottom === 0 && bodyImgHeight > 0) {
-            lastElementBottom = pdfHeight;
-        }
 
-        // 2. Process Signature (if it exists)
-        if (signatureElement) {
-            const signatureCanvas = await html2canvas(signatureElement, canvasOptions);
-            const signatureImgData = signatureCanvas.toDataURL('image/jpeg', 0.95);
-            const signatureImgHeight = (signatureCanvas.height * pdfWidth) / signatureCanvas.width;
-            
-            const spaceLeftOnPage = pdfHeight - lastElementBottom;
-
-            if (signatureImgHeight > spaceLeftOnPage) {
-                pdf.addPage();
-                pdf.addImage(signatureImgData, 'JPEG', 0, 0, pdfWidth, signatureImgHeight, undefined, 'FAST');
-                lastElementBottom = signatureImgHeight;
-            } else {
-                pdf.addImage(signatureImgData, 'JPEG', 0, lastElementBottom, pdfWidth, signatureImgHeight, undefined, 'FAST');
-                lastElementBottom += signatureImgHeight;
-            }
-        }
-
-        // 3. Process Footer
-        const footerCanvas = await html2canvas(footerElement, canvasOptions);
-        const footerImgData = footerCanvas.toDataURL('image/jpeg', 0.95);
-        const footerImgHeight = (footerCanvas.height * pdfWidth) / footerCanvas.width;
-        
-        const spaceLeftForFooter = pdfHeight - lastElementBottom;
-
-        if (footerImgHeight > spaceLeftForFooter) {
-            pdf.addPage();
-            pdf.addImage(footerImgData, 'JPEG', 0, pdfHeight - footerImgHeight, pdfWidth, footerImgHeight, undefined, 'FAST');
-        } else {
-            pdf.addImage(footerImgData, 'JPEG', 0, pdfHeight - footerImgHeight, pdfWidth, footerImgHeight, undefined, 'FAST');
-        }
-
-
-        // 4. Save or Return
         if (mode === 'save') {
-            pdf.save(fileName);
+            const safeName = fileName.replace(/[/\\?%*:|"<>#]/g, '-').replace(/\s+/g, '_');
+            const finalName = safeName.toLowerCase().endsWith('.pdf') ? safeName : `${safeName}.pdf`;
+            
+            console.log("Triggering save for:", finalName);
+            // jsPDF save() is generally robust
+            pdf.save(finalName);
+            
+            // Return size for logging
+            const blob = pdf.output('blob');
+            console.log("PDF Generated. Blob Size:", (blob.size / 1024).toFixed(2), "KB");
         } else {
-            return pdf.output('datauristring');
+            console.log("Generating Preview Blob...");
+            const blob = pdf.output('blob');
+            return URL.createObjectURL(blob);
         }
-
     } catch (error) {
-        console.error("Error generating PDF:", error);
-        throw new Error("Failed to generate PDF.");
-    } finally {
-        // Re-add the manifest link if it was removed
-        if (manifestLink) {
-            document.head.appendChild(manifestLink);
-        }
+        console.error("CRITICAL ERROR generating PDF:", error);
+        throw error;
     }
 }
-

@@ -86,7 +86,7 @@ export default function DeliveryChallanPage() {
                         setChallanToDownload(null);
                     }
                 }
-            }, 100);
+            }, 1000);
 
             return () => clearTimeout(timer);
         }
@@ -119,7 +119,18 @@ export default function DeliveryChallanPage() {
                     </div>
                      {/* This component is rendered off-screen and used for PDF generation */}
                      {challanToDownload && settings && (
-                        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', zIndex: -1 }}>
+                        <div 
+                            id="pdf-capture-container"
+                            style={{ 
+                                position: 'fixed', 
+                                top: 0, 
+                                left: 0, 
+                                width: '850px', 
+                                opacity: 0.01, 
+                                pointerEvents: 'none',
+                                zIndex: -9999 
+                            }}
+                        >
                             <DeliveryChallanPreview ref={challanPreviewRef} challan={challanToDownload} settings={settings} />
                         </div>
                     )}

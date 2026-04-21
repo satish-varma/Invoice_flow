@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
 import { generateAndSavePdf } from "@/lib/pdf";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Download } from "lucide-react";
 
 
 export default function DeliveryChallansPage() {
@@ -82,8 +83,10 @@ export default function DeliveryChallansPage() {
                             toast({ variant: "destructive", title: "PDF Generation Failed", description: "There was an error saving the PDF." });
                         } finally {
                             if (!isBulkDownloading) {
-                                setChallanToGenerate(null);
-                                setPdfAction(null);
+                                setTimeout(() => {
+                                    setChallanToGenerate(null);
+                                    setPdfAction(null);
+                                }, 500);
                             }
                         }
                     } else { // 'preview'
@@ -232,29 +235,70 @@ export default function DeliveryChallansPage() {
 
             {/* Preview Dialog */}
             <Dialog open={!!previewingChallan} onOpenChange={(open) => !open && closePreview()}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    {isGeneratingPdf ? (
-                        <div className="flex flex-col items-center justify-center py-20">
-                            <Loader className="h-8 w-8 animate-spin mb-4" />
-                            <p>Generating Preview...</p>
-                        </div>
-                    ) : pdfUrl ? (
-                        <iframe src={pdfUrl} className="w-full h-[70vh] border-none" title="Challan Preview" />
-                    ) : (
-                        <div className="flex items-center justify-center py-20 text-muted-foreground">
-                            Could not generate preview.
+                <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>Challan Preview: {previewingChallan?.dcNumber}</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex-grow overflow-auto bg-muted/20 p-4 sm:p-8 flex items-center justify-center rounded-md border">
+                        {isGeneratingPdf ? (
+                            <div className="flex flex-col items-center justify-center py-20">
+                                <Loader className="h-8 w-8 animate-spin mb-4" />
+                                <p>Generating Preview...</p>
+                            </div>
+                        ) : pdfUrl ? (
+                            <iframe src={pdfUrl} className="w-full h-full border-none shadow-sm" title="Challan Preview" />
+                        ) : (
+                            <div className="flex items-center justify-center py-20 text-muted-foreground">
+                                Could not generate preview.
+                            </div>
+                        )}
+                    </div>
+                    {pdfUrl && !isGeneratingPdf && (
+                        <div className="flex justify-end pt-4 mt-auto border-t">
+                            <Button
+                                onClick={async () => {
+                                    const container = document.getElementById('pdf-capture-container-dialog');
+                                    if (container && previewingChallan) {
+                                      await generateAndSavePdf(container as HTMLElement, `challan-${previewingChallan.dcNumber}.pdf`, 'save');
+                                    }
+                                }}
+                                className="inline-flex items-center justify-center"
+                            >
+                                <Download className="mr-2 h-4 w-4" />
+                                Download PDF
+                            </Button>
                         </div>
                     )}
                 </DialogContent>
+                {/* Hidden container for clean capture in dialog */}
+                <div style={{ position: 'fixed', left: '-9999px', top: 0, width: '850px' }}>
+                    {previewingChallan && settings && (
+                        <div id="pdf-capture-container-dialog" style={{ background: 'white' }}>
+                            <DeliveryChallanPreview challan={previewingChallan} settings={settings} />
+                        </div>
+                    )}
+                </div>
             </Dialog>
 
-            {/* Hidden container for PDF generation */}
+            {/* Robust container for PDF generation */}
             {challanToGenerate && settings && (
-                <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', zIndex: -1 }}>
+                <div 
+                    id="pdf-capture-container"
+                    style={{ 
+                        position: 'fixed', 
+                        top: 0, 
+                        left: 0, 
+                        width: '850px',
+                        background: 'white',
+                        opacity: 0, 
+                        pointerEvents: 'none',
+                        zIndex: -9999,
+                        overflow: 'visible'
+                    }}
+                >
                     <DeliveryChallanPreview ref={challanPreviewRef} challan={challanToGenerate} settings={settings} />
                 </div>
             )}
-
             {/* Delete Confirmation */}
             <AlertDialog open={!!challansToDelete} onOpenChange={(open) => !open && setChallansToDelete(null)}>
                 <AlertDialogContent>

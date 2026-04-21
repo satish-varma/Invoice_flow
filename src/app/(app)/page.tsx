@@ -125,7 +125,7 @@ export default function Home() {
                         setInvoiceToDownload(null);
                     }
                 }
-            }, 100); // 100ms delay
+            }, 1000); // 1000ms delay
 
             return () => clearTimeout(timer);
         }
@@ -170,7 +170,18 @@ export default function Home() {
                         </div>
                         {/* This component is rendered off-screen and used for PDF generation */}
                         {invoiceToDownload && settings && (
-                            <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', zIndex: -1 }}>
+                            <div 
+                                id="pdf-capture-container"
+                                style={{ 
+                                    position: 'fixed', 
+                                    top: 0, 
+                                    left: 0, 
+                                    width: '850px', // Fixed width to ensure consistent layout
+                                    opacity: 0.01, 
+                                    pointerEvents: 'none',
+                                    zIndex: -9999 
+                                }}
+                            >
                                 <InvoicePreview ref={invoicePreviewRef} invoice={invoiceToDownload} settings={settings} />
                             </div>
                         )}

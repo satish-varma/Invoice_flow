@@ -89,7 +89,12 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                     <div className="flex flex-col items-end gap-2">
                         {activeProfile.logoUrl && (
                             <div className='relative w-32 h-16 mb-2'>
-                                <Image src={activeProfile.logoUrl} alt="Company Logo" fill sizes="128px" className="object-contain object-right" priority />
+                                <img 
+                                    src={activeProfile.logoUrl} 
+                                    alt="Company Logo" 
+                                    className="object-contain object-right w-full h-full" 
+                                    crossOrigin="anonymous"
+                                />
                             </div>
                         )}
                         <div className="text-right space-y-1">
@@ -107,7 +112,12 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                 <div className='text-center space-y-4 pb-8 border-b'>
                     {activeProfile.logoUrl && (
                         <div className='relative w-24 h-24 mx-auto mb-2'>
-                            <Image src={activeProfile.logoUrl} alt="Company Logo" fill sizes="96px" className="object-contain" priority />
+                            <img 
+                                src={activeProfile.logoUrl} 
+                                alt="Company Logo" 
+                                className="object-contain w-full h-full" 
+                                crossOrigin="anonymous"
+                            />
                         </div>
                     )}
                     <h1 className='text-sm uppercase tracking-[0.2em] text-gray-400'>Bill of Supply</h1>
@@ -133,7 +143,12 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                     <div className="space-y-1">
                         {activeProfile.logoUrl && (
                             <div className='relative w-32 h-16 mb-4'>
-                                <Image src={activeProfile.logoUrl} alt="Company Logo" fill sizes="128px" className="object-contain object-left" priority />
+                                <img 
+                                    src={activeProfile.logoUrl} 
+                                    alt="Company Logo" 
+                                    className="object-contain object-left w-full h-full" 
+                                    crossOrigin="anonymous"
+                                />
                             </div>
                         )}
                         <p className='font-bold text-xl'>{activeProfile.companyName}</p>
@@ -272,11 +287,14 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                                 <div className='flex flex-col justify-end items-center h-full text-xs'>
                                     <div className='text-center w-full'>
                                         <p className="mb-2 font-bold text-gray-500 uppercase tracking-widest">Authorized Signatory</p>
-                                        {activeProfile.stampLogoUrl && (
-                                            <div className='relative w-[80px] h-[80px] mx-auto my-2 opacity-80'>
-                                                <Image src={activeProfile.stampLogoUrl} alt="Company Stamp" fill sizes="80px" className="object-contain" priority />
-                                            </div>
-                                        )}
+                                        <div className='relative w-[80px] h-[80px] mx-auto my-2 opacity-80 flex items-center justify-center'>
+                                            <img 
+                                                src="/sigwithsign.png" 
+                                                alt="Company Stamp" 
+                                                className="max-w-full max-h-full object-contain"
+                                                crossOrigin="anonymous" 
+                                            />
+                                        </div>
                                         <p className="mt-2 text-gray-600 italic">For {activeProfile.companyName}</p>
                                     </div>
                                 </div>

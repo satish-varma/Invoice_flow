@@ -87,7 +87,7 @@ export default function QuotationPage() {
                         setQuotationToDownload(null);
                     }
                 }
-            }, 100); // 100ms delay
+            }, 1000); // 1000ms delay
 
             return () => clearTimeout(timer);
         }
@@ -120,7 +120,18 @@ export default function QuotationPage() {
                     </div>
                      {/* This component is rendered off-screen and used for PDF generation */}
                      {quotationToDownload && settings && (
-                        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', zIndex: -1 }}>
+                        <div 
+                            id="pdf-capture-container"
+                            style={{ 
+                                position: 'fixed', 
+                                top: 0, 
+                                left: 0, 
+                                width: '850px', 
+                                opacity: 0.01, 
+                                pointerEvents: 'none',
+                                zIndex: -9999 
+                            }}
+                        >
                             <QuotationPreview ref={quotationPreviewRef} quotation={quotationToDownload} settings={settings} />
                         </div>
                     )}

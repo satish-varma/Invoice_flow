@@ -32,6 +32,7 @@ type LineItem = {
     unit?: string;
     hsnCode?: string;
     total?: number;
+    productId?: string;
 };
 
 
@@ -71,12 +72,15 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     const [shipToName, setShipToName] = useState('');
     const [shipToAddress, setShipToAddress] = useState('');
     const [shipToGst, setShipToGst] = useState('');
+
+    const [selectedBillToId, setSelectedBillToId] = useState<string>('');
+    const [selectedShipToId, setSelectedShipToId] = useState<string>('');
     const [status, setStatus] = useState<'pending' | 'paid' | 'cancelled'>('pending');
 
     const [appliedTaxes, setAppliedTaxes] = useState<TaxItem[]>([]);
 
     const [lineItems, setLineItems] = useState<LineItem[]>([
-        { id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0 }
+        { id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0, productId: 'none' }
     ]);
     const [clients, setClients] = useState<Client[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
@@ -140,6 +144,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                         setBillToName(defaultContact.name);
                         setBillToAddress(defaultContact.address);
                         setBillToGst(defaultContact.gst);
+                        setSelectedBillToId(`${defaultContact.id}|billTo`);
                     }
                 }
                 if (loadedSettings.defaultShipToContact && loadedSettings.shipToContacts) {
@@ -148,6 +153,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                         setShipToName(defaultContact.name);
                         setShipToAddress(defaultContact.address);
                         setShipToGst(defaultContact.gst);
+                        setSelectedShipToId(`${defaultContact.id}|shipTo`);
                         if (defaultContact.taxes && defaultContact.taxes.length > 0) {
                             const taxesToApply = availableTaxes
                                 .filter(tax => defaultContact.taxes!.includes(tax.id))
@@ -155,7 +161,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                     id: Date.now() + index,
                                     name: tax.name,
                                     rate: tax.rate,
-                                    amount: (subtotal * tax.rate) / 100
+                                    amount: 0
                                 }));
                             setAppliedTaxes(taxesToApply);
                         }
@@ -164,7 +170,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             }
         }
         loadSettingsAndApplyDefaults();
-    }, [initialData, subtotal]);
+    }, [initialData]);
 
     useEffect(() => {
         // Set date on client mount to avoid hydration mismatch
@@ -196,7 +202,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 ...item,
                 id: item.id || Date.now() + index,
                 unitPrice: item.unitPrice || (item as any).price || 0, // Ensure unitPrice is set, fallback to old 'price'
-                total: (item.quantity || 0) * (item.unitPrice || (item as any).price || 0) // Calculate total
+                total: (item.quantity || 0) * (item.unitPrice || (item as any).price || 0), // Calculate total
+                productId: (item as any).productId || 'none'
             })));
         } else {
             handleClearForm(false); // Don't call onAddNew here to prevent loop
@@ -204,7 +211,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     }, [initialData]);
 
     const handleAddItem = () => {
-        setLineItems([...lineItems, { id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0 }]);
+        setLineItems([...lineItems, { id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0, productId: 'none' }]);
     };
 
     const handleRemoveItem = (id: number) => {
@@ -231,6 +238,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             setLineItems(lineItems.map(item =>
                 item.id === id ? {
                     ...item,
+                    productId: product.id,
                     name: product.name,
                     unitPrice: product.unitPrice,
                     unit: product.unit || '',
@@ -256,6 +264,13 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                     }
                 }
             }
+        } else if (productId === 'none') {
+            setLineItems(lineItems.map(item =>
+                item.id === id ? {
+                    ...item,
+                    productId: 'none'
+                } : item
+            ));
         }
     };
 
@@ -293,8 +308,10 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         setShipToName('');
         setShipToAddress('');
         setShipToGst('');
+        setSelectedBillToId('');
+        setSelectedShipToId('');
         setAppliedTaxes([]);
-        setLineItems([{ id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0 }]);
+        setLineItems([{ id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0, productId: 'none' }]);
         setStatus('pending');
         if (shouldCallback) {
             onAddNew();
@@ -400,9 +417,50 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             const dataUri = await fileToDataUri(file);
             const result: ExtractInvoiceDataOutput = await extractInvoiceData({ photoDataUri: dataUri });
 
-            if (result.customerName) setBillToName(result.customerName);
+            if (result.customerName) {
+                setBillToName(result.customerName);
+                setSelectedBillToId('');
+            }
 
-            if (result.lineItems && result.lineItems.length > 0) {
+            if (result.serviceMonth) {
+                const match = result.serviceMonth.match(/^([a-zA-Z]{3})/);
+                if (match) {
+                    const prefix = match[1].toLowerCase();
+                    const monthMap: Record<string, string> = {
+                        jan: "January", feb: "February", mar: "March", apr: "April", may: "May", jun: "June",
+                        jul: "July", aug: "August", sep: "September", oct: "October", nov: "November", dec: "December"
+                    };
+                    const fullMonth = monthMap[prefix];
+                    if (fullMonth) {
+                        setPeriod(fullMonth);
+                        setDelivery(fullMonth);
+                    }
+                }
+            }
+
+            if (result.deliverTo) {
+                const dtUpper = result.deliverTo.toUpperCase();
+                const dtNormalized = dtUpper.replace(/\s+/g, '');
+                const foundContact = settings.shipToContacts?.find(c => {
+                    const cName = c.name ? c.name.toUpperCase() : '';
+                    const cNameNormalized = cName.replace(/\s+/g, '');
+                    return cNameNormalized && (dtNormalized.includes(cNameNormalized) || cNameNormalized.includes(dtNormalized));
+                });
+                if (foundContact) {
+                    setShipToName(foundContact.name || '');
+                    setShipToAddress(foundContact.address || '');
+                    if (foundContact.gst) setShipToGst(foundContact.gst);
+                    setSelectedShipToId(`${foundContact.id}|shipTo`);
+                } else {
+                    // Extract just the first line as company name, rest as address
+                    const lines = result.deliverTo.split('\n');
+                    setShipToName(lines[0] || result.deliverTo);
+                    setSelectedShipToId('');
+                    if (lines.length > 1) {
+                        setShipToAddress(lines.slice(1).join(', '));
+                    }
+                }
+            }            if (result.lineItems && result.lineItems.length > 0) {
                 setLineItems(result.lineItems.map((item: any, index: number) => {
                     const price = item.unitPrice || item.price || 0;
                     return {
@@ -412,12 +470,13 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                         unitPrice: price,
                         unit: item.unit || '',
                         hsnCode: item.hsnCode || '',
-                        total: (item.quantity || 0) * price
+                        total: (item.quantity || 0) * price,
+                        productId: 'none'
                     };
                 }));
             }
             else {
-                setLineItems([{ id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0 }]);
+                setLineItems([{ id: Date.now(), name: '', quantity: 1, unitPrice: 0, unit: '', hsnCode: '', total: 0, productId: 'none' }]);
             }
             toast({
                 title: "Extraction Complete",
@@ -446,6 +505,12 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     }, [settings.billToContacts, settings.shipToContacts, clients]);
 
     const handleContactSelect = (value: string, section: 'billTo' | 'shipTo') => {
+        if (section === 'billTo') {
+            setSelectedBillToId(value);
+        } else {
+            setSelectedShipToId(value);
+        }
+
         const [id, type] = value.split('|');
         const contact = allSavedClients.find(c => c.id === id && c.type === type);
 
@@ -595,7 +660,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                         <div className="space-y-2">
                             <div>
                                 <Label>Select Saved Contact</Label>
-                                <Select onValueChange={(value) => handleContactSelect(value, 'billTo')}>
+                                <Select value={selectedBillToId} onValueChange={(value) => handleContactSelect(value, 'billTo')}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a billing contact" />
                                     </SelectTrigger>
@@ -690,7 +755,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                         <div className="space-y-2">
                             <div>
                                 <Label>Select Saved Contact</Label>
-                                <Select onValueChange={(value) => handleContactSelect(value, 'shipTo')}>
+                                <Select value={selectedShipToId} onValueChange={(value) => handleContactSelect(value, 'shipTo')}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a shipping contact" />
                                     </SelectTrigger>
@@ -759,7 +824,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 {lineItems.map((item, index) => (
                                     <TableRow key={item.id} className="animate-fade-in-down hover:bg-muted/20">
                                         <TableCell>
-                                            <Select onValueChange={(val) => handleProductSelect(item.id, val)}>
+                                            <Select value={item.productId || 'none'} onValueChange={(val) => handleProductSelect(item.id, val)}>
                                                 <SelectTrigger className="h-9">
                                                     <SelectValue placeholder="Quick select..." />
                                                 </SelectTrigger>

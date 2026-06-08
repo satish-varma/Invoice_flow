@@ -6,15 +6,13 @@ import { getFirestore } from "firebase/firestore";
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  "projectId": "invoiceflow-24nxt",
-  "appId": "1:272128777200:web:f1309bfb80260ff45e5b35",
-  "storageBucket": "invoiceflow-24nxt.firebasestorage.app",
-  "apiKey": "AIzaSyCCa1LXbotrsXO8FkppHRzxGno04s_i_SE",
-  "authDomain": "invoiceflow-24nxt.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "272128777200"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase

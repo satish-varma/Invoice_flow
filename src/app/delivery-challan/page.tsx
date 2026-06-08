@@ -10,6 +10,7 @@ import { DeliveryChallanForm } from '@/components/delivery-challan-form';
 import { ChallanList } from '@/components/challan-list';
 import { Challan, getChallans } from '@/services/challanService';
 import { DeliveryChallanPreview } from '@/components/delivery-challan-preview';
+import { AppShell } from '@/components/app-shell';
 
 export default function DeliveryChallanPage() {
     const [challans, setChallans] = useState<Challan[]>([]);
@@ -93,29 +94,31 @@ export default function DeliveryChallanPage() {
     }, [challanToDownload, settings, toast]);
 
     return (
-        <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
-            <div className="w-full max-w-7xl mx-auto">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2">
-                        <DeliveryChallanForm
-                          key={selectedChallan?.id || 'new'} 
-                          initialData={selectedChallan} 
-                          onChallanSave={handleChallanSave} 
-                          onAddNew={handleAddNew}
-                        />
-                    </div>
-                    <div className="lg:col-span-1">
-                        {isLoading ? (
-                            <div className="flex items-center justify-center h-full">
-                                <Loader className="h-8 w-8 animate-spin" />
-                            </div>
-                        ) : (
-                            <ChallanList 
-                                challans={challans} 
-                                onSelectChallan={handleSelectChallan}
-                                onDownloadChallan={handleDownload}
+        <AppShell>
+            <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
+                <div className="w-full max-w-7xl mx-auto">
+                    <div className="grid grid-cols-1 gap-8">
+                        <div className="w-full">
+                            <DeliveryChallanForm
+                            key={selectedChallan?.id || 'new'} 
+                            initialData={selectedChallan} 
+                            onChallanSave={handleChallanSave} 
+                            onAddNew={handleAddNew}
                             />
-                        )}
+                        </div>
+                        <div className="w-full">
+                            {isLoading ? (
+                                <div className="flex items-center justify-center p-12">
+                                    <Loader className="h-8 w-8 animate-spin" />
+                                </div>
+                            ) : (
+                                <ChallanList 
+                                    challans={challans} 
+                                    onSelectChallan={handleSelectChallan}
+                                    onDownloadChallan={handleDownload}
+                                />
+                            )}
+                        </div>
                     </div>
                      {/* This component is rendered off-screen and used for PDF generation */}
                      {challanToDownload && settings && (
@@ -135,7 +138,7 @@ export default function DeliveryChallanPage() {
                         </div>
                     )}
                 </div>
-            </div>
-        </main>
+            </main>
+        </AppShell>
     );
 }

@@ -51,7 +51,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     const [shipToAddress, setShipToAddress] = useState('');
 
     const [lineItems, setLineItems] = useState<ChallanLineItem[]>([
-        { id: 1, name: '', hsnCode: '', quantity: 1, unitPrice: 0, total: 0 },
+        { id: 1, name: '', hsnCode: '', quantity: 0, unitPrice: 0, total: 0 },
     ]);
     const [note, setNote] = useState('The above goods sent on returnable basis not for sale');
     const [clients, setClients] = useState<Client[]>([]);
@@ -169,7 +169,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     }, [lineItems.map(i => `${i.quantity}-${i.unitPrice}`).join(',')]);
 
     const handleAddItem = () => {
-        setLineItems([...lineItems, { id: Date.now(), name: '', hsnCode: '', unit: '', quantity: 1, unitPrice: 0, total: 0 }]);
+        setLineItems([...lineItems, { id: Date.now(), name: '', hsnCode: '', unit: '', quantity: 0, unitPrice: 0, total: 0 }]);
     };
 
     const handleRemoveItem = (id: number) => {
@@ -212,7 +212,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         setBillToAddress('');
         setShipToName('');
         setShipToAddress('');
-        setLineItems([{ id: Date.now(), name: '', hsnCode: '', quantity: 1, unitPrice: 0, total: 0 }]);
+        setLineItems([{ id: Date.now(), name: '', hsnCode: '', quantity: 0, unitPrice: 0, total: 0 }]);
         setGstRate(5);
         setShipping(0);
         setOther(0);
@@ -607,10 +607,10 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                             <Input placeholder="Unit" value={item.unit || ''} onChange={e => handleItemChange(item.id, 'unit', e.target.value)} />
                                         </TableCell>
                                         <TableCell>
-                                            <Input className="text-right" type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="0" />
+                                            <Input className="text-right" type="number" value={item.quantity || ''} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="0" />
                                         </TableCell>
                                         <TableCell>
-                                            <Input className="text-right" type="number" value={item.unitPrice} onChange={e => handleItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} min="0" step="0.01" />
+                                            <Input className="text-right" type="number" value={item.unitPrice || ''} onChange={e => handleItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} min="0" step="0.01" />
                                         </TableCell>
                                         <TableCell className="font-medium text-right">{(Number(item.total) || 0).toFixed(2)}</TableCell>
                                         <TableCell className="text-right no-print">
@@ -655,7 +655,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 <span className="text-muted-foreground">GST @</span>
                                 <Input
                                     type="number"
-                                    value={gstRate}
+                                    value={gstRate || ''}
                                     onChange={e => setGstRate(parseFloat(e.target.value) || 0)}
                                     className="h-8 text-right w-16"
                                     placeholder="5"
@@ -666,11 +666,11 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">Shipping/Handling</span>
-                            <Input type="number" value={shipping} onChange={e => setShipping(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
+                            <Input type="number" value={shipping || ''} onChange={e => setShipping(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">Other</span>
-                            <Input type="number" value={other} onChange={e => setOther(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
+                            <Input type="number" value={other || ''} onChange={e => setOther(parseFloat(e.target.value) || 0)} className="h-8 text-right max-w-[120px]" />
                         </div>
                         <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
                             <span>Total</span>

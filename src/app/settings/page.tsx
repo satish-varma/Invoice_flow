@@ -36,19 +36,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-
-export const availableTaxes = [
-    { id: 'SGST2.5', name: 'SGST @ 2.5%', rate: 2.5 },
-    { id: 'CGST2.5', name: 'CGST @ 2.5%', rate: 2.5 },
-    { id: 'SGST6', name: 'SGST @ 6%', rate: 6 },
-    { id: 'CGST6', name: 'CGST @ 6%', rate: 6 },
-    { id: 'SGST9', name: 'SGST @ 9%', rate: 9 },
-    { id: 'CGST9', name: 'CGST @ 9%', rate: 9 },
-    { id: 'SGST14', name: 'SGST @ 14%', rate: 14 },
-    { id: 'CGST14', name: 'CGST @ 14%', rate: 14 },
-    { id: 'Cess12', name: 'Cess @ 12%', rate: 12 },
-];
+import { AppShell } from '@/components/app-shell';
+import { availableTaxes } from '@/lib/tax-constants';
 
 
 type ContactType = 'billTo' | 'shipTo';
@@ -378,7 +367,7 @@ export default function SettingsPage() {
                     <Input value={profile.profileName ?? ''} onChange={e => handleProfileInputChange('profileName', e.target.value)} placeholder="e.g., Main Business, Side Hustle" />
                 </div>
                 <AccordionItem value="item-1">
-                    <AccordionTrigger>Company Details ("From" Address)</AccordionTrigger>
+                    <AccordionTrigger>Company Details (&quot;From&quot; Address)</AccordionTrigger>
                     <AccordionContent className="grid md:grid-cols-2 gap-4 pt-4">
                         <div className="space-y-2 md:col-span-2">
                             <Label>Company Name</Label>
@@ -464,7 +453,7 @@ export default function SettingsPage() {
                                 <div className='flex-1 space-y-2'>
                                     <Label>Upload Stamp</Label>
                                     <Input type="file" ref={fileInputRef} onChange={e => handleFileChange(e, 'stamp')} accept="image/png, image/jpeg" />
-                                    <p className='text-xs text-muted-foreground'>This will appear above the "Authorized Signatory" text in the footer.</p>
+                                    <p className='text-xs text-muted-foreground'>This will appear above the &quot;Authorized Signatory&quot; text in the footer.</p>
                                 </div>
                                 {stampPreview && (
                                     <div className='relative w-24 h-24 border rounded-md p-2 bg-white flex items-center justify-center'>
@@ -500,22 +489,23 @@ export default function SettingsPage() {
     }
 
     return (
-        <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
-            <div className="w-full max-w-6xl mx-auto">
-                <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <Button variant="outline" asChild>
-                            <Link href="/">
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                Back to Create
-                            </Link>
-                        </Button>
-                        <h1 className="text-3xl sm:text-4xl font-headline font-bold text-primary mt-4">Settings</h1>
-                        <p className="text-muted-foreground text-sm sm:text-base">Manage your company profiles, invoice settings, and customer contacts.</p>
+        <AppShell>
+            <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
+                <div className="w-full max-w-6xl mx-auto">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <Button variant="outline" asChild className="mb-4">
+                                <Link href="/">
+                                    <ArrowLeft className="mr-2 h-4 w-4" />
+                                    Back to Create
+                                </Link>
+                            </Button>
+                            <h1 className="text-3xl sm:text-4xl font-headline font-bold text-primary mt-4">Settings</h1>
+                            <p className="text-muted-foreground text-sm sm:text-base">Manage your company profiles, invoice settings, and customer contacts.</p>
+                        </div>
                     </div>
-                </div>
 
-                <Tabs defaultValue="company" className="w-full">
+                    <Tabs defaultValue="company" className="w-full">
                     <TabsList className='mb-4'>
                         <TabsTrigger value="company">Company Profiles</TabsTrigger>
                         <TabsTrigger value="contacts">Contacts</TabsTrigger>
@@ -525,7 +515,7 @@ export default function SettingsPage() {
                         <Card>
                             <CardHeader>
                                 <CardTitle>Company Profiles</CardTitle>
-                                <CardDescription>Manage the "From" details that appear on your invoices. You can create multiple profiles.</CardDescription>
+                                <CardDescription>Manage the &quot;From&quot; details that appear on your invoices. You can create multiple profiles.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 {settings.companyProfiles?.map(profile => (
@@ -559,12 +549,12 @@ export default function SettingsPage() {
                             {/* Bill To Section */}
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Manage "Bill To" Contacts</CardTitle>
+                                    <CardTitle>Manage &quot;Bill To&quot; Contacts</CardTitle>
                                     <CardDescription>Add, view, and remove billing contacts.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div className="p-4 border rounded-lg space-y-4">
-                                        <h3 className="font-bold">Add New "Bill To" Contact</h3>
+                                        <h3 className="font-bold">Add New &quot;Bill To&quot; Contact</h3>
                                         <div className="space-y-2">
                                             <Label htmlFor="billToDisplayName">Display Name (Unique)</Label>
                                             <Input id="billToDisplayName" placeholder="e.g., Main Client" value={newBillTo.displayName} onChange={e => handleInputChange('newBillTo', 'displayName', e.target.value)} />
@@ -586,7 +576,7 @@ export default function SettingsPage() {
                                         </Button>
                                     </div>
                                     <div className="space-y-2">
-                                        <h3 className="font-bold">Saved "Bill To" Contacts</h3>
+                                        <h3 className="font-bold">Saved &quot;Bill To&quot; Contacts</h3>
                                         <div className="rounded-md border overflow-x-auto">
                                             <Table>
                                                 <TableHeader>
@@ -621,12 +611,12 @@ export default function SettingsPage() {
                             {/* Ship To Section */}
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Manage "Ship To" Contacts</CardTitle>
+                                    <CardTitle>Manage &quot;Ship To&quot; Contacts</CardTitle>
                                     <CardDescription>Add, view, and remove shipping contacts.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div className="p-4 border rounded-lg space-y-4">
-                                        <h3 className="font-bold">Add New "Ship To" Contact</h3>
+                                        <h3 className="font-bold">Add New &quot;Ship To&quot; Contact</h3>
                                         <div className="space-y-2">
                                             <Label htmlFor="shipToDisplayName">Display Name (Unique)</Label>
                                             <Input id="shipToDisplayName" placeholder="e.g., Warehouse" value={newShipTo.displayName} onChange={e => handleInputChange('newShipTo', 'displayName', e.target.value)} />
@@ -649,7 +639,7 @@ export default function SettingsPage() {
                                         </Button>
                                     </div>
                                     <div className="space-y-2">
-                                        <h3 className="font-bold">Saved "Ship To" Contacts</h3>
+                                        <h3 className="font-bold">Saved &quot;Ship To&quot; Contacts</h3>
                                         <div className="rounded-md border overflow-x-auto">
                                             <Table>
                                                 <TableHeader>
@@ -760,7 +750,7 @@ export default function SettingsPage() {
                                                     Apply
                                                 </Button>
                                             </div>
-                                            <p className='text-xs text-muted-foreground mt-2'>This color will be used for headings and accents in 'Modern' template.</p>
+                                            <p className='text-xs text-muted-foreground mt-2'>This color will be used for headings and accents in &apos;Modern&apos; template.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -817,7 +807,7 @@ export default function SettingsPage() {
                             {editingContactType === 'shipTo' && renderTaxesSelector('editContact', editingContact)}
                         </div>
                         <DialogFooter>
-                            <DialogClose asChild><Button variant="outline" onClick={() => setEditingContact(null)}>Cancel</Button></DialogClose>
+                            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
                             <Button onClick={handleUpdateContact} disabled={isSaving}>
                                 {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : 'Save Changes'}
                             </Button>
@@ -825,6 +815,7 @@ export default function SettingsPage() {
                     </DialogContent>
                 </Dialog>
             )}
-        </main>
+            </main>
+        </AppShell>
     );
 }

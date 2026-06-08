@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getSettings, Settings, CompanyProfile, BillToContact, ShipToContact } from '@/services/settingsService';
 import { getClients, saveClient, Client } from '@/services/clientService';
 import { Checkbox } from './ui/checkbox';
-import { availableTaxes } from '@/app/settings/page';
+import { availableTaxes } from '@/lib/tax-constants';
 import { getProducts, Product } from '@/services/productService';
 
 type LineItem = {
@@ -846,10 +846,10 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                             <Input placeholder="Unit" value={item.unit || ''} onChange={e => handleItemChange(item.id, 'unit', e.target.value)} />
                                         </TableCell>
                                         <TableCell>
-                                            <Input className="text-right" type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="0" />
+                                            <Input className="text-right" type="number" value={item.quantity || ''} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="0" />
                                         </TableCell>
                                         <TableCell>
-                                            <Input className="text-right" type="number" value={item.unitPrice} onChange={e => handleItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} min="0" step="0.01" placeholder="0.00" />
+                                            <Input className="text-right" type="number" value={item.unitPrice || ''} onChange={e => handleItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} min="0" step="0.01" placeholder="0.00" />
                                         </TableCell>
                                         <TableCell className="font-medium text-right">{!isNaN(item.quantity) && !isNaN(item.unitPrice) ? (Number(item.quantity) * Number(item.unitPrice)).toFixed(2) : '0.00'}</TableCell>
                                         <TableCell className="text-right no-print">

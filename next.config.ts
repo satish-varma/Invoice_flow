@@ -3,6 +3,9 @@ const nextConfig = {
     /* config options here */
     output: 'standalone',
     serverExternalPackages: ['pdf-parse'],
+    outputFileTracingIncludes: {
+        '/**/*': ['./node_modules/pdf-parse/**/*'],
+    },
     typescript: {
         ignoreBuildErrors: true,
     },

@@ -400,6 +400,7 @@ export async function extractInvoiceData(
 
   try {
     const buffer = Buffer.from(base64Data, 'base64');
+    // PDFParse is a class in this version of pdf-parse
     const parser = new PDFParse({ data: buffer });
     const parseResult = await parser.getText();
     const text = parseResult.text;

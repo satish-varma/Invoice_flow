@@ -8,7 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, Sheet } from 'lucide-react';
 import { format } from "date-fns"
 import { extractChallanData, ExtractChallanOutput } from '@/ai/flows/extract-challan-flow';
 import { useToast } from "@/hooks/use-toast"
@@ -22,6 +22,7 @@ import { getSettings, Settings, CompanyProfile, BillToContact, ShipToContact } f
 import { getClients, saveClient, Client } from '@/services/clientService';
 import { Checkbox } from './ui/checkbox';
 import { getProducts, Product } from '@/services/productService';
+import * as XLSX from 'xlsx';
 
 interface DeliveryChallanFormProps {
     initialData?: Challan | null;
@@ -64,7 +65,9 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
 
     const [isExtracting, setIsExtracting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isImportingExcel, setIsImportingExcel] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const excelInputRef = useRef<HTMLInputElement>(null);
     const pathname = usePathname();
     const router = useRouter();
 
@@ -345,6 +348,91 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         }
     };
 
+    const handleExcelImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setIsImportingExcel(true);
+        try {
+            const buffer = await file.arrayBuffer();
+            const workbook = XLSX.read(buffer, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+            if (!rows || rows.length === 0) {
+                toast({ variant: 'destructive', title: 'Empty Sheet', description: 'The Excel file has no data rows.' });
+                return;
+            }
+
+            // Normalise header keys: lowercase + trim for flexible matching
+            const normalise = (s: unknown) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+
+            // Map flexible column names to canonical fields
+            const findKey = (row: Record<string, unknown>, ...aliases: string[]) => {
+                const keys = Object.keys(row);
+                for (const alias of aliases) {
+                    const found = keys.find(k => normalise(k) === normalise(alias));
+                    if (found !== undefined) return found;
+                }
+                return null;
+            };
+
+            const firstRow = rows[0];
+            const keyItemName  = findKey(firstRow, 'itemname', 'item', 'name', 'description', 'product', 'itemdescription');
+            const keyHsn       = findKey(firstRow, 'hsncode', 'hsn', 'sac', 'hsnno');
+            const keyUnit      = findKey(firstRow, 'unit', 'uom', 'units');
+            const keyQty       = findKey(firstRow, 'qty', 'quantity', 'nos', 'count');
+            const keyUnitPrice = findKey(firstRow, 'unitprice', 'rate', 'price', 'unitrate', 'mrp');
+
+            if (!keyItemName || !keyQty || !keyUnitPrice) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Column Not Found',
+                    description: 'Could not find required columns. Ensure your sheet has: Item Name, Qty, Unit Price.',
+                });
+                return;
+            }
+
+            const importedItems: ChallanLineItem[] = rows
+                .filter(row => row[keyItemName!] !== '')
+                .map((row, index) => {
+                    const qty   = parseFloat(String(row[keyQty!])) || 0;
+                    const price = parseFloat(String(row[keyUnitPrice!])) || 0;
+                    return {
+                        id: Date.now() + index,
+                        name:      String(row[keyItemName!] || ''),
+                        hsnCode:   keyHsn  ? String(row[keyHsn]  || '') : '',
+                        unit:      keyUnit ? String(row[keyUnit] || '') : '',
+                        quantity:  qty,
+                        unitPrice: price,
+                        total:     qty * price,
+                    };
+                });
+
+            if (importedItems.length === 0) {
+                toast({ variant: 'destructive', title: 'No Items', description: 'No valid product rows were found in the sheet.' });
+                return;
+            }
+
+            setLineItems(importedItems);
+            toast({
+                title: 'Excel Imported',
+                description: `${importedItems.length} item(s) loaded from the spreadsheet.`,
+            });
+        } catch (error) {
+            console.error('Excel import error:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Import Failed',
+                description: 'Could not read the Excel file. Please check the file format and try again.',
+            });
+        } finally {
+            setIsImportingExcel(false);
+            if (excelInputRef.current) excelInputRef.current.value = '';
+        }
+    };
+
     const allSavedClients = useMemo(() => {
         const billTo = (settings.billToContacts || []).map(c => ({ ...c, type: 'billTo' as const }));
         const shipTo = (settings.shipToContacts || []).map(c => ({ ...c, type: 'shipTo' as const }));
@@ -417,6 +505,13 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 <><Wand2 /> Autofill</>
                             )}
                         </Button>
+                        <Button variant="ghost" onClick={() => excelInputRef.current?.click()} disabled={isImportingExcel}>
+                            {isImportingExcel ? (
+                                <><Loader className="animate-spin" /> Importing...</>
+                            ) : (
+                                <><Sheet className="h-4 w-4" /> Import Excel</>
+                            )}
+                        </Button>
                         <Button onClick={() => handleSaveChallan(false)} disabled={isSaving} variant="secondary">
                             {isSaving ? <Loader className="animate-spin" /> : <Save />}
                             {initialData ? 'Update' : 'Save'}
@@ -435,6 +530,14 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 className="hidden"
                 accept="image/*,application/pdf"
                 disabled={isExtracting}
+            />
+            <input
+                type="file"
+                ref={excelInputRef}
+                onChange={handleExcelImport}
+                className="hidden"
+                accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+                disabled={isImportingExcel}
             />
             <Card className="w-full shadow-lg">
                 <CardHeader className="bg-muted/20 p-4 sm:p-6">

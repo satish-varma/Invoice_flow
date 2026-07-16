@@ -8,9 +8,9 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, FileText, Truck, Settings as SettingsIcon, X, ArrowLeft, ArrowRight, Columns } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Loader, Save, FilePlus, FileText, Truck, Settings as SettingsIcon, X, ArrowLeft, ArrowRight, Columns, Sheet } from 'lucide-react';
 import { format } from "date-fns"
-import { extractQuotationData, ExtractQuotationOutput } from '@/ai/flows/extract-quotation-flow';
+import * as XLSX from 'xlsx';
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
 import { Quotation, saveQuotation, QuotationLineItem, ColumnDef } from '@/services/quotationService';
@@ -30,14 +30,6 @@ interface QuotationFormProps {
     onAddNew: () => void;
 }
 
-function fileToDataUri(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-}
 
 type CombinedContact = (BillToContact & { type: 'billTo' }) | (ShipToContact & { type: 'shipTo' });
 
@@ -73,9 +65,9 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     const [shipping, setShipping] = useState(0);
     const [other, setOther] = useState(0);
 
-    const [isExtracting, setIsExtracting] = useState(false);
+    const [isImportingExcel, setIsImportingExcel] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const excelInputRef = useRef<HTMLInputElement>(null);
     const pathname = usePathname();
     const router = useRouter();
 
@@ -327,61 +319,89 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
         }
     };
 
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleExcelImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        setIsExtracting(true);
+        setIsImportingExcel(true);
         try {
-            const dataUri = await fileToDataUri(file);
-            const result: ExtractQuotationOutput = await extractQuotationData({ photoDataUri: dataUri });
+            const buffer = await file.arrayBuffer();
+            const workbook = XLSX.read(buffer, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { defval: '' });
 
-            if (result.quotationNumber) setQuotationNumber(result.quotationNumber);
-            if (result.quotationDate) setQuotationDate(new Date(result.quotationDate));
-            if (result.validityDate) setValidityDate(new Date(result.validityDate));
-            if (result.billToName) setBillToName(result.billToName);
-            if (result.billToAddress) setBillToAddress(result.billToAddress);
-
-            if (result.lineItems && result.lineItems.length > 0) {
-                setLineItems(result.lineItems.map((item, index) => ({
-                    id: Date.now() + index,
-                    name: item.name || '',
-                    unit: item.unit || '',
-                    quantity: item.quantity || 0,
-                    unitPrice: item.unitPrice || 0,
-                    discount: item.discount || 0,
-                    total: ((item.quantity || 0) * (item.unitPrice || 0)) - (item.discount || 0),
-                    customFields: {},
-                })));
+            if (!rows || rows.length === 0) {
+                toast({ variant: 'destructive', title: 'Empty Sheet', description: 'The Excel file has no data rows.' });
+                return;
             }
-            if (result.subtotal) { /* Not setting subtotal directly */ }
-            if (result.gstAmount) {
-                const extractedSubtotal = result.subtotal || subtotal;
-                const extractedDiscount = result.lineItems?.reduce((acc, item) => acc + (item.discount || 0), 0) || totalDiscount;
-                if (extractedSubtotal > 0) {
-                    setGstRate((result.gstAmount / (extractedSubtotal - extractedDiscount)) * 100);
+
+            const normalise = (s: unknown) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+            const findKey = (row: Record<string, unknown>, ...aliases: string[]) => {
+                const keys = Object.keys(row);
+                for (const alias of aliases) {
+                    const found = keys.find(k => normalise(k) === normalise(alias));
+                    if (found !== undefined) return found;
                 }
-            }
-            if (result.shipping) setShipping(result.shipping);
-            if (result.other) setOther(result.other);
-            if (result.terms) setTerms(result.terms);
+                return null;
+            };
 
+            const firstRow = rows[0];
+            const keyItemName  = findKey(firstRow, 'itemname', 'item', 'name', 'description', 'product', 'itemdescription');
+            const keyHsn       = findKey(firstRow, 'hsncode', 'hsn', 'sac', 'hsnno');
+            const keyUnit      = findKey(firstRow, 'unit', 'uom', 'units');
+            const keyQty       = findKey(firstRow, 'qty', 'quantity', 'nos', 'count');
+            const keyUnitPrice = findKey(firstRow, 'unitprice', 'rate', 'price', 'unitrate', 'mrp');
+            const keyDiscount  = findKey(firstRow, 'discount', 'disc', 'discountamt', 'discountamount');
+
+            if (!keyItemName || !keyQty || !keyUnitPrice) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Column Not Found',
+                    description: 'Could not find required columns. Ensure your sheet has: Item Name, Qty, Unit Price.',
+                });
+                return;
+            }
+
+            const importedItems: QuotationLineItem[] = rows
+                .filter(row => row[keyItemName!] !== '')
+                .map((row, index) => {
+                    const qty      = parseFloat(String(row[keyQty!])) || 0;
+                    const price    = parseFloat(String(row[keyUnitPrice!])) || 0;
+                    const discount = keyDiscount ? (parseFloat(String(row[keyDiscount])) || 0) : 0;
+                    return {
+                        id:         Date.now() + index,
+                        name:       String(row[keyItemName!] || ''),
+                        hsnCode:    keyHsn  ? String(row[keyHsn]  || '') : '',
+                        unit:       keyUnit ? String(row[keyUnit] || '') : '',
+                        quantity:   qty,
+                        unitPrice:  price,
+                        discount,
+                        total:      qty * price - discount,
+                        customFields: {},
+                    };
+                });
+
+            if (importedItems.length === 0) {
+                toast({ variant: 'destructive', title: 'No Items', description: 'No valid product rows were found in the sheet.' });
+                return;
+            }
+
+            setLineItems(importedItems);
             toast({
-                title: "Extraction Complete",
-                description: "Quotation data has been filled in.",
+                title: 'Excel Imported',
+                description: `${importedItems.length} item(s) loaded from the spreadsheet.`,
             });
         } catch (error) {
-            console.error("Failed to extract quotation data:", error);
+            console.error('Excel import error:', error);
             toast({
-                variant: "destructive",
-                title: "Extraction Failed",
-                description: "Could not extract data from the file. Please try another file.",
-            })
+                variant: 'destructive',
+                title: 'Import Failed',
+                description: 'Could not read the Excel file. Please check the file format and try again.',
+            });
         } finally {
-            setIsExtracting(false);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
+            setIsImportingExcel(false);
+            if (excelInputRef.current) excelInputRef.current.value = '';
         }
     };
 
@@ -508,11 +528,11 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                         </Button>
                     </nav>
                     <div className="flex items-center gap-2 flex-wrap">
-                        <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={isExtracting}>
-                            {isExtracting ? (
-                                <><Loader className="animate-spin" /> Extracting...</>
+                        <Button variant="ghost" onClick={() => excelInputRef.current?.click()} disabled={isImportingExcel}>
+                            {isImportingExcel ? (
+                                <><Loader className="animate-spin" /> Importing...</>
                             ) : (
-                                <><Wand2 /> Autofill</>
+                                <><Sheet className="h-4 w-4" /> Import Excel</>
                             )}
                         </Button>
                         <Button onClick={() => handleSaveQuotation(false)} disabled={isSaving} variant="secondary">
@@ -528,11 +548,11 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
             </div>
             <input
                 type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
+                ref={excelInputRef}
+                onChange={handleExcelImport}
                 className="hidden"
-                accept="image/*,application/pdf"
-                disabled={isExtracting}
+                accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+                disabled={isImportingExcel}
             />
             <Card className="w-full shadow-lg">
                 <CardHeader className="bg-muted/20 p-4 sm:p-6">

@@ -8,9 +8,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, Sheet } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, Sheet } from 'lucide-react';
 import { format } from "date-fns"
-import { extractChallanData, ExtractChallanOutput } from '@/ai/flows/extract-challan-flow';
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
 import { Challan, saveChallan, ChallanLineItem } from '@/services/challanService';
@@ -28,15 +27,6 @@ interface DeliveryChallanFormProps {
     initialData?: Challan | null;
     onChallanSave: (savedChallan?: Challan) => void;
     onAddNew: () => void;
-}
-
-function fileToDataUri(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
 }
 
 type CombinedContact = (BillToContact & { type: 'billTo' }) | (ShipToContact & { type: 'shipTo' });
@@ -63,10 +53,8 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     const [shipping, setShipping] = useState(0);
     const [other, setOther] = useState(0);
 
-    const [isExtracting, setIsExtracting] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
     const [isImportingExcel, setIsImportingExcel] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isSaving, setIsSaving] = useState(false);
     const excelInputRef = useRef<HTMLInputElement>(null);
     const pathname = usePathname();
     const router = useRouter();
@@ -293,61 +281,6 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         }
     };
 
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        setIsExtracting(true);
-        try {
-            const dataUri = await fileToDataUri(file);
-            const result: ExtractChallanOutput = await extractChallanData({ photoDataUri: dataUri });
-
-            if (result.dcNumber) setDcNumber(result.dcNumber);
-            if (result.dcDate) setDcDate(new Date(result.dcDate));
-            if (result.billToName) setBillToName(result.billToName);
-            if (result.billToAddress) setBillToAddress(result.billToAddress);
-            if (result.shipToName) setShipToName(result.shipToName);
-            if (result.shipToAddress) setShipToAddress(result.shipToAddress);
-
-            if (!result.shipToName && result.billToName) setShipToName(result.billToName);
-            if (!result.shipToAddress && result.billToAddress) setShipToAddress(result.billToAddress);
-
-            if (result.lineItems && result.lineItems.length > 0) {
-                setLineItems(result.lineItems.map((item, index) => ({
-                    id: Date.now() + index,
-                    ...item,
-                    hsnCode: item.hsnCode || '',
-                    total: item.quantity * item.unitPrice,
-                })));
-            }
-            if (result.subtotal) { /* Not setting subtotal directly */ }
-            if (result.gstAmount) {
-                const extractedSubtotal = result.subtotal || subtotal;
-                if (extractedSubtotal > 0) {
-                    setGstRate((result.gstAmount / extractedSubtotal) * 100);
-                }
-            }
-            if (result.total) { /* Not setting total directly */ }
-
-            toast({
-                title: "Extraction Complete",
-                description: "Challan data has been filled in.",
-            });
-        } catch (error) {
-            console.error("Failed to extract challan data:", error);
-            toast({
-                variant: "destructive",
-                title: "Extraction Failed",
-                description: "Could not extract data from the file. Please try another file.",
-            })
-        } finally {
-            setIsExtracting(false);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-        }
-    };
-
     const handleExcelImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -498,13 +431,6 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                         </Button>
                     </nav>
                     <div className="flex items-center gap-2 flex-wrap">
-                        <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={isExtracting}>
-                            {isExtracting ? (
-                                <><Loader className="animate-spin" /> Extracting...</>
-                            ) : (
-                                <><Wand2 /> Autofill</>
-                            )}
-                        </Button>
                         <Button variant="ghost" onClick={() => excelInputRef.current?.click()} disabled={isImportingExcel}>
                             {isImportingExcel ? (
                                 <><Loader className="animate-spin" /> Importing...</>
@@ -523,14 +449,6 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                     </div>
                 </div>
             </div>
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-                accept="image/*,application/pdf"
-                disabled={isExtracting}
-            />
             <input
                 type="file"
                 ref={excelInputRef}

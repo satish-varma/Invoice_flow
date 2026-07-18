@@ -1,4 +1,4 @@
-'use server';
+
 /**
  * @fileOverview An invoice data extraction local agent.
  *
@@ -99,7 +99,7 @@ function formatDate(dateStr: string): string {
   return '';
 }
 
-function parseInvoiceText(text: string): ExtractInvoiceDataOutput {
+export function parseInvoiceText(text: string): ExtractInvoiceDataOutput {
   const rawLines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
   const fullText = rawLines.join(' '); // for regex matching across line breaks
 
@@ -392,46 +392,3 @@ function parseInvoiceText(text: string): ExtractInvoiceDataOutput {
   return output;
 }
 
-
-export async function extractInvoiceData(
-  input: ExtractInvoiceDataInput
-): Promise<ExtractInvoiceDataResponse> {
-  const { photoDataUri } = input;
-  if (!photoDataUri) {
-    return { success: false, error: "No file uploaded." };
-  }
-
-  const match = photoDataUri.match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) {
-    return { success: false, error: "Invalid file format." };
-  }
-
-  const mimeType = match[1];
-  const base64Data = match[2];
-
-  if (mimeType !== 'application/pdf') {
-    return { success: false, error: "Local autofill is only supported for text-based PDF files. Images are not supported locally." };
-  }
-
-  try {
-    const buffer = Buffer.from(base64Data, 'base64');
-    
-    // unpdf is designed to work in serverless/edge environments universally
-    const { text } = await extractText(buffer);
-
-    console.log('[extractInvoiceData] PDF text extracted, length:', text?.length);
-    console.log('[extractInvoiceData] First 800 chars:\n', text?.substring(0, 800));
-
-    if (!text || !text.trim()) {
-      return { success: false, error: "The PDF document does not contain extractable text (it might be a scanned image-only PDF)." };
-    }
-
-    const result = parseInvoiceText(text);
-    console.log('[extractInvoiceData] Parsed result:', JSON.stringify(result, null, 2));
-    return { success: true, data: result };
-  } catch (error) {
-    console.error("Local PDF parsing error:", error);
-    const errMessage = error instanceof Error ? error.message : "Unknown error occurred during PDF parsing.";
-    return { success: false, error: `Failed to parse the PDF document: ${errMessage}` };
-  }
-}

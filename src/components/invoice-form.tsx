@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText } from 'lucide-react';
 import { format } from "date-fns"
-import { extractInvoiceData, ExtractInvoiceDataResponse } from '@/ai/flows/extract-invoice-flow';
+import { ExtractInvoiceDataResponse } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
 import { Invoice, saveInvoice, TaxItem } from '@/services/invoiceService';
@@ -415,7 +415,18 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         setIsExtracting(true);
         try {
             const dataUri = await fileToDataUri(file);
-            const response = await extractInvoiceData({ photoDataUri: dataUri });
+            const req = await fetch('/api/extract-invoice', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ photoDataUri: dataUri })
+            });
+
+            if (!req.ok) {
+                const errJson = await req.json().catch(() => ({}));
+                throw new Error(errJson.error || `Server responded with status ${req.status}`);
+            }
+
+            const response = await req.json();
 
             if (!response.success) {
                 throw new Error(response.error);

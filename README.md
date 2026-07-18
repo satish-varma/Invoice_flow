@@ -1,66 +1,47 @@
 # InvoiceFlow - Professional Invoice Management
 
-InvoiceFlow is a modern, web-based application designed to streamline the process of creating, managing, and tracking professional invoices. Built with Next.js, Firebase, and Genkit, it offers a user-friendly interface for generating invoices from scratch or automatically extracting data from uploaded images using AI.
+InvoiceFlow is a robust, serverless-friendly web application designed to streamline the creation, management, and tracking of professional invoices, quotations, and delivery challans. Built with Next.js 15, Firebase, and Tailwind CSS, it offers intelligent offline PDF parsing and seamless Excel integrations to automate data entry without relying on expensive or unpredictable AI APIs.
 
 ## Key Features
 
-- **AI-Powered Data Extraction:** Automatically populate invoice fields by simply uploading an image of an invoice. The AI agent extracts key details like invoice number, customer name, date, and line items.
-- **Dynamic Invoice Form:** Create and edit invoices with an intuitive form that supports multiple line items, tax calculations, and customer details.
-- **Secure Cloud Storage:** All invoices are securely saved to Firebase Firestore, allowing you to access them from anywhere.
-- **PDF Generation & Download:** Generate professional-looking PDF versions of your invoices for printing or sending to clients.
-- **Invoice Previews:** Instantly preview how your final invoice will look before saving or downloading.
-- **Saved Invoices Management:** View, filter, and sort all your saved invoices in a clean, organized data table.
-- **Responsive Design:** The application is fully responsive and works seamlessly on desktops, tablets, and mobile devices.
+- **Offline PDF Parsing (Invoices):** Extract key details like invoice numbers, dates, customer names, and line items directly from PDF invoices. Powered by `unpdf` via a custom API Route to bypass serverless limitations, ensuring lightning-fast extraction without sending data to third-party AI services.
+- **Excel Bulk Import:** Automatically populate Quotations and Delivery Challans by uploading standard Excel spreadsheets, bypassing the need for manual entry or OCR.
+- **Smart Contact Matching:** Advanced "Ship-To" matching logic that verifies both company names and location-specific address keywords to prevent false positives (e.g., distinguishing between branches like "CGI Nexity" and "CGI Sky View").
+- **Secure Cloud Storage:** All documents are securely saved to Firebase Firestore, with real-time syncing and robust data structure.
+- **Dynamic Forms & PDF Generation:** Create, edit, and instantly preview professional PDFs for printing or sending to clients.
+- **Serverless-Optimized Architecture:** Specifically tuned for deployment on Firebase App Hosting, utilizing App Router API routes to safely bypass Next.js Server Action payload limits and Edge runtime module constraints.
 
 ## Getting Started
 
-To run this application locally, you will need to have Node.js, npm, and the Firebase CLI installed.
+To run this application locally, you will need Node.js (v20+), npm, and the Firebase CLI.
 
 1.  **Install Dependencies:**
     ```bash
     npm install
     ```
 
-2. **Deploy Firestore Rules:**
-   The application requires open access to Firestore for development. You need to deploy the included security rules.
-   First, log in to Firebase:
-   ```bash
-   firebase login
-   ```
-   Then, deploy the rules:
-   ```bash
-   firebase deploy --only firestore
-   ```
-   **Note:** These rules are insecure and should not be used in a production environment.
+2. **Configure Firebase:**
+    Ensure you have an active Firebase project. You will need to add your Firebase configuration to your environment variables (e.g., `.env.local`).
 
 3.  **Run the Development Server:**
     ```bash
     npm run dev
     ```
 
-The application will be available at `http://localhost:9002`.
+The application will be available at `http://localhost:9002` (or your configured port).
 
-## Project Structure
+## Project Architecture
 
-- **`src/app`**: Contains the main pages of the application, built using the Next.js App Router.
-  - **`src/app/page.tsx`**: The main invoice creation page.
-  - **`src/app/invoices`**: The page for viewing and managing saved invoices.
-- **`src/components`**: Reusable React components used throughout the application.
-  - **`src/components/invoice-form.tsx`**: The primary form for creating and editing invoices.
-  - **`src/components/invoice-preview.tsx`**: The component that renders the final invoice layout for previews and PDF generation.
-  - **`src/components/ui`**: UI components from `shadcn/ui`.
-- **`src/ai`**: Contains the AI-related logic, powered by Genkit.
-  - **`src/ai/flows/extract-invoice-flow.ts`**: The Genkit flow that defines the AI agent for extracting data from invoice images.
-- **`src/services`**: Handles communication with backend services, primarily Firebase Firestore.
-  - **`src/services/invoiceService.ts`**: Contains functions for saving and retrieving invoices from Firestore.
-- **`src/lib`**: Utility functions and Firebase configuration.
-  - **`src/lib/firebase.ts`**: Initializes the Firebase SDK.
+- **`src/app`**: Next.js App Router structure containing all main pages (invoices, quotations, challans).
+- **`src/app/api/extract-invoice`**: The dedicated REST API route that handles server-side PDF text extraction. It uses `unpdf` and strict `Uint8Array` parsing to ensure compatibility with Firebase App Hosting.
+- **`src/components`**: Reusable Shadcn UI components and complex form handlers (e.g., `invoice-form.tsx`, `quotation-form.tsx`).
+- **`src/ai/flows`**: Legacy folder name housing the `parseInvoiceText` regex logic. Note: The app no longer relies on external AI endpoints (like Gemini) to save costs and improve reliability.
+- **`src/services`**: Firebase Firestore communication layers.
 
 ## Technologies Used
 
-- **Next.js:** React framework for building the user interface.
-- **Firebase:** Backend services, including Firestore for database storage.
-- **Genkit:** AI framework for building the data extraction flow.
-- **Shadcn/ui:** A collection of beautifully designed UI components.
-- **Tailwind CSS:** For styling the application.
-- **TypeScript:** For type-safe code.
+- **Next.js 15 (App Router)**
+- **Firebase (Firestore, App Hosting, Auth)**
+- **unpdf (PDF.js)** for serverless PDF parsing
+- **Shadcn/ui & Tailwind CSS** for styling
+- **TypeScript**

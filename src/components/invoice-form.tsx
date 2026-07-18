@@ -440,17 +440,48 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
 
             if (result.deliverTo) {
                 const dtUpper = result.deliverTo.toUpperCase();
-                const dtNormalized = dtUpper.replace(/\s+/g, '');
-                const foundContact = settings.shipToContacts?.find(c => {
-                    const cName = c.name ? c.name.toUpperCase() : '';
-                    const cNameNormalized = cName.replace(/\s+/g, '');
-                    return cNameNormalized && (dtNormalized.includes(cNameNormalized) || cNameNormalized.includes(dtNormalized));
+                let bestContact = null;
+                let bestScore = 0;
+
+                settings.shipToContacts?.forEach(c => {
+                    const cName = c.name ? c.name.toUpperCase().trim() : '';
+                    if (!cName || cName.length < 2) return;
+
+                    // The contact name must be present in the extracted text
+                    if (dtUpper.includes(cName)) {
+                        let score = cName.length; // Base score on name length
+                        
+                        // If contact has an address, check for address overlap to differentiate branches
+                        if (c.address) {
+                            const cAddr = c.address.toUpperCase();
+                            const addrWords = cAddr.split(/[\s,.-]+/).filter(w => w.length >= 4);
+                            
+                            let matchedWords = 0;
+                            addrWords.forEach(w => {
+                                if (dtUpper.includes(w)) matchedWords++;
+                            });
+
+                            // If there are significant words in the address, but ZERO match the invoice text,
+                            // this is likely the WRONG branch (e.g., CGI Sky View vs CGI Nexity).
+                            if (addrWords.length > 0 && matchedWords === 0) {
+                                return; // Reject this contact
+                            }
+                            
+                            score += (matchedWords * 10);
+                        }
+
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestContact = c;
+                        }
+                    }
                 });
-                if (foundContact) {
-                    setShipToName(foundContact.name || '');
-                    setShipToAddress(foundContact.address || '');
-                    if (foundContact.gst) setShipToGst(foundContact.gst);
-                    setSelectedShipToId(`${foundContact.id}|shipTo`);
+
+                if (bestContact) {
+                    setShipToName(bestContact.name || '');
+                    setShipToAddress(bestContact.address || '');
+                    if (bestContact.gst) setShipToGst(bestContact.gst);
+                    setSelectedShipToId(`${bestContact.id}|shipTo`);
                 } else {
                     // Extract just the first line as company name, rest as address
                     const lines = result.deliverTo.split('\n');

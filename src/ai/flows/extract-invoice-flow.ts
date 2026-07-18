@@ -8,7 +8,7 @@
  */
 
 import { z } from 'genkit';
-import { PDFParse } from 'pdf-parse';
+import { extractText } from 'unpdf';
 
 const LineItemSchema = z.object({
   name: z.string().describe('The name or description of the line item.'),
@@ -415,11 +415,9 @@ export async function extractInvoiceData(
 
   try {
     const buffer = Buffer.from(base64Data, 'base64');
-    // PDFParse is a class in this version of pdf-parse
-    const parser = new PDFParse({ data: buffer });
-    const parseResult = await parser.getText();
-    const text = parseResult.text;
-    await parser.destroy();
+    
+    // unpdf is designed to work in serverless/edge environments universally
+    const { text } = await extractText(buffer);
 
     console.log('[extractInvoiceData] PDF text extracted, length:', text?.length);
     console.log('[extractInvoiceData] First 800 chars:\n', text?.substring(0, 800));

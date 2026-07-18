@@ -2,10 +2,6 @@
 const nextConfig = {
     /* config options here */
     output: 'standalone',
-    serverExternalPackages: ['pdf-parse'],
-    outputFileTracingIncludes: {
-        '/**/*': ['./node_modules/pdf-parse/**/*'],
-    },
     experimental: {
         serverActions: {
             bodySizeLimit: '10mb',

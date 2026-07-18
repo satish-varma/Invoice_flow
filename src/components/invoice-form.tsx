@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText } from 'lucide-react';
 import { format } from "date-fns"
-import { extractInvoiceData, ExtractInvoiceDataOutput } from '@/ai/flows/extract-invoice-flow';
+import { extractInvoiceData, ExtractInvoiceDataResponse } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
 import { Invoice, saveInvoice, TaxItem } from '@/services/invoiceService';
@@ -415,7 +415,13 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         setIsExtracting(true);
         try {
             const dataUri = await fileToDataUri(file);
-            const result: ExtractInvoiceDataOutput = await extractInvoiceData({ photoDataUri: dataUri });
+            const response = await extractInvoiceData({ photoDataUri: dataUri });
+
+            if (!response.success) {
+                throw new Error(response.error);
+            }
+
+            const result = response.data;
 
             if (result.customerName) {
                 setBillToName(result.customerName);

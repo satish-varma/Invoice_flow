@@ -41,6 +41,14 @@ export type ExtractInvoiceDataOutput = z.infer<
   typeof ExtractInvoiceDataOutputSchema
 >;
 
+export type ExtractInvoiceDataResponse = {
+  success: true;
+  data: ExtractInvoiceDataOutput;
+} | {
+  success: false;
+  error: string;
+};
+
 function formatDate(dateStr: string): string {
   const monthsMap: Record<string, string> = {
     jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
@@ -387,22 +395,22 @@ function parseInvoiceText(text: string): ExtractInvoiceDataOutput {
 
 export async function extractInvoiceData(
   input: ExtractInvoiceDataInput
-): Promise<ExtractInvoiceDataOutput> {
+): Promise<ExtractInvoiceDataResponse> {
   const { photoDataUri } = input;
   if (!photoDataUri) {
-    throw new Error("No file uploaded.");
+    return { success: false, error: "No file uploaded." };
   }
 
   const match = photoDataUri.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) {
-    throw new Error("Invalid file format.");
+    return { success: false, error: "Invalid file format." };
   }
 
   const mimeType = match[1];
   const base64Data = match[2];
 
   if (mimeType !== 'application/pdf') {
-    throw new Error("Local autofill is only supported for text-based PDF files. Images are not supported locally.");
+    return { success: false, error: "Local autofill is only supported for text-based PDF files. Images are not supported locally." };
   }
 
   try {
@@ -417,14 +425,15 @@ export async function extractInvoiceData(
     console.log('[extractInvoiceData] First 800 chars:\n', text?.substring(0, 800));
 
     if (!text || !text.trim()) {
-      throw new Error("The PDF document does not contain extractable text (it might be a scanned image-only PDF).");
+      return { success: false, error: "The PDF document does not contain extractable text (it might be a scanned image-only PDF)." };
     }
 
     const result = parseInvoiceText(text);
     console.log('[extractInvoiceData] Parsed result:', JSON.stringify(result, null, 2));
-    return result;
+    return { success: true, data: result };
   } catch (error) {
     console.error("Local PDF parsing error:", error);
-    throw error instanceof Error ? error : new Error("Failed to parse the PDF document.");
+    const errMessage = error instanceof Error ? error.message : "Unknown error occurred during PDF parsing.";
+    return { success: false, error: `Failed to parse the PDF document: ${errMessage}` };
   }
 }

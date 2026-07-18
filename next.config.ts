@@ -6,6 +6,11 @@ const nextConfig = {
     outputFileTracingIncludes: {
         '/**/*': ['./node_modules/pdf-parse/**/*'],
     },
+    experimental: {
+        serverActions: {
+            bodySizeLimit: '10mb',
+        },
+    },
     typescript: {
         ignoreBuildErrors: true,
     },

@@ -25,7 +25,11 @@ export async function POST(req: NextRequest) {
     const uint8Array = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
     
     // Extract text from the PDF using unpdf (requires Uint8Array)
-    const { text } = await extractText(uint8Array);
+    const extractionResult = await extractText(uint8Array);
+    const rawText = extractionResult.text;
+    
+    // unpdf might return an array of strings (one per page) or a single string
+    const text = Array.isArray(rawText) ? rawText.join('\n') : (typeof rawText === 'string' ? rawText : String(rawText));
 
     if (!text || !text.trim()) {
       return NextResponse.json({ success: false, error: "The PDF document does not contain extractable text." }, { status: 400 });

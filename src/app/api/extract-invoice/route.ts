@@ -22,9 +22,10 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(base64Data, 'base64');
+    const uint8Array = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
     
-    // Extract text from the PDF buffer using unpdf
-    const { text } = await extractText(buffer);
+    // Extract text from the PDF using unpdf (requires Uint8Array)
+    const { text } = await extractText(uint8Array);
 
     if (!text || !text.trim()) {
       return NextResponse.json({ success: false, error: "The PDF document does not contain extractable text." }, { status: 400 });

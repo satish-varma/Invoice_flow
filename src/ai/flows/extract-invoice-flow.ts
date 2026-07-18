@@ -188,12 +188,19 @@ function parseInvoiceText(text: string): ExtractInvoiceDataOutput {
       continue;
     }
 
-    // "Vendor Address" section: next line is the vendor/customer name (Hungerbox format)
-    if (/^Vendor\s*Address\b/i.test(line) && !customerName) {
-      if (i + 1 < rawLines.length && /[a-zA-Z]{2,}/.test(rawLines[i + 1])) {
-        customerName = rawLines[i + 1].trim();
+    // "Vendor Address" section: the invoice is from Hungerbox
+    if (/^Vendor\s*Address\b/i.test(line)) {
+      if (!customerName || customerName.toLowerCase().includes('gut guru')) {
+        customerName = 'Hungerbox';
       }
       continue;
+    }
+  }
+
+  // Fallback: If it's a Hungerbox PO and we didn't set a name, set it to Hungerbox
+  if (!customerName || customerName.toLowerCase().includes('gut guru')) {
+    if (fullText.toLowerCase().includes('hungerbox') || fullText.toLowerCase().includes('eatgood')) {
+      customerName = 'Hungerbox';
     }
   }
 

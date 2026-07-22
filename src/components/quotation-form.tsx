@@ -504,7 +504,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
             <div className="mb-8">
                 <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4'>
                     <div>
-                        <h1 className="text-4xl font-headline font-bold text-primary">
+                        <h1 className="text-2xl sm:text-4xl font-headline font-bold text-primary">
                             Quotation
                         </h1>
                         <p className="text-muted-foreground text-sm sm:text-base">
@@ -527,7 +527,8 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                             <Link href="/settings"><SettingsIcon /> Settings</Link>
                         </Button>
                     </nav>
-                    <div className="flex items-center gap-2 flex-wrap">
+                    {/* Desktop action buttons — hidden on mobile */}
+                    <div className="hidden sm:flex items-center gap-2 flex-wrap">
                         <Button variant="ghost" onClick={() => excelInputRef.current?.click()} disabled={isImportingExcel}>
                             {isImportingExcel ? (
                                 <><Loader className="animate-spin" /> Importing...</>
@@ -633,49 +634,89 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                             </div>
                             <div>
                                 <Label>Quotation Date</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            id="date"
-                                            variant={"outline"}
-                                            className="w-full justify-start text-left font-normal"
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {quotationDate ? format(quotationDate, "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="end">
-                                        <Calendar
-                                            mode="single"
-                                            selected={quotationDate}
-                                            onSelect={setQuotationDate}
-                                            initialFocus
+                                <div className="hidden sm:block">
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                id="date"
+                                                variant={"outline"}
+                                                className="w-full justify-start text-left font-normal"
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {quotationDate ? format(quotationDate, "PPP") : <span>Pick a date</span>}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="end">
+                                            <Calendar
+                                                mode="single"
+                                                selected={quotationDate}
+                                                onSelect={setQuotationDate}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                                <div className="sm:hidden mt-1">
+                                    <div className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                                        <div className="flex items-center gap-2">
+                                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                            {quotationDate ? format(quotationDate, "PPP") : <span className="text-muted-foreground">Pick a date</span>}
+                                        </div>
+                                        <Input 
+                                            type="date"
+                                            className="absolute opacity-0 inset-0 w-full h-full cursor-pointer"
+                                            value={quotationDate ? format(quotationDate, 'yyyy-MM-dd') : ''}
+                                            onChange={(e) => {
+                                                if (e.target.value) {
+                                                    setQuotationDate(new Date(e.target.value + 'T00:00:00'));
+                                                }
+                                            }}
                                         />
-                                    </PopoverContent>
-                                </Popover>
+                                    </div>
+                                </div>
                             </div>
                             <div>
                                 <Label>Validity Date</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            id="validityDate"
-                                            variant={"outline"}
-                                            className="w-full justify-start text-left font-normal"
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {validityDate ? format(validityDate, "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="end">
-                                        <Calendar
-                                            mode="single"
-                                            selected={validityDate}
-                                            onSelect={setValidityDate}
-                                            initialFocus
+                                <div className="hidden sm:block">
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                id="validityDate"
+                                                variant={"outline"}
+                                                className="w-full justify-start text-left font-normal"
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {validityDate ? format(validityDate, "PPP") : <span>Pick a date</span>}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="end">
+                                            <Calendar
+                                                mode="single"
+                                                selected={validityDate}
+                                                onSelect={setValidityDate}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                                <div className="sm:hidden mt-1">
+                                    <div className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                                        <div className="flex items-center gap-2">
+                                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                            {validityDate ? format(validityDate, "PPP") : <span className="text-muted-foreground">Pick a date</span>}
+                                        </div>
+                                        <Input 
+                                            type="date"
+                                            className="absolute opacity-0 inset-0 w-full h-full cursor-pointer"
+                                            value={validityDate ? format(validityDate, 'yyyy-MM-dd') : ''}
+                                            onChange={(e) => {
+                                                if (e.target.value) {
+                                                    setValidityDate(new Date(e.target.value + 'T00:00:00'));
+                                                }
+                                            }}
                                         />
-                                    </PopoverContent>
-                                </Popover>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -688,8 +729,8 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                             <div key={item.id} className="border rounded-lg p-3 bg-muted/20 space-y-2 animate-fade-in-down">
                                 <div className="flex justify-between items-center">
                                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Item {index + 1}</span>
-                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} aria-label="Remove item" className="h-7 w-7 active:scale-95">
-                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} aria-label="Remove item" className="h-11 w-11 sm:h-7 sm:w-7 active:scale-95">
+                                        <Trash2 className="h-5 w-5 sm:h-4 sm:w-4 text-destructive" />
                                     </Button>
                                 </div>
                                 <div>
@@ -895,6 +936,42 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* ── Mobile sticky action bar ───────────────────────── */}
+            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-t shadow-2xl px-4 py-3 flex items-center gap-2 no-print">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-11 text-sm"
+                    onClick={() => excelInputRef.current?.click()}
+                    disabled={isImportingExcel}
+                >
+                    {isImportingExcel ? <Loader className="animate-spin mr-1 h-4 w-4" /> : <Sheet className="mr-1 h-4 w-4" />}
+                    Import
+                </Button>
+                <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1 h-11 text-sm"
+                    onClick={() => handleSaveQuotation(false)}
+                    disabled={isSaving}
+                >
+                    {isSaving ? <Loader className="animate-spin mr-1 h-4 w-4" /> : <Save className="mr-1 h-4 w-4" />}
+                    {initialData ? 'Update' : 'Save'}
+                </Button>
+                <Button
+                    size="sm"
+                    className="flex-1 h-11 text-sm bg-accent text-accent-foreground hover:bg-accent/90"
+                    onClick={() => handleSaveQuotation(true)}
+                    disabled={isSaving}
+                >
+                    {isSaving ? <Loader className="animate-spin mr-1 h-4 w-4" /> : <Save className="mr-1 h-4 w-4" />}
+                    Save+PDF
+                </Button>
+            </div>
+
+            {/* Bottom spacer so sticky bar doesn't cover content */}
+            <div className="sm:hidden h-20" />
         </>
     );
 }

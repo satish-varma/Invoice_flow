@@ -611,7 +611,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             <div className="mb-8">
                 <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4'>
                     <div>
-                        <h1 className="text-4xl font-headline font-bold text-primary">
+                        <h1 className="text-2xl sm:text-4xl font-headline font-bold text-primary">
                             InvoiceFlow
                         </h1>
                         <p className="text-muted-foreground text-sm sm:text-base">
@@ -637,7 +637,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                             <Link href="/settings"><SettingsIcon /> Settings</Link>
                         </Button>
                     </nav>
-                    <div className="flex items-center gap-2 flex-wrap">
+                    {/* Desktop action buttons — hidden on mobile (mobile gets sticky bar) */}
+                    <div className="hidden sm:flex items-center gap-2 flex-wrap">
                         <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={isExtracting}>
                             {isExtracting ? (
                                 <><Loader className="animate-spin" /> Extracting...</>
@@ -754,26 +755,49 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 <Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className="max-w-[200px]" readOnly={!!initialData || !invoiceNumber} placeholder="Auto-generated" />
                             </div>
                             <div>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            id="date"
-                                            variant={"outline"}
-                                            className="w-full justify-start text-left font-normal"
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {date ? format(date, "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="end">
-                                        <Calendar
-                                            mode="single"
-                                            selected={date}
-                                            onSelect={setDate}
-                                            initialFocus
+                                {/* Desktop Date Picker */}
+                                <div className="hidden sm:block">
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                id="date"
+                                                variant={"outline"}
+                                                className="w-full justify-start text-left font-normal"
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {date ? format(date, "PPP") : <span>Pick a date</span>}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="end">
+                                            <Calendar
+                                                mode="single"
+                                                selected={date}
+                                                onSelect={setDate}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                                {/* Mobile Native Date Picker */}
+                                <div className="sm:hidden">
+                                    <div className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                                        <div className="flex items-center gap-2">
+                                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                            {date ? format(date, "PPP") : <span className="text-muted-foreground">Pick a date</span>}
+                                        </div>
+                                        <Input 
+                                            type="date"
+                                            className="absolute opacity-0 inset-0 w-full h-full cursor-pointer"
+                                            value={date ? format(date, 'yyyy-MM-dd') : ''}
+                                            onChange={(e) => {
+                                                if (e.target.value) {
+                                                    // Parse as local time to avoid timezone offset issues
+                                                    setDate(new Date(e.target.value + 'T00:00:00'));
+                                                }
+                                            }}
                                         />
-                                    </PopoverContent>
-                                </Popover>
+                                    </div>
+                                </div>
                             </div>
                             <div>
                                 <Label htmlFor='period'>Period</Label>
@@ -860,8 +884,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                             <div key={item.id} className="border rounded-lg p-3 bg-muted/20 space-y-2 animate-fade-in-down">
                                 <div className="flex justify-between items-center">
                                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Item {index + 1}</span>
-                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} aria-label="Remove item" className="h-7 w-7 active:scale-95">
-                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} aria-label="Remove item" className="h-11 w-11 sm:h-7 sm:w-7 active:scale-95">
+                                        <Trash2 className="h-5 w-5 sm:h-4 sm:w-4 text-destructive" />
                                     </Button>
                                 </div>
                                 <div>
@@ -984,30 +1008,30 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                         {/* Manual Tax Section */}
                         <div className='space-y-2 border-t border-dashed pt-2'>
                             {appliedTaxes.map((tax) => (
-                                <div key={tax.id} className="flex items-center gap-2 animate-fade-in-down">
-                                    <Input
-                                        placeholder="Tax Name"
-                                        value={tax.name}
-                                        onChange={e => handleTaxChange(tax.id!, 'name', e.target.value)}
-                                        className="h-8"
-                                    />
-                                    <Input
-                                        type="number"
-                                        placeholder="Rate (%)"
-                                        value={tax.rate}
-                                        onChange={e => handleTaxChange(tax.id!, 'rate', parseFloat(e.target.value) || 0)}
-                                        className="h-8 text-right w-24"
-                                    />
-                                    <Input
-                                        type="number"
-                                        placeholder="Amount"
-                                        value={tax.amount}
-                                        onChange={e => handleTaxChange(tax.id!, 'amount', parseFloat(e.target.value) || 0)}
-                                        className="h-8 text-right w-28"
-                                    />
-                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveTax(tax.id!)} aria-label="Remove tax" className="h-8 w-8 active:scale-95">
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
+                                <div key={tax.id} className="animate-fade-in-down border rounded-lg p-2 sm:p-0 sm:border-0">
+                                    {/* Mobile stacked layout */}
+                                    <div className="flex sm:hidden flex-col gap-1.5">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs text-muted-foreground font-medium">Tax</span>
+                                            <Button variant="ghost" size="icon" onClick={() => handleRemoveTax(tax.id!)} aria-label="Remove tax" className="h-11 w-11 sm:h-7 sm:w-7 active:scale-95">
+                                                <Trash2 className="h-5 w-5 sm:h-3.5 sm:w-3.5 text-destructive" />
+                                            </Button>
+                                        </div>
+                                        <Input placeholder="Tax Name" value={tax.name} onChange={e => handleTaxChange(tax.id!, 'name', e.target.value)} className="h-8" />
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            <Input type="number" placeholder="Rate (%)" value={tax.rate} onChange={e => handleTaxChange(tax.id!, 'rate', parseFloat(e.target.value) || 0)} className="h-8 text-right" />
+                                            <Input type="number" placeholder="Amount" value={tax.amount} onChange={e => handleTaxChange(tax.id!, 'amount', parseFloat(e.target.value) || 0)} className="h-8 text-right" />
+                                        </div>
+                                    </div>
+                                    {/* Desktop inline layout */}
+                                    <div className="hidden sm:flex items-center gap-2">
+                                        <Input placeholder="Tax Name" value={tax.name} onChange={e => handleTaxChange(tax.id!, 'name', e.target.value)} className="h-8" />
+                                        <Input type="number" placeholder="Rate (%)" value={tax.rate} onChange={e => handleTaxChange(tax.id!, 'rate', parseFloat(e.target.value) || 0)} className="h-8 text-right w-24" />
+                                        <Input type="number" placeholder="Amount" value={tax.amount} onChange={e => handleTaxChange(tax.id!, 'amount', parseFloat(e.target.value) || 0)} className="h-8 text-right w-28" />
+                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveTax(tax.id!)} aria-label="Remove tax" className="h-8 w-8 active:scale-95">
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
                                 </div>
                             ))}
                             <Button onClick={handleAddTax} variant="outline" size="sm" className="bg-transparent hover:bg-accent/10 h-8 active:scale-95">
@@ -1033,6 +1057,42 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                     )}
                 </CardFooter>
             </Card>
+
+            {/* ── Mobile sticky action bar (hidden on desktop) ─────── */}
+            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-t shadow-2xl px-4 py-3 flex items-center gap-2 no-print">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-11 text-sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isExtracting}
+                >
+                    {isExtracting ? <Loader className="animate-spin mr-1 h-4 w-4" /> : <Wand2 className="mr-1 h-4 w-4" />}
+                    Autofill
+                </Button>
+                <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1 h-11 text-sm"
+                    onClick={() => handleSaveInvoice('save')}
+                    disabled={isSaving}
+                >
+                    {isSaving ? <Loader className="animate-spin mr-1 h-4 w-4" /> : <Save className="mr-1 h-4 w-4" />}
+                    {initialData ? 'Update' : 'Save'}
+                </Button>
+                <Button
+                    size="sm"
+                    className="flex-1 h-11 text-sm bg-accent text-accent-foreground hover:bg-accent/90"
+                    onClick={() => handleSaveInvoice('preview')}
+                    disabled={isSaving}
+                >
+                    {isSaving ? <Loader className="animate-spin mr-1 h-4 w-4" /> : <Wand2 className="mr-1 h-4 w-4" />}
+                    Preview
+                </Button>
+            </div>
+
+            {/* Bottom padding so sticky bar doesn't cover content on mobile */}
+            <div className="sm:hidden h-20" />
         </>
     );
 }

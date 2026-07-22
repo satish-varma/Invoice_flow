@@ -229,6 +229,9 @@ export default function DeliveryChallansPage() {
                         data={data}
                         onDeleteSelected={handleBulkDeleteRequest}
                         onDownloadSelected={handleBulkDownload}
+                        onPreview={handlePreview}
+                        onDownloadSingle={handleDownload}
+                        onDeleteSingle={handleDeleteRequest}
                     />
                 </div>
             </main>

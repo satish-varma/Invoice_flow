@@ -682,7 +682,52 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                 </CardContent>
 
                 <CardContent className="p-4 sm:p-6">
-                    <div className="mt-6 overflow-x-auto">
+                    {/* Mobile card layout */}
+                    <div className="md:hidden space-y-3 mt-4">
+                        {lineItems.map((item, index) => (
+                            <div key={item.id} className="border rounded-lg p-3 bg-muted/20 space-y-2 animate-fade-in-down">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Item {index + 1}</span>
+                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} aria-label="Remove item" className="h-7 w-7 active:scale-95">
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                                <div>
+                                    <Label className="text-xs text-muted-foreground">Product</Label>
+                                    <Select onValueChange={(val) => handleProductSelect(item.id, val)}>
+                                        <SelectTrigger className="h-9 mt-1">
+                                            <SelectValue placeholder="Select..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {products.map(p => (
+                                                <SelectItem key={p.id} value={p.id!}>{p.name}</SelectItem>
+                                            ))}
+                                            <SelectItem value="none" className='text-muted-foreground italic font-normal'>Manual entry...</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                {columns.map(col => (
+                                    <div key={col.id}>
+                                        <Label className="text-xs text-muted-foreground">{col.label}</Label>
+                                        <Input
+                                            className={`mt-1 ${['quantity', 'unitPrice', 'discount'].includes(col.id) ? 'text-right' : ''}`}
+                                            placeholder={col.label}
+                                            value={['name', 'unit', 'hsnCode', 'quantity', 'unitPrice', 'discount'].includes(col.id) ? ((item as any)[col.id] || '') : (item.customFields?.[col.id] || '')}
+                                            onChange={e => handleItemChange(item.id, col.id, e.target.value)}
+                                            type={['quantity', 'unitPrice', 'discount'].includes(col.id) || col.id.startsWith('custom_') ? 'number' : 'text'}
+                                        />
+                                    </div>
+                                ))}
+                                <div className="flex justify-between items-center pt-1 border-t">
+                                    <span className="text-xs text-muted-foreground font-medium">Total</span>
+                                    <span className="font-bold text-sm">{(Number(item.total) || 0).toFixed(2)}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Desktop table layout */}
+                    <div className="hidden md:block mt-6 overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -743,6 +788,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                         </Button>
                     </div>
                 </CardContent>
+
                 <CardFooter className="bg-muted/20 p-4 sm:p-6 flex justify-between items-start gap-8">
                     <div className="w-full space-y-4">
                         <div>

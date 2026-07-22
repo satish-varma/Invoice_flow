@@ -121,11 +121,13 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex items-center p-2 border-b md:hidden">
+        <header className="flex items-center p-3 border-b md:hidden bg-card sticky top-0 z-10 shadow-sm">
           <SidebarTrigger />
-          <h1 className="text-lg font-bold ml-2">InvoiceFlow</h1>
+          <h1 className="text-lg font-bold ml-2 text-primary">InvoiceFlow</h1>
         </header>
-        {children}
+        <div className="flex-1 overflow-auto">
+          {children}
+        </div>
       </SidebarInset>
     </>
   );

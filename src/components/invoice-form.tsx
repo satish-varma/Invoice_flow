@@ -854,7 +854,64 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 </CardContent>
 
                 <CardContent className="p-4 sm:p-6">
-                    <div className="mt-6 overflow-x-auto">
+                    {/* Mobile card layout (shown only on mobile) */}
+                    <div className="md:hidden space-y-3 mt-4">
+                        {lineItems.map((item, index) => (
+                            <div key={item.id} className="border rounded-lg p-3 bg-muted/20 space-y-2 animate-fade-in-down">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Item {index + 1}</span>
+                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} aria-label="Remove item" className="h-7 w-7 active:scale-95">
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                                <div>
+                                    <Label className="text-xs text-muted-foreground">Product</Label>
+                                    <Select value={item.productId || 'none'} onValueChange={(val) => handleProductSelect(item.id, val)}>
+                                        <SelectTrigger className="h-9 mt-1">
+                                            <SelectValue placeholder="Quick select..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {products.map(p => (
+                                                <SelectItem key={p.id} value={p.id!}>{p.name}</SelectItem>
+                                            ))}
+                                            <SelectItem value="none" className='text-muted-foreground italic font-normal'>Manual entry...</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label className="text-xs text-muted-foreground">Description</Label>
+                                    <Input className="mt-1" placeholder="Item description" value={item.name} onChange={e => handleItemChange(item.id, 'name', e.target.value)} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <Label className="text-xs text-muted-foreground">HSN/SAC</Label>
+                                        <Input className="mt-1" placeholder="HSN" value={item.hsnCode} onChange={e => handleItemChange(item.id, 'hsnCode', e.target.value)} />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs text-muted-foreground">Unit</Label>
+                                        <Input className="mt-1" placeholder="Unit" value={item.unit || ''} onChange={e => handleItemChange(item.id, 'unit', e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <Label className="text-xs text-muted-foreground">Quantity</Label>
+                                        <Input className="mt-1 text-right" type="number" value={item.quantity || ''} onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} min="0" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs text-muted-foreground">Rate ({settings.currencySymbol || '₹'})</Label>
+                                        <Input className="mt-1 text-right" type="number" value={item.unitPrice || ''} onChange={e => handleItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} min="0" step="0.01" placeholder="0.00" />
+                                    </div>
+                                </div>
+                                <div className="flex justify-between items-center pt-1 border-t">
+                                    <span className="text-xs text-muted-foreground font-medium">Amount</span>
+                                    <span className="font-bold text-sm">{settings.currencySymbol || '₹'} {(!isNaN(item.quantity) && !isNaN(item.unitPrice) ? (Number(item.quantity) * Number(item.unitPrice)) : 0).toFixed(2)}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Desktop table layout (hidden on mobile) */}
+                    <div className="hidden md:block mt-6 overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -916,6 +973,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                         </Button>
                     </div>
                 </CardContent>
+
                 <CardFooter className="bg-muted/20 p-4 sm:p-6 flex-col items-end gap-4">
                     <div className="w-full max-w-sm text-sm space-y-2">
                         <div className="flex justify-between">

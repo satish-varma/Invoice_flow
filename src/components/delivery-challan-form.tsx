@@ -559,7 +559,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                     </Popover>
                                 </div>
                                 <div className="sm:hidden">
-                                    <div className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                                    <div className="relative flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
                                         <div className="flex items-center gap-2">
                                             <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                                             {dcDate ? format(dcDate, "PPP") : <span className="text-muted-foreground">Pick a date</span>}

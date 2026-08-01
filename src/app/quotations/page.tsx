@@ -6,9 +6,10 @@ import { QuotationsDataTable } from "./data-table";
 import { getColumns } from "./columns";
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader } from "lucide-react";
+import { ArrowLeft, Loader, Plus } from "lucide-react";
 import React, { useRef, useEffect, useState } from "react";
 import { QuotationPreview } from "@/components/quotation-preview";
+import { AppShell } from "@/components/app-shell";
 import type { Settings } from "@/services/settingsService";
 import { getSettings } from "@/services/settingsService";
 import {
@@ -321,6 +322,15 @@ export default function QuotationsPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Mobile Floating Action Button */}
+            <div className="sm:hidden fixed bottom-6 right-6 z-50 no-print">
+                <Button size="icon" className="h-14 w-14 rounded-full shadow-xl bg-primary text-primary-foreground" asChild>
+                    <Link href="/quotation">
+                        <Plus className="h-6 w-6" />
+                    </Link>
+                </Button>
+            </div>
         </AppShell>
     );
 }

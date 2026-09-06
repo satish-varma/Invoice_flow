@@ -57,7 +57,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     { href: '/products', label: 'Products', icon: Package },
     { href: '/clients', label: 'Clients', icon: User },
     { href: '/settings', label: 'Settings', icon: Settings },
-    { href: '/newrelic', label: 'NewRelic DC Portal', icon: ExternalLink, divider: true },
+    { href: '/declarations', label: 'GST Declarations', icon: FileText, divider: true },
+    { href: '/newrelic', label: 'NewRelic DC Portal', icon: ExternalLink },
   ];
 
   return (

@@ -68,24 +68,11 @@ export const DeclarationPreview = forwardRef<HTMLDivElement, DeclarationPreviewP
           </div>
 
           {/* Body content */}
-          <div className="text-[15px] space-y-5 text-justify leading-relaxed text-gray-900">
-            <p>
-              We, <strong>{data.vendorName}</strong>, located at <strong>{data.address}</strong>, hereby confirm that we are not registered under GST as we are exempted from GST registration considering our supply of services turnover for the FY {data.financialYear || '____'} is less than the minimum registration turnover limit of Rs. 40 lacs set out under the GST Act.
-            </p>
-            <p>
-              We hereby further confirm that no TCS should be deducted on the payments made to us for the supply of services made on the EatGood Technologies Pvt. Ltd. (HungerBox) platform.
-            </p>
-            <p>
-              We hereby agree and confirm that in case any authority makes a demand to pay GST amount, then we alone will be responsible to make payment towards the applicable GST, Interest, Penalty, etc. related to the supply made by us in each such case, without recourse to EatGood Technologies Pvt. Ltd. (Hungerbox).
-            </p>
-            <p>
-              We hereby agree and confirm that:
-            </p>
-            <ol className="list-decimal pl-6 space-y-2 font-medium">
-              <li>
-                I / We declare that I am empowered to execute this undertaking and the same is given under the orders of proper authority as per the delegation of power of the organization.
-              </li>
-            </ol>
+          <div className="text-[15px] space-y-5 text-justify leading-relaxed text-gray-900 whitespace-pre-wrap">
+            {data.declarationText
+              ?.replace(/\{vendorName\}/g, data.vendorName || '')
+              ?.replace(/\{address\}/g, data.address || '')
+              ?.replace(/\{financialYear\}/g, data.financialYear || '')}
           </div>
         </div>
 
@@ -94,9 +81,9 @@ export const DeclarationPreview = forwardRef<HTMLDivElement, DeclarationPreviewP
           <div className="space-y-1">
             <p className="mb-4">Thanking you,</p>
             <p className="mb-2">Yours sincerely,</p>
-            <div className="mt-[100px]">
-              <p><span className="font-bold">Place:</span> {data.place}</p>
-              <p><span className="font-bold">Date:</span> {formattedDate}</p>
+            <div className="mt-[100px] text-[13px] text-gray-800 space-y-0.5 font-semibold">
+              <p>Name: {data.personName}</p>
+              <p>Designation: {data.designation}</p>
             </div>
           </div>
           
@@ -115,8 +102,8 @@ export const DeclarationPreview = forwardRef<HTMLDivElement, DeclarationPreviewP
               Signature of Authorized Person
             </p>
             <div className="mt-1 text-[13px] text-gray-800 space-y-0.5 text-center w-64">
-              <p><span className="font-semibold">Name:</span> {data.personName}</p>
-              <p><span className="font-semibold">Designation:</span> {data.designation}</p>
+              <p><span className="font-semibold">Place:</span> {data.place}</p>
+              <p><span className="font-semibold">Date:</span> {formattedDate}</p>
             </div>
           </div>
         </div>

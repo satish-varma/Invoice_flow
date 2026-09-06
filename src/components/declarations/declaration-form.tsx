@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { exportToPdf } from '@/lib/pdf';
 import { DeclarationPreview } from './declaration-preview';
 import { Download, Loader2 } from 'lucide-react';
@@ -26,6 +27,7 @@ export const declarationSchema = z.object({
   financialYear: z.string().min(1, 'Financial Year is required'),
   personName: z.string().min(1, 'Person Name is required'),
   designation: z.string().min(1, 'Designation is required'),
+  declarationText: z.string().min(1, 'Declaration text is required'),
 });
 
 export type DeclarationData = z.infer<typeof declarationSchema>;
@@ -43,6 +45,14 @@ const PRESETS: Record<string, Partial<DeclarationData>> = {
     financialYear: '2026-27',
     personName: 'CHEMARTHI JYOSNA',
     designation: 'Proprieter',
+    declarationText: `We, {vendorName}, located at {address}, hereby confirm that we are not registered under GST as we are exempted from GST registration considering our supply of services turnover for the FY {financialYear} is less than the minimum registration turnover limit of Rs. 40 lacs set out under the GST Act.
+
+We hereby further confirm that no TCS should be deducted on the payments made to us for the supply of services made on the EatGood Technologies Pvt. Ltd. (HungerBox) platform.
+
+We hereby agree and confirm that in case any authority makes a demand to pay GST amount, then we alone will be responsible to make payment towards the applicable GST, Interest, Penalty, etc. related to the supply made by us in each such case, without recourse to EatGood Technologies Pvt. Ltd. (Hungerbox).
+
+We hereby agree and confirm that:
+1. I / We declare that I am empowered to execute this undertaking and the same is given under the orders of proper authority as per the delegation of power of the organization.`,
   }
 };
 
@@ -165,6 +175,17 @@ export function DeclarationForm() {
             </div>
           </div>
           
+          <div className="space-y-3 pt-3 border-t">
+            <h3 className="text-sm font-semibold text-gray-900">Declaration Text</h3>
+            <div className="grid gap-2">
+              <Label>Text (Supports basic dynamic fields like {'{vendorName}'})</Label>
+              <Textarea 
+                {...form.register('declarationText')} 
+                className="h-32 font-mono text-xs" 
+              />
+            </div>
+          </div>
+
           <div className="space-y-3 pt-3 border-t">
             <h3 className="text-sm font-semibold text-gray-900">Signatory</h3>
             <div className="grid grid-cols-2 gap-3">

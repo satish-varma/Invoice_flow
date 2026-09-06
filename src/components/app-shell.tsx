@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +25,7 @@ import {
   Package,
   Briefcase,
   Receipt,
+  ExternalLink,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@/firebase';
@@ -55,6 +57,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     { href: '/products', label: 'Products', icon: Package },
     { href: '/clients', label: 'Clients', icon: User },
     { href: '/settings', label: 'Settings', icon: Settings },
+    { href: '/newrelic', label: 'NewRelic DC Portal', icon: ExternalLink, divider: true },
   ];
 
   return (
@@ -71,20 +74,25 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
         <SidebarContent>
           <SidebarMenu>
             {navItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <Link href={item.href} passHref>
-                  <SidebarMenuButton
-                    isActive={pathname === item.href}
-                    tooltip={{ children: item.label }}
-                    onClick={() => {
-                      if (openMobile) setOpenMobile(false);
-                    }}
-                  >
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
+              <React.Fragment key={item.href}>
+                {item.divider && (
+                  <div className="mx-2 my-1 h-px bg-sidebar-border group-data-[collapsible=icon]:hidden" />
+                )}
+                <SidebarMenuItem>
+                  <Link href={item.href} passHref>
+                    <SidebarMenuButton
+                      isActive={pathname === item.href}
+                      tooltip={{ children: item.label }}
+                      onClick={() => {
+                        if (openMobile) setOpenMobile(false);
+                      }}
+                    >
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              </React.Fragment>
             ))}
           </SidebarMenu>
         </SidebarContent>

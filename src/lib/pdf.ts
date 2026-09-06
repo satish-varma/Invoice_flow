@@ -64,13 +64,24 @@ export async function generateAndSavePdf(element: HTMLElement, fileName: string,
             const safeName = fileName.replace(/[/\\?%*:|"<>#]/g, '-').replace(/\s+/g, '_');
             const finalName = safeName.toLowerCase().endsWith('.pdf') ? safeName : `${safeName}.pdf`;
             
-            console.log("Triggering save for:", finalName);
-            // jsPDF save() is generally robust
-            pdf.save(finalName);
+            console.log("Triggering direct file download for:", finalName);
+            const arrayBuffer = pdf.output('arraybuffer');
+            const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+            const link = document.createElement('a');
+            link.style.display = 'none';
+            link.href = URL.createObjectURL(blob);
+            link.download = finalName;
+            document.body.appendChild(link);
+            link.click();
             
-            // Return size for logging
-            const blob = pdf.output('blob');
-            console.log("PDF Generated. Blob Size:", (blob.size / 1024).toFixed(2), "KB");
+            setTimeout(() => {
+                if (link.parentNode) {
+                    link.parentNode.removeChild(link);
+                }
+                URL.revokeObjectURL(link.href);
+            }, 2000);
+
+            console.log("PDF Saved directly as:", finalName, "Blob Size:", (blob.size / 1024).toFixed(2), "KB");
         } else {
             console.log("Generating Preview Blob...");
             const blob = pdf.output('blob');

@@ -326,34 +326,77 @@ export function extractDataFromText(text: string, filename: string = ''): Parsed
     }
   } else {
     // Gut Guru, CVR Enterprises, The Drill (Proforma)
-    let pendingLine = '';
+    // PDF format can be 3 lines per item:
+    //   Line i:   "1 Town Bus Rice Kodubale"   (item# + name)
+    //   Line i+1: "21069099"                    (HSN code alone)
+    //   Line i+2: "144.00 Pcs"                 (quantity + unit)
+    // OR all on one line: "1 Town Bus Rice Kodubale 21069099 144.00 Pcs"
+
+    const isMetaLine = (l: string) =>
+      /FSSAI|GSTIN|PAN\s*:|Tel\.|Phone|Email|Address|Pincode|State|Invoice\s*No|DC\s*No|Bill\s*No|Date\s*:|Dated|Terms|Bank|Account|IFSC|Branch|UPI|Authorised|Signature|Subject|Dispatch|HSN\s*Code|Description|Qty\s*Rate|Amount|Discount|Taxable|Grand\s*Total|Sub\s*Total|BILLED\s*TO|SHIP\s*TO|Delivery|Challan|HungerBox|Sample\s*Line|Draft/i.test(l);
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      const fullLine = pendingLine ? `${pendingLine} ${line}` : line;
 
-      const match = fullLine.match(/^(\d{1,2})\s+(.+?)\s+(\d{5,8})\s+([\d,]+(?:\.\d+)?)\s*(Pcs|Case|Cans|Nos|Box|Kg|Gms|Pkts|Bottles)?\b/i);
-      if (match) {
-        let rawName = match[2];
-        const itemBrand = detectBrandFromItemName(rawName, brandName);
-        const itemName = cleanItemName(rawName, itemBrand);
-        const qtyStr = match[4].replace(/,/g, '');
-        const qty = parseFloat(qtyStr);
-        if (itemName && !isNaN(qty) && qty > 0) {
-          lineItems.push({
-            brandName: itemBrand,
-            itemName,
-            quantity: qty,
-          });
-          pendingLine = '';
-          continue;
+      if (isMetaLine(line)) continue;
+
+      // Strategy 1: All on one line — "1 Town Bus Rice Kodubale 21069099 144.00 Pcs"
+      const oneLiner = line.match(/^(\d{1,2})\s+(.+?)\s+(\d{5,8})\s+([\d,]+(?:\.\d+)?)\s*(Pcs|Case|Cans|Nos|Box|Kg|Gms|Pkts|Bottles)?\b/i);
+      if (oneLiner) {
+        const rawName = oneLiner[2].trim();
+        const qty = parseFloat(oneLiner[4].replace(/,/g, ''));
+        if (rawName && !isNaN(qty) && qty > 0 && !isMetaLine(rawName)) {
+          const itemBrand = detectBrandFromItemName(rawName, brandName);
+          const itemName = cleanItemName(rawName, itemBrand);
+          if (itemName) {
+            lineItems.push({ brandName: itemBrand, itemName, quantity: qty });
+            continue;
+          }
         }
       }
 
-      if (/^\d{1,2}\s+[A-Za-z]/.test(line) && !/\d{6,8}/.test(line)) {
-        pendingLine = line;
-      } else {
-        pendingLine = '';
+      // Strategy 2: 3-line lookahead — name / HSN / qty on separate lines
+      if (/^\d{1,2}\s+[A-Za-z]/.test(line) && i + 2 < lines.length) {
+        const hsnLine  = lines[i + 1].trim();
+        const qtyLine  = lines[i + 2].trim();
+        const isHsn    = /^\d{6,8}$/.test(hsnLine);
+        const qtyMatch = qtyLine.match(/^([\d,]+(?:\.\d+)?)\s*(Pcs|Case|Cans|Nos|Box|Kg|Gms|Pkts|Bottles)?/i);
+        if (isHsn && qtyMatch) {
+          const rawName = line.replace(/^\d{1,2}\s+/, '').trim();
+          const qty = parseFloat(qtyMatch[1].replace(/,/g, ''));
+          if (rawName && !isNaN(qty) && qty > 0 && !isMetaLine(rawName)) {
+            const itemBrand = detectBrandFromItemName(rawName, brandName);
+            const itemName = cleanItemName(rawName, itemBrand);
+            if (itemName) {
+              lineItems.push({ brandName: itemBrand, itemName, quantity: qty });
+              i += 2; // consumed hsnLine and qtyLine
+              continue;
+            }
+          }
+        }
+      }
+
+      // Strategy 3: 2-line lookahead — name+HSN on line i / qty on line i+1
+      if (/^\d{1,2}\s+[A-Za-z]/.test(line) && /\d{6,8}/.test(line) && i + 1 < lines.length) {
+        const qtyLine  = lines[i + 1].trim();
+        const qtyMatch = qtyLine.match(/^([\d,]+(?:\.\d+)?)\s*(Pcs|Case|Cans|Nos|Box|Kg|Gms|Pkts|Bottles)?/i);
+        if (qtyMatch) {
+          const combined = `${line} ${qtyLine}`;
+          const fullMatch = combined.match(/^\d{1,2}\s+(.+?)\s+\d{5,8}\s+([\d,]+(?:\.\d+)?)/);
+          if (fullMatch) {
+            const rawName = fullMatch[1].trim();
+            const qty = parseFloat(fullMatch[2].replace(/,/g, ''));
+            if (rawName && !isNaN(qty) && qty > 0 && !isMetaLine(rawName)) {
+              const itemBrand = detectBrandFromItemName(rawName, brandName);
+              const itemName = cleanItemName(rawName, itemBrand);
+              if (itemName) {
+                lineItems.push({ brandName: itemBrand, itemName, quantity: qty });
+                i += 1;
+                continue;
+              }
+            }
+          }
+        }
       }
     }
   }

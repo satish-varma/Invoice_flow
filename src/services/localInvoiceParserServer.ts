@@ -1,5 +1,5 @@
-import { PDFParse } from 'pdf-parse';
-import { createWorker } from 'tesseract.js';
+// Note: pdf-parse and tesseract.js are loaded dynamically to avoid
+// Next.js build-time bundling issues with Node.js-only modules.
 
 export interface ParsedItem {
   brandName?: string;
@@ -73,84 +73,27 @@ export async function parseInvoiceBufferLocally(
       }
     }
 
-    // Fast local OCR with generous timeout to ensure proper extraction of uploaded images
-    try {
-      const ocrTask = (async () => {
-        try {
-          const worker = await createWorker('eng', 1, {
-            workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@v5.0.0/dist/worker.min.js',
-            corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@v5.0.0',
-          });
-          const ret = await worker.recognize(buffer);
-          await worker.terminate();
-          return ret.data?.text || '';
-        } catch (err) {
-          console.warn('Tesseract OCR error:', err);
-          return '';
-        }
-      })();
-
-      const timeoutTask = new Promise<string>((_, reject) =>
-        setTimeout(() => reject(new Error('OCR Timeout')), 12000)
-      );
-
-      const ocrText = await Promise.race([ocrTask, timeoutTask]);
-
-      const parsed = extractDataFromText(ocrText, filename);
-      if (parsed.lineItems.length > 0) {
-        return parsed;
-      }
-
-      // Secondary flexible parser for OCR text lines from screenshot images
-      const lines = ocrText.split('\n').map(l => l.trim()).filter(Boolean);
-      let detectedBrand = parsed.brandName || '';
-
-      for (const line of lines) {
-        const match = line.match(/^(?:(\d{1,2})\s+)?(.+?)\s+(?:(\d{5,8})\s+)?([\d,]+(?:\.\d+)?)\s*(?:Pcs|Case|Cans|Nos|Box|Kg|Gms|Pkts|Bottles|Expiry|\()?\b/i);
-        if (match) {
-          const rawName = match[2];
-          const qty = parseFloat(match[4].replace(/,/g, ''));
-          if (
-            rawName &&
-            !isNaN(qty) &&
-            qty > 0 &&
-            !/BRAND\s*NAME|ITEM\s*NAME|QTY|EXPIRY|Local\s*Invoice|Upload|HungerBox|Save|Billed|Total/i.test(rawName)
-          ) {
-            const itemBrand = detectBrandFromItemName(rawName, detectedBrand || 'Healthy Master');
-            const itemName = cleanItemName(rawName, itemBrand);
-            if (itemName) {
-              parsed.lineItems.push({
-                brandName: itemBrand,
-                itemName,
-                quantity: qty,
-              });
-            }
-          }
-        }
-      }
-
-      if (parsed.lineItems.length > 0) {
-        parsed.brandName = parsed.lineItems[0].brandName || detectedBrand;
-      }
-
-      return parsed;
-    } catch (err) {
-      console.warn('Image OCR skipped or timed out:', err instanceof Error ? err.message : err);
-      return {
-        brandName: '',
-        dcNumber: '',
-        date: new Date().toISOString().split('T')[0],
-        lineItems: [],
-      };
-    }
+    // Server-side OCR is not supported in Next.js production (tesseract.js uses browser Workers).
+    // Image OCR is performed client-side before this function is called.
+    // If we reach here with an image it means no ocrText was provided — return empty.
+    return {
+      brandName: '',
+      dcNumber: '',
+      date: new Date().toISOString().split('T')[0],
+      lineItems: [],
+    };
   }
 
-  // Parse PDF text locally with pdf-parse v2
-  const pdfParser = new PDFParse(new Uint8Array(buffer));
-  const rawData = await pdfParser.getText();
-  const text = typeof rawData === 'string' ? rawData : rawData?.text || '';
-
-  return extractDataFromText(text, filename);
+  // Parse PDF text locally using pdf-parse (dynamic import to avoid build-time bundling issues)
+  try {
+    const pdfParse = (await import('pdf-parse')).default;
+    const data = await pdfParse(buffer);
+    const text = data.text || '';
+    return extractDataFromText(text, filename);
+  } catch (err) {
+    console.error('pdf-parse error:', err);
+    throw new Error('Failed to parse PDF: ' + (err instanceof Error ? err.message : String(err)));
+  }
 }
 
 const CATALOG_ITEM_NAMES = [

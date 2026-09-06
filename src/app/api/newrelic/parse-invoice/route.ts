@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseInvoiceBufferLocally } from '@/services/localInvoiceParserServer';
 
+// pdf-parse requires Node.js runtime (not Edge)
+export const runtime = 'nodejs';
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

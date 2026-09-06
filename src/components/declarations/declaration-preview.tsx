@@ -26,16 +26,16 @@ export const DeclarationPreview = forwardRef<HTMLDivElement, DeclarationPreviewP
         }}
       >
         {/* Letterhead Header Margin */}
-        <div className="pt-[50px] px-[60px] pb-6 border-b-[3px] border-[#333] mb-8 relative">
+        <div className="pt-[50px] px-[60px] pb-6 border-b-[3px] border-[#333] mb-8 relative flex justify-between items-center">
           {/* Logo */}
-          <div className="absolute top-[45px] left-[60px]">
+          <div className="flex-shrink-0">
             {data.vendorName?.toLowerCase().includes('gut guru') && (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src="/logo.svg" alt="The Gut Guru Logo" className="h-[60px] w-auto object-contain" />
+              <img src="/logo.svg" alt="The Gut Guru Logo" className="h-[120px] w-auto object-contain" />
             )}
           </div>
           
-          <div className="text-right ml-[140px]">
+          <div className="text-right ml-8">
             <h1 className="text-2xl font-bold uppercase tracking-wide text-gray-900 mb-1 leading-tight">
               {data.vendorName || 'Vendor Name'}
             </h1>
@@ -94,29 +94,30 @@ export const DeclarationPreview = forwardRef<HTMLDivElement, DeclarationPreviewP
           <div className="space-y-1">
             <p className="mb-4">Thanking you,</p>
             <p className="mb-2">Yours sincerely,</p>
-            <div className="h-[80px] w-48 relative mb-2">
-              {/* Only show signature for gut guru for now, could make this dynamic */}
+            <div className="mt-[100px]">
+              <p><span className="font-bold">Place:</span> {data.place}</p>
+              <p><span className="font-bold">Date:</span> {formattedDate}</p>
+            </div>
+          </div>
+          
+          <div className="space-y-1 text-right flex flex-col items-end">
+            <div className="h-[100px] w-56 relative mb-2 flex justify-end">
               {data.vendorName?.toLowerCase().includes('gut guru') && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img 
                   src="/sigwithsign_small.png" 
                   alt="Signature & Seal" 
-                  className="absolute bottom-0 left-0 max-h-full max-w-full object-contain"
+                  className="absolute bottom-0 right-0 max-h-full max-w-full object-contain"
                 />
               )}
             </div>
-            <p className="pt-2 font-semibold border-t border-gray-900 mt-2 w-64">
+            <p className="pt-2 font-semibold border-t border-gray-900 mt-2 w-64 text-center">
               Signature of Authorized Person
             </p>
-            <div className="mt-1 text-[13px] text-gray-800 space-y-0.5">
+            <div className="mt-1 text-[13px] text-gray-800 space-y-0.5 text-center w-64">
               <p><span className="font-semibold">Name:</span> {data.personName}</p>
               <p><span className="font-semibold">Designation:</span> {data.designation}</p>
             </div>
-          </div>
-          
-          <div className="space-y-1 text-right text-[14px]">
-            <p><span className="font-bold">Place:</span> {data.place}</p>
-            <p><span className="font-bold">Date:</span> {formattedDate}</p>
           </div>
         </div>
       </div>

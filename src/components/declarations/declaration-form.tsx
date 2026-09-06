@@ -43,20 +43,7 @@ const PRESETS: Record<string, Partial<DeclarationData>> = {
     financialYear: '2026-27',
     personName: 'CHEMARTHI JYOSNA',
     designation: 'Proprieter',
-  },
-  sambaram: {
-    vendorName: 'Sambaram Catering',
-    address: 'Hyderabad, Telangana',
-    phone: '9515517525 / 9032833137',
-    email: 'sambaramcatering@gmail.com',
-    website: '',
-    gstin: 'Applied for — Registration Pending',
-    refNo: '',
-    place: 'Hyderabad, Telangana',
-    financialYear: '2021-22',
-    personName: 'Ashok',
-    designation: 'Proprietor',
-  },
+  }
 };
 
 export function DeclarationForm() {
@@ -120,7 +107,6 @@ export function DeclarationForm() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="gut_guru">The Gut Guru</SelectItem>
-                <SelectItem value="sambaram">Sambaram Catering</SelectItem>
               </SelectContent>
             </Select>
           </div>

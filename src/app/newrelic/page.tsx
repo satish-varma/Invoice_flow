@@ -21,6 +21,7 @@ export default function NewRelicPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedChallan, setSelectedChallan] = useState<NewRelicChallan | null>(null);
   const [challanToDownload, setChallanToDownload] = useState<NewRelicChallan | null>(null);
+  const [formKey, setFormKey] = useState<string>('new');
   const previewRef = useRef<HTMLDivElement>(null);
 
   /* ── Data fetching ── */
@@ -74,6 +75,7 @@ export default function NewRelicPage() {
       note: challan.note,
     };
     setSelectedChallan(duplicated);
+    setFormKey(`dup-${Date.now()}`); // force form remount to populate copied items
     window.scrollTo({ top: 0, behavior: 'smooth' });
     toast({
       title: 'Items copied!',
@@ -136,7 +138,7 @@ export default function NewRelicPage() {
 
         {/* Form */}
         <NewRelicChallanForm
-          key={selectedChallan?.id ?? 'new'}
+          key={selectedChallan?.id ?? formKey}
           initialData={selectedChallan}
           onChallanSave={handleSave}
           onAddNew={() => setSelectedChallan(null)}

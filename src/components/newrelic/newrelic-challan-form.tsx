@@ -138,9 +138,9 @@ export function NewRelicChallanForm({
 
   /* ── Auto-suggest DC Number when location changes and DC field is empty ── */
   useEffect(() => {
-    // Only auto-suggest for brand-new challans (no initialData at all).
-    // Editing OR duplicating (initialData present but no id) keeps the existing/incremented DC number.
-    if (!initialData) {
+    // Fires for new challans AND duplicates (both have no id).
+    // Does NOT fire when editing an existing challan (which has an id).
+    if (!initialData?.id) {
       getSuggestedDcNumber(watchedLocation).then((suggested) => {
         setValue('dcNumber', suggested);
       });

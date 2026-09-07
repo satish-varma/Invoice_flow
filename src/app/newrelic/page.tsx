@@ -8,7 +8,6 @@ import {
   NewRelicChallan,
   getNewRelicChallans,
   deleteNewRelicChallan,
-  incrementDcNumber,
   NEWRELIC_LOCATIONS,
 } from '@/services/newrelicChallanService';
 import { NewRelicChallanForm } from '@/components/newrelic/newrelic-challan-form';
@@ -65,20 +64,20 @@ export default function NewRelicPage() {
   };
 
   const handleDuplicate = (challan: NewRelicChallan) => {
-    // Strip the id so the form treats this as a NEW challan,
-    // and auto-increment the DC number by 1.
+    // Create a new challan with the same items/location but no id or dcNumber.
+    // The form will auto-suggest the next DC number just like a new challan.
     const duplicated: NewRelicChallan = {
-      ...challan,
-      id: undefined,
-      dcNumber: incrementDcNumber(challan.dcNumber),
-      dcDate: new Date().toISOString(), // default to today
+      location: challan.location,
+      dcDate: new Date().toISOString(),
+      dcNumber: '', // will be auto-suggested by the form
+      lineItems: challan.lineItems,
+      note: challan.note,
     };
     setSelectedChallan(duplicated);
-    // Scroll up to the form
     window.scrollTo({ top: 0, behavior: 'smooth' });
     toast({
-      title: 'Challan duplicated',
-      description: `New DC No: ${duplicated.dcNumber} — edit and save to confirm.`,
+      title: 'Items copied!',
+      description: 'A new challan has been pre-filled with the same items. Save to confirm.',
     });
   };
 

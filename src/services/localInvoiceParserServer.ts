@@ -1,6 +1,12 @@
 // Note: pdf-parse and tesseract.js are loaded dynamically to avoid
 // Next.js build-time bundling issues with Node.js-only modules.
 
+// Regex constants kept at module level to prevent Turbopack CSS scanner
+// from misinterpreting bracket patterns as Tailwind utility classes.
+const DC_PREFIX_STRIP_RE = new RegExp('^(?:HMB|INV|SO|DOC|BILL|DC)[\s:-]*', 'i');
+const ALPHANUMERIC_ONLY_RE = /[^A-Za-z0-9]/g;
+const TRIM_SEPARATORS_RE = /^[\s:-]+|[\s:-]+$/g;
+
 export interface ParsedItem {
   brandName?: string;
   itemName: string;
@@ -162,7 +168,7 @@ function cleanItemName(name: string, brand?: string): string {
     }
   }
 
-  cleaned = cleaned.replace(/^[-:\s]+|[-:\s]+$/g, '').trim();
+  cleaned = cleaned.replace(TRIM_SEPARATORS_RE, '').trim();
 
   // Handle repeated tokens e.g. "PALAK CHIPS - PALAK CHIPS" -> "Palak Chips"
   const parts = cleaned.split(/[-:]/).map(p => p.trim()).filter(Boolean);
@@ -240,7 +246,7 @@ export function extractDataFromText(text: string, filename: string = ''): Parsed
   }
 
   if (dcNumber) {
-    dcNumber = dcNumber.replace(/^(?:HMB|INV|SO|DOC|BILL|DC)[-:\s]*/i, '').replace(/[^A-Za-z0-9]/g, '').trim();
+    dcNumber = dcNumber.replace(DC_PREFIX_STRIP_RE, '').replace(ALPHANUMERIC_ONLY_RE, '').trim();
   }
 
   // Date Extraction

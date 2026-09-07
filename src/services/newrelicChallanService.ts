@@ -198,6 +198,21 @@ export async function getNewRelicChallans(): Promise<NewRelicChallan[]> {
   }
 }
 
+/**
+ * Increments the numeric suffix of a DC number by one.
+ * e.g. "HYD569" → "HYD570", "BLR001" → "BLR002"
+ * Preserves the zero-padding width of the original number.
+ */
+export function incrementDcNumber(dcNumber: string): string {
+  const match = dcNumber.match(/^([A-Za-z]+)(\d+)$/);
+  if (!match) return dcNumber; // unrecognised format – return as-is
+  const prefix = match[1].toUpperCase();
+  const digits = match[2];
+  const nextNum = parseInt(digits, 10) + 1;
+  const padded = String(nextNum).padStart(digits.length, '0');
+  return `${prefix}${padded}`;
+}
+
 export async function deleteNewRelicChallan(id: string): Promise<void> {
   const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, id);
   await deleteDoc(docRef);

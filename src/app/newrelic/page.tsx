@@ -8,6 +8,7 @@ import {
   NewRelicChallan,
   getNewRelicChallans,
   deleteNewRelicChallan,
+  incrementDcNumber,
   NEWRELIC_LOCATIONS,
 } from '@/services/newrelicChallanService';
 import { NewRelicChallanForm } from '@/components/newrelic/newrelic-challan-form';
@@ -61,6 +62,24 @@ export default function NewRelicPage() {
     } catch {
       toast({ variant: 'destructive', title: 'Delete failed' });
     }
+  };
+
+  const handleDuplicate = (challan: NewRelicChallan) => {
+    // Strip the id so the form treats this as a NEW challan,
+    // and auto-increment the DC number by 1.
+    const duplicated: NewRelicChallan = {
+      ...challan,
+      id: undefined,
+      dcNumber: incrementDcNumber(challan.dcNumber),
+      dcDate: new Date().toISOString(), // default to today
+    };
+    setSelectedChallan(duplicated);
+    // Scroll up to the form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    toast({
+      title: 'Challan duplicated',
+      description: `New DC No: ${duplicated.dcNumber} — edit and save to confirm.`,
+    });
   };
 
   /* ── PDF generation after preview mounts ── */
@@ -135,6 +154,7 @@ export default function NewRelicPage() {
             onSelectChallan={setSelectedChallan}
             onDownloadChallan={handleDownload}
             onDeleteChallan={handleDelete}
+            onDuplicateChallan={handleDuplicate}
           />
         )}
       </div>

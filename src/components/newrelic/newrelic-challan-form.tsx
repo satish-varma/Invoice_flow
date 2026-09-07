@@ -41,6 +41,14 @@ import {
 } from '@/services/newrelicInvoiceParser';
 import { useToast } from '@/hooks/use-toast';
 
+/* ─── Module-level regex constants ───────────────────────────────────────────
+ * Kept outside the component to prevent Turbopack's CSS scanner from
+ * misinterpreting bracket regex patterns as Tailwind utility classes.
+ */
+const DC_PREFIX_STRIP_RE = new RegExp('^(?:HMB|INV|SO|DOC|BILL|DC)[\\s:-]*', 'i');
+const ALPHANUMERIC_RE = /[^A-Za-z0-9]/g;
+const DIGITS_ONLY_RE = /^\d+$/;
+
 /* ─── Zod schema ─────────────────────────────────────────────────── */
 const lineItemSchema = z.object({
   id: z.number(),
@@ -130,7 +138,9 @@ export function NewRelicChallanForm({
 
   /* ── Auto-suggest DC Number when location changes and DC field is empty ── */
   useEffect(() => {
-    if (!initialData?.id) {
+    // Only auto-suggest for brand-new challans (no initialData at all).
+    // Editing OR duplicating (initialData present but no id) keeps the existing/incremented DC number.
+    if (!initialData) {
       getSuggestedDcNumber(watchedLocation).then((suggested) => {
         setValue('dcNumber', suggested);
       });
@@ -189,10 +199,10 @@ export function NewRelicChallanForm({
         setValue('lineItems', newRows);
 
         if (data.dcNumber && data.dcNumber.trim()) {
-          const rawClean = data.dcNumber.replace(/^(?:HMB|INV|SO|DOC|BILL|DC)[-:\s]*/i, '').replace(/[^A-Za-z0-9]/g, '').trim();
+          const rawClean = data.dcNumber.replace(DC_PREFIX_STRIP_RE, '').replace(ALPHANUMERIC_RE, '').trim();
           const currentLoc = watchedLocation || 'hyderabad';
           const prefix = NEWRELIC_LOCATIONS[currentLoc]?.dcPrefix || 'HYD';
-          const formattedDc = /^\d+$/.test(rawClean) ? `${prefix}${rawClean}` : (rawClean.toUpperCase() || data.dcNumber.trim());
+          const formattedDc = DIGITS_ONLY_RE.test(rawClean) ? `${prefix}${rawClean}` : (rawClean.toUpperCase() || data.dcNumber.trim());
           setValue('dcNumber', formattedDc);
         }
 
@@ -293,6 +303,7 @@ export function NewRelicChallanForm({
   };
 
   const isEditing = !!initialData?.id;
+  const isDuplicating = !!initialData && !initialData.id;
   const locationConfig = NEWRELIC_LOCATIONS[watchedLocation];
 
   // Derived unique brand names for datalist
@@ -324,13 +335,17 @@ export function NewRelicChallanForm({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
         <div>
           <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-            {isEditing ? `Edit Challan — ${initialData?.dcNumber}` : 'New Delivery Challan'}
+            {isEditing
+              ? `Edit Challan — ${initialData?.dcNumber}`
+              : isDuplicating
+              ? `Duplicate Challan — new DC: ${watchedDcNumber}`
+              : 'New Delivery Challan'}
           </h2>
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
             NewRelic · Returnable Items DC
           </p>
         </div>
-        {isEditing && (
+        {(isEditing || isDuplicating) && (
           <Button type="button" variant="outline" size="sm" onClick={onAddNew} className="self-start sm:self-auto">
             + New Challan
           </Button>
@@ -681,7 +696,7 @@ export function NewRelicChallanForm({
           ) : (
             <FileDown className="h-4 w-4" />
           )}
-          {isEditing ? 'Update & Download' : 'Save & Download PDF'}
+          {isEditing ? 'Update & Download' : isDuplicating ? 'Save Duplicate & Download' : 'Save & Download PDF'}
         </Button>
         <Button
           type="button"
@@ -691,7 +706,7 @@ export function NewRelicChallanForm({
           onClick={handleSubmit((v) => onSubmit(v, false))}
         >
           <Save className="h-4 w-4" />
-          {isEditing ? 'Update Only' : 'Save Only'}
+          {isEditing ? 'Update Only' : isDuplicating ? 'Save Duplicate Only' : 'Save Only'}
         </Button>
       </div>
     </form>

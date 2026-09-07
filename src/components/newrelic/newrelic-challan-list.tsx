@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { Trash2, Download, Edit2 } from 'lucide-react';
+import { Trash2, Download, Edit2, Copy } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -32,6 +32,7 @@ interface NewRelicChallanListProps {
   onSelectChallan: (c: NewRelicChallan) => void;
   onDownloadChallan: (c: NewRelicChallan) => void;
   onDeleteChallan: (id: string) => void;
+  onDuplicateChallan: (c: NewRelicChallan) => void;
 }
 
 export function NewRelicChallanList({
@@ -39,6 +40,7 @@ export function NewRelicChallanList({
   onSelectChallan,
   onDownloadChallan,
   onDeleteChallan,
+  onDuplicateChallan,
 }: NewRelicChallanListProps) {
   if (challans.length === 0) {
     return (
@@ -96,6 +98,15 @@ export function NewRelicChallanList({
                 onClick={() => onSelectChallan(challan)}
               >
                 <Edit2 className="h-3.5 w-3.5" /> Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-9 text-xs gap-1 border-gray-200 text-gray-700 hover:text-amber-600 hover:border-amber-400"
+                onClick={() => onDuplicateChallan(challan)}
+                title="Duplicate challan with next DC number"
+              >
+                <Copy className="h-3.5 w-3.5" /> Dupe
               </Button>
               <Button
                 variant="outline"
@@ -186,6 +197,15 @@ export function NewRelicChallanList({
                       title="Edit"
                     >
                       <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-500 hover:text-amber-500"
+                      onClick={() => onDuplicateChallan(challan)}
+                      title="Duplicate with next DC number"
+                    >
+                      <Copy className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"

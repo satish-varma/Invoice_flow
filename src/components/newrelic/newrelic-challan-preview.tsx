@@ -57,7 +57,7 @@ export const NewRelicChallanPreview = React.forwardRef<HTMLDivElement, Props>(
     }
 
     return (
-      <div ref={ref} style={{ fontFamily: 'Georgia, "Times New Roman", serif', background: '#fff' }}>
+      <div ref={ref} style={{ fontFamily: 'Georgia, "Times New Roman", serif', background: '#fff', color: '#000' }}>
         {pages.map((page, pageIndex) => (
           <div
             key={pageIndex}
@@ -79,7 +79,7 @@ export const NewRelicChallanPreview = React.forwardRef<HTMLDivElement, Props>(
                 {/* Top row: GST/date/DC on left, Logo on right */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px' }}>
                   {/* Left: meta */}
-                  <div style={{ fontSize: '14px', fontStyle: 'italic', lineHeight: '2' }}>
+                  <div style={{ fontSize: '14px', fontStyle: 'italic', lineHeight: '2', color: '#000' }}>
                     <div>Hunger Box GST: {HUNGERBOX_GST}</div>
                     <div style={{ marginTop: '6px' }}>
                       <span>Date: {formattedDate}</span>
@@ -102,7 +102,7 @@ export const NewRelicChallanPreview = React.forwardRef<HTMLDivElement, Props>(
                 </div>
 
                 {/* To block */}
-                <div style={{ fontSize: '14px', fontStyle: 'italic', lineHeight: '1.8', marginBottom: '20px' }}>
+                <div style={{ fontSize: '14px', fontStyle: 'italic', lineHeight: '1.8', marginBottom: '20px', color: '#000' }}>
                   <div>To,</div>
                   {addressLines.map((line, i) => (
                     <div key={i} style={{ fontWeight: i === 0 ? 'bold' : 'normal' }}>
@@ -112,22 +112,22 @@ export const NewRelicChallanPreview = React.forwardRef<HTMLDivElement, Props>(
                 </div>
 
                 {/* Ref line */}
-                <div style={{ textAlign: 'center', fontWeight: 'bold', fontStyle: 'italic', fontSize: '14px', marginBottom: '16px' }}>
-                  Ref: DC for Returnable items to be present at New Relic Pvt Ltd.
+                <div style={{ textAlign: 'center', fontWeight: 'bold', fontStyle: 'italic', fontSize: '14px', marginBottom: '16px', color: '#000' }}>
+                  Ref: DC for Non Returnable items to be present at New Relic Pvt Ltd.
                 </div>
 
                 {/* Salutation */}
-                <div style={{ textAlign: 'center', fontStyle: 'italic', fontSize: '14px', textDecoration: 'underline', marginBottom: '20px' }}>
+                <div style={{ textAlign: 'center', fontStyle: 'italic', fontSize: '14px', textDecoration: 'underline', marginBottom: '20px', color: '#000' }}>
                   To whom so ever it may concern
                 </div>
 
                 {/* Body */}
-                <div style={{ fontStyle: 'italic', fontSize: '14px', lineHeight: '1.6', marginBottom: '14px' }}>
-                  This is to bring to your notice that the below mentioned Returnable items are stationed at{' '}
+                <div style={{ fontStyle: 'italic', fontSize: '14px', lineHeight: '1.6', marginBottom: '14px', color: '#000' }}>
+                  This is to bring to your notice that the below mentioned Non Returnable items are stationed at{' '}
                   New Relic Pvt. Ltd.
                 </div>
 
-                <div style={{ fontStyle: 'italic', fontSize: '14px', marginBottom: '16px' }}>
+                <div style={{ fontStyle: 'italic', fontSize: '14px', marginBottom: '16px', color: '#000' }}>
                   Items are mentioned below.
                 </div>
               </>

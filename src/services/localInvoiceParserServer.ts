@@ -312,7 +312,7 @@ export function extractDataFromText(text: string, filename: string = ''): Parsed
           qty > 0 &&
           !/BRAND\s*NAME|ITEM\s*NAME|QTY|EXPIRY|Local\s*Invoice|Upload|HungerBox|Save|Billed|Total|Recipient|Address|Delivery|Challan|Mindspace|Bangalore|Hyderabad|Sample|Line\s*Item|Draft|Invoice\s*No|DC\s*No|Bill\s*To|Ship\s*To/i.test(rawName)
         ) {
-          const itemBrand = detectBrandFromItemName(rawName, brandName);
+          const itemBrand = detectBrandFromItemName(rawName, brandName || '');
           const itemName = cleanItemName(rawName, itemBrand);
           if (itemName && !/Sample|Line\s*Item|Draft|Expiry/i.test(itemName)) {
             lineItems.push({
@@ -426,7 +426,7 @@ export function extractDataFromText(text: string, filename: string = ''): Parsed
           qty > 0 &&
           !isExcludedText(rawName)
         ) {
-          const itemBrand = detectBrandFromItemName(rawName, brandName || 'Healthy Master');
+          const itemBrand = detectBrandFromItemName(rawName, brandName || '');
           const itemName = cleanItemName(rawName, itemBrand);
           if (itemName && !isExcludedText(itemName)) {
             lineItems.push({
@@ -452,7 +452,7 @@ export function extractDataFromText(text: string, filename: string = ''): Parsed
             qty > 0 &&
             !isExcludedText(rawName)
           ) {
-            const itemBrand = detectBrandFromItemName(rawName, brandName || 'Healthy Master');
+            const itemBrand = detectBrandFromItemName(rawName, brandName || '');
             const itemName = cleanItemName(rawName, itemBrand);
             if (itemName && !isExcludedText(itemName)) {
               lineItems.push({

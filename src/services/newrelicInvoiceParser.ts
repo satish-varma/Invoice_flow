@@ -67,11 +67,11 @@ export async function parseUploadedInvoiceFile(file: File): Promise<ParsedInvoic
         const res = await fetch('/api/newrelic/parse-invoice', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileDataUri: dataUri, fileName: file.name, ocrText }),
+          body: JSON.stringify({ fileName: file.name, ocrText }), // Omit fileDataUri to avoid 413 Payload Too Large
         });
 
         const json = await res.json();
-        if (res.ok && json.success && json.data?.lineItems?.length > 0) {
+        if (res.ok && json.success) {
           return json.data as ParsedInvoiceData;
         }
       }

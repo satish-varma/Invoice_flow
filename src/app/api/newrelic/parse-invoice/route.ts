@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     if (ocrText && typeof ocrText === 'string' && ocrText.trim()) {
       const { extractDataFromText } = await import('@/services/localInvoiceParserServer');
       const parsedFromOcr = extractDataFromText(ocrText, fileName || '');
-      if (parsedFromOcr.lineItems.length > 0) {
+      if (parsedFromOcr.lineItems.length > 0 || !fileDataUri) {
         return NextResponse.json({
           success: true,
           data: parsedFromOcr,

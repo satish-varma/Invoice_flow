@@ -203,7 +203,7 @@ export default function NewRelicPage() {
 
         {/* Hero stats & Dashboard */}
         {role === 'admin' || role === 'superadmin' ? (
-          <NewRelicDashboard challans={displayedChallans} />
+          <NewRelicDashboard challans={displayChallans} />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <StatCard

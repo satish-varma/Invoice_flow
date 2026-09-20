@@ -22,6 +22,7 @@ import { NewRelicAdminPreviewModal } from '@/components/newrelic/newrelic-admin-
 import { NewRelicSignedCopyModal } from '@/components/newrelic/newrelic-signed-copy-modal';
 import { NewRelicGlobalAuditLog } from '@/components/newrelic/newrelic-global-audit-log';
 import { generateAndSavePdf } from '@/lib/pdf';
+import { NewRelicDashboard } from '@/components/newrelic/newrelic-dashboard';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function NewRelicPage() {
@@ -200,27 +201,31 @@ export default function NewRelicPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-3 sm:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8">
 
-        {/* Hero stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <StatCard
-            icon={<FileText className="h-5 w-5 text-[#3b2fc9]" />}
-            label="Total Challans"
-            value={challans.length}
-            bg="bg-[#3b2fc9]/5"
-          />
-          <StatCard
-            icon={<MapPin className="h-5 w-5 text-blue-500" />}
-            label="Hyderabad"
-            value={hydCount}
-            bg="bg-blue-50"
-          />
-          <StatCard
-            icon={<MapPin className="h-5 w-5 text-emerald-500" />}
-            label="Bangalore"
-            value={blrCount}
-            bg="bg-emerald-50"
-          />
-        </div>
+        {/* Hero stats & Dashboard */}
+        {role === 'admin' || role === 'superadmin' ? (
+          <NewRelicDashboard challans={displayedChallans} />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <StatCard
+              icon={<FileText className="h-5 w-5 text-[#3b2fc9]" />}
+              label="Total Challans"
+              value={challans.length}
+              bg="bg-[#3b2fc9]/5"
+            />
+            <StatCard
+              icon={<MapPin className="h-5 w-5 text-blue-500" />}
+              label="Hyderabad"
+              value={hydCount}
+              bg="bg-blue-50"
+            />
+            <StatCard
+              icon={<MapPin className="h-5 w-5 text-emerald-500" />}
+              label="Bangalore"
+              value={blrCount}
+              bg="bg-emerald-50"
+            />
+          </div>
+        )}
 
         {/* Action Buttons */}
         {!selectedChallan && !isCreatingNew && (

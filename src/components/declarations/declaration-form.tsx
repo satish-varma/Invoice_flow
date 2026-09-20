@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { exportToPdf } from '@/lib/pdf';
+import { generateAndSavePdf } from '@/lib/pdf';
 import { DeclarationPreview } from './declaration-preview';
 import { Download, Loader2 } from 'lucide-react';
 
@@ -89,7 +89,7 @@ export function DeclarationForm() {
     const filename = `Declaration_${data.vendorName.replace(/[^a-zA-Z0-9]/g, '_')}_${data.date}.pdf`;
     
     try {
-      await exportToPdf(previewRef.current, filename);
+      await generateAndSavePdf(previewRef.current, filename);
     } catch (error) {
       console.error('Failed to export PDF:', error);
     } finally {

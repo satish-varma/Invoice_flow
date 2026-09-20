@@ -1,12 +1,12 @@
+'use client';
 
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'NewRelic Delivery Challan — HungerBox',
-  description: 'Generate and manage delivery challans for New Relic One India Pvt Ltd.',
-};
+import { useAuth } from '@/contexts/AuthContext';
+import { LogOut, Users } from 'lucide-react';
+import Link from 'next/link';
 
 export default function NewRelicLayout({ children }: { children: React.ReactNode }) {
+  const { user, role, signOut } = useAuth();
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Minimal branded top bar */}
@@ -24,13 +24,36 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
               NewRelic DC Portal
             </span>
           </div>
-          <span className="text-[11px] sm:text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 truncate">
-            Returnable Items · HYD &amp; BLR
-          </span>
+          <div className="flex items-center gap-3">
+            {role === 'admin' && (
+              <Link 
+                href="/admin/users" 
+                className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-[#3b2fc9] bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-full transition-colors"
+              >
+                <Users className="h-3.5 w-3.5" />
+                Users
+              </Link>
+            )}
+            <span className="text-[11px] sm:text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 truncate">
+              Returnable Items · HYD & BLR
+            </span>
+            
+            <div className="hidden sm:flex flex-col items-end mr-2">
+              <span className="text-xs font-semibold text-gray-700">{user?.email}</span>
+              <span className="text-[10px] text-gray-500 uppercase tracking-wider">{role}</span>
+            </div>
+
+            <button 
+              onClick={signOut}
+              className="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded-md hover:bg-red-50"
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </header>
       <main>{children}</main>
     </div>
   );
 }
-

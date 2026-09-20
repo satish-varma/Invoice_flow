@@ -5,7 +5,8 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { CalendarIcon, Plus, Trash2, FileDown, Save, Loader2, Sparkles, UploadCloud, FileText } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { CalendarIcon, Plus, Trash2, FileDown, Save, Loader2, Sparkles, UploadCloud, FileText, Paperclip, AlertTriangle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,7 @@ import {
   NEWRELIC_LOCATIONS,
   saveNewRelicChallan,
   getSuggestedDcNumber,
+  checkDuplicateDcNumber,
 } from '@/services/newrelicChallanService';
 import { getCatalogItems, CatalogItem } from '@/services/newrelicCatalogService';
 import {
@@ -40,6 +42,7 @@ import {
   SAMPLE_INVOICES_LIST,
 } from '@/services/newrelicInvoiceParser';
 import { useToast } from '@/hooks/use-toast';
+import { NewRelicAttachmentModal } from '@/components/newrelic/newrelic-attachment-modal';
 
 /* ─── Module-level regex constants ───────────────────────────────────────────
  * Kept outside the component to prevent Turbopack's CSS scanner from
@@ -55,7 +58,9 @@ const lineItemSchema = z.object({
   brandName: z.string().optional().default(''),
   itemName: z.string().optional().default(''),
   quantity: z.coerce.number().min(1, 'Quantity must be ≥ 1'),
-  expiry: z.string().optional(),
+  expiry: z.string().min(1, 'Expiry is required'),
+  mrp: z.coerce.number().optional(),
+  procurementCost: z.coerce.number().optional(),
 });
 
 const challanSchema = z
@@ -65,6 +70,8 @@ const challanSchema = z
     dcDate: z.date(),
     lineItems: z.array(lineItemSchema),
     note: z.string().optional(),
+    transportCost: z.coerce.number().optional(),
+    otherCharges: z.coerce.number().optional(),
   })
   .refine(
     (data) =>
@@ -82,32 +89,46 @@ type FormValues = z.infer<typeof challanSchema>;
 /* ─── Props ──────────────────────────────────────────────────────── */
 interface NewRelicChallanFormProps {
   initialData?: NewRelicChallan | null;
+  defaultLocation?: NewRelicLocation;
   onChallanSave: (saved?: NewRelicChallan) => void;
   onAddNew: () => void;
+  onCancel?: () => void;
 }
 
 /* ─── Component ──────────────────────────────────────────────────── */
 export function NewRelicChallanForm({
   initialData,
+  defaultLocation,
   onChallanSave,
   onAddNew,
+  onCancel,
 }: NewRelicChallanFormProps) {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [isParsingInvoice, setIsParsingInvoice] = useState(false);
   const [selectedSample, setSelectedSample] = useState<string>('');
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const [showSignedCopyModal, setShowSignedCopyModal] = useState(false);
+  const [showGoodsReceivedModal, setShowGoodsReceivedModal] = useState(false);
+  const [currentData, setCurrentData] = useState<NewRelicChallan | null>(initialData || null);
   const formId = useId();
 
   const defaultValues: FormValues = {
     dcNumber: initialData?.dcNumber ?? '',
-    location: (initialData?.location as NewRelicLocation) ?? 'hyderabad',
+    location: (initialData?.location as NewRelicLocation) ?? defaultLocation ?? 'hyderabad',
     dcDate: initialData?.dcDate ? new Date(initialData.dcDate) : new Date(),
     lineItems: initialData?.lineItems?.length
       ? initialData.lineItems
-      : [{ id: 1, brandName: '', itemName: '', quantity: 1, expiry: '' }],
+      : [{ id: 1, brandName: '', itemName: '', quantity: 1, expiry: '', mrp: undefined }],
     note: initialData?.note ?? '',
+    transportCost: initialData?.transportCost ?? undefined,
+    otherCharges: initialData?.otherCharges ?? undefined,
+    procurementCost: initialData?.procurementCost ?? undefined,
   };
+
+  const { role, user } = useAuth();
+  const isAdmin = role === 'admin';
 
   const {
     register,
@@ -130,6 +151,7 @@ export function NewRelicChallanForm({
   const watchedLocation = watch('location') as NewRelicLocation;
   const watchedDcNumber = watch('dcNumber');
   const watchedLineItems = watch('lineItems');
+  const calculatedTotalPCost = watchedLineItems?.reduce((acc, item) => acc + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 0)), 0) || 0;
 
   /* ── Load Catalog for Autocomplete ── */
   useEffect(() => {
@@ -146,6 +168,24 @@ export function NewRelicChallanForm({
       });
     }
   }, [watchedLocation, initialData, setValue]);
+
+  /* ── Check for duplicate DC Number ── */
+  useEffect(() => {
+    if (!watchedDcNumber || watchedDcNumber.trim() === '') {
+      setDuplicateError(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      checkDuplicateDcNumber(watchedDcNumber, initialData?.id).then((isDup) => {
+        if (isDup) {
+          setDuplicateError('⚠️ This DC Number is already in use by another active invoice.');
+        } else {
+          setDuplicateError(null);
+        }
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [watchedDcNumber, initialData?.id]);
 
   const addItems = (count: number) => {
     let lastBrand = '';
@@ -166,6 +206,7 @@ export function NewRelicChallanForm({
         itemName: '',
         quantity: 1,
         expiry: '',
+        mrp: undefined,
       });
     }
     append(newRows);
@@ -263,6 +304,7 @@ export function NewRelicChallanForm({
           itemName: item.itemName!.trim(),
           quantity: Number(item.quantity) || 1,
           expiry: item.expiry?.trim() || '',
+          procurementCost: item.procurementCost,
         }));
 
       if (validItems.length === 0) {
@@ -275,6 +317,18 @@ export function NewRelicChallanForm({
         return;
       }
 
+      if (duplicateError) {
+        toast({
+          variant: 'destructive',
+          title: 'Duplicate DC Number',
+          description: 'Please use a unique DC Number before saving.',
+        });
+        setIsSaving(false);
+        return;
+      }
+
+      const calculatedProcurementCost = validItems.reduce((acc, item) => acc + ((item.procurementCost || 0) * item.quantity), 0);
+
       const payload = {
         id: initialData?.id,
         dcNumber: values.dcNumber,
@@ -282,8 +336,11 @@ export function NewRelicChallanForm({
         dcDate: values.dcDate.toISOString(),
         lineItems: validItems as NewRelicChallanItem[],
         note: values.note,
+        transportCost: values.transportCost,
+        otherCharges: values.otherCharges,
+        procurementCost: calculatedProcurementCost,
       };
-      const saved = await saveNewRelicChallan(payload);
+      const saved = await saveNewRelicChallan(payload, user?.email || null);
       toast({
         title: 'Challan saved',
         description: `DC No: ${saved.dcNumber}`,
@@ -345,11 +402,6 @@ export function NewRelicChallanForm({
             NewRelic · Returnable Items DC
           </p>
         </div>
-        {(isEditing || isDuplicating) && (
-          <Button type="button" variant="outline" size="sm" onClick={onAddNew} className="self-start sm:self-auto">
-            + New Challan
-          </Button>
-        )}
       </div>
 
       {/* DC Number + Location + Date row */}
@@ -361,10 +413,12 @@ export function NewRelicChallanForm({
             id={`${formId}-dcNumber`}
             {...register('dcNumber')}
             placeholder="e.g. HYD001 or BLR001"
-            className={cn('font-semibold text-[#3b2fc9]', errors.dcNumber && 'border-red-500')}
+            className={cn('font-semibold text-[#3b2fc9]', (errors.dcNumber || duplicateError) && 'border-red-500')}
           />
           {errors.dcNumber ? (
             <p className="text-xs text-red-500">{errors.dcNumber.message}</p>
+          ) : duplicateError ? (
+            <p className="text-xs text-red-500 font-medium">{duplicateError}</p>
           ) : (
             <p className="text-[11px] text-gray-400">Editable delivery challan reference</p>
           )}
@@ -403,28 +457,18 @@ export function NewRelicChallanForm({
             name="dcDate"
             control={control}
             render={({ field }) => (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !field.value && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {field.value ? format(field.value, 'dd-MM-yyyy') : 'Pick a date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <Input
+                type="date"
+                value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
+                onChange={(e) => {
+                  const date = e.target.value ? new Date(e.target.value) : null;
+                  field.onChange(date);
+                }}
+                className={cn(
+                  'w-full bg-white',
+                  errors.dcDate && 'border-red-400'
+                )}
+              />
             )}
           />
           {errors.dcDate && (
@@ -537,19 +581,41 @@ export function NewRelicChallanForm({
           <p className="text-[11px] sm:text-xs text-gray-400">Type to search saved brands &amp; catalog</p>
         </div>
 
+        {isEditing && isAdmin && (initialData?.procurementCost || 0) > 0 && calculatedTotalPCost === 0 && (
+          <div className="bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-xl flex items-start gap-3 shadow-xs">
+            <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <strong className="font-semibold block mb-1">Legacy Cost Detected</strong>
+              This document has a legacy global Procurement Cost of <strong>₹{(initialData?.procurementCost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>. Please distribute this into the new P.Cost columns below before saving.
+            </div>
+          </div>
+        )}
+
         {/* Table header for desktop */}
-        <div className="hidden sm:grid grid-cols-[2fr_3fr_1fr_1.5fr_auto] gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wide px-1">
+        <div className={cn(
+          "hidden sm:grid gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wide px-1",
+          isAdmin ? "grid-cols-[2fr_3fr_1fr_1.5fr_1fr_1fr_auto]" : "grid-cols-[2fr_3fr_1fr_1.5fr_auto]"
+        )}>
           <span>Brand Name</span>
           <span>Item Name</span>
           <span>Qty</span>
-          <span>Expiry (opt)</span>
+          <span>Expiry</span>
+          {isAdmin && (
+            <>
+              <span>MRP</span>
+              <span>P.Cost (Vendor)</span>
+            </>
+          )}
           <span />
         </div>
 
         {fields.map((field, index) => (
           <div
             key={field.id}
-            className="p-3 sm:p-0 bg-gray-50/80 sm:bg-transparent rounded-xl border border-gray-200/80 sm:border-0 grid grid-cols-1 sm:grid-cols-[2fr_3fr_1fr_1.5fr_auto] gap-2.5 sm:gap-2 items-start"
+            className={cn(
+              "p-3 sm:p-0 bg-gray-50/80 sm:bg-transparent rounded-xl border border-gray-200/80 sm:border-0 grid grid-cols-1 gap-2.5 sm:gap-2 items-start",
+              isAdmin ? "sm:grid-cols-[2fr_3fr_1fr_1.5fr_1fr_1fr_auto]" : "sm:grid-cols-[2fr_3fr_1fr_1.5fr_auto]"
+            )}
           >
             {/* Brand Name */}
             <div className="space-y-1 sm:space-y-0">
@@ -599,13 +665,45 @@ export function NewRelicChallanForm({
               </div>
 
               <div className="space-y-1 sm:space-y-0">
-                <Label className="text-xs text-gray-500 sm:hidden">Expiry (optional)</Label>
+                <Label className="text-xs text-gray-500 sm:hidden">Expiry</Label>
                 <Input
                   {...register(`lineItems.${index}.expiry`)}
-                  placeholder="Expiry (optional)"
+                  placeholder="Expiry (e.g. 15-05-2026)"
                   className={cn(errors.lineItems?.[index]?.expiry && 'border-red-400')}
                 />
+                {errors.lineItems?.[index]?.expiry && (
+                  <p className="text-xs text-red-500 mt-0.5 sm:hidden">
+                    {errors.lineItems[index]?.expiry?.message}
+                  </p>
+                )}
               </div>
+
+              {isAdmin && (
+                <>
+                  <div className="space-y-1 sm:space-y-0">
+                    <Label className="text-xs text-gray-500 sm:hidden">MRP</Label>
+                    <Input
+                      {...register(`lineItems.${index}.mrp`)}
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      placeholder="MRP"
+                      className={cn(errors.lineItems?.[index]?.mrp && 'border-red-400')}
+                    />
+                  </div>
+                  <div className="space-y-1 sm:space-y-0">
+                    <Label className="text-xs text-gray-500 sm:hidden">P.Cost</Label>
+                    <Input
+                      {...register(`lineItems.${index}.procurementCost`)}
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      placeholder="Cost"
+                      className={cn(errors.lineItems?.[index]?.procurementCost && 'border-red-400')}
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Remove */}
@@ -624,6 +722,19 @@ export function NewRelicChallanForm({
             </div>
           </div>
         ))}
+
+        {isAdmin && (
+          <div className="flex flex-wrap items-center justify-between gap-4 py-2 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
+            <div className="flex gap-4">
+              <span>Items: <strong className="text-gray-900">{watch('lineItems')?.length || 0}</strong></span>
+              <span>Total Qty: <strong className="text-gray-900">{watch('lineItems')?.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0) || 0}</strong></span>
+            </div>
+            <div className="flex gap-4">
+              <span>Total MRP: <strong className="text-gray-900">₹{watch('lineItems')?.reduce((acc, item) => acc + ((Number(item.mrp) || 0) * (Number(item.quantity) || 0)), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</strong></span>
+              <span>Total P.Cost: <strong className="text-gray-900">₹{watch('lineItems')?.reduce((acc, item) => acc + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 0)), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</strong></span>
+            </div>
+          </div>
+        )}
 
         {/* Quick Add Batch Buttons directly below rows */}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100">
@@ -673,6 +784,34 @@ export function NewRelicChallanForm({
         )}
       </div>
 
+      {/* Admin Financial Charges (Transport Cost & Other Charges) */}
+      {isAdmin && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2">
+          <div className="space-y-1.5">
+            <Label htmlFor={`${formId}-transportCost`}>Transport Cost</Label>
+            <Input
+              id={`${formId}-transportCost`}
+              type="number"
+              step="0.01"
+              min="0"
+              {...register('transportCost')}
+              placeholder="0.00"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`${formId}-otherCharges`}>Other Charges</Label>
+            <Input
+              id={`${formId}-otherCharges`}
+              type="number"
+              step="0.01"
+              min="0"
+              {...register('otherCharges')}
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Note */}
       <div className="space-y-1.5">
         <Label htmlFor={`${formId}-note`}>Note (optional)</Label>
@@ -684,8 +823,44 @@ export function NewRelicChallanForm({
         />
       </div>
 
+      {/* Signed Copies Management (Admin/Manager only, and only when editing) */}
+      {isEditing && currentData?.id && (role === 'admin' || role === 'superadmin' || role === 'manager') && (
+        <div className="pt-2 flex flex-col sm:flex-row gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full sm:flex-1 gap-2 border-gray-300 text-gray-700"
+            onClick={() => setShowSignedCopyModal(true)}
+          >
+            <Paperclip className="h-4 w-4" />
+            Manage Signed Copies {(currentData.signedCopyUrls || []).length > 0 && `(${currentData.signedCopyUrls?.length})`}
+          </Button>
+          
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full sm:flex-1 gap-2 border-gray-300 text-gray-700"
+            onClick={() => setShowGoodsReceivedModal(true)}
+          >
+            <FileText className="h-4 w-4" />
+            Goods Received Invoice {(currentData.goodsReceivedInvoiceUrls || []).length > 0 && `(${currentData.goodsReceivedInvoiceUrls?.length})`}
+          </Button>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-2">
+        {onCancel && (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full sm:flex-1 h-11 sm:h-10 text-gray-500"
+            disabled={isSaving}
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+        )}
         <Button
           type="submit"
           className="w-full sm:flex-1 h-11 sm:h-10 bg-[#3b2fc9] hover:bg-[#2d23a0] text-white gap-2"
@@ -709,6 +884,30 @@ export function NewRelicChallanForm({
           {isEditing ? 'Update Only' : isDuplicating ? 'Save Duplicate Only' : 'Save Only'}
         </Button>
       </div>
+
+      {/* Signed Copies Modal */}
+      {showSignedCopyModal && currentData && (
+        <NewRelicAttachmentModal
+          isOpen={showSignedCopyModal}
+          onClose={() => setShowSignedCopyModal(false)}
+          challan={currentData}
+          title="Signed Copies"
+          type="signed_copy"
+          onUpdate={() => {}}
+        />
+      )}
+
+      {/* Goods Received Modal */}
+      {showGoodsReceivedModal && currentData && (
+        <NewRelicAttachmentModal
+          isOpen={showGoodsReceivedModal}
+          onClose={() => setShowGoodsReceivedModal(false)}
+          challan={currentData}
+          title="Goods Received Invoice"
+          type="goods_received"
+          onUpdate={() => {}}
+        />
+      )}
     </form>
   );
 }

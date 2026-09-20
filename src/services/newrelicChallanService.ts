@@ -14,6 +14,9 @@ import {
   writeBatch,
   getDoc,
   Timestamp,
+  where,
+  collectionGroup,
+  limit,
 } from 'firebase/firestore';
 
 export type NewRelicLocation = 'hyderabad' | 'bangalore';
@@ -44,6 +47,8 @@ export interface NewRelicChallanItem {
   itemName: string;
   quantity: number;
   expiry?: string; // e.g. "30-04-2027" or optional/blank
+  mrp?: number; // purely for admin analytics/view
+  procurementCost?: number; // actual cost paid to vendor per item
 }
 
 export interface NewRelicChallan {
@@ -53,7 +58,26 @@ export interface NewRelicChallan {
   location: NewRelicLocation;
   lineItems: NewRelicChallanItem[];
   note?: string;
+  transportCost?: number; // purely for admin analytics/view
+  otherCharges?: number; // purely for admin analytics/view
+  procurementCost?: number; // actual cost paid to vendor for goods
   createdAt?: any;
+  createdBy?: string | null;
+  updatedAt?: any;
+  updatedBy?: string | null;
+  deletedBy?: string | null;
+  isDeleted?: boolean;
+  deletedAt?: any;
+  signedCopyUrls?: string[];
+  goodsReceivedInvoiceUrls?: string[];
+}
+
+export interface NewRelicChallanHistory {
+  id: string;
+  editedAt: any;
+  action?: 'CREATED' | 'UPDATED' | 'DELETED' | 'RESTORED';
+  editedBy?: string | null;
+  previousData: NewRelicChallan;
 }
 
 const NEWRELIC_CHALLANS_COLLECTION = 'newrelic_challans';
@@ -62,35 +86,51 @@ import { saveCatalogItems } from './newrelicCatalogService';
 
 export async function getSuggestedDcNumber(location: NewRelicLocation): Promise<string> {
   const locationConfig = NEWRELIC_LOCATIONS[location];
-  const counterRef = doc(db, 'counters', locationConfig.counterDoc);
-  const snap = await getDoc(counterRef);
-  let nextNumber = 1;
-  if (snap.exists()) {
-    nextNumber = (snap.data()?.currentNumber ?? 0) + 1;
-  }
+  
+  const q = query(
+    collection(db, NEWRELIC_CHALLANS_COLLECTION),
+    where('location', '==', location)
+  );
+  
+  const snapshot = await getDocs(q);
+  let maxNumber = 0;
+
+  snapshot.forEach((docSnap) => {
+    const data = docSnap.data();
+    const dcNumber = data.dcNumber || '';
+    // Extract the numeric part
+    const numPart = dcNumber.replace(locationConfig.dcPrefix, '');
+    const num = parseInt(numPart, 10);
+    if (!isNaN(num) && num > maxNumber) {
+      maxNumber = num;
+    }
+  });
+
+  const nextNumber = maxNumber + 1;
   const paddedNumber = String(nextNumber).padStart(3, '0');
   return `${locationConfig.dcPrefix}${paddedNumber}`;
 }
 
-async function getNextDcNumber(location: NewRelicLocation): Promise<string> {
-  const locationConfig = NEWRELIC_LOCATIONS[location];
-  const counterRef = doc(db, 'counters', locationConfig.counterDoc);
-
-  const newNumber = await runTransaction(db, async (transaction) => {
-    const counterDoc = await transaction.get(counterRef);
-    let nextNumber = 1;
-    if (counterDoc.exists()) {
-      const data = counterDoc.data();
-      const currentNumber = data?.currentNumber ?? 0;
-      nextNumber = currentNumber + 1;
+export async function checkDuplicateDcNumber(dcNumber: string, excludeId?: string): Promise<boolean> {
+  if (!dcNumber) return false;
+  
+  const q = query(
+    collection(db, NEWRELIC_CHALLANS_COLLECTION),
+    where('dcNumber', '==', dcNumber.trim())
+  );
+  const snapshot = await getDocs(q);
+  
+  if (snapshot.empty) return false;
+  
+  // If it exists, make sure it's not the same document we are editing
+  let isDuplicate = false;
+  snapshot.forEach(docSnap => {
+    if (docSnap.id !== excludeId && !docSnap.data().isDeleted) {
+      isDuplicate = true;
     }
-    transaction.set(counterRef, { currentNumber: nextNumber }, { merge: true });
-    return nextNumber;
   });
-
-  // Format: HYD001, BLR001, etc.
-  const paddedNumber = String(newNumber).padStart(3, '0');
-  return `${locationConfig.dcPrefix}${paddedNumber}`;
+  
+  return isDuplicate;
 }
 
 type SaveInput = Omit<NewRelicChallan, 'dcNumber' | 'createdAt'> & {
@@ -98,7 +138,7 @@ type SaveInput = Omit<NewRelicChallan, 'dcNumber' | 'createdAt'> & {
   dcNumber?: string;
 };
 
-export async function saveNewRelicChallan(challan: SaveInput): Promise<NewRelicChallan> {
+export async function saveNewRelicChallan(challan: SaveInput, userEmail: string | null = null): Promise<NewRelicChallan> {
   try {
     let finalData: any;
 
@@ -108,21 +148,39 @@ export async function saveNewRelicChallan(challan: SaveInput): Promise<NewRelicC
     }
 
     if (challan.id) {
-      // Update existing
+      // Fetch existing data for history snapshot
       const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, challan.id);
+      const oldSnap = await getDoc(docRef);
+      
+      if (oldSnap.exists()) {
+        const historyRef = collection(docRef, 'history');
+        await addDoc(historyRef, {
+          editedAt: serverTimestamp(),
+          action: 'UPDATED',
+          editedBy: userEmail,
+          previousData: oldSnap.data()
+        });
+      }
+
+      // Update existing
       const { id, ...data } = challan;
-      await updateDoc(docRef, { ...data });
+      await updateDoc(docRef, { 
+        ...data,
+        updatedAt: serverTimestamp(),
+        updatedBy: userEmail,
+      });
       const snap = await getDoc(docRef);
       finalData = { id: challan.id, ...snap.data() };
     } else {
-      // Create new: use specified dcNumber or auto-generate
+      // Create new: use specified dcNumber or generate one as fallback
       const dcNumber =
-        challan.dcNumber?.trim() || (await getNextDcNumber(challan.location));
+        challan.dcNumber?.trim() || (await getSuggestedDcNumber(challan.location));
       const { id, ...data } = challan;
       const completeData = {
         ...data,
         dcNumber,
         createdAt: serverTimestamp(),
+        createdBy: userEmail,
       };
       const docRef = await addDoc(collection(db, NEWRELIC_CHALLANS_COLLECTION), completeData);
       const snap = await getDoc(docRef);
@@ -183,11 +241,31 @@ export async function getNewRelicChallans(): Promise<NewRelicChallan[]> {
         }
       } catch {}
 
+      let deletedAt: string | undefined;
+      try {
+        if (data.deletedAt instanceof Timestamp) {
+          deletedAt = data.deletedAt.toDate().toISOString();
+        } else if (data.deletedAt) {
+          deletedAt = new Date(data.deletedAt).toISOString();
+        }
+      } catch {}
+
+      let updatedAt: string | undefined;
+      try {
+        if (data.updatedAt instanceof Timestamp) {
+          updatedAt = data.updatedAt.toDate().toISOString();
+        } else if (data.updatedAt) {
+          updatedAt = new Date(data.updatedAt).toISOString();
+        }
+      } catch {}
+
       challans.push({
         id: docSnap.id,
         ...data,
         dcDate,
         createdAt,
+        deletedAt,
+        updatedAt,
       } as NewRelicChallan);
     });
 
@@ -213,15 +291,259 @@ export function incrementDcNumber(dcNumber: string): string {
   return `${prefix}${padded}`;
 }
 
-export async function deleteNewRelicChallan(id: string): Promise<void> {
+export async function deleteNewRelicChallan(id: string, userEmail: string | null = null): Promise<void> {
+  const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, id);
+  const oldSnap = await getDoc(docRef);
+  if (oldSnap.exists()) {
+    const historyRef = collection(docRef, 'history');
+    await addDoc(historyRef, {
+      editedAt: serverTimestamp(),
+      action: 'DELETED',
+      editedBy: userEmail,
+      previousData: oldSnap.data()
+    });
+  }
+  await updateDoc(docRef, {
+    isDeleted: true,
+    deletedAt: serverTimestamp(),
+    deletedBy: userEmail,
+  });
+}
+
+export async function permanentDeleteNewRelicChallan(id: string): Promise<void> {
   const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, id);
   await deleteDoc(docRef);
 }
 
-export async function deleteNewRelicChallans(ids: string[]): Promise<void> {
+export async function deleteNewRelicChallans(ids: string[], userEmail: string | null = null): Promise<void> {
   const batch = writeBatch(db);
-  ids.forEach((id) => {
-    batch.delete(doc(db, NEWRELIC_CHALLANS_COLLECTION, id));
+  for (const id of ids) {
+    const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, id);
+    const oldSnap = await getDoc(docRef);
+    if (oldSnap.exists()) {
+      const historyRef = collection(docRef, 'history');
+      batch.set(doc(historyRef), {
+        editedAt: serverTimestamp(),
+        action: 'DELETED',
+        editedBy: userEmail,
+        previousData: oldSnap.data()
+      });
+    }
+    batch.update(docRef, {
+      isDeleted: true,
+      deletedAt: serverTimestamp(),
+      deletedBy: userEmail,
+    });
+  }
+  await batch.commit();
+}
+
+export async function restoreNewRelicChallans(ids: string[], userEmail: string | null = null): Promise<void> {
+  const batch = writeBatch(db);
+  for (const id of ids) {
+    const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, id);
+    const oldSnap = await getDoc(docRef);
+    if (oldSnap.exists()) {
+      const historyRef = collection(docRef, 'history');
+      batch.set(doc(historyRef), {
+        editedAt: serverTimestamp(),
+        action: 'RESTORED',
+        editedBy: userEmail,
+        previousData: oldSnap.data()
+      });
+    }
+    batch.update(docRef, {
+      isDeleted: false,
+      deletedAt: null,
+      updatedAt: serverTimestamp(),
+      updatedBy: userEmail,
+    });
+  }
+  await batch.commit();
+}
+
+export async function getNewRelicChallanHistory(id: string): Promise<NewRelicChallanHistory[]> {
+  try {
+    const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, id);
+    const historyRef = collection(docRef, 'history');
+    const q = query(historyRef, orderBy('editedAt', 'desc'));
+    const snapshot = await getDocs(q);
+    
+    const history: NewRelicChallanHistory[] = [];
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      
+      let editedAt: string | undefined;
+      try {
+        if (data.editedAt instanceof Timestamp) {
+          editedAt = data.editedAt.toDate().toISOString();
+        } else if (data.editedAt) {
+          editedAt = new Date(data.editedAt).toISOString();
+        }
+      } catch {}
+
+      history.push({
+        id: docSnap.id,
+        editedAt,
+        action: data.action || 'UPDATED',
+        editedBy: data.editedBy || 'Unknown',
+        previousData: data.previousData as NewRelicChallan,
+      });
+    });
+
+    return JSON.parse(JSON.stringify(history));
+  } catch (error) {
+    console.error('Error fetching challan history:', error);
+    return [];
+  }
+}
+
+export async function getGlobalAuditLogs(): Promise<NewRelicChallanHistory[]> {
+  try {
+    const q = query(
+      collectionGroup(db, 'history'),
+      // Remove orderBy to avoid composite index requirements for now
+      // We'll sort in memory
+      limit(200)
+    );
+    const snapshot = await getDocs(q);
+    
+    let history: NewRelicChallanHistory[] = [];
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      
+      let editedAt: string | undefined;
+      try {
+        if (data.editedAt instanceof Timestamp) {
+          editedAt = data.editedAt.toDate().toISOString();
+        } else if (data.editedAt) {
+          editedAt = new Date(data.editedAt).toISOString();
+        }
+      } catch {}
+
+      history.push({
+        id: docSnap.id,
+        editedAt,
+        action: data.action || 'UPDATED',
+        editedBy: data.editedBy || 'Unknown',
+        previousData: data.previousData as NewRelicChallan,
+      });
+    });
+
+    // Sort descending by date
+    history.sort((a, b) => {
+      if (!a.editedAt) return 1;
+      if (!b.editedAt) return -1;
+      return new Date(b.editedAt).getTime() - new Date(a.editedAt).getTime();
+    });
+
+    return JSON.parse(JSON.stringify(history));
+  } catch (error) {
+    console.error('Error fetching global audit logs:', error);
+    return [];
+  }
+}
+
+export async function addSignedCopyUrl(challanId: string, url: string, userEmail: string | null): Promise<void> {
+  const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, challanId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) throw new Error('Challan not found');
+
+  const data = docSnap.data();
+  const currentUrls = data.signedCopyUrls || [];
+  
+  const batch = writeBatch(db);
+  batch.update(docRef, {
+    signedCopyUrls: [...currentUrls, url],
+    updatedAt: serverTimestamp(),
+    updatedBy: userEmail,
   });
+
+  const historyRef = doc(collection(docRef, 'history'));
+  batch.set(historyRef, {
+    editedAt: serverTimestamp(),
+    action: 'UPDATED',
+    editedBy: userEmail,
+    previousData: { ...data, id: docSnap.id },
+  });
+
+  await batch.commit();
+}
+
+export async function removeSignedCopyUrl(challanId: string, urlToRemove: string, userEmail: string | null): Promise<void> {
+  const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, challanId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) throw new Error('Challan not found');
+
+  const data = docSnap.data();
+  const currentUrls: string[] = data.signedCopyUrls || [];
+  
+  const batch = writeBatch(db);
+  batch.update(docRef, {
+    signedCopyUrls: currentUrls.filter(u => u !== urlToRemove),
+    updatedAt: serverTimestamp(),
+    updatedBy: userEmail,
+  });
+
+  const historyRef = doc(collection(docRef, 'history'));
+  batch.set(historyRef, {
+    editedAt: serverTimestamp(),
+    action: 'UPDATED',
+    editedBy: userEmail,
+    previousData: { ...data, id: docSnap.id },
+  });
+
+  await batch.commit();
+}
+
+export async function addGoodsReceivedUrl(challanId: string, url: string, userEmail: string | null): Promise<void> {
+  const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, challanId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) throw new Error('Challan not found');
+
+  const data = docSnap.data();
+  const currentUrls = data.goodsReceivedInvoiceUrls || [];
+  
+  const batch = writeBatch(db);
+  batch.update(docRef, {
+    goodsReceivedInvoiceUrls: [...currentUrls, url],
+    updatedAt: serverTimestamp(),
+    updatedBy: userEmail,
+  });
+
+  const historyRef = doc(collection(docRef, 'history'));
+  batch.set(historyRef, {
+    editedAt: serverTimestamp(),
+    action: 'UPDATED',
+    editedBy: userEmail,
+    previousData: { ...data, id: docSnap.id },
+  });
+
+  await batch.commit();
+}
+
+export async function removeGoodsReceivedUrl(challanId: string, urlToRemove: string, userEmail: string | null): Promise<void> {
+  const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, challanId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) throw new Error('Challan not found');
+
+  const data = docSnap.data();
+  const currentUrls: string[] = data.goodsReceivedInvoiceUrls || [];
+  
+  const batch = writeBatch(db);
+  batch.update(docRef, {
+    goodsReceivedInvoiceUrls: currentUrls.filter(u => u !== urlToRemove),
+    updatedAt: serverTimestamp(),
+    updatedBy: userEmail,
+  });
+
+  const historyRef = doc(collection(docRef, 'history'));
+  batch.set(historyRef, {
+    editedAt: serverTimestamp(),
+    action: 'UPDATED',
+    editedBy: userEmail,
+    previousData: { ...data, id: docSnap.id },
+  });
+
   await batch.commit();
 }

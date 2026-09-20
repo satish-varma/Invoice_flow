@@ -21,6 +21,13 @@ import React from 'react';
 import { format } from 'date-fns';
 import { NewRelicChallan, NewRelicChallanItem, NEWRELIC_LOCATIONS } from '@/services/newrelicChallanService';
 
+/**
+ * IMPORTANT NOTE ON ANALYTICS FIELDS (MRP, Transport Cost, Other Charges):
+ * These fields are purely for admin-view analytics and MUST NOT be included
+ * in this downloaded/generated PDF challan to ensure it remains unchanged
+ * for external use. Do not render them here.
+ */
+
 const HUNGERBOX_GST = '29AADCE9896J1ZQ';
 const FIRST_PAGE_ITEMS = 10;
 const SUBSEQUENT_PAGE_ITEMS = 18;

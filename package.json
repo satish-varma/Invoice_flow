@@ -52,6 +52,7 @@
     "jspdf": "^2.5.2",
     "lucide-react": "^0.475.0",
     "next": "15.3.8",
+    "next-auth": "^4.24.15",
     "patch-package": "^8.0.0",
     "pdf-parse": "^1.1.4",
     "react": "^18.3.1",

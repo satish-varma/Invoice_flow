@@ -28,20 +28,19 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const auth = useAuth();
-  const { user } = useUser();
+  const user = auth?.user;
   const router = useRouter();
   const { openMobile, setOpenMobile } = useSidebar();
 
   const handleSignOut = async () => {
-    if (auth) {
+    if (auth && auth.signOut) {
       await auth.signOut();
-      router.push('/auth');
     }
   };
 
@@ -111,14 +110,13 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
             <SidebarMenuItem>
               <div className="flex items-center gap-2 p-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || ''} />
-                  <AvatarFallback>
-                    <User />
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    <User className="h-4 w-4" />
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col truncate group-data-[collapsible=icon]:hidden">
                   <span className="text-sm font-semibold truncate text-sidebar-primary">
-                    {user?.displayName}
+                    {user?.email?.split('@')[0]}
                   </span>
                   <span className="text-xs text-sidebar-foreground/70 truncate">
                     {user?.email}

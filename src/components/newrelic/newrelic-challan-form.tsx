@@ -826,20 +826,14 @@ export function NewRelicChallanForm({
         />
       </div>
 
-      {/* Signed Copies Management (Admin/Manager only) */}
-      {(role === 'admin' || role === 'superadmin' || role === 'manager') && (
+      {/* Signed Copies Management (Admin/Manager only, and only when editing) */}
+      {isEditing && currentData?.id && (role === 'admin' || role === 'superadmin' || role === 'manager') && (
         <div className="pt-2 flex flex-col sm:flex-row gap-2">
           <Button
             type="button"
             variant="outline"
             className="w-full sm:flex-1 gap-2 border-gray-300 text-gray-700"
-            onClick={() => {
-              if (!isEditing || !currentData?.id) {
-                toast({ title: 'Please Save First', description: 'You must save the document before uploading attachments.' });
-                return;
-              }
-              setShowSignedCopyModal(true);
-            }}
+            onClick={() => setShowSignedCopyModal(true)}
           >
             <Paperclip className="h-4 w-4" />
             Manage Signed Copies {(currentData?.signedCopyUrls || []).length > 0 && `(${currentData?.signedCopyUrls?.length})`}
@@ -849,13 +843,7 @@ export function NewRelicChallanForm({
             type="button"
             variant="outline"
             className="w-full sm:flex-1 gap-2 border-gray-300 text-gray-700"
-            onClick={() => {
-              if (!isEditing || !currentData?.id) {
-                toast({ title: 'Please Save First', description: 'You must save the document before uploading attachments.' });
-                return;
-              }
-              setShowGoodsReceivedModal(true);
-            }}
+            onClick={() => setShowGoodsReceivedModal(true)}
           >
             <FileText className="h-4 w-4" />
             Goods Received Invoice {(currentData?.goodsReceivedInvoiceUrls || []).length > 0 && `(${currentData?.goodsReceivedInvoiceUrls?.length})`}

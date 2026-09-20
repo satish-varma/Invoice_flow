@@ -146,8 +146,8 @@ export function NewRelicChallanList({
             {role === 'admin' && (
               <div className="flex items-center justify-between text-[11px] text-gray-500 border-t border-gray-50 pt-2 mt-1">
                 <span>{isTrashView ? 'Deleted By:' : 'Created By:'}</span>
-                <span className="font-medium text-gray-700 truncate max-w-[150px]" title={(isTrashView ? challan.deletedBy : challan.createdBy) || 'System'}>
-                  {formatAuthorName((isTrashView ? challan.deletedBy : challan.createdBy))}
+                <span className="font-medium text-gray-700 truncate max-w-[150px]" title={(isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)) || 'System'}>
+                  {formatAuthorName((isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)))}
                   {isTrashView && challan.deletedAt && (
                     <span className="text-gray-400 ml-1">
                       ({format(new Date(challan.deletedAt), 'dd-MMM-yy')})
@@ -340,8 +340,8 @@ export function NewRelicChallanList({
                   <>
                     <TableCell>
                       <div className="flex flex-col text-[11px]">
-                        <span className="font-medium text-gray-700 truncate max-w-[120px]" title={(isTrashView ? challan.deletedBy : challan.createdBy) || 'System'}>
-                          {formatAuthorName((isTrashView ? challan.deletedBy : challan.createdBy))}
+                        <span className="font-medium text-gray-700 truncate max-w-[150px]" title={(isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)) || 'System'}>
+                          {formatAuthorName((isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)))}
                         </span>
                         {(isTrashView ? challan.deletedAt : challan.createdAt) && (
                           <span className="text-gray-400">

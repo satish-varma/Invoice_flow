@@ -128,7 +128,10 @@ export function NewRelicChallanForm({
   };
 
   const { role, user } = useAuth();
-  const isAdmin = role === 'admin';
+  const isAdmin = role === 'admin' || role === 'superadmin';
+  const isManager = role === 'manager';
+  const canSeeMrp = isAdmin || isManager;
+  const canSeePCost = isAdmin;
 
   const {
     register,
@@ -594,18 +597,15 @@ export function NewRelicChallanForm({
         {/* Table header for desktop */}
         <div className={cn(
           "hidden sm:grid gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wide px-1",
-          isAdmin ? "grid-cols-[2fr_3fr_1fr_1.5fr_1fr_1fr_auto]" : "grid-cols-[2fr_3fr_1fr_1.5fr_auto]"
+          canSeeMrp && canSeePCost ? "grid-cols-[2fr_3fr_1fr_1.5fr_1fr_1fr_auto]" : 
+          canSeeMrp ? "grid-cols-[2fr_3fr_1fr_1.5fr_1fr_auto]" : "grid-cols-[2fr_3fr_1fr_1.5fr_auto]"
         )}>
           <span>Brand Name</span>
           <span>Item Name</span>
           <span>Qty</span>
           <span>Expiry</span>
-          {isAdmin && (
-            <>
-              <span>MRP</span>
-              <span>P.Cost (Vendor)</span>
-            </>
-          )}
+          {canSeeMrp && <span>MRP</span>}
+          {canSeePCost && <span>P.Cost (Vendor)</span>}
           <span />
         </div>
 
@@ -614,7 +614,8 @@ export function NewRelicChallanForm({
             key={field.id}
             className={cn(
               "p-3 sm:p-0 bg-gray-50/80 sm:bg-transparent rounded-xl border border-gray-200/80 sm:border-0 grid grid-cols-1 gap-2.5 sm:gap-2 items-start",
-              isAdmin ? "sm:grid-cols-[2fr_3fr_1fr_1.5fr_1fr_1fr_auto]" : "sm:grid-cols-[2fr_3fr_1fr_1.5fr_auto]"
+              canSeeMrp && canSeePCost ? "sm:grid-cols-[2fr_3fr_1fr_1.5fr_1fr_1fr_auto]" : 
+              canSeeMrp ? "sm:grid-cols-[2fr_3fr_1fr_1.5fr_1fr_auto]" : "sm:grid-cols-[2fr_3fr_1fr_1.5fr_auto]"
             )}
           >
             {/* Brand Name */}
@@ -678,8 +679,7 @@ export function NewRelicChallanForm({
                 )}
               </div>
 
-              {isAdmin && (
-                <>
+              {canSeeMrp && (
                   <div className="space-y-1 sm:space-y-0">
                     <Label className="text-xs text-gray-500 sm:hidden">MRP</Label>
                     <Input
@@ -691,6 +691,8 @@ export function NewRelicChallanForm({
                       className={cn(errors.lineItems?.[index]?.mrp && 'border-red-400')}
                     />
                   </div>
+              )}
+              {canSeePCost && (
                   <div className="space-y-1 sm:space-y-0">
                     <Label className="text-xs text-gray-500 sm:hidden">P.Cost</Label>
                     <Input
@@ -702,7 +704,6 @@ export function NewRelicChallanForm({
                       className={cn(errors.lineItems?.[index]?.procurementCost && 'border-red-400')}
                     />
                   </div>
-                </>
               )}
             </div>
 
@@ -723,7 +724,7 @@ export function NewRelicChallanForm({
           </div>
         ))}
 
-        {isAdmin && (
+        {canSeeMrp && (
           <div className="flex flex-wrap items-center justify-between gap-4 py-2 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
             <div className="flex gap-4">
               <span>Items: <strong className="text-gray-900">{watch('lineItems')?.length || 0}</strong></span>
@@ -731,7 +732,9 @@ export function NewRelicChallanForm({
             </div>
             <div className="flex gap-4">
               <span>Total MRP: <strong className="text-gray-900">₹{watch('lineItems')?.reduce((acc, item) => acc + ((Number(item.mrp) || 0) * (Number(item.quantity) || 0)), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</strong></span>
-              <span>Total P.Cost: <strong className="text-gray-900">₹{watch('lineItems')?.reduce((acc, item) => acc + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 0)), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</strong></span>
+              {canSeePCost && (
+                <span>Total P.Cost: <strong className="text-gray-900">₹{watch('lineItems')?.reduce((acc, item) => acc + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 0)), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</strong></span>
+              )}
             </div>
           </div>
         )}

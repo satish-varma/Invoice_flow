@@ -344,13 +344,26 @@ export function NewRelicChallanForm({
         procurementCost: calculatedProcurementCost,
       };
 
-      // Firebase throws an error if any field is strictly `undefined`
-      Object.keys(payload).forEach(key => {
-        if (payload[key] === undefined) {
-          delete payload[key];
+      // Firebase throws an error if any field is strictly `undefined`. 
+      // Deep clean the payload to remove undefined fields recursively.
+      const cleanUndefined = (obj: any): any => {
+        if (Array.isArray(obj)) {
+          return obj.map(cleanUndefined);
         }
-      });
-      const saved = await saveNewRelicChallan(payload, user?.email || null);
+        if (obj !== null && typeof obj === 'object') {
+          const newObj: any = {};
+          Object.keys(obj).forEach((key) => {
+            if (obj[key] !== undefined) {
+              newObj[key] = cleanUndefined(obj[key]);
+            }
+          });
+          return newObj;
+        }
+        return obj;
+      };
+      
+      const cleanPayload = cleanUndefined(payload);
+      const saved = await saveNewRelicChallan(cleanPayload, user?.email || null);
       toast({
         title: 'Challan saved',
         description: `DC No: ${saved.dcNumber}`,

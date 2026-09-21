@@ -332,7 +332,7 @@ export function NewRelicChallanForm({
 
       const calculatedProcurementCost = validItems.reduce((acc, item) => acc + ((item.procurementCost || 0) * item.quantity), 0);
 
-      const payload = {
+      const payload: any = {
         id: initialData?.id,
         dcNumber: values.dcNumber,
         location: values.location,
@@ -343,6 +343,13 @@ export function NewRelicChallanForm({
         otherCharges: values.otherCharges,
         procurementCost: calculatedProcurementCost,
       };
+
+      // Firebase throws an error if any field is strictly `undefined`
+      Object.keys(payload).forEach(key => {
+        if (payload[key] === undefined) {
+          delete payload[key];
+        }
+      });
       const saved = await saveNewRelicChallan(payload, user?.email || null);
       toast({
         title: 'Challan saved',

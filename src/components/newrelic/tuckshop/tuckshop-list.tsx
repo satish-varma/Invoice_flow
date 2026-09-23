@@ -12,6 +12,8 @@ interface Props {
 export function TuckshopList({ records }: Props) {
   const { role, user } = useAuth();
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'sale'>('all');
+  const [filterMonth, setFilterMonth] = useState<string>('all');
+  const [filterYear, setFilterYear] = useState<string>('all');
   
   // Map full names to codes since they are stored as 'bangalore' / 'hyderabad' in users collection
   const getMappedLocation = (locStr?: string) => {
@@ -38,9 +40,21 @@ export function TuckshopList({ records }: Props) {
     }
   };
 
+  const availableYears = React.useMemo(() => {
+    return Array.from(new Set(records.map(r => new Date(r.date).getFullYear()))).sort((a, b) => b - a);
+  }, [records]);
+
   const filteredRecords = records.filter(record => {
     if (filterType !== 'all' && record.type !== filterType) return false;
     if (filterLocation !== 'all' && record.location !== filterLocation) return false;
+    
+    if (filterMonth !== 'all') {
+      if (new Date(record.date).getMonth().toString() !== filterMonth) return false;
+    }
+    if (filterYear !== 'all') {
+      if (new Date(record.date).getFullYear().toString() !== filterYear) return false;
+    }
+    
     return true;
   });
 
@@ -71,6 +85,29 @@ export function TuckshopList({ records }: Props) {
             <option value="all">All Types</option>
             <option value="expense">Expenses Only</option>
             <option value="sale">Sales Only</option>
+          </select>
+
+          <select
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20"
+          >
+            <option value="all">All Months</option>
+            {Array.from({ length: 12 }, (_, i) => {
+              const d = new Date(2000, i, 1);
+              return <option key={i} value={i}>{d.toLocaleString('default', { month: 'short' })}</option>;
+            })}
+          </select>
+
+          <select
+            value={filterYear}
+            onChange={(e) => setFilterYear(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20"
+          >
+            <option value="all">All Years</option>
+            {availableYears.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
           </select>
         </div>
       </div>

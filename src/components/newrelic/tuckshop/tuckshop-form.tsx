@@ -4,24 +4,26 @@ import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { saveTuckshopRecord, uploadTuckshopBill, NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
-import { PlusCircle, Loader2, IndianRupee, TrendingDown, UploadCloud } from 'lucide-react';
+import { PlusCircle, Loader2, IndianRupee, TrendingDown } from 'lucide-react';
 
 interface Props {
   existingCategories: string[];
+  initialTab?: 'expense' | 'sale';
   onSuccess?: () => void;
 }
 
-export function TuckshopForm({ existingCategories, onSuccess }: Props) {
+export function TuckshopForm({ existingCategories, initialTab = 'expense', onSuccess }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'expense' | 'sale'>('expense');
+  const [activeTab, setActiveTab] = useState<'expense' | 'sale'>(initialTab);
 
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [location, setLocation] = useState<'HYD' | 'BLR'>('BLR');
   
   // Expense states
   const [category, setCategory] = useState<string>('Dosa Batter');
+  const [customCategory, setCustomCategory] = useState<string>('');
   const [expenseAmount, setExpenseAmount] = useState<string>('');
   const [expenseDesc, setExpenseDesc] = useState<string>('');
   const [billFile, setBillFile] = useState<File | null>(null);
@@ -42,7 +44,9 @@ export function TuckshopForm({ existingCategories, onSuccess }: Props) {
       return;
     }
     
-    if (activeTab === 'expense' && !category.trim()) {
+    const finalCategory = category === 'other' ? customCategory.trim() : category;
+    
+    if (activeTab === 'expense' && !finalCategory) {
       toast({
         variant: 'destructive',
         title: 'Validation Error',
@@ -62,7 +66,7 @@ export function TuckshopForm({ existingCategories, onSuccess }: Props) {
         date,
         location,
         type: activeTab,
-        category: activeTab === 'sale' ? 'Sales' : category.trim(),
+        category: activeTab === 'sale' ? 'Sales' : finalCategory,
         amount: Number(amount),
         description: activeTab === 'expense' ? (expenseDesc.trim() || undefined) : 'Daily Total Sale',
         billUrl,
@@ -76,6 +80,7 @@ export function TuckshopForm({ existingCategories, onSuccess }: Props) {
         setExpenseAmount('');
         setExpenseDesc('');
         setBillFile(null);
+        if (category === 'other') setCustomCategory('');
       } else {
         setSaleAmount('');
       }
@@ -93,11 +98,16 @@ export function TuckshopForm({ existingCategories, onSuccess }: Props) {
     }
   };
 
+  // Combine standard and existing into unique array
+  const standardCategories = ['Dosa Batter', 'Vegetables', 'Groceries', 'Bread', 'Cutlery', 'Fruits'];
+  const allCategories = Array.from(new Set([...standardCategories, ...existingCategories]));
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-      {/* Tabs Header */}
+      {/* Tabs Header - Optional since we have separate buttons now, but let's keep it for context inside the modal */}
       <div className="flex border-b border-gray-200">
         <button
+          type="button"
           onClick={() => setActiveTab('expense')}
           className={`flex-1 py-4 flex items-center justify-center gap-2 text-sm font-semibold transition-colors ${
             activeTab === 'expense' 
@@ -109,6 +119,7 @@ export function TuckshopForm({ existingCategories, onSuccess }: Props) {
           Log Expense
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('sale')}
           className={`flex-1 py-4 flex items-center justify-center gap-2 text-sm font-semibold transition-colors ${
             activeTab === 'sale' 
@@ -151,26 +162,29 @@ export function TuckshopForm({ existingCategories, onSuccess }: Props) {
             <>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Expense Category <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  list="category-suggestions"
-                  required
+                <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  placeholder="e.g. Dosa Batter"
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
-                />
-                <datalist id="category-suggestions">
-                  <option value="Dosa Batter" />
-                  <option value="Bread" />
-                  <option value="Fruits" />
-                  <option value="Groceries" />
-                  <option value="Cutlery" />
-                  {existingCategories.map((cat, i) => (
-                    <option key={i} value={cat} />
+                >
+                  {allCategories.map((cat, i) => (
+                    <option key={i} value={cat}>{cat}</option>
                   ))}
-                </datalist>
-                <p className="text-[11px] text-gray-500 mt-1">Select an existing category or type a new one.</p>
+                  <option value="other">Other (Add New)</option>
+                </select>
+                
+                {category === 'other' && (
+                  <div className="mt-3">
+                    <input
+                      type="text"
+                      required
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
+                      placeholder="Enter new category name"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>

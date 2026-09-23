@@ -61,6 +61,7 @@ export default function TuckshopPage() {
             </button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px] p-0 border-0 overflow-hidden bg-transparent shadow-none">
+            <DialogTitle className="sr-only">Log Tuckshop Record</DialogTitle>
             {/* The form has its own background, borders, and rounded corners */}
             <TuckshopForm 
               existingCategories={existingCategories} 

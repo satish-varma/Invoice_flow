@@ -104,32 +104,9 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', onSuc
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-      {/* Tabs Header - Optional since we have separate buttons now, but let's keep it for context inside the modal */}
-      <div className="flex border-b border-gray-200">
-        <button
-          type="button"
-          onClick={() => setActiveTab('expense')}
-          className={`flex-1 py-4 flex items-center justify-center gap-2 text-sm font-semibold transition-colors ${
-            activeTab === 'expense' 
-              ? 'bg-[#3b2fc9]/5 text-[#3b2fc9] border-b-2 border-[#3b2fc9]' 
-              : 'text-gray-500 hover:bg-gray-50'
-          }`}
-        >
-          <TrendingDown className="h-4 w-4" />
-          Log Expense
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('sale')}
-          className={`flex-1 py-4 flex items-center justify-center gap-2 text-sm font-semibold transition-colors ${
-            activeTab === 'sale' 
-              ? 'bg-green-50 text-green-600 border-b-2 border-green-600' 
-              : 'text-gray-500 hover:bg-gray-50'
-          }`}
-        >
-          <IndianRupee className="h-4 w-4" />
-          Log Daily Sale
-        </button>
+      <div className={`p-4 border-b border-gray-100 flex items-center gap-2 font-semibold ${activeTab === 'expense' ? 'text-red-600 bg-red-50/50' : 'text-green-600 bg-green-50/50'}`}>
+        {activeTab === 'expense' ? <TrendingDown className="h-5 w-5" /> : <IndianRupee className="h-5 w-5" />}
+        {activeTab === 'expense' ? 'Log Expense' : 'Log Daily Sale'}
       </div>
 
       <form onSubmit={handleSubmit} className="p-4 sm:p-6">

@@ -10,9 +10,22 @@ interface Props {
 }
 
 export function TuckshopList({ records }: Props) {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'sale'>('all');
-  const [filterLocation, setFilterLocation] = useState<'all' | 'HYD' | 'BLR'>('all');
+  
+  // Use preferred location if available, otherwise 'all'
+  const defaultLoc = user?.preferredLocations?.[0] as 'HYD' | 'BLR' | undefined;
+  const [filterLocation, setFilterLocation] = useState<'all' | 'HYD' | 'BLR'>(defaultLoc || 'all');
+
+  // Also update if user object loads later
+  React.useEffect(() => {
+    if (user?.preferredLocations?.[0] && filterLocation === 'all') {
+      const loc = user.preferredLocations[0];
+      if (loc === 'HYD' || loc === 'BLR') {
+        setFilterLocation(loc);
+      }
+    }
+  }, [user?.preferredLocations]);
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this record?')) {
@@ -64,6 +77,7 @@ export function TuckshopList({ records }: Props) {
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Date</th>
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Location</th>
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Category</th>
+              <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">User</th>
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Description</th>
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Bill</th>
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Amount</th>
@@ -75,7 +89,7 @@ export function TuckshopList({ records }: Props) {
           <tbody className="divide-y divide-gray-100">
             {filteredRecords.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-5 py-8 text-center text-sm text-gray-500">
+                <td colSpan={8} className="px-5 py-8 text-center text-sm text-gray-500">
                   No records found.
                 </td>
               </tr>
@@ -90,6 +104,9 @@ export function TuckshopList({ records }: Props) {
                   </td>
                   <td className="px-5 py-3 text-sm text-gray-600 capitalize">
                     {record.category.replace('_', ' ')}
+                  </td>
+                  <td className="px-5 py-3 text-sm text-gray-500 max-w-[150px] truncate" title={record.createdBy || ''}>
+                    {record.createdBy || 'Unknown'}
                   </td>
                   <td className="px-5 py-3 text-sm text-gray-500 max-w-[200px] truncate" title={record.description}>
                     {record.description || '-'}

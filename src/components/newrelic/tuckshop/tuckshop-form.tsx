@@ -19,7 +19,20 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', onSuc
   const [activeTab, setActiveTab] = useState<'expense' | 'sale'>(initialTab);
 
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [location, setLocation] = useState<'HYD' | 'BLR'>('BLR');
+  
+  // Use preferred location if available, otherwise 'BLR'
+  const defaultLoc = user?.preferredLocations?.[0] as 'HYD' | 'BLR' | undefined;
+  const [location, setLocation] = useState<'HYD' | 'BLR'>(defaultLoc || 'BLR');
+
+  // Also update if user object loads later
+  React.useEffect(() => {
+    if (user?.preferredLocations?.[0] && location === 'BLR') {
+      const loc = user.preferredLocations[0];
+      if (loc === 'HYD' || loc === 'BLR') {
+        setLocation(loc);
+      }
+    }
+  }, [user?.preferredLocations]);
   
   // Expense states
   const [category, setCategory] = useState<string>('Dosa Batter');

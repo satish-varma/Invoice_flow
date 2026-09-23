@@ -80,15 +80,7 @@ export function TuckshopList({ records }: Props) {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const totalSales = React.useMemo(() => {
-    return filteredRecords.filter(r => r.type === 'sale').reduce((sum, r) => sum + r.amount, 0);
-  }, [filteredRecords]);
 
-  const totalExpenses = React.useMemo(() => {
-    return filteredRecords.filter(r => r.type === 'expense').reduce((sum, r) => sum + r.amount, 0);
-  }, [filteredRecords]);
-
-  const netProfit = totalSales - totalExpenses;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
@@ -154,41 +146,7 @@ export function TuckshopList({ records }: Props) {
         </div>
       </div>
 
-      {role === 'admin' && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-5 bg-gray-50 border-b border-gray-100">
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Total Sales</p>
-              <h4 className="text-2xl font-bold text-gray-800">₹{totalSales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h4>
-            </div>
-            <div className="h-10 w-10 rounded-full bg-green-50 flex items-center justify-center">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-            </div>
-          </div>
-          
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Total Expenses</p>
-              <h4 className="text-2xl font-bold text-gray-800">₹{totalExpenses.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h4>
-            </div>
-            <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center">
-              <TrendingDown className="h-5 w-5 text-red-600" />
-            </div>
-          </div>
-          
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Net Profit / Loss</p>
-              <h4 className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {netProfit >= 0 ? '+' : ''}₹{netProfit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-              </h4>
-            </div>
-            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${netProfit >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-              <IndianRupee className={`h-5 w-5 ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`} />
-            </div>
-          </div>
-        </div>
-      )}
+
 
       <div className="overflow-x-auto flex-1">
         <table className="w-full text-left border-collapse min-w-[700px]">

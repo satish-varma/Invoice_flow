@@ -17,7 +17,6 @@ import { db } from '@/lib/firebase';
 
 export const NEWRELIC_TUCKSHOP_COLLECTION = 'newrelic_tuckshop';
 
-export type TuckshopCategory = 'dosa_batter' | 'bread' | 'fruits' | 'cutlery' | 'groceries' | 'sales' | 'other';
 export type TuckshopType = 'expense' | 'sale';
 
 export interface NewRelicTuckshopRecord {
@@ -25,9 +24,10 @@ export interface NewRelicTuckshopRecord {
   date: string; // ISO string
   location: string;
   type: TuckshopType;
-  category: TuckshopCategory;
+  category: string; // Now fully dynamic
   amount: number;
   description?: string;
+  billUrl?: string; // Link to uploaded bill in Storage
   createdAt?: string | Timestamp | any;
   createdBy?: string | null;
   updatedAt?: string | Timestamp | any;
@@ -107,4 +107,18 @@ export const saveTuckshopRecord = async (record: Partial<NewRelicTuckshopRecord>
 
 export const deleteTuckshopRecord = async (id: string) => {
   await deleteDoc(doc(db, NEWRELIC_TUCKSHOP_COLLECTION, id));
+};
+
+export const uploadTuckshopBill = async (file: File): Promise<string> => {
+  // Requires "import { storage } from '@/lib/firebase'" and "import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'"
+  const { storage } = await import('@/lib/firebase');
+  const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+  
+  const timestamp = Date.now();
+  const fileExtension = file.name.split('.').pop();
+  const filePath = `tuckshop_bills/${timestamp}_${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
+  
+  const storageRef = ref(storage, filePath);
+  await uploadBytes(storageRef, file);
+  return await getDownloadURL(storageRef);
 };

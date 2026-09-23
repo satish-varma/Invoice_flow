@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Trash2, TrendingUp, TrendingDown, Filter } from 'lucide-react';
+import { Trash2, TrendingUp, TrendingDown, Filter, FileText, ExternalLink } from 'lucide-react';
 import { NewRelicTuckshopRecord, deleteTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -27,9 +27,9 @@ export function TuckshopList({ records }: Props) {
   });
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mt-6">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
       <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/50">
-        <h3 className="font-semibold text-gray-800 text-lg">Transaction History</h3>
+        <h3 className="font-semibold text-gray-800 text-lg">Transaction Ledger</h3>
         
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -57,15 +57,15 @@ export function TuckshopList({ records }: Props) {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto flex-1">
+        <table className="w-full text-left border-collapse min-w-[700px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Date</th>
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Location</th>
-              <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Type</th>
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Category</th>
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Description</th>
+              <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Bill</th>
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Amount</th>
               {role === 'admin' && (
                 <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Actions</th>
@@ -88,22 +88,20 @@ export function TuckshopList({ records }: Props) {
                   <td className="px-5 py-3 text-sm font-medium text-gray-700">
                     {record.location}
                   </td>
-                  <td className="px-5 py-3 text-sm">
-                    {record.type === 'expense' ? (
-                      <span className="inline-flex items-center gap-1 text-red-600 bg-red-50 px-2 py-0.5 rounded-md font-medium text-xs">
-                        <TrendingDown className="h-3 w-3" /> Expense
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-green-600 bg-green-50 px-2 py-0.5 rounded-md font-medium text-xs">
-                        <TrendingUp className="h-3 w-3" /> Sale
-                      </span>
-                    )}
-                  </td>
                   <td className="px-5 py-3 text-sm text-gray-600 capitalize">
                     {record.category.replace('_', ' ')}
                   </td>
-                  <td className="px-5 py-3 text-sm text-gray-500 truncate max-w-[200px]" title={record.description}>
+                  <td className="px-5 py-3 text-sm text-gray-500 max-w-[200px] truncate" title={record.description}>
                     {record.description || '-'}
+                  </td>
+                  <td className="px-5 py-3 text-center">
+                    {record.billUrl ? (
+                      <a href={record.billUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center p-1.5 text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition-colors" title="View Uploaded Bill">
+                        <FileText className="h-4 w-4" />
+                      </a>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
                   </td>
                   <td className={`px-5 py-3 text-sm font-semibold text-right ${record.type === 'expense' ? 'text-red-600' : 'text-green-600'}`}>
                     {record.type === 'expense' ? '-' : '+'}₹{record.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
@@ -112,7 +110,7 @@ export function TuckshopList({ records }: Props) {
                     <td className="px-5 py-3 text-right">
                       <button
                         onClick={() => handleDelete(record.id!)}
-                        className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
+                        className="text-gray-400 hover:text-red-500 p-1.5 rounded transition-colors"
                         title="Delete Record"
                       >
                         <Trash2 className="h-4 w-4" />

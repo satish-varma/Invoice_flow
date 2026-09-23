@@ -3,10 +3,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { saveTuckshopRecord, NewRelicTuckshopRecord, TuckshopCategory } from '@/services/newrelicTuckshopService';
-import { PlusCircle, Loader2, IndianRupee, TrendingDown } from 'lucide-react';
+import { saveTuckshopRecord, uploadTuckshopBill, NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
+import { PlusCircle, Loader2, IndianRupee, TrendingDown, UploadCloud } from 'lucide-react';
 
-export function TuckshopForm() {
+interface Props {
+  existingCategories: string[];
+}
+
+export function TuckshopForm({ existingCategories }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -16,9 +20,10 @@ export function TuckshopForm() {
   const [location, setLocation] = useState<'HYD' | 'BLR'>('BLR');
   
   // Expense states
-  const [category, setCategory] = useState<TuckshopCategory>('dosa_batter');
+  const [category, setCategory] = useState<string>('Dosa Batter');
   const [expenseAmount, setExpenseAmount] = useState<string>('');
   const [expenseDesc, setExpenseDesc] = useState<string>('');
+  const [billFile, setBillFile] = useState<File | null>(null);
   
   // Sale states
   const [saleAmount, setSaleAmount] = useState<string>('');
@@ -35,16 +40,31 @@ export function TuckshopForm() {
       });
       return;
     }
+    
+    if (activeTab === 'expense' && !category.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Validation Error',
+        description: 'Please select or enter an expense category.',
+      });
+      return;
+    }
 
     setIsSaving(true);
     try {
+      let billUrl = undefined;
+      if (activeTab === 'expense' && billFile) {
+        billUrl = await uploadTuckshopBill(billFile);
+      }
+
       const record: Partial<NewRelicTuckshopRecord> = {
         date,
         location,
         type: activeTab,
-        category: activeTab === 'sale' ? 'sales' : category,
+        category: activeTab === 'sale' ? 'Sales' : category.trim(),
         amount: Number(amount),
         description: activeTab === 'expense' ? (expenseDesc.trim() || undefined) : 'Daily Total Sale',
+        billUrl,
       };
 
       await saveTuckshopRecord(record, user?.email || null);
@@ -54,6 +74,7 @@ export function TuckshopForm() {
       if (activeTab === 'expense') {
         setExpenseAmount('');
         setExpenseDesc('');
+        setBillFile(null);
       } else {
         setSaleAmount('');
       }
@@ -127,18 +148,26 @@ export function TuckshopForm() {
             <>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Expense Category <span className="text-red-500">*</span></label>
-                <select
+                <input
+                  type="text"
+                  list="category-suggestions"
+                  required
                   value={category}
-                  onChange={(e) => setCategory(e.target.value as TuckshopCategory)}
+                  onChange={(e) => setCategory(e.target.value)}
+                  placeholder="e.g. Dosa Batter"
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
-                >
-                  <option value="dosa_batter">Dosa Batter</option>
-                  <option value="bread">Bread</option>
-                  <option value="fruits">Fruits</option>
-                  <option value="groceries">Groceries</option>
-                  <option value="cutlery">Cutlery</option>
-                  <option value="other">Other Expense</option>
-                </select>
+                />
+                <datalist id="category-suggestions">
+                  <option value="Dosa Batter" />
+                  <option value="Bread" />
+                  <option value="Fruits" />
+                  <option value="Groceries" />
+                  <option value="Cutlery" />
+                  {existingCategories.map((cat, i) => (
+                    <option key={i} value={cat} />
+                  ))}
+                </datalist>
+                <p className="text-[11px] text-gray-500 mt-1">Select an existing category or type a new one.</p>
               </div>
 
               <div>
@@ -154,8 +183,20 @@ export function TuckshopForm() {
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
                 />
               </div>
+              
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Upload Bill (Optional)</label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => setBillFile(e.target.files?.[0] || null)}
+                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#3b2fc9]/10 file:text-[#3b2fc9] hover:file:bg-[#3b2fc9]/20 cursor-pointer"
+                  />
+                </div>
+              </div>
 
-              <div className="sm:col-span-2">
+              <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Notes / Description</label>
                 <input
                   type="text"

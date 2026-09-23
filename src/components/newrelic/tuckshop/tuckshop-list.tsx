@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Trash2, TrendingUp, TrendingDown, Filter, FileText, ExternalLink } from 'lucide-react';
+import { Trash2, Filter, FileText, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { NewRelicTuckshopRecord, deleteTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -14,6 +14,14 @@ export function TuckshopList({ records }: Props) {
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'sale'>('all');
   const [filterMonth, setFilterMonth] = useState<string>('all');
   const [filterYear, setFilterYear] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [filterType, filterLocation, filterMonth, filterYear, searchQuery]);
   
   // Map full names to codes since they are stored as 'bangalore' / 'hyderabad' in users collection
   const getMappedLocation = (locStr?: string) => {
@@ -55,15 +63,38 @@ export function TuckshopList({ records }: Props) {
       if (new Date(record.date).getFullYear().toString() !== filterYear) return false;
     }
     
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase().trim();
+      const catMatch = record.category.replace('_', ' ').toLowerCase().includes(q);
+      const descMatch = (record.description || '').toLowerCase().includes(q);
+      if (!catMatch && !descMatch) return false;
+    }
+    
     return true;
   });
+
+  const totalPages = Math.ceil(filteredRecords.length / ITEMS_PER_PAGE);
+  const paginatedRecords = filteredRecords.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
       <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/50">
         <h3 className="font-semibold text-gray-800 text-lg">Transaction Ledger</h3>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search items..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 w-40 sm:w-48"
+            />
+          </div>
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
             <select
@@ -129,14 +160,14 @@ export function TuckshopList({ records }: Props) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {filteredRecords.length === 0 ? (
+            {paginatedRecords.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-5 py-8 text-center text-sm text-gray-500">
                   No records found.
                 </td>
               </tr>
             ) : (
-              filteredRecords.map((record) => (
+              paginatedRecords.map((record) => (
                 <tr key={record.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-5 py-3 text-sm text-gray-600">
                     {new Date(record.date).toLocaleDateString()}
@@ -182,6 +213,33 @@ export function TuckshopList({ records }: Props) {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="p-4 border-t border-gray-200 flex items-center justify-between bg-white text-sm text-gray-600">
+          <div>
+            Showing <span className="font-medium">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-medium">{Math.min(currentPage * ITEMS_PER_PAGE, filteredRecords.length)}</span> of <span className="font-medium">{filteredRecords.length}</span> results
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-1.5 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="px-2 font-medium text-gray-700">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-1.5 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

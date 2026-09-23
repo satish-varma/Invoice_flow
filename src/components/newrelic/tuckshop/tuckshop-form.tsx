@@ -8,9 +8,10 @@ import { PlusCircle, Loader2, IndianRupee, TrendingDown, UploadCloud } from 'luc
 
 interface Props {
   existingCategories: string[];
+  onSuccess?: () => void;
 }
 
-export function TuckshopForm({ existingCategories }: Props) {
+export function TuckshopForm({ existingCategories, onSuccess }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -78,6 +79,8 @@ export function TuckshopForm({ existingCategories }: Props) {
       } else {
         setSaleAmount('');
       }
+      
+      if (onSuccess) onSuccess();
     } catch (err) {
       console.error(err);
       toast({

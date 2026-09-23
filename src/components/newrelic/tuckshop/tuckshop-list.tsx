@@ -18,11 +18,7 @@ export function TuckshopList({ records }: Props) {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
 
-  // Reset to page 1 when filters change
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [filterType, filterLocation, filterMonth, filterYear, searchQuery]);
-  
+
   // Map full names to codes since they are stored as 'bangalore' / 'hyderabad' in users collection
   const getMappedLocation = (locStr?: string) => {
     if (!locStr) return undefined;
@@ -33,6 +29,11 @@ export function TuckshopList({ records }: Props) {
   
   const defaultLoc = getMappedLocation(user?.preferredLocations?.[0]);
   const [filterLocation, setFilterLocation] = useState<'all' | 'HYD' | 'BLR'>(defaultLoc || 'all');
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [filterType, filterLocation, filterMonth, filterYear, searchQuery]);
 
   // Also update if user object loads later
   React.useEffect(() => {

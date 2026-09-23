@@ -34,10 +34,11 @@ const SUBSEQUENT_PAGE_ITEMS = 18;
 
 interface Props {
   challan: NewRelicChallan;
+  showMrp?: boolean;
 }
 
 export const NewRelicChallanPreview = React.forwardRef<HTMLDivElement, Props>(
-  ({ challan }, ref) => {
+  ({ challan, showMrp = false }, ref) => {
     const locationConfig = NEWRELIC_LOCATIONS[challan.location];
     const addressLines = locationConfig.address.split('\n');
 
@@ -166,13 +167,20 @@ export const NewRelicChallanPreview = React.forwardRef<HTMLDivElement, Props>(
             >
               <thead>
                 <tr style={{ backgroundColor: '#ffffff' }}>
-                  {[
-                    { title: 'S.NO', align: 'center', width: '8%' },
-                    { title: 'Brand Name', align: 'center', width: '22%' },
-                    { title: 'Item Name', align: 'left', width: '42%' },
-                    { title: 'QUANTITY', align: 'center', width: '13%' },
-                    { title: 'Expiry', align: 'center', width: '15%' },
-                  ].map((col) => (
+                  {(() => {
+                    const columns = [
+                      { title: 'S.NO', align: 'center', width: showMrp ? '6%' : '8%' },
+                      { title: 'Brand Name', align: 'center', width: showMrp ? '20%' : '22%' },
+                      { title: 'Item Name', align: 'left', width: showMrp ? '35%' : '42%' },
+                      { title: 'QUANTITY', align: 'center', width: showMrp ? '12%' : '13%' },
+                      { title: 'Expiry', align: 'center', width: showMrp ? '13%' : '15%' },
+                    ];
+                    
+                    if (showMrp) {
+                      columns.splice(4, 0, { title: 'MRP', align: 'center', width: '14%' });
+                    }
+                    
+                    return columns.map((col) => (
                     <th
                       key={col.title}
                       style={{
@@ -187,7 +195,7 @@ export const NewRelicChallanPreview = React.forwardRef<HTMLDivElement, Props>(
                     >
                       {col.title}
                     </th>
-                  ))}
+                  ))})()}
                 </tr>
               </thead>
               <tbody>
@@ -231,6 +239,17 @@ export const NewRelicChallanPreview = React.forwardRef<HTMLDivElement, Props>(
                       >
                         {item.quantity}
                       </td>
+                      {showMrp && (
+                        <td
+                          style={{
+                            border: '1.5px solid #000',
+                            padding: '6px 8px',
+                            textAlign: 'center',
+                          }}
+                        >
+                          {item.mrp ? `₹${item.mrp}` : '—'}
+                        </td>
+                      )}
                       <td
                         style={{
                           border: '1.5px solid #000',

@@ -49,7 +49,7 @@ export function NewRelicChallanViewModal({
         <div className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center items-start">
           <div className="shadow-2xl rounded overflow-hidden scale-[0.7] md:scale-100 origin-top bg-white ring-1 ring-black/5">
             <div className="pointer-events-none">
-              <NewRelicChallanPreview challan={challan} />
+              <NewRelicChallanPreview challan={challan} showMrp={true} />
             </div>
           </div>
         </div>

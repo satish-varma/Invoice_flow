@@ -20,17 +20,22 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', onSuc
 
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
   
-  // Use preferred location if available, otherwise 'BLR'
-  const defaultLoc = user?.preferredLocations?.[0] as 'HYD' | 'BLR' | undefined;
+  // Map full names to codes since they are stored as 'bangalore' / 'hyderabad' in users collection
+  const getMappedLocation = (locStr?: string) => {
+    if (!locStr) return undefined;
+    if (locStr.toLowerCase() === 'bangalore' || locStr === 'BLR') return 'BLR';
+    if (locStr.toLowerCase() === 'hyderabad' || locStr === 'HYD') return 'HYD';
+    return undefined;
+  };
+  
+  const defaultLoc = getMappedLocation(user?.preferredLocations?.[0]);
   const [location, setLocation] = useState<'HYD' | 'BLR'>(defaultLoc || 'BLR');
 
   // Also update if user object loads later
   React.useEffect(() => {
-    if (user?.preferredLocations?.[0] && location === 'BLR') {
-      const loc = user.preferredLocations[0];
-      if (loc === 'HYD' || loc === 'BLR') {
-        setLocation(loc);
-      }
+    const mappedLoc = getMappedLocation(user?.preferredLocations?.[0]);
+    if (mappedLoc && location === 'BLR') {
+      setLocation(mappedLoc);
     }
   }, [user?.preferredLocations]);
   

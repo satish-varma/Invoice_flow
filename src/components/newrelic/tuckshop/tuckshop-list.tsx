@@ -13,17 +13,22 @@ export function TuckshopList({ records }: Props) {
   const { role, user } = useAuth();
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'sale'>('all');
   
-  // Use preferred location if available, otherwise 'all'
-  const defaultLoc = user?.preferredLocations?.[0] as 'HYD' | 'BLR' | undefined;
+  // Map full names to codes since they are stored as 'bangalore' / 'hyderabad' in users collection
+  const getMappedLocation = (locStr?: string) => {
+    if (!locStr) return undefined;
+    if (locStr.toLowerCase() === 'bangalore' || locStr === 'BLR') return 'BLR';
+    if (locStr.toLowerCase() === 'hyderabad' || locStr === 'HYD') return 'HYD';
+    return undefined;
+  };
+  
+  const defaultLoc = getMappedLocation(user?.preferredLocations?.[0]);
   const [filterLocation, setFilterLocation] = useState<'all' | 'HYD' | 'BLR'>(defaultLoc || 'all');
 
   // Also update if user object loads later
   React.useEffect(() => {
-    if (user?.preferredLocations?.[0] && filterLocation === 'all') {
-      const loc = user.preferredLocations[0];
-      if (loc === 'HYD' || loc === 'BLR') {
-        setFilterLocation(loc);
-      }
+    const mappedLoc = getMappedLocation(user?.preferredLocations?.[0]);
+    if (mappedLoc && filterLocation === 'all') {
+      setFilterLocation(mappedLoc);
     }
   }, [user?.preferredLocations]);
 

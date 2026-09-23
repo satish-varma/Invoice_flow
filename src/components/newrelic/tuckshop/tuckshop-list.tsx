@@ -3,13 +3,15 @@
 import React, { useState } from 'react';
 import { Trash2, Filter, FileText, Search, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, IndianRupee } from 'lucide-react';
 import { NewRelicTuckshopRecord, deleteTuckshopRecord } from '@/services/newrelicTuckshopService';
+import { TuckshopDashboard } from './tuckshop-dashboard';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
   records: NewRelicTuckshopRecord[];
+  showDashboard?: boolean;
 }
 
-export function TuckshopList({ records }: Props) {
+export function TuckshopList({ records, showDashboard }: Props) {
   const { role, user } = useAuth();
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'sale'>('all');
   const [filterMonth, setFilterMonth] = useState<string>('all');
@@ -83,7 +85,10 @@ export function TuckshopList({ records }: Props) {
 
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
+    <div className="flex flex-col gap-6 h-full w-full">
+      {showDashboard && <TuckshopDashboard records={filteredRecords} />}
+      
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
       <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/50">
         <h3 className="font-semibold text-gray-800 text-lg">Transaction Ledger</h3>
         
@@ -245,6 +250,7 @@ export function TuckshopList({ records }: Props) {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

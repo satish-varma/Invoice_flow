@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { TuckshopDashboard } from '@/components/newrelic/tuckshop/tuckshop-dashboard';
+
 import { TuckshopForm } from '@/components/newrelic/tuckshop/tuckshop-form';
 import { TuckshopList } from '@/components/newrelic/tuckshop/tuckshop-list';
 import { subscribeToTuckshopRecords, NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
@@ -90,10 +90,8 @@ export default function TuckshopPage() {
         </div>
       ) : (
         <>
-          {role === 'admin' && <TuckshopDashboard records={records} />}
-          
           <div className="w-full">
-            <TuckshopList records={records} />
+            <TuckshopList records={records} showDashboard={role === 'admin'} />
           </div>
         </>
       )}

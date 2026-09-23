@@ -3,23 +3,30 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { saveTuckshopRecord, NewRelicTuckshopRecord, TuckshopType, TuckshopCategory } from '@/services/newrelicTuckshopService';
-import { PlusCircle, Loader2 } from 'lucide-react';
+import { saveTuckshopRecord, NewRelicTuckshopRecord, TuckshopCategory } from '@/services/newrelicTuckshopService';
+import { PlusCircle, Loader2, IndianRupee, TrendingDown } from 'lucide-react';
 
 export function TuckshopForm() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'expense' | 'sale'>('expense');
 
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [location, setLocation] = useState<'HYD' | 'BLR'>('BLR');
-  const [type, setType] = useState<TuckshopType>('expense');
+  
+  // Expense states
   const [category, setCategory] = useState<TuckshopCategory>('dosa_batter');
-  const [amount, setAmount] = useState<string>('');
-  const [description, setDescription] = useState<string>('');
+  const [expenseAmount, setExpenseAmount] = useState<string>('');
+  const [expenseDesc, setExpenseDesc] = useState<string>('');
+  
+  // Sale states
+  const [saleAmount, setSaleAmount] = useState<string>('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const amount = activeTab === 'expense' ? expenseAmount : saleAmount;
+    
     if (!amount || Number(amount) <= 0) {
       toast({
         variant: 'destructive',
@@ -34,19 +41,22 @@ export function TuckshopForm() {
       const record: Partial<NewRelicTuckshopRecord> = {
         date,
         location,
-        type,
-        category: type === 'sale' ? 'sales' : category,
+        type: activeTab,
+        category: activeTab === 'sale' ? 'sales' : category,
         amount: Number(amount),
-        description: description.trim() || undefined,
+        description: activeTab === 'expense' ? (expenseDesc.trim() || undefined) : 'Daily Total Sale',
       };
 
       await saveTuckshopRecord(record, user?.email || null);
       toast({ title: 'Record saved successfully' });
       
       // Reset form
-      setAmount('');
-      setDescription('');
-      if (type === 'sale') setType('expense');
+      if (activeTab === 'expense') {
+        setExpenseAmount('');
+        setExpenseDesc('');
+      } else {
+        setSaleAmount('');
+      }
     } catch (err) {
       console.error(err);
       toast({
@@ -61,13 +71,34 @@ export function TuckshopForm() {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center gap-2">
-        <PlusCircle className="h-5 w-5 text-[#3b2fc9]" />
-        <h2 className="text-lg font-bold text-gray-800">Add New Record</h2>
+      {/* Tabs Header */}
+      <div className="flex border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('expense')}
+          className={`flex-1 py-4 flex items-center justify-center gap-2 text-sm font-semibold transition-colors ${
+            activeTab === 'expense' 
+              ? 'bg-[#3b2fc9]/5 text-[#3b2fc9] border-b-2 border-[#3b2fc9]' 
+              : 'text-gray-500 hover:bg-gray-50'
+          }`}
+        >
+          <TrendingDown className="h-4 w-4" />
+          Log Expense
+        </button>
+        <button
+          onClick={() => setActiveTab('sale')}
+          className={`flex-1 py-4 flex items-center justify-center gap-2 text-sm font-semibold transition-colors ${
+            activeTab === 'sale' 
+              ? 'bg-green-50 text-green-600 border-b-2 border-green-600' 
+              : 'text-gray-500 hover:bg-gray-50'
+          }`}
+        >
+          <IndianRupee className="h-4 w-4" />
+          Log Daily Sale
+        </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-6">
+      <form onSubmit={handleSubmit} className="p-4 sm:p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
           
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Date <span className="text-red-500">*</span></label>
@@ -76,7 +107,7 @@ export function TuckshopForm() {
               required
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
             />
           </div>
 
@@ -85,93 +116,87 @@ export function TuckshopForm() {
             <select
               value={location}
               onChange={(e) => setLocation(e.target.value as 'HYD' | 'BLR')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
             >
               <option value="BLR">Bangalore (BLR)</option>
               <option value="HYD">Hyderabad (HYD)</option>
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Type <span className="text-red-500">*</span></label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="type"
-                  value="expense"
-                  checked={type === 'expense'}
-                  onChange={() => setType('expense')}
-                  className="text-[#3b2fc9] focus:ring-[#3b2fc9]"
-                />
-                <span className="text-sm">Expense</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="type"
-                  value="sale"
-                  checked={type === 'sale'}
-                  onChange={() => setType('sale')}
-                  className="text-green-600 focus:ring-green-600"
-                />
-                <span className="text-sm">Sale (Revenue)</span>
-              </label>
-            </div>
-          </div>
+          {activeTab === 'expense' ? (
+            <>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Expense Category <span className="text-red-500">*</span></label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as TuckshopCategory)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
+                >
+                  <option value="dosa_batter">Dosa Batter</option>
+                  <option value="bread">Bread</option>
+                  <option value="fruits">Fruits</option>
+                  <option value="groceries">Groceries</option>
+                  <option value="cutlery">Cutlery</option>
+                  <option value="other">Other Expense</option>
+                </select>
+              </div>
 
-          {type === 'expense' && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Category <span className="text-red-500">*</span></label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as TuckshopCategory)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
-              >
-                <option value="dosa_batter">Dosa Batter</option>
-                <option value="bread">Bread</option>
-                <option value="fruits">Fruits</option>
-                <option value="groceries">Groceries</option>
-                <option value="cutlery">Cutlery</option>
-                <option value="other">Other Expense</option>
-              </select>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Amount (₹) <span className="text-red-500">*</span></label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={expenseAmount}
+                  onChange={(e) => setExpenseAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Notes / Description</label>
+                <input
+                  type="text"
+                  value={expenseDesc}
+                  onChange={(e) => setExpenseDesc(e.target.value)}
+                  placeholder="Optional notes..."
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Total Daily Sale (₹) <span className="text-red-500">*</span></label>
+              <input
+                type="number"
+                required
+                min="0"
+                step="0.01"
+                value={saleAmount}
+                onChange={(e) => setSaleAmount(e.target.value)}
+                placeholder="0.00"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600/20 focus:border-green-600"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Enter the complete total sales collected for the selected date and location.
+              </p>
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Amount (₹) <span className="text-red-500">*</span></label>
-            <input
-              type="number"
-              required
-              min="0"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Notes / Description</label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional notes..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
-            />
-          </div>
         </div>
 
         <div className="flex justify-end border-t border-gray-100 pt-5">
           <button
             type="submit"
             disabled={isSaving}
-            className="px-6 py-2 bg-[#3b2fc9] text-white font-medium rounded-lg hover:bg-[#2a2296] disabled:opacity-70 flex items-center gap-2"
+            className={`px-6 py-2 text-white text-sm font-medium rounded-lg disabled:opacity-70 flex items-center gap-2 transition-colors ${
+              activeTab === 'sale' ? 'bg-green-600 hover:bg-green-700' : 'bg-[#3b2fc9] hover:bg-[#2a2296]'
+            }`}
           >
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Save Record
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
+            {activeTab === 'sale' ? 'Record Sale' : 'Save Expense'}
           </button>
         </div>
       </form>

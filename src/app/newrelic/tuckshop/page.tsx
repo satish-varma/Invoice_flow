@@ -6,8 +6,10 @@ import { TuckshopForm } from '@/components/newrelic/tuckshop/tuckshop-form';
 import { TuckshopList } from '@/components/newrelic/tuckshop/tuckshop-list';
 import { subscribeToTuckshopRecords, NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function TuckshopPage() {
+  const { role } = useAuth();
   const [records, setRecords] = useState<NewRelicTuckshopRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -37,7 +39,7 @@ export default function TuckshopPage() {
         </div>
       ) : (
         <>
-          <TuckshopDashboard records={records} />
+          {role === 'admin' && <TuckshopDashboard records={records} />}
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-4">

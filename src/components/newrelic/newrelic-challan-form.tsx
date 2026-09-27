@@ -722,11 +722,19 @@ export function NewRelicChallanForm({
             <div className="space-y-1 sm:space-y-0">
               <Label className="text-xs text-gray-500 sm:hidden">Brand Name</Label>
               <Input
-                {...register(`lineItems.${index}.brandName`)}
+                {...register(`lineItems.${index}.brandName`, {
+                  onChange: () => {
+                    // Reset dependent fields when brand changes
+                    setValue(`lineItems.${index}.itemName`, '');
+                    setValue(`lineItems.${index}.mrp`, undefined);
+                    setValue(`lineItems.${index}.procurementCost`, undefined);
+                  },
+                })}
                 list="newrelic-brand-list"
                 placeholder="e.g. Happilo"
                 className={cn(errors.lineItems?.[index]?.brandName && 'border-red-400')}
               />
+
               {errors.lineItems?.[index]?.brandName && (
                 <p className="text-xs text-red-500 mt-0.5">
                   {errors.lineItems[index]?.brandName?.message}

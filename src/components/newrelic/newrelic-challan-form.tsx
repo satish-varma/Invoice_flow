@@ -36,7 +36,7 @@ import {
   checkDuplicateDcNumber,
 } from '@/services/newrelicChallanService';
 import { getCatalogItems, CatalogItem } from '@/services/newrelicCatalogService';
-import { getPricingItems, buildPricingMap } from '@/services/newrelicPricingService';
+import { getPricingItems, buildPricingMap, PricingItem } from '@/services/newrelicPricingService';
 import {
   parseUploadedInvoiceFile,
   parseSampleInvoice,
@@ -110,6 +110,7 @@ export function NewRelicChallanForm({
   const [selectedSample, setSelectedSample] = useState<string>('');
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [pricingMap, setPricingMap] = useState<Map<string, number>>(new Map());
+  const [pricingItems, setPricingItems] = useState<PricingItem[]>([]);
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const hasBackfilledPCost = useRef(false); // ensure backfill only fires once
   const [showSignedCopyModal, setShowSignedCopyModal] = useState(false);
@@ -164,11 +165,11 @@ export function NewRelicChallanForm({
     getCatalogItems().then((items) => setCatalog(items));
   }, []);
 
-  /* ── Load Pricing Map for P.Cost auto-fill ── */
+  /* ── Load Pricing Map for P.Cost + MRP auto-fill ── */
   useEffect(() => {
     if (isAdmin) {
-      // Load pricing map for both new and edit mode — used for auto-fill when field is empty
       getPricingItems(watchedLocation).then((items) => {
+        setPricingItems(items);
         setPricingMap(buildPricingMap(items));
       });
     }
@@ -180,7 +181,7 @@ export function NewRelicChallanForm({
     if (!isAdmin || pricingMap.size === 0 || hasBackfilledPCost.current) return;
     const items = watchedLineItems;
     if (!items || items.length === 0) return;
-    hasBackfilledPCost.current = true; // mark as done before setValue calls
+    hasBackfilledPCost.current = true;
     items.forEach((item, index) => {
       const cost = Number(item.procurementCost);
       if (!cost || cost === 0) {
@@ -191,6 +192,20 @@ export function NewRelicChallanForm({
         const priceFromMap = pricingMap.get(key);
         if (priceFromMap !== undefined) {
           setValue(`lineItems.${index}.procurementCost`, priceFromMap);
+        }
+      }
+      // Also backfill MRP if empty
+      const mrp = Number(item.mrp);
+      if (!mrp || mrp === 0) {
+        const brand = (item.brandName || '').trim().toLowerCase();
+        const name = (item.itemName || '').trim().toLowerCase();
+        if (!brand || !name) return;
+        const key = `${brand}__${name}`;
+        const entry = pricingItems.find(p =>
+          p.brandName.toLowerCase() === brand && p.itemName.toLowerCase() === name
+        );
+        if (entry?.mrp) {
+          setValue(`lineItems.${index}.mrp`, entry.mrp);
         }
       }
     });
@@ -328,6 +343,18 @@ export function NewRelicChallanForm({
       if (match.defaultQuantity) {
         setValue(`lineItems.${index}.quantity`, match.defaultQuantity);
       }
+      // Auto-fill MRP from pricing map — only when field is empty
+      const mrpKey = `${match.brandName.trim().toLowerCase()}__${selectedItemName.trim().toLowerCase()}`;
+      const pricingEntry = pricingItems.find(p =>
+        p.brandName.toLowerCase() === match.brandName.toLowerCase() &&
+        p.itemName.toLowerCase() === selectedItemName.trim().toLowerCase()
+      );
+      if (pricingEntry) {
+        const currentMrp = watchedLineItems?.[index]?.mrp;
+        if (!currentMrp || Number(currentMrp) === 0) {
+          setValue(`lineItems.${index}.mrp`, pricingEntry.mrp);
+        }
+      }
       // Auto-fill P.Cost from pricing map — only when field is empty (never overwrite saved values)
       if (isAdmin) {
         const currentCost = watchedLineItems?.[index]?.procurementCost;
@@ -339,6 +366,7 @@ export function NewRelicChallanForm({
           }
         }
       }
+
     } else if (isAdmin) {
       // Also try matching just by item name across all brands in the pricing map
       const currentCost = watchedLineItems?.[index]?.procurementCost;

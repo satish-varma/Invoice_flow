@@ -356,13 +356,36 @@ export default function StockRequestPage() {
             </table>
           </div>
           
-          <button
-            type="button"
-            onClick={() => append({ brandName: '', itemName: '', orderType: 'cases', caseSize: 1, quantity: 1, totalUnits: 1 })}
-            className="flex items-center gap-1.5 text-sm text-[#3b2fc9] font-medium hover:text-[#2f25a8] px-2"
-          >
-            <Plus className="h-4 w-4" /> Add Row
-          </button>
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              type="button"
+              onClick={() => append({ brandName: '', itemName: '', orderType: 'cases', caseSize: 1, quantity: 1, totalUnits: 1 })}
+              className="flex items-center gap-1.5 text-sm text-[#3b2fc9] font-medium hover:text-[#2f25a8] px-2"
+            >
+              <Plus className="h-4 w-4" /> Add Row
+            </button>
+            <button
+              type="button"
+              onClick={() => append(Array(2).fill({ brandName: '', itemName: '', orderType: 'cases', caseSize: 1, quantity: 1, totalUnits: 1 }))}
+              className="text-sm text-gray-500 font-medium hover:text-[#3b2fc9] px-2"
+            >
+              +2 Rows
+            </button>
+            <button
+              type="button"
+              onClick={() => append(Array(3).fill({ brandName: '', itemName: '', orderType: 'cases', caseSize: 1, quantity: 1, totalUnits: 1 }))}
+              className="text-sm text-gray-500 font-medium hover:text-[#3b2fc9] px-2"
+            >
+              +3 Rows
+            </button>
+            <button
+              type="button"
+              onClick={() => append(Array(5).fill({ brandName: '', itemName: '', orderType: 'cases', caseSize: 1, quantity: 1, totalUnits: 1 }))}
+              className="text-sm text-gray-500 font-medium hover:text-[#3b2fc9] px-2"
+            >
+              +5 Rows
+            </button>
+          </div>
         </div>
 
         {errors.lineItems?.root && (

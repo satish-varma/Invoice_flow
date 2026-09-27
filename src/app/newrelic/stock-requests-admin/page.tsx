@@ -4,11 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getStockRequests, updateStockRequestStatus, deleteStockRequest, updateStockRequestFulfillment } from '@/services/newrelicStockRequestService';
 import { StockRequest } from '@/types/stockRequest';
-import { Check, Download, Trash2, MapPin, Calendar, Clock, CheckCircle, User } from 'lucide-react';
+import { Check, Download, Trash2, MapPin, Calendar, Clock, CheckCircle, User, FileText } from 'lucide-react';
 import { format } from 'date-fns';
+import { useRouter } from 'next/navigation';
 
 export default function StockRequestsAdminPage() {
   const { role } = useAuth();
+  const router = useRouter();
   const [requests, setRequests] = useState<StockRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterLocation, setFilterLocation] = useState<'all' | 'hyderabad' | 'bangalore'>('all');
@@ -88,6 +90,39 @@ export default function StockRequestsAdminPage() {
     } catch (e) {
       alert('Failed to save fulfillment');
     }
+  };
+
+  const handleCreateChallan = (req: StockRequest) => {
+    const draft = {
+      location: req.location,
+      dcDate: new Date().toISOString(),
+      dcNumber: '',
+      lineItems: req.lineItems.map(item => {
+        const qty = item.fulfilledQuantity ?? item.quantity;
+        const totalValue = qty * (item.mrp || 0);
+        return {
+          brandName: item.brandName,
+          itemName: item.itemName,
+          quantity: qty,
+          unitValue: item.mrp || 0,
+          totalValue: totalValue,
+          isFreeItem: false,
+          hsnCode: ''
+        };
+      }),
+      amount: req.lineItems.reduce((acc, item) => {
+        const qty = item.fulfilledQuantity ?? item.quantity;
+        return acc + (qty * (item.mrp || 0));
+      }, 0),
+      discount: 0,
+      freight: 0,
+      totalAmount: req.lineItems.reduce((acc, item) => {
+        const qty = item.fulfilledQuantity ?? item.quantity;
+        return acc + (qty * (item.mrp || 0));
+      }, 0),
+    };
+    sessionStorage.setItem('challanDraft', JSON.stringify(draft));
+    router.push('/newrelic');
   };
 
   const handleExport = () => {
@@ -250,6 +285,15 @@ export default function StockRequestsAdminPage() {
                       className="bg-gray-100 text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                     >
                       Undo Fulfill
+                    </button>
+                  )}
+                  {(req.status === 'FULFILLED' || req.status === 'PARTIALLY_FULFILLED') && (
+                    <button
+                      onClick={() => handleCreateChallan(req)}
+                      className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors flex items-center gap-1"
+                      title="Convert to Delivery Challan"
+                    >
+                      <FileText className="h-4 w-4" /> Create Challan
                     </button>
                   )}
                   <button

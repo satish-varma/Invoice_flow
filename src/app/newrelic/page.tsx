@@ -56,6 +56,18 @@ export default function NewRelicPage() {
 
   useEffect(() => {
     fetchData();
+    
+    const draftStr = sessionStorage.getItem('challanDraft');
+    if (draftStr) {
+      try {
+        const draft = JSON.parse(draftStr);
+        setSelectedChallan(draft);
+        setFormKey(`draft-${Date.now()}`);
+        sessionStorage.removeItem('challanDraft');
+      } catch (e) {
+        console.error('Failed to parse challanDraft', e);
+      }
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

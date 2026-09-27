@@ -5,7 +5,8 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { getCatalogItems, saveCatalogItem, deleteCatalogItem } from '@/services/newrelicCatalogService';
-import { Trash2, Plus, Pencil, Check, X, Search, Database } from 'lucide-react';
+import { getAllPricingItems } from '@/services/newrelicPricingService';
+import { Trash2, Plus, Pencil, Check, X, Search, Database, Download, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function CatalogPage() {
@@ -126,6 +127,67 @@ export default function CatalogPage() {
     }
   }
 
+  function handleExportCsv() {
+    const headers = ['Brand Name', 'Item Name', 'Case Size', 'Reference MRP'];
+    const rows = filteredItems.map(i => [
+      `"${i.brandName.replace(/"/g, '""')}"`,
+      `"${i.itemName.replace(/"/g, '""')}"`,
+      i.caseSize || '',
+      i.mrp || ''
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `catalog_export_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  async function handleSyncMrp() {
+    if (!confirm('This will pull MRPs from the Procurement Pricing table to populate the Catalog Reference MRPs. Continue?')) return;
+    setSaving(true);
+    setError('');
+    try {
+      const pricingItems = await getAllPricingItems();
+      
+      const mrpMap = new Map<string, number>();
+      pricingItems.forEach(p => {
+         const key = `${p.brandName.trim().toLowerCase()}__${p.itemName.trim().toLowerCase()}`;
+         if (p.mrp > 0) mrpMap.set(key, p.mrp);
+      });
+
+      let updatedCount = 0;
+      for (const cat of catalog) {
+         const key = `${cat.brandName.trim().toLowerCase()}__${cat.itemName.trim().toLowerCase()}`;
+         const pricingMrp = mrpMap.get(key);
+         if (pricingMrp !== undefined && cat.mrp !== pricingMrp) {
+            await saveCatalogItem({ 
+              brandName: cat.brandName,
+              itemName: cat.itemName,
+              defaultQuantity: cat.defaultQuantity,
+              caseSize: cat.caseSize,
+              mrp: pricingMrp 
+            }, cat.id);
+            updatedCount++;
+         }
+      }
+      
+      if (updatedCount > 0) {
+        const refreshed = await getCatalogItems();
+        setCatalog(refreshed);
+      }
+      alert(`Successfully synced ${updatedCount} items with MRP from the Pricing table!`);
+    } catch(e) {
+      console.error(e);
+      setError('Failed to sync MRPs. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (!role || role !== 'admin') return null;
 
   return (
@@ -141,7 +203,21 @@ export default function CatalogPage() {
             Add, edit, or remove Brand and Item names to clean up duplicate or misspelled dropdown suggestions.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={handleSyncMrp}
+            disabled={saving}
+            className="flex items-center gap-1.5 bg-white border border-gray-300 text-gray-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+          >
+            <RefreshCw className={`h-4 w-4 ${saving ? 'animate-spin' : ''}`} />
+            Sync from Pricing
+          </button>
+          <button
+            onClick={handleExportCsv}
+            className="flex items-center gap-1.5 bg-white border border-gray-300 text-gray-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
+            <Download className="h-4 w-4" /> Export CSV
+          </button>
           <button
             onClick={() => {
               setShowAdd(true);

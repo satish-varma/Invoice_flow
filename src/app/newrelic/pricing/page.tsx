@@ -40,6 +40,7 @@ export default function PricingPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [isSeeding, setIsSeeding] = useState(false);
+  const [isCleaning, setIsCleaning] = useState(false);
   const [seedResult, setSeedResult] = useState<string | null>(null);
 
   // Inline editing
@@ -187,6 +188,37 @@ export default function PricingPage() {
     }
   }
 
+  async function handleCleanPricing() {
+    if (!confirm('This will delete all Pricing items that no longer exist in your Catalog. Continue?')) return;
+    setIsCleaning(true);
+    setError('');
+    setSeedResult(null);
+    try {
+      const validCatalogKeys = new Set(
+        catalog.map(c => `${c.brandName.trim().toLowerCase()}__${c.itemName.trim().toLowerCase()}`)
+      );
+
+      let deletedCount = 0;
+      for (const item of pricingItems) {
+        const key = `${item.brandName.trim().toLowerCase()}__${item.itemName.trim().toLowerCase()}`;
+        if (!validCatalogKeys.has(key)) {
+          await deletePricingItem(item.id!);
+          deletedCount++;
+        }
+      }
+
+      if (deletedCount > 0) {
+        const refreshed = await getAllPricingItems();
+        setPricingItems(refreshed);
+      }
+      setSeedResult(`✓ Cleanup complete! Deleted ${deletedCount} orphaned/duplicate pricing items.`);
+    } catch (e) {
+      setError('Failed to clean up pricing. Please try again.');
+    } finally {
+      setIsCleaning(false);
+    }
+  }
+
   if (!role || role !== 'admin') return null;
 
   const locations: NewRelicLocation[] = ['hyderabad', 'bangalore'];
@@ -222,11 +254,20 @@ export default function PricingPage() {
                 setIsSeeding(false);
               }
             }}
-            disabled={isSeeding || saving}
+            disabled={isSeeding || isCleaning || saving}
             className="flex items-center gap-1.5 bg-white border border-gray-300 text-gray-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
           >
             <RefreshCw className={`h-4 w-4 ${isSeeding ? 'animate-spin' : ''}`} />
             {isSeeding ? 'Seeding…' : 'Seed from DC History'}
+          </button>
+          
+          <button
+            onClick={handleCleanPricing}
+            disabled={isSeeding || isCleaning || saving}
+            className="flex items-center gap-1.5 bg-white border border-red-200 text-red-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-50 disabled:opacity-50 transition-colors"
+          >
+            <Trash2 className={`h-4 w-4 ${isCleaning ? 'animate-spin' : ''}`} />
+            {isCleaning ? 'Cleaning…' : 'Clean Orphaned Data'}
           </button>
           <button
             onClick={() => { setShowAdd(true); setNewRow(emptyEdit(activeLocation)); setError(''); setSeedResult(null); }}

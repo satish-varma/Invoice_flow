@@ -36,6 +36,7 @@ import {
   checkDuplicateDcNumber,
 } from '@/services/newrelicChallanService';
 import { getCatalogItems, CatalogItem } from '@/services/newrelicCatalogService';
+import { getPricingItems, buildPricingMap } from '@/services/newrelicPricingService';
 import {
   parseUploadedInvoiceFile,
   parseSampleInvoice,
@@ -108,6 +109,7 @@ export function NewRelicChallanForm({
   const [isParsingInvoice, setIsParsingInvoice] = useState(false);
   const [selectedSample, setSelectedSample] = useState<string>('');
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [pricingMap, setPricingMap] = useState<Map<string, number>>(new Map());
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const [showSignedCopyModal, setShowSignedCopyModal] = useState(false);
   const [showGoodsReceivedModal, setShowGoodsReceivedModal] = useState(false);
@@ -160,6 +162,16 @@ export function NewRelicChallanForm({
   useEffect(() => {
     getCatalogItems().then((items) => setCatalog(items));
   }, []);
+
+  /* ── Load Pricing Map for P.Cost auto-fill (new DCs only) ── */
+  useEffect(() => {
+    if (!initialData?.id && isAdmin) {
+      // Only auto-fill P.Cost on brand-new DCs, never on edit
+      getPricingItems(watchedLocation).then((items) => {
+        setPricingMap(buildPricingMap(items));
+      });
+    }
+  }, [watchedLocation, initialData?.id, isAdmin]);
 
   /* ── Auto-suggest DC Number when location changes and DC field is empty ── */
   useEffect(() => {
@@ -291,6 +303,22 @@ export function NewRelicChallanForm({
       }
       if (match.defaultQuantity) {
         setValue(`lineItems.${index}.quantity`, match.defaultQuantity);
+      }
+      // Auto-fill P.Cost from pricing map (new DCs only — edit mode keeps saved value)
+      if (!initialData?.id && isAdmin) {
+        const key = `${match.brandName.trim().toLowerCase()}__${selectedItemName.trim().toLowerCase()}`;
+        const cost = pricingMap.get(key);
+        if (cost !== undefined) {
+          setValue(`lineItems.${index}.procurementCost`, cost);
+        }
+      }
+    } else if (!initialData?.id && isAdmin) {
+      // Also try matching just by item name across all brands in the pricing map
+      const currentBrand = watchedLineItems?.[index]?.brandName?.trim().toLowerCase() || '';
+      const key = `${currentBrand}__${selectedItemName.trim().toLowerCase()}`;
+      const cost = pricingMap.get(key);
+      if (cost !== undefined) {
+        setValue(`lineItems.${index}.procurementCost`, cost);
       }
     }
   };

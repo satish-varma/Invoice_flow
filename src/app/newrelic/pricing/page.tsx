@@ -11,9 +11,10 @@ import {
   deletePricingItem,
   calcPurchaseCost,
   getAllPricingItems,
+  seedPricingFromChallans,
 } from '@/services/newrelicPricingService';
 import { NewRelicLocation, NEWRELIC_LOCATIONS } from '@/services/newrelicChallanService';
-import { Trash2, Plus, Pencil, Check, X, Search, TrendingUp } from 'lucide-react';
+import { Trash2, Plus, Pencil, Check, X, Search, TrendingUp, RefreshCw } from 'lucide-react';
 
 type EditRow = {
   brandName: string;
@@ -44,6 +45,8 @@ export default function PricingPage() {
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState<string | null>(null);
 
   // Inline editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -207,13 +210,46 @@ export default function PricingPage() {
             Set MRP and discount per item per location. These prices auto-fill P.Cost when creating new DCs.
           </p>
         </div>
-        <button
-          onClick={() => { setShowAdd(true); setNewRow(emptyEdit(activeLocation)); setError(''); }}
-          className="flex items-center gap-1.5 bg-[#3b2fc9] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#2f25a8] transition-colors"
-        >
-          <Plus className="h-4 w-4" /> Add Pricing Row
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={async () => {
+              if (!confirm('This will populate the Pricing table from your existing DC history (latest data wins). Continue?')) return;
+              setIsSeeding(true);
+              setSeedResult(null);
+              setError('');
+              try {
+                const result = await seedPricingFromChallans();
+                const refreshed = await getAllPricingItems();
+                setPricingItems(refreshed);
+                setSeedResult(`✓ Seeded ${result.seeded} item(s) from DC history (${result.skipped} already covered by newer DCs).`);
+              } catch {
+                setError('Seeding failed. Please try again.');
+              } finally {
+                setIsSeeding(false);
+              }
+            }}
+            disabled={isSeeding || saving}
+            className="flex items-center gap-1.5 bg-white border border-gray-300 text-gray-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+          >
+            <RefreshCw className={`h-4 w-4 ${isSeeding ? 'animate-spin' : ''}`} />
+            {isSeeding ? 'Seeding…' : 'Seed from DC History'}
+          </button>
+          <button
+            onClick={() => { setShowAdd(true); setNewRow(emptyEdit(activeLocation)); setError(''); setSeedResult(null); }}
+            className="flex items-center gap-1.5 bg-[#3b2fc9] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#2f25a8] transition-colors"
+          >
+            <Plus className="h-4 w-4" /> Add Pricing Row
+          </button>
+        </div>
       </div>
+
+      {/* Seed result banner */}
+      {seedResult && (
+        <div className="mb-3 px-3 py-2 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm flex items-center justify-between">
+          <span>{seedResult}</span>
+          <button onClick={() => setSeedResult(null)} className="ml-2 text-green-500 hover:text-green-700"><X className="h-3.5 w-3.5" /></button>
+        </div>
+      )}
 
       {/* Location Tabs */}
       <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">

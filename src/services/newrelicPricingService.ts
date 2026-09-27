@@ -83,3 +83,72 @@ export function buildPricingMap(items: PricingItem[]): Map<string, number> {
   }
   return map;
 }
+
+/**
+ * Seeds the newrelic_pricing collection from existing challan history.
+ * Reads all DCs ordered newest-first; latest data wins — skips items already seen.
+ * Only seeds entries where procurementCost > 0 on the DC line item.
+ */
+export async function seedPricingFromChallans(): Promise<{ seeded: number; skipped: number }> {
+  // Lazy import to avoid circular deps at module level
+  const { db } = await import('@/lib/firebase');
+  const { collection, getDocs, query, orderBy, setDoc, doc, serverTimestamp } = await import('firebase/firestore');
+
+  const CHALLANS_COLLECTION = 'newrelicChallans';
+  const seen = new Set<string>(); // "brand__item__location" — track which we've already seeded
+  let seeded = 0;
+  let skipped = 0;
+
+  try {
+    const snap = await getDocs(
+      query(collection(db, CHALLANS_COLLECTION), orderBy('createdAt', 'desc'))
+    );
+
+    for (const docSnap of snap.docs) {
+      const data = docSnap.data();
+      const location = data.location as NewRelicLocation;
+      if (!location || !data.lineItems || !Array.isArray(data.lineItems)) continue;
+
+      for (const item of data.lineItems) {
+        const brand = (item.brandName || '').trim();
+        const name = (item.itemName || '').trim();
+        const pCost = Number(item.procurementCost);
+        const mrp = Number(item.mrp);
+
+        if (!brand || !name || !(pCost > 0)) continue;
+
+        const seenKey = `${brand.toLowerCase()}__${name.toLowerCase()}__${location}`;
+        if (seen.has(seenKey)) {
+          skipped++;
+          continue; // Later (older) DC — latest already processed
+        }
+        seen.add(seenKey);
+
+        const discountPercent =
+          mrp > 0 ? parseFloat(((1 - pCost / mrp) * 100).toFixed(2)) : 0;
+
+        const docId = getPricingDocId(brand, name, location);
+        await setDoc(
+          doc(db, PRICING_COLLECTION, docId),
+          {
+            brandName: brand,
+            itemName: name,
+            location,
+            mrp: mrp || pCost, // fallback mrp to pCost if not available
+            discountPercent,
+            purchaseCost: pCost,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+        seeded++;
+      }
+    }
+  } catch (e) {
+    console.error('Error seeding pricing from challans:', e);
+    throw e;
+  }
+
+  return { seeded, skipped };
+}
+

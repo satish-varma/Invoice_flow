@@ -163,15 +163,15 @@ export function NewRelicChallanForm({
     getCatalogItems().then((items) => setCatalog(items));
   }, []);
 
-  /* ── Load Pricing Map for P.Cost auto-fill (new DCs only) ── */
+  /* ── Load Pricing Map for P.Cost auto-fill ── */
   useEffect(() => {
-    if (!initialData?.id && isAdmin) {
-      // Only auto-fill P.Cost on brand-new DCs, never on edit
+    if (isAdmin) {
+      // Load pricing map for both new and edit mode — used for auto-fill when field is empty
       getPricingItems(watchedLocation).then((items) => {
         setPricingMap(buildPricingMap(items));
       });
     }
-  }, [watchedLocation, initialData?.id, isAdmin]);
+  }, [watchedLocation, isAdmin]);
 
   /* ── Auto-suggest DC Number when location changes and DC field is empty ── */
   useEffect(() => {
@@ -304,23 +304,30 @@ export function NewRelicChallanForm({
       if (match.defaultQuantity) {
         setValue(`lineItems.${index}.quantity`, match.defaultQuantity);
       }
-      // Auto-fill P.Cost from pricing map (new DCs only — edit mode keeps saved value)
-      if (!initialData?.id && isAdmin) {
-        const key = `${match.brandName.trim().toLowerCase()}__${selectedItemName.trim().toLowerCase()}`;
+      // Auto-fill P.Cost from pricing map — only when field is empty (never overwrite saved values)
+      if (isAdmin) {
+        const currentCost = watchedLineItems?.[index]?.procurementCost;
+        if (!currentCost || Number(currentCost) === 0) {
+          const key = `${match.brandName.trim().toLowerCase()}__${selectedItemName.trim().toLowerCase()}`;
+          const cost = pricingMap.get(key);
+          if (cost !== undefined) {
+            setValue(`lineItems.${index}.procurementCost`, cost);
+          }
+        }
+      }
+    } else if (isAdmin) {
+      // Also try matching just by item name across all brands in the pricing map
+      const currentCost = watchedLineItems?.[index]?.procurementCost;
+      if (!currentCost || Number(currentCost) === 0) {
+        const currentBrand = watchedLineItems?.[index]?.brandName?.trim().toLowerCase() || '';
+        const key = `${currentBrand}__${selectedItemName.trim().toLowerCase()}`;
         const cost = pricingMap.get(key);
         if (cost !== undefined) {
           setValue(`lineItems.${index}.procurementCost`, cost);
         }
       }
-    } else if (!initialData?.id && isAdmin) {
-      // Also try matching just by item name across all brands in the pricing map
-      const currentBrand = watchedLineItems?.[index]?.brandName?.trim().toLowerCase() || '';
-      const key = `${currentBrand}__${selectedItemName.trim().toLowerCase()}`;
-      const cost = pricingMap.get(key);
-      if (cost !== undefined) {
-        setValue(`lineItems.${index}.procurementCost`, cost);
-      }
     }
+
   };
 
   const onSubmit = async (values: FormValues, shouldDownload = true) => {

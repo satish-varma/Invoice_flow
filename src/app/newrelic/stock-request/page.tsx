@@ -266,6 +266,8 @@ export default function StockRequestPage() {
                   return (
                     <tr key={field.id} className="hover:bg-gray-50/50">
                       <td className="px-2 py-2">
+                        <input type="hidden" {...register(`lineItems.${index}.mrp` as const)} />
+                        <input type="hidden" {...register(`lineItems.${index}.pCost` as const)} />
                         <input
                           list={`brands-${index}`}
                           {...register(`lineItems.${index}.brandName` as const)}

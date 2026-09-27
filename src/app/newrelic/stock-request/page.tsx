@@ -136,14 +136,14 @@ export default function StockRequestPage() {
     try {
       setIsSubmitting(true);
       
-      const payload = {
+      const payload = JSON.parse(JSON.stringify({
         location: data.location,
         requestDate: data.requestDate.toISOString(),
         status: data.status,
         lineItems: data.lineItems,
         notes: data.notes,
         createdBy: user?.email || user?.id || 'Unknown',
-      };
+      }));
       
       await saveStockRequest(payload, data.id);
       setSuccess(true);

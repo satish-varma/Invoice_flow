@@ -501,6 +501,21 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                     setShipToAddress(bestContact.address || '');
                     if (bestContact.gst) setShipToGst(bestContact.gst);
                     setSelectedShipToId(`${bestContact.id}|shipTo`);
+
+                    // Populating taxes from the identified ship-to contact
+                    const taxes = bestContact.taxes;
+                    if (taxes && Array.isArray(taxes) && taxes.length > 0) {
+                        const globalTaxList = settings?.customTaxes && settings.customTaxes.length > 0 ? settings.customTaxes : availableTaxes;
+                        const taxesToApply = globalTaxList
+                            .filter(taxDef => taxes.includes(taxDef.id))
+                            .map((taxDef, index) => ({
+                                id: Date.now() + index,
+                                name: taxDef.name,
+                                rate: taxDef.rate,
+                                amount: 0,
+                            }));
+                        setAppliedTaxes(taxesToApply);
+                    }
                 } else {
                     // Extract just the first line as company name, rest as address
                     const lines = result.deliverTo.split('\n');

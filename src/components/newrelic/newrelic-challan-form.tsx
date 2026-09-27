@@ -173,6 +173,28 @@ export function NewRelicChallanForm({
     }
   }, [watchedLocation, isAdmin]);
 
+  /* ── In edit mode, backfill empty P.Cost cells once the pricing map is ready ── */
+  useEffect(() => {
+    if (!isAdmin || pricingMap.size === 0) return;
+    const items = watchedLineItems;
+    if (!items || items.length === 0) return;
+    items.forEach((item, index) => {
+      const cost = Number(item.procurementCost);
+      if (!cost || cost === 0) {
+        const brand = (item.brandName || '').trim().toLowerCase();
+        const name = (item.itemName || '').trim().toLowerCase();
+        if (!brand || !name) return;
+        const key = `${brand}__${name}`;
+        const priceFromMap = pricingMap.get(key);
+        if (priceFromMap !== undefined) {
+          setValue(`lineItems.${index}.procurementCost`, priceFromMap);
+        }
+      }
+    });
+  // Run whenever the pricing map loads — not on every item change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pricingMap]);
+
   /* ── Auto-suggest DC Number when location changes and DC field is empty ── */
   useEffect(() => {
     // Fires for new challans AND duplicates (both have no id).

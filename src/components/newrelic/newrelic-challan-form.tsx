@@ -726,6 +726,7 @@ export function NewRelicChallanForm({
                   onChange: () => {
                     // Reset dependent fields when brand changes
                     setValue(`lineItems.${index}.itemName`, '');
+                    setValue(`lineItems.${index}.quantity`, 1);
                     setValue(`lineItems.${index}.mrp`, undefined);
                     setValue(`lineItems.${index}.procurementCost`, undefined);
                   },

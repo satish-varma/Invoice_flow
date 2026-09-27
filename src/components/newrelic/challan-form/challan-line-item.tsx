@@ -71,6 +71,7 @@ export function ChallanLineItem({
           list="newrelic-brand-list"
           placeholder="e.g. Happilo"
           autoComplete="off"
+          onFocus={(e) => e.target.select()}
           className={cn(errors.lineItems?.[index]?.brandName && 'border-red-400')}
         />
 
@@ -96,6 +97,7 @@ export function ChallanLineItem({
           list={datalistId}
           placeholder="e.g. Chilli garlic makhana"
           autoComplete="off"
+          onFocus={(e) => e.target.select()}
           className={cn(errors.lineItems?.[index]?.itemName && 'border-red-400')}
         />
         {errors.lineItems?.[index]?.itemName && (

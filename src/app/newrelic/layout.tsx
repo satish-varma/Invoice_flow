@@ -80,16 +80,28 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
             Tuckshop Tracking
           </Link>
           {role === 'admin' && (
-            <Link 
-              href="/newrelic/pricing" 
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                pathname === '/newrelic/pricing' 
-                  ? 'border-[#3b2fc9] text-[#3b2fc9]' 
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Pricing
-            </Link>
+            <>
+              <Link 
+                href="/newrelic/pricing" 
+                className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+                  pathname === '/newrelic/pricing' 
+                    ? 'border-[#3b2fc9] text-[#3b2fc9]' 
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Pricing
+              </Link>
+              <Link 
+                href="/newrelic/catalog" 
+                className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+                  pathname === '/newrelic/catalog' 
+                    ? 'border-[#3b2fc9] text-[#3b2fc9]' 
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Catalog
+              </Link>
+            </>
           )}
         </div>
       </div>

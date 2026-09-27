@@ -7,6 +7,7 @@ import {
   writeBatch,
   query,
   limit,
+  deleteDoc,
 } from 'firebase/firestore';
 
 import { CatalogItem } from '@/types/challan';
@@ -202,6 +203,30 @@ export async function saveCatalogItems(
     console.error('Error saving catalog items:', error);
   }
 }
+
+export async function saveCatalogItem(item: Omit<CatalogItem, 'id'>, id?: string): Promise<void> {
+  try {
+    const docId = id || `${item.brandName.trim().toLowerCase()}_${item.itemName
+      .trim()
+      .toLowerCase()}`.replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+    
+    const docRef = doc(db, CATALOG_COLLECTION, docId);
+    await setDoc(docRef, item, { merge: true });
+  } catch (error) {
+    console.error('Error saving catalog item:', error);
+    throw error;
+  }
+}
+
+export async function deleteCatalogItem(id: string): Promise<void> {
+  try {
+    await deleteDoc(doc(db, CATALOG_COLLECTION, id));
+  } catch (error) {
+    console.error('Error deleting catalog item:', error);
+    throw error;
+  }
+}
+
 
 export async function seedDefaultCatalog(): Promise<void> {
   try {

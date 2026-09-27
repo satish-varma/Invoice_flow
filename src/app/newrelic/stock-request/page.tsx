@@ -8,10 +8,12 @@ import { useRouter } from 'next/navigation';
 import { stockRequestSchema, StockRequestFormValues, StockRequestItemValues } from '@/types/stockRequest';
 import { getCatalogItems } from '@/services/newrelicCatalogService';
 import { getAllPricingItems } from '@/services/newrelicPricingService';
-import { saveStockRequest } from '@/services/newrelicStockRequestService';
+import { saveStockRequest, getStockRequests } from '@/services/newrelicStockRequestService';
 import { CatalogItem, PricingItem } from '@/types/challan';
-import { Plus, Trash2, CheckCircle, PackageSearch } from 'lucide-react';
+import { StockRequest } from '@/types/stockRequest';
+import { Plus, Trash2, CheckCircle, PackageSearch, List, Copy, Pencil, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 export default function StockRequestPage() {
   const { role, user, email } = useAuth();
@@ -19,6 +21,8 @@ export default function StockRequestPage() {
 
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [pricing, setPricing] = useState<PricingItem[]>([]);
+  const [myRequests, setMyRequests] = useState<StockRequest[]>([]);
+  const [view, setView] = useState<'form' | 'history'>('form');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -51,14 +55,48 @@ export default function StockRequestPage() {
 
   useEffect(() => {
     if (!role) return;
-    Promise.all([getCatalogItems(), getAllPricingItems()]).then(([cat, pri]) => {
+    Promise.all([
+      getCatalogItems(), 
+      getAllPricingItems(),
+      getStockRequests()
+    ]).then(([cat, pri, reqs]) => {
       setCatalog(cat);
       setPricing(pri);
+      
+      // Filter requests created by this user
+      const userIdentifier = email || user?.uid;
+      setMyRequests(reqs.filter(r => r.createdBy === userIdentifier));
     });
-  }, [role]);
+  }, [role, email, user?.uid, success]);
 
   // Derive unique brands for datalist
   const brands = Array.from(new Set(catalog.map(c => c.brandName))).sort();
+
+  const handleEdit = (req: StockRequest) => {
+    reset({
+      id: req.id,
+      location: req.location,
+      requestDate: new Date(req.requestDate),
+      status: req.status,
+      notes: req.notes || '',
+      lineItems: req.lineItems,
+    });
+    setView('form');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDuplicate = (req: StockRequest) => {
+    reset({
+      id: undefined, // Create as new
+      location: req.location,
+      requestDate: new Date(),
+      status: 'PENDING',
+      notes: req.notes || '',
+      lineItems: req.lineItems.map(item => ({ ...item, id: undefined })),
+    });
+    setView('form');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const onSubmit = async (data: StockRequestFormValues) => {
     try {
@@ -73,9 +111,16 @@ export default function StockRequestPage() {
         createdBy: email || user?.uid || 'Unknown',
       };
       
-      await saveStockRequest(payload);
+      await saveStockRequest(payload, data.id);
       setSuccess(true);
-      reset();
+      reset({
+        id: undefined,
+        location: data.location,
+        requestDate: new Date(),
+        status: 'PENDING',
+        lineItems: [{ brandName: '', itemName: '', orderType: 'cases', caseSize: 1, quantity: 1, totalUnits: 1 }],
+        notes: '',
+      });
       setTimeout(() => setSuccess(false), 5000);
     } catch (error) {
       console.error(error);
@@ -89,13 +134,33 @@ export default function StockRequestPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <PackageSearch className="h-6 w-6 text-[#3b2fc9]" />
-            Request Stock
+            Stock Requests
           </h1>
-          <p className="text-gray-500 text-sm mt-1">Submit a stock requirement request to the admin for your location.</p>
+          <p className="text-gray-500 text-sm mt-1">Submit or track your stock requirements to the admin.</p>
+        </div>
+        <div className="flex bg-gray-100 p-1 rounded-lg">
+          <button
+            onClick={() => setView('form')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+              view === 'form' ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            <Plus className="h-4 w-4" /> New Request
+          </button>
+          <button
+            onClick={() => setView('history')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+              view === 'history' ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            <List className="h-4 w-4" /> My Requests
+          </button>
         </div>
       </div>
 
@@ -106,6 +171,7 @@ export default function StockRequestPage() {
         </div>
       )}
 
+      {view === 'form' && (
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
         
         {/* Header Information */}
@@ -309,10 +375,77 @@ export default function StockRequestPage() {
             disabled={isSubmitting || fields.length === 0}
             className="bg-[#3b2fc9] text-white px-6 py-2.5 rounded-lg font-medium hover:bg-[#2f25a8] disabled:opacity-50 transition-colors shadow-sm"
           >
-            {isSubmitting ? 'Submitting...' : 'Submit Request'}
+            {isSubmitting ? 'Submitting...' : watch('id') ? 'Update Request' : 'Submit Request'}
           </button>
         </div>
       </form>
+      )}
+
+      {view === 'history' && (
+        <div className="space-y-4">
+          {myRequests.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-200 border-dashed">
+              You haven't submitted any stock requests yet.
+            </div>
+          ) : (
+            myRequests.map(req => (
+              <div key={req.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex flex-wrap justify-between items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                    <span className="font-medium text-gray-900">{format(new Date(req.requestDate), 'dd MMM yyyy, hh:mm a')}</span>
+                    <span className="capitalize text-gray-600">{req.location}</span>
+                    <div className="flex items-center gap-1.5">
+                      {req.status === 'PENDING' && <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><Clock className="h-3 w-3"/> PENDING</span>}
+                      {req.status === 'FULFILLED' && <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3"/> FULFILLED</span>}
+                      {req.status === 'CANCELLED' && <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><Trash2 className="h-3 w-3"/> CANCELLED</span>}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {req.status === 'PENDING' && (
+                      <button
+                        onClick={() => handleEdit(req)}
+                        className="text-gray-500 hover:text-[#3b2fc9] bg-white border border-gray-200 hover:border-[#3b2fc9] px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
+                      >
+                        <Pencil className="h-3.5 w-3.5" /> Edit
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDuplicate(req)}
+                      className="text-gray-500 hover:text-[#3b2fc9] bg-white border border-gray-200 hover:border-[#3b2fc9] px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
+                    >
+                      <Copy className="h-3.5 w-3.5" /> Duplicate
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 sm:p-6 overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-gray-500 font-medium border-b border-gray-100">
+                      <tr>
+                        <th className="pb-2 pr-4">Item</th>
+                        <th className="pb-2 pr-4">Order Type</th>
+                        <th className="pb-2 pr-4 text-right">Quantity</th>
+                        <th className="pb-2 pr-4 text-right">Total Units</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {req.lineItems.map((item, idx) => (
+                        <tr key={idx}>
+                          <td className="py-2 pr-4"><span className="font-medium text-gray-900">{item.brandName}</span> - {item.itemName}</td>
+                          <td className="py-2 pr-4 capitalize text-gray-600">{item.orderType}</td>
+                          <td className="py-2 pr-4 text-right text-gray-900">{item.quantity} {item.orderType === 'cases' && <span className="text-gray-400 text-xs">(x{item.caseSize})</span>}</td>
+                          <td className="py-2 pr-4 text-right font-medium text-[#3b2fc9]">{item.totalUnits}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

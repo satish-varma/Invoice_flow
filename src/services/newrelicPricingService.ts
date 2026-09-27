@@ -94,7 +94,7 @@ export async function seedPricingFromChallans(): Promise<{ seeded: number; skipp
   const { db } = await import('@/lib/firebase');
   const { collection, getDocs, query, orderBy, setDoc, doc, serverTimestamp } = await import('firebase/firestore');
 
-  const CHALLANS_COLLECTION = 'newrelicChallans';
+  const CHALLANS_COLLECTION = 'newrelic_challans';
   const seen = new Set<string>(); // "brand__item__location" — track which we've already seeded
   let seeded = 0;
   let skipped = 0;

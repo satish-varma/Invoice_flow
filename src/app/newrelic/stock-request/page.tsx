@@ -246,6 +246,7 @@ export default function StockRequestPage() {
                   <th className="px-3 py-2 w-[120px]">Quantity</th>
                   <th className="px-3 py-2 w-[120px]">Total Units</th>
                   <th className="px-3 py-2 w-[100px]">Ref MRP</th>
+                  <th className="px-3 py-2 w-[100px]">P.Cost</th>
                   <th className="px-3 py-2 w-[50px]"></th>
                 </tr>
               </thead>
@@ -257,6 +258,7 @@ export default function StockRequestPage() {
                   const caseSize = lineItems[index]?.caseSize || 1;
                   const qty = lineItems[index]?.quantity || 0;
                   const mrp = lineItems[index]?.mrp;
+                  const pCost = lineItems[index]?.pCost;
                   
                   // Allowed items for the current brand
                   const allowedItems = catalog.filter(c => c.brandName === currentBrand).map(c => c.itemName).sort();
@@ -275,6 +277,7 @@ export default function StockRequestPage() {
                             setValue(`lineItems.${index}.itemName`, '');
                             setValue(`lineItems.${index}.caseSize`, 1);
                             setValue(`lineItems.${index}.mrp`, 0);
+                            setValue(`lineItems.${index}.pCost`, 0);
                             setValue(`lineItems.${index}.quantity`, 1);
                             setValue(`lineItems.${index}.totalUnits`, 1);
                           }}
@@ -307,12 +310,14 @@ export default function StockRequestPage() {
                               }
                             }
                             
-                            // Auto-populate MRP from pricing
+                            // Auto-populate MRP and PCost from pricing
                             const priceMatch = pricing.find(p => p.location === selectedLocation && p.brandName === currentBrand && p.itemName === val);
-                            if (priceMatch && priceMatch.mrp) {
-                              setValue(`lineItems.${index}.mrp`, priceMatch.mrp);
+                            if (priceMatch) {
+                              if (priceMatch.mrp) setValue(`lineItems.${index}.mrp`, priceMatch.mrp);
+                              if (priceMatch.pCost) setValue(`lineItems.${index}.pCost`, priceMatch.pCost);
                             } else if (catMatch && catMatch.mrp) {
                               setValue(`lineItems.${index}.mrp`, catMatch.mrp); // Fallback to catalog ref mrp
+                              setValue(`lineItems.${index}.pCost`, 0);
                             }
                           }}
                           className={cn(
@@ -373,6 +378,9 @@ export default function StockRequestPage() {
                       </td>
                       <td className="px-2 py-2 text-gray-500">
                         {mrp ? `₹${mrp}` : '-'}
+                      </td>
+                      <td className="px-2 py-2 text-gray-500">
+                        {pCost ? `₹${pCost}` : '-'}
                       </td>
                       <td className="px-2 py-2 text-right">
                         <button

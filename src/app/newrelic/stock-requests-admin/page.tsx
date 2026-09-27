@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getStockRequests, updateStockRequestStatus, deleteStockRequest, updateStockRequestFulfillment } from '@/services/newrelicStockRequestService';
 import { StockRequest } from '@/types/stockRequest';
-import { Check, Download, Trash2, MapPin, Calendar, Clock, CheckCircle, User, FileText } from 'lucide-react';
+import { Check, Download, Trash2, MapPin, Calendar, Clock, CheckCircle, User, FileText, IndianRupee } from 'lucide-react';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 
@@ -180,6 +180,16 @@ export default function StockRequestsAdminPage() {
     return true;
   });
 
+  const pendingRequests = requests.filter(r => r.status === 'PENDING');
+  let totalPendingMrp = 0;
+  let totalPendingCost = 0;
+  pendingRequests.forEach(r => {
+    r.lineItems.forEach(item => {
+      totalPendingMrp += (item.mrp || 0) * item.quantity;
+      totalPendingCost += (item.pCost || 0) * item.quantity;
+    });
+  });
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -193,6 +203,27 @@ export default function StockRequestsAdminPage() {
         >
           <Download className="h-4 w-4" /> Export CSV
         </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-500 mb-1">Total Pending Budget (MRP)</p>
+            <p className="text-2xl font-bold text-gray-900">₹{totalPendingMrp.toFixed(2)}</p>
+          </div>
+          <div className="bg-blue-100 p-3 rounded-full text-blue-700">
+            <IndianRupee className="h-6 w-6" />
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-500 mb-1">Total Pending Cost (P.Cost)</p>
+            <p className="text-2xl font-bold text-[#3b2fc9]">₹{totalPendingCost.toFixed(2)}</p>
+          </div>
+          <div className="bg-indigo-100 p-3 rounded-full text-[#3b2fc9]">
+            <IndianRupee className="h-6 w-6" />
+          </div>
+        </div>
       </div>
 
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap gap-4">

@@ -10,6 +10,7 @@ export const stockRequestItemSchema = z.object({
   quantity: z.coerce.number().min(1, 'Quantity must be ≥ 1'),
   totalUnits: z.coerce.number().min(1),
   mrp: z.coerce.number().optional(),
+  pCost: z.coerce.number().optional(),
   fulfilledQuantity: z.coerce.number().optional(),
   fulfilledTotalUnits: z.coerce.number().optional(),
 });
@@ -35,6 +36,7 @@ export interface StockRequestItem {
   quantity: number;
   totalUnits: number;
   mrp?: number;
+  pCost?: number;
   fulfilledQuantity?: number;
   fulfilledTotalUnits?: number;
 }

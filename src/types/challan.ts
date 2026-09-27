@@ -79,6 +79,8 @@ export interface CatalogItem {
   brandName: string;
   itemName: string;
   defaultQuantity: number;
+  caseSize?: number;
+  mrp?: number;
 }
 
 export interface PricingItem {

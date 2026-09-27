@@ -22,11 +22,15 @@ export default function CatalogPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBrand, setEditBrand] = useState('');
   const [editItem, setEditItem] = useState('');
+  const [editCaseSize, setEditCaseSize] = useState<string>('');
+  const [editMrp, setEditMrp] = useState<string>('');
 
   // Add-new form state
   const [showAdd, setShowAdd] = useState(false);
   const [newBrand, setNewBrand] = useState('');
   const [newItem, setNewItem] = useState('');
+  const [newCaseSize, setNewCaseSize] = useState<string>('');
+  const [newMrp, setNewMrp] = useState<string>('');
 
   useEffect(() => {
     if (role && role !== 'admin') {
@@ -66,11 +70,15 @@ export default function CatalogPage() {
         brandName: newBrand.trim(),
         itemName: newItem.trim(),
         defaultQuantity: 1,
+        caseSize: newCaseSize ? Number(newCaseSize) : undefined,
+        mrp: newMrp ? Number(newMrp) : undefined,
       });
       const refreshed = await getCatalogItems();
       setCatalog(refreshed);
       setNewBrand('');
       setNewItem('');
+      setNewCaseSize('');
+      setNewMrp('');
       setShowAdd(false);
     } catch (e) {
       setError('Failed to add. Please try again.');
@@ -91,6 +99,8 @@ export default function CatalogPage() {
         brandName: editBrand.trim(),
         itemName: editItem.trim(),
         defaultQuantity: 1,
+        caseSize: editCaseSize ? Number(editCaseSize) : undefined,
+        mrp: editMrp ? Number(editMrp) : undefined,
       }, id);
       const refreshed = await getCatalogItems();
       setCatalog(refreshed);
@@ -137,6 +147,8 @@ export default function CatalogPage() {
               setShowAdd(true);
               setNewBrand('');
               setNewItem('');
+              setNewCaseSize('');
+              setNewMrp('');
               setError('');
             }}
             className="flex items-center gap-1.5 bg-[#3b2fc9] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#2f25a8] transition-colors"
@@ -170,8 +182,10 @@ export default function CatalogPage() {
           <table className="w-full text-sm text-left">
             <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
               <tr>
-                <th className="px-4 py-3 min-w-[200px]">Brand Name</th>
-                <th className="px-4 py-3 min-w-[250px]">Item Name</th>
+                <th className="px-4 py-3 min-w-[180px]">Brand Name</th>
+                <th className="px-4 py-3 min-w-[200px]">Item Name</th>
+                <th className="px-4 py-3 w-[100px]">Case Size</th>
+                <th className="px-4 py-3 w-[100px]">Ref MRP</th>
                 <th className="px-4 py-3 w-[120px] text-right">Actions</th>
               </tr>
             </thead>
@@ -193,6 +207,24 @@ export default function CatalogPage() {
                       placeholder="e.g. Soya Sticks"
                       value={newItem}
                       onChange={(e) => setNewItem(e.target.value)}
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      type="number"
+                      className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#3b2fc9]"
+                      placeholder="e.g. 144"
+                      value={newCaseSize}
+                      onChange={(e) => setNewCaseSize(e.target.value)}
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      type="number"
+                      className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#3b2fc9]"
+                      placeholder="e.g. 50"
+                      value={newMrp}
+                      onChange={(e) => setNewMrp(e.target.value)}
                     />
                   </td>
                   <td className="px-4 py-2 text-right">
@@ -226,7 +258,7 @@ export default function CatalogPage() {
                 </tr>
               ) : filteredItems.length === 0 && !showAdd ? (
                 <tr>
-                  <td colSpan={3} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
                     No catalog items found.
                   </td>
                 </tr>
@@ -266,6 +298,32 @@ export default function CatalogPage() {
                           item.itemName
                         )}
                       </td>
+                      <td className="px-4 py-2 text-gray-600">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-[#3b2fc9]"
+                            value={editCaseSize}
+                            onChange={(e) => setEditCaseSize(e.target.value)}
+                            placeholder="-"
+                          />
+                        ) : (
+                          item.caseSize || '-'
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-gray-600">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-[#3b2fc9]"
+                            value={editMrp}
+                            onChange={(e) => setEditMrp(e.target.value)}
+                            placeholder="-"
+                          />
+                        ) : (
+                          item.mrp ? `₹${item.mrp}` : '-'
+                        )}
+                      </td>
                       <td className="px-4 py-2 text-right">
                         <div className="flex justify-end gap-1">
                           {isEditing ? (
@@ -294,6 +352,8 @@ export default function CatalogPage() {
                                   setEditingId(item.id!);
                                   setEditBrand(item.brandName);
                                   setEditItem(item.itemName);
+                                  setEditCaseSize(item.caseSize?.toString() || '');
+                                  setEditMrp(item.mrp?.toString() || '');
                                   setError('');
                                 }}
                                 className="p-1.5 text-gray-400 hover:text-[#3b2fc9] hover:bg-blue-50 rounded transition-colors"

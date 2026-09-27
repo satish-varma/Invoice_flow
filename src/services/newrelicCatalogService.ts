@@ -211,7 +211,15 @@ export async function saveCatalogItem(item: Omit<CatalogItem, 'id'>, id?: string
       .toLowerCase()}`.replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
     
     const docRef = doc(db, CATALOG_COLLECTION, docId);
-    await setDoc(docRef, item, { merge: true });
+    const dataToSave: any = {
+      brandName: item.brandName.trim(),
+      itemName: item.itemName.trim(),
+      defaultQuantity: item.defaultQuantity || 1,
+    };
+    if (item.caseSize !== undefined) dataToSave.caseSize = item.caseSize;
+    if (item.mrp !== undefined) dataToSave.mrp = item.mrp;
+    
+    await setDoc(docRef, dataToSave, { merge: true });
   } catch (error) {
     console.error('Error saving catalog item:', error);
     throw error;

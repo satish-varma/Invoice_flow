@@ -1,10 +1,9 @@
-const admin = require('firebase-admin');
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
 const fs = require('fs');
 const path = require('path');
 
 // Initialize Firebase Admin
-// It will automatically use the FIREBASE_CONFIG environment variable or Google Application Default Credentials
-// Or we can manually pass the service account if set in env vars:
 const serviceAccount = {
   projectId: process.env.FIREBASE_PROJECT_ID,
   clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
@@ -18,11 +17,12 @@ if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.
   process.exit(1);
 }
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+initializeApp({
+  credential: cert(serviceAccount)
 });
 
-const db = admin.firestore();
+const db = getFirestore();
+
 
 // Define which collections you want to back up
 const collectionsToBackup = [

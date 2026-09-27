@@ -314,7 +314,7 @@ export default function StockRequestPage() {
                             const priceMatch = pricing.find(p => p.location === selectedLocation && p.brandName === currentBrand && p.itemName === val);
                             if (priceMatch) {
                               if (priceMatch.mrp) setValue(`lineItems.${index}.mrp`, priceMatch.mrp);
-                              if (priceMatch.pCost) setValue(`lineItems.${index}.pCost`, priceMatch.pCost);
+                              if (priceMatch.purchaseCost) setValue(`lineItems.${index}.pCost`, priceMatch.purchaseCost);
                             } else if (catMatch && catMatch.mrp) {
                               setValue(`lineItems.${index}.mrp`, catMatch.mrp); // Fallback to catalog ref mrp
                               setValue(`lineItems.${index}.pCost`, 0);

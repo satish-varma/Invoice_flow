@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getStockRequests, updateStockRequestStatus, deleteStockRequest } from '@/services/newrelicStockRequestService';
 import { StockRequest } from '@/types/stockRequest';
-import { Check, Download, Trash2, MapPin, Calendar, Clock, CheckCircle } from 'lucide-react';
+import { Check, Download, Trash2, MapPin, Calendar, Clock, CheckCircle, User } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function StockRequestsAdminPage() {
@@ -64,7 +64,7 @@ export default function StockRequestsAdminPage() {
       return;
     }
 
-    const headers = ['Request Date', 'Location', 'Status', 'Brand Name', 'Item Name', 'Order Type', 'Case Size', 'Quantity', 'Total Units', 'Reference MRP'];
+    const headers = ['Request Date', 'Requested By', 'Location', 'Status', 'Brand Name', 'Item Name', 'Order Type', 'Case Size', 'Quantity', 'Total Units', 'Reference MRP'];
     const rows: string[][] = [];
 
     filtered.forEach(req => {
@@ -72,6 +72,7 @@ export default function StockRequestsAdminPage() {
       req.lineItems.forEach(item => {
         rows.push([
           date,
+          `"${req.createdBy}"`,
           req.location,
           req.status,
           `"${item.brandName.replace(/"/g, '""')}"`,
@@ -157,6 +158,10 @@ export default function StockRequestsAdminPage() {
                   <div className="flex items-center gap-1.5 text-gray-600">
                     <Calendar className="h-4 w-4" />
                     <span className="font-medium text-gray-900">{format(new Date(req.requestDate), 'dd MMM yyyy, hh:mm a')}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-gray-600">
+                    <User className="h-4 w-4" />
+                    <span>{req.createdBy}</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-gray-600">
                     <MapPin className="h-4 w-4" />

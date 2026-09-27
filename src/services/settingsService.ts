@@ -10,6 +10,12 @@ export interface BillToContact {
     gst: string;
 }
 
+export interface TaxSlab {
+    id: string;
+    name: string;
+    rate: number;
+}
+
 export interface ShipToContact {
     id: string;
     displayName: string;
@@ -50,6 +56,7 @@ export interface Settings {
     currencySymbol?: string; // e.g., "₹", "$"
     pdfTemplate?: string; // e.g., "classic", "modern", "minimal"
     primaryColor?: string; // Hex color
+    customTaxes?: TaxSlab[]; // User-defined taxes
 }
 
 const SETTINGS_COLLECTION = 'settings';
@@ -65,6 +72,7 @@ export async function getSettings(): Promise<Settings> {
             companyProfiles: [],
             billToContacts: [],
             shipToContacts: [],
+            customTaxes: [],
         };
 
         let result: Settings;
@@ -113,6 +121,11 @@ export async function getSettings(): Promise<Settings> {
                 currencySymbol: data.currencySymbol || "₹",
                 pdfTemplate: data.pdfTemplate || "classic",
                 primaryColor: data.primaryColor || "#3b82f6", // Default blue-500
+                customTaxes: data.customTaxes !== undefined ? data.customTaxes.map((t: any) => ({
+                    id: t.id || "",
+                    name: t.name || "",
+                    rate: t.rate || 0,
+                })) : undefined,
             };
         } else {
             // The document doesn't exist. Instead of writing here, we return a default object.

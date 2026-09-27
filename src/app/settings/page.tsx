@@ -25,6 +25,7 @@ import {
     ShipToContact,
     Settings,
     CompanyProfile,
+    TaxSlab,
     saveGeneralSettings
 } from '@/services/settingsService';
 import { useToast } from '@/hooks/use-toast';
@@ -71,6 +72,8 @@ const initialShipToState: Omit<ShipToContact, 'id'> = {
 
 export default function SettingsPage() {
     const [settings, setSettings] = useState<Settings>({ companyProfiles: [], billToContacts: [], shipToContacts: [] });
+    const [customTaxes, setCustomTaxes] = useState<TaxSlab[]>(availableTaxes);
+    const [newTax, setNewTax] = useState<Partial<TaxSlab>>({ name: '', rate: 0 });
 
     const [newBillTo, setNewBillTo] = useState<Omit<BillToContact, 'id'>>(initialBillToState);
     const [newShipTo, setNewShipTo] = useState<Omit<ShipToContact, 'id'>>(initialShipToState);
@@ -95,6 +98,9 @@ export default function SettingsPage() {
         try {
             const loadedSettings = await getSettings();
             setSettings(loadedSettings);
+            if (loadedSettings.customTaxes !== undefined) {
+                setCustomTaxes(loadedSettings.customTaxes);
+            }
         } catch (e) {
             toast({ variant: 'destructive', title: 'Failed to load settings.' })
         } finally {
@@ -123,11 +129,15 @@ export default function SettingsPage() {
         }
     };
 
-    const renderTaxesSelector = (form: 'newShipTo' | 'editContact', contactData: any) => (
+    const renderTaxesSelector = (form: 'newShipTo' | 'editContact', contactData: any) => {
+        // Fallback to customTaxes if available, else availableTaxes
+        const taxListToRender = customTaxes.length > 0 ? customTaxes : availableTaxes;
+        
+        return (
         <div className="space-y-2">
             <Label>Applicable Taxes</Label>
             <div className="p-4 border rounded-md grid grid-cols-2 gap-4">
-                {availableTaxes.map(tax => (
+                {taxListToRender.map(tax => (
                     <div key={tax.id} className="flex items-center space-x-2">
                         <Checkbox
                             id={`${form}-${tax.id}`}
@@ -144,7 +154,8 @@ export default function SettingsPage() {
                 ))}
             </div>
         </div>
-    );
+        );
+    };
 
     const handleInputChange = (form: 'newBillTo' | 'newShipTo' | 'editContact', field: string, value: string) => {
         if (form === 'newBillTo') {
@@ -359,6 +370,33 @@ export default function SettingsPage() {
         }
     };
 
+    const handleSaveTaxes = async () => {
+        setIsSaving(true);
+        try {
+            await saveGeneralSettings({ customTaxes });
+            setSettings(prev => ({ ...prev, customTaxes }));
+            toast({ title: 'Taxes Saved', description: 'Your custom tax slabs have been updated.' });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to save taxes.' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    const handleAddTax = () => {
+        if (!newTax.name || newTax.rate === undefined) {
+             toast({ variant: 'destructive', title: 'Invalid Tax', description: 'Please provide both name and rate.' });
+             return;
+        }
+        const newId = newTax.name.replace(/\s+/g, '').toUpperCase() + newTax.rate;
+        setCustomTaxes(prev => [...prev, { id: newId, name: newTax.name!, rate: newTax.rate! }]);
+        setNewTax({ name: '', rate: 0 });
+    };
+
+    const handleRemoveTax = (idToRemove: string) => {
+        setCustomTaxes(prev => prev.filter(t => t.id !== idToRemove));
+    };
+
     const renderProfileForm = (profile: CompanyProfile | Omit<CompanyProfile, 'id'>) => {
         return (
             <Accordion type="multiple" defaultValue={['item-1', 'item-2', 'item-3', 'item-4', 'item-5']} className="w-full">
@@ -509,6 +547,7 @@ export default function SettingsPage() {
                     <TabsList className='mb-4'>
                         <TabsTrigger value="company">Company Profiles</TabsTrigger>
                         <TabsTrigger value="contacts">Contacts</TabsTrigger>
+                        <TabsTrigger value="taxes">Taxes</TabsTrigger>
                         <TabsTrigger value="general">General</TabsTrigger>
                     </TabsList>
                     <TabsContent value="company">
@@ -757,6 +796,79 @@ export default function SettingsPage() {
                             </CardContent>
                         </Card>
                     </TabsContent>
+                    
+                    <TabsContent value="taxes">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Tax Slabs</CardTitle>
+                                <CardDescription>Manage the taxes that can be applied to your invoices.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Tax Name (e.g., IGST @ 18%)</Label>
+                                        <Input
+                                            value={newTax.name}
+                                            onChange={e => setNewTax(prev => ({ ...prev, name: e.target.value }))}
+                                            placeholder="IGST @ 18%"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Rate (%)</Label>
+                                        <Input
+                                            type="number"
+                                            value={newTax.rate}
+                                            onChange={e => setNewTax(prev => ({ ...prev, rate: parseFloat(e.target.value) || 0 }))}
+                                            placeholder="18"
+                                        />
+                                    </div>
+                                    <div className="flex items-end">
+                                        <Button onClick={handleAddTax} className="w-full" variant="outline">
+                                            <PlusCircle className="mr-2 h-4 w-4" /> Add Tax
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="border rounded-md mt-6">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Tax Name</TableHead>
+                                                <TableHead>Rate (%)</TableHead>
+                                                <TableHead className="w-[100px] text-right">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {customTaxes.map(tax => (
+                                                <TableRow key={tax.id}>
+                                                    <TableCell className="font-medium">{tax.name}</TableCell>
+                                                    <TableCell>{tax.rate}%</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveTax(tax.id)}>
+                                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                            {customTaxes.length === 0 && (
+                                                <TableRow>
+                                                    <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                                                        No custom taxes defined.
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                            <CardFooter>
+                                <Button onClick={handleSaveTaxes} disabled={isSaving}>
+                                    {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                    Save Taxes
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    </TabsContent>
+
                 </Tabs>
 
             </div>

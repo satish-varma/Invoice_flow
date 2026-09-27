@@ -155,7 +155,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                         setShipToGst(defaultContact.gst);
                         setSelectedShipToId(`${defaultContact.id}|shipTo`);
                         if (defaultContact.taxes && defaultContact.taxes.length > 0) {
-                            const taxesToApply = availableTaxes
+                            const taxList = loadedSettings.customTaxes && loadedSettings.customTaxes.length > 0 ? loadedSettings.customTaxes : availableTaxes;
+                            const taxesToApply = taxList
                                 .filter(tax => defaultContact.taxes!.includes(tax.id))
                                 .map((tax, index) => ({
                                     id: Date.now() + index,
@@ -250,7 +251,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
 
             // Auto-apply taxes if product has a tax category that matches available taxes
             if (product.taxCategory) {
-                const taxDef = availableTaxes.find(t => t.name === product.taxCategory);
+                const taxList = settings?.customTaxes && settings.customTaxes.length > 0 ? settings.customTaxes : availableTaxes;
+                const taxDef = taxList.find(t => t.name === product.taxCategory);
                 if (taxDef) {
                     // Check if this tax is already applied
                     const isApplied = appliedTaxes.some(t => t.name === taxDef.name);
@@ -575,7 +577,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 // Auto-populate taxes from the selected ship-to contact
                 const taxes = (contact as any).taxes;
                 if (taxes && Array.isArray(taxes) && taxes.length > 0) {
-                    const taxesToApply = availableTaxes
+                    const taxList = settings?.customTaxes && settings.customTaxes.length > 0 ? settings.customTaxes : availableTaxes;
+                    const taxesToApply = taxList
                         .filter(taxDef => taxes.includes(taxDef.id))
                         .map((taxDef, index) => ({
                             id: Date.now() + index,

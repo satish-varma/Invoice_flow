@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getStockRequests, updateStockRequestStatus, deleteStockRequest } from '@/services/newrelicStockRequestService';
+import { getStockRequests, updateStockRequestStatus, deleteStockRequest, updateStockRequestFulfillment } from '@/services/newrelicStockRequestService';
 import { StockRequest } from '@/types/stockRequest';
 import { Check, Download, Trash2, MapPin, Calendar, Clock, CheckCircle, User } from 'lucide-react';
 import { format } from 'date-fns';
@@ -12,7 +12,9 @@ export default function StockRequestsAdminPage() {
   const [requests, setRequests] = useState<StockRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterLocation, setFilterLocation] = useState<'all' | 'hyderabad' | 'bangalore'>('all');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'PENDING' | 'FULFILLED' | 'CANCELLED'>('PENDING');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'PENDING' | 'PARTIALLY_FULFILLED' | 'FULFILLED' | 'CANCELLED'>('PENDING');
+  const [activeFulfillId, setActiveFulfillId] = useState<string | null>(null);
+  const [fulfillData, setFulfillData] = useState<{ [itemId: string]: number }>({});
 
   useEffect(() => {
     if (role === 'admin') {
@@ -52,6 +54,42 @@ export default function StockRequestsAdminPage() {
     }
   };
 
+  const handleStartFulfill = (req: StockRequest) => {
+    const data: { [itemId: string]: number } = {};
+    req.lineItems.forEach((item, idx) => {
+      data[idx.toString()] = item.fulfilledQuantity ?? item.quantity;
+    });
+    setFulfillData(data);
+    setActiveFulfillId(req.id!);
+  };
+
+  const handleSaveFulfill = async (req: StockRequest) => {
+    let allFulfilled = true;
+    let anyFulfilled = false;
+    const newLineItems = req.lineItems.map((item, idx) => {
+      const fQty = fulfillData[idx.toString()] ?? 0;
+      if (fQty < item.quantity) allFulfilled = false;
+      if (fQty > 0) anyFulfilled = true;
+      return {
+        ...item,
+        fulfilledQuantity: fQty,
+        fulfilledTotalUnits: item.orderType === 'cases' ? fQty * item.caseSize : fQty
+      };
+    });
+    
+    let status = 'PENDING';
+    if (allFulfilled) status = 'FULFILLED';
+    else if (anyFulfilled) status = 'PARTIALLY_FULFILLED';
+    
+    try {
+      await updateStockRequestFulfillment(req.id!, newLineItems, status as any);
+      setRequests(prev => prev.map(r => r.id === req.id ? { ...r, lineItems: newLineItems, status: status as any } : r));
+      setActiveFulfillId(null);
+    } catch (e) {
+      alert('Failed to save fulfillment');
+    }
+  };
+
   const handleExport = () => {
     const filtered = requests.filter(r => {
       if (filterLocation !== 'all' && r.location !== filterLocation) return false;
@@ -64,7 +102,7 @@ export default function StockRequestsAdminPage() {
       return;
     }
 
-    const headers = ['Request Date', 'Requested By', 'Location', 'Status', 'Brand Name', 'Item Name', 'Order Type', 'Case Size', 'Quantity', 'Total Units', 'Reference MRP'];
+    const headers = ['Request Date', 'Requested By', 'Location', 'Status', 'Brand Name', 'Item Name', 'Order Type', 'Case Size', 'Quantity', 'Total Units', 'Reference MRP', 'Fulfilled Qty', 'Fulfilled Units'];
     const rows: string[][] = [];
 
     filtered.forEach(req => {
@@ -81,7 +119,9 @@ export default function StockRequestsAdminPage() {
           (item.caseSize || 1).toString(),
           item.quantity.toString(),
           item.totalUnits.toString(),
-          item.mrp?.toString() || ''
+          item.mrp?.toString() || '',
+          item.fulfilledQuantity?.toString() || '',
+          item.fulfilledTotalUnits?.toString() || ''
         ]);
       });
     });
@@ -138,6 +178,7 @@ export default function StockRequestsAdminPage() {
         >
           <option value="all">All Statuses</option>
           <option value="PENDING">Pending</option>
+          <option value="PARTIALLY_FULFILLED">Partially Fulfilled</option>
           <option value="FULFILLED">Fulfilled</option>
           <option value="CANCELLED">Cancelled</option>
         </select>
@@ -169,6 +210,7 @@ export default function StockRequestsAdminPage() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     {req.status === 'PENDING' && <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><Clock className="h-3 w-3"/> PENDING</span>}
+                    {req.status === 'PARTIALLY_FULFILLED' && <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3"/> PARTIAL</span>}
                     {req.status === 'FULFILLED' && <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3"/> FULFILLED</span>}
                     {req.status === 'CANCELLED' && <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><Trash2 className="h-3 w-3"/> CANCELLED</span>}
                   </div>
@@ -178,13 +220,29 @@ export default function StockRequestsAdminPage() {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  {req.status === 'PENDING' && (
+                  {(req.status === 'PENDING' || req.status === 'PARTIALLY_FULFILLED') && activeFulfillId !== req.id && (
                     <button
-                      onClick={() => handleStatusChange(req.id!, 'FULFILLED')}
+                      onClick={() => handleStartFulfill(req)}
                       className="bg-[#3b2fc9] text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-[#2f25a8] transition-colors flex items-center gap-1"
                     >
-                      <Check className="h-4 w-4" /> Mark Fulfilled
+                      <Check className="h-4 w-4" /> Fulfill
                     </button>
+                  )}
+                  {activeFulfillId === req.id && (
+                    <>
+                      <button
+                        onClick={() => setActiveFulfillId(null)}
+                        className="bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleSaveFulfill(req)}
+                        className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                      >
+                        Save & Mark
+                      </button>
+                    </>
                   )}
                   {req.status === 'FULFILLED' && (
                     <button
@@ -210,23 +268,51 @@ export default function StockRequestsAdminPage() {
                     <tr>
                       <th className="px-4 py-2">Brand & Item</th>
                       <th className="px-4 py-2">Order Type</th>
-                      <th className="px-4 py-2 text-right">Quantity</th>
                       <th className="px-4 py-2 text-right">Case Size</th>
-                      <th className="px-4 py-2 text-right font-bold text-gray-900">Total Units</th>
+                      <th className="px-4 py-2 text-right">Req. Qty</th>
+                      <th className="px-4 py-2 text-right">Req. Units</th>
+                      <th className="px-4 py-2 text-right text-[#3b2fc9]">Fulf. Qty</th>
+                      <th className="px-4 py-2 text-right text-[#3b2fc9]">Fulf. Units</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {req.lineItems.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50">
-                        <td className="px-4 py-2">
-                          <span className="font-medium">{item.brandName}</span> - {item.itemName}
-                        </td>
-                        <td className="px-4 py-2 capitalize">{item.orderType}</td>
-                        <td className="px-4 py-2 text-right">{item.quantity}</td>
-                        <td className="px-4 py-2 text-right text-gray-500">{item.caseSize || 1}</td>
-                        <td className="px-4 py-2 text-right font-semibold text-[#3b2fc9]">{item.totalUnits}</td>
-                      </tr>
-                    ))}
+                    {req.lineItems.map((item, idx) => {
+                      const isFulfilling = activeFulfillId === req.id;
+                      const fQty = isFulfilling 
+                        ? (fulfillData[idx.toString()] ?? 0)
+                        : (item.fulfilledQuantity ?? item.quantity); // Fallback to full for UI if not fulfilled yet
+                      const fUnits = item.orderType === 'cases' ? fQty * item.caseSize : fQty;
+                      
+                      return (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          <td className="px-4 py-2">
+                            <span className="font-medium">{item.brandName}</span> - {item.itemName}
+                          </td>
+                          <td className="px-4 py-2 capitalize">{item.orderType}</td>
+                          <td className="px-4 py-2 text-right text-gray-500">{item.caseSize || 1}</td>
+                          <td className="px-4 py-2 text-right">{item.quantity}</td>
+                          <td className="px-4 py-2 text-right font-semibold text-gray-900">{item.totalUnits}</td>
+                          <td className="px-4 py-2 text-right">
+                            {isFulfilling ? (
+                              <input
+                                type="number"
+                                min="0"
+                                value={fQty}
+                                onChange={(e) => setFulfillData(prev => ({ ...prev, [idx]: Number(e.target.value) }))}
+                                className="w-20 rounded border border-gray-300 px-2 py-1 text-sm text-right focus:border-[#3b2fc9] focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
+                              />
+                            ) : (
+                              <span className={item.fulfilledQuantity !== undefined && item.fulfilledQuantity < item.quantity ? "text-orange-500 font-bold" : ""}>
+                                {item.fulfilledQuantity ?? '-'}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-right font-bold text-[#3b2fc9]">
+                            {isFulfilling ? fUnits : (item.fulfilledTotalUnits ?? '-')}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

@@ -65,6 +65,16 @@ export async function updateStockRequestStatus(id: string, status: StockRequest[
   }
 }
 
+export async function updateStockRequestFulfillment(id: string, lineItems: StockRequest['lineItems'], status: StockRequest['status']): Promise<void> {
+  try {
+    const docRef = doc(db, STOCK_REQUEST_COLLECTION, id);
+    await setDoc(docRef, { lineItems, status, updatedAt: serverTimestamp() }, { merge: true });
+  } catch (error) {
+    console.error('Error updating stock request fulfillment:', error);
+    throw error;
+  }
+}
+
 export async function deleteStockRequest(id: string): Promise<void> {
   try {
     const docRef = doc(db, STOCK_REQUEST_COLLECTION, id);

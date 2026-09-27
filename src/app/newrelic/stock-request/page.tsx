@@ -11,7 +11,7 @@ import { getAllPricingItems } from '@/services/newrelicPricingService';
 import { saveStockRequest, getStockRequests } from '@/services/newrelicStockRequestService';
 import { CatalogItem, PricingItem } from '@/types/challan';
 import { StockRequest } from '@/types/stockRequest';
-import { Plus, Trash2, CheckCircle, PackageSearch, List, Copy, Pencil, Clock } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, PackageSearch, List, Copy, Pencil, Clock, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -95,7 +95,41 @@ export default function StockRequestPage() {
       lineItems: req.lineItems.map(item => ({ ...item, id: undefined })),
     });
     setView('form');
+    setView('form');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCreateChallan = (req: StockRequest) => {
+    const draft = {
+      location: req.location,
+      dcDate: new Date().toISOString(),
+      dcNumber: '',
+      lineItems: req.lineItems.map(item => {
+        const qty = item.fulfilledQuantity ?? item.quantity;
+        const totalValue = qty * (item.mrp || 0);
+        return {
+          brandName: item.brandName,
+          itemName: item.itemName,
+          quantity: qty,
+          unitValue: item.mrp || 0,
+          totalValue: totalValue,
+          isFreeItem: false,
+          hsnCode: ''
+        };
+      }),
+      amount: req.lineItems.reduce((acc, item) => {
+        const qty = item.fulfilledQuantity ?? item.quantity;
+        return acc + (qty * (item.mrp || 0));
+      }, 0),
+      discount: 0,
+      freight: 0,
+      totalAmount: req.lineItems.reduce((acc, item) => {
+        const qty = item.fulfilledQuantity ?? item.quantity;
+        return acc + (qty * (item.mrp || 0));
+      }, 0),
+    };
+    sessionStorage.setItem('challanDraft', JSON.stringify(draft));
+    router.push('/newrelic');
   };
 
   const onSubmit = async (data: StockRequestFormValues) => {
@@ -419,6 +453,7 @@ export default function StockRequestPage() {
                     <span className="capitalize text-gray-600">{req.location}</span>
                     <div className="flex items-center gap-1.5">
                       {req.status === 'PENDING' && <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><Clock className="h-3 w-3"/> PENDING</span>}
+                      {req.status === 'PARTIALLY_FULFILLED' && <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3"/> PARTIAL</span>}
                       {req.status === 'FULFILLED' && <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3"/> FULFILLED</span>}
                       {req.status === 'CANCELLED' && <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><Trash2 className="h-3 w-3"/> CANCELLED</span>}
                     </div>
@@ -439,6 +474,15 @@ export default function StockRequestPage() {
                     >
                       <Copy className="h-3.5 w-3.5" /> Duplicate
                     </button>
+                    {(req.status === 'FULFILLED' || req.status === 'PARTIALLY_FULFILLED') && (
+                      <button
+                        onClick={() => handleCreateChallan(req)}
+                        className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors flex items-center gap-1.5"
+                        title="Convert to Delivery Challan"
+                      >
+                        <FileText className="h-3.5 w-3.5" /> Create Challan
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -448,8 +492,10 @@ export default function StockRequestPage() {
                       <tr>
                         <th className="pb-2 pr-4">Item</th>
                         <th className="pb-2 pr-4">Order Type</th>
-                        <th className="pb-2 pr-4 text-right">Quantity</th>
-                        <th className="pb-2 pr-4 text-right">Total Units</th>
+                        <th className="pb-2 pr-4 text-right">Req. Qty</th>
+                        <th className="pb-2 pr-4 text-right">Req. Units</th>
+                        <th className="pb-2 pr-4 text-right text-[#3b2fc9]">Fulf. Qty</th>
+                        <th className="pb-2 pr-4 text-right text-[#3b2fc9]">Fulf. Units</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -458,7 +504,13 @@ export default function StockRequestPage() {
                           <td className="py-2 pr-4"><span className="font-medium text-gray-900">{item.brandName}</span> - {item.itemName}</td>
                           <td className="py-2 pr-4 capitalize text-gray-600">{item.orderType}</td>
                           <td className="py-2 pr-4 text-right text-gray-900">{item.quantity} {item.orderType === 'cases' && <span className="text-gray-400 text-xs">(x{item.caseSize})</span>}</td>
-                          <td className="py-2 pr-4 text-right font-medium text-[#3b2fc9]">{item.totalUnits}</td>
+                          <td className="py-2 pr-4 text-right font-medium text-gray-900">{item.totalUnits}</td>
+                          <td className="py-2 pr-4 text-right font-medium text-[#3b2fc9]">
+                            {item.fulfilledQuantity ?? '-'}
+                          </td>
+                          <td className="py-2 pr-4 text-right font-medium text-[#3b2fc9]">
+                            {item.fulfilledTotalUnits ?? '-'}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

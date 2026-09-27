@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 export default function StockRequestPage() {
-  const { role, user, email } = useAuth();
+  const { role, user } = useAuth();
   const router = useRouter();
 
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
@@ -64,10 +64,10 @@ export default function StockRequestPage() {
       setPricing(pri);
       
       // Filter requests created by this user
-      const userIdentifier = email || user?.uid;
-      setMyRequests(reqs.filter(r => r.createdBy === userIdentifier));
+      const userIdentifier = user?.email || user?.id;
+      setMyRequests(reqs.filter(r => r.createdBy === userIdentifier || r.createdBy === 'Unknown'));
     });
-  }, [role, email, user?.uid, success]);
+  }, [role, user?.email, user?.id, success]);
 
   // Derive unique brands for datalist
   const brands = Array.from(new Set(catalog.map(c => c.brandName))).sort();
@@ -108,7 +108,7 @@ export default function StockRequestPage() {
         status: data.status,
         lineItems: data.lineItems,
         notes: data.notes,
-        createdBy: email || user?.uid || 'Unknown',
+        createdBy: user?.email || user?.id || 'Unknown',
       };
       
       await saveStockRequest(payload, data.id);

@@ -19,8 +19,7 @@ import {
   limit,
 } from 'firebase/firestore';
 
-export type NewRelicLocation = 'hyderabad' | 'bangalore';
-
+import { NewRelicLocation, NewRelicChallanItem, NewRelicChallan, NewRelicChallanHistory } from '@/types/challan';
 export const NEWRELIC_LOCATIONS: Record<
   NewRelicLocation,
   { label: string; address: string; dcPrefix: string; counterDoc: string }
@@ -41,44 +40,7 @@ export const NEWRELIC_LOCATIONS: Record<
   },
 };
 
-export interface NewRelicChallanItem {
-  id: number;
-  brandName: string;
-  itemName: string;
-  quantity: number;
-  expiry?: string; // e.g. "30-04-2027" or optional/blank
-  mrp?: number; // purely for admin analytics/view
-  procurementCost?: number; // actual cost paid to vendor per item
-}
 
-export interface NewRelicChallan {
-  id?: string;
-  dcNumber: string; // e.g. "HYD569" or "BLR001"
-  dcDate: string; // ISO date string
-  location: NewRelicLocation;
-  lineItems: NewRelicChallanItem[];
-  note?: string;
-  transportCost?: number; // purely for admin analytics/view
-  otherCharges?: number; // purely for admin analytics/view
-  procurementCost?: number; // actual cost paid to vendor for goods
-  createdAt?: any;
-  createdBy?: string | null;
-  updatedAt?: any;
-  updatedBy?: string | null;
-  deletedBy?: string | null;
-  isDeleted?: boolean;
-  deletedAt?: any;
-  signedCopyUrls?: string[];
-  goodsReceivedInvoiceUrls?: string[];
-}
-
-export interface NewRelicChallanHistory {
-  id: string;
-  editedAt: any;
-  action?: 'CREATED' | 'UPDATED' | 'DELETED' | 'RESTORED';
-  editedBy?: string | null;
-  previousData: NewRelicChallan;
-}
 
 const NEWRELIC_CHALLANS_COLLECTION = 'newrelic_challans';
 

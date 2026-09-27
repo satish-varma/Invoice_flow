@@ -1,3 +1,4 @@
+import { CatalogItem } from '@/types/challan';
 import React from 'react';
 import { UseFormRegister, FieldErrors, UseFieldArrayRemove, UseFormSetValue } from 'react-hook-form';
 import { Trash2 } from 'lucide-react';
@@ -5,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { CatalogItem } from '@/services/newrelicCatalogService';
+
 
 interface ChallanLineItemProps {
   index: number;

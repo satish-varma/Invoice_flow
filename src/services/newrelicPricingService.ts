@@ -10,18 +10,7 @@ import {
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
-import { NewRelicLocation } from './newrelicChallanService';
-
-export interface PricingItem {
-  id?: string;
-  brandName: string;
-  itemName: string;
-  location: NewRelicLocation;
-  mrp: number;
-  discountPercent: number;
-  purchaseCost: number; // auto-calculated or overridden
-  updatedAt?: Timestamp;
-}
+import { PricingItem, NewRelicLocation } from '@/types/challan';
 
 const PRICING_COLLECTION = 'newrelic_pricing';
 

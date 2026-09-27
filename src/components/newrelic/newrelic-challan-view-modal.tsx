@@ -1,5 +1,7 @@
 'use client';
 
+import { NewRelicChallan } from '@/types/challan';
+
 import React from 'react';
 import { Eye, Download } from 'lucide-react';
 import {
@@ -9,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { NewRelicChallan } from '@/services/newrelicChallanService';
+
 import { NewRelicChallanPreview } from '@/components/newrelic/newrelic-challan-preview';
 
 interface NewRelicChallanViewModalProps {

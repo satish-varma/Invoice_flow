@@ -1,5 +1,7 @@
 'use client';
 
+import { NewRelicChallanHistory, NewRelicChallan } from '@/types/challan';
+
 import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { Loader2, History, RotateCcw, Download } from 'lucide-react';
@@ -12,11 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import {
-  NewRelicChallanHistory,
-  getNewRelicChallanHistory,
-  NewRelicChallan,
-} from '@/services/newrelicChallanService';
+import {getNewRelicChallanHistory} from '@/services/newrelicChallanService';
 import { Badge } from '@/components/ui/badge';
 
 interface NewRelicChallanHistoryModalProps {

@@ -1,5 +1,7 @@
 'use client';
 
+import { NewRelicChallan } from '@/types/challan';
+
 import React from 'react';
 import { Receipt } from 'lucide-react';
 import {
@@ -8,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { NewRelicChallan } from '@/services/newrelicChallanService';
+
 import {
   Table,
   TableBody,

@@ -1,5 +1,6 @@
+import { NewRelicChallanItem } from '@/types/challan';
 import React from 'react';
-import { NewRelicChallanItem } from '@/services/newrelicChallanService';
+
 
 interface ChallanSummaryProps {
   lineItems?: Partial<NewRelicChallanItem>[];

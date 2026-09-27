@@ -1,11 +1,13 @@
 'use client';
 
+import { NewRelicChallan } from '@/types/challan';
+
 import React, { useState, useRef } from 'react';
 import { Loader2, Paperclip, UploadCloud, Trash2, Camera, Eye, X, Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { NewRelicChallan, addSignedCopyUrl, removeSignedCopyUrl, addGoodsReceivedUrl, removeGoodsReceivedUrl } from '@/services/newrelicChallanService';
+import {addSignedCopyUrl, removeSignedCopyUrl, addGoodsReceivedUrl, removeGoodsReceivedUrl} from '@/services/newrelicChallanService';
 import { uploadStorageFile, deleteStorageFile } from '@/services/storageService';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';

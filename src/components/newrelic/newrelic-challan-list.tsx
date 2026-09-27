@@ -1,3 +1,4 @@
+import { NewRelicChallan } from '@/types/challan';
 
 'use client';
 
@@ -25,7 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { NewRelicChallan, NEWRELIC_LOCATIONS } from '@/services/newrelicChallanService';
+import {NEWRELIC_LOCATIONS} from '@/services/newrelicChallanService';
 
 interface NewRelicChallanListProps {
   challans: NewRelicChallan[];

@@ -1,5 +1,6 @@
+import { NewRelicChallan } from '@/types/challan';
 import React, { useMemo, useState } from 'react';
-import { NewRelicChallan } from '@/services/newrelicChallanService';
+
 import { Search, Filter, ArrowUpDown } from 'lucide-react';
 
 interface NewRelicItemDashboardProps {

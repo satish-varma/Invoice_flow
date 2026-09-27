@@ -1,3 +1,4 @@
+import { NewRelicChallan, NewRelicChallanItem } from '@/types/challan';
 /**
  * NewRelicChallanPreview
  *
@@ -19,7 +20,7 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { NewRelicChallan, NewRelicChallanItem, NEWRELIC_LOCATIONS } from '@/services/newrelicChallanService';
+import {NEWRELIC_LOCATIONS} from '@/services/newrelicChallanService';
 
 /**
  * IMPORTANT NOTE ON ANALYTICS FIELDS (MRP, Transport Cost, Other Charges):

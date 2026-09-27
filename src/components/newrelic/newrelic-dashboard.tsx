@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { NewRelicChallan } from '@/types/newrelicChallan';
+import { NewRelicChallan } from '@/types/challan';
 import { TrendingUp, TrendingDown, DollarSign, Package, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

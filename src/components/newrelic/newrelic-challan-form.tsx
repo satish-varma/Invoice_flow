@@ -27,16 +27,22 @@ import { Calendar } from '@/components/ui/calendar';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import {
-  NewRelicChallan,
-  NewRelicChallanItem,
-  NewRelicLocation,
   NEWRELIC_LOCATIONS,
   saveNewRelicChallan,
   getSuggestedDcNumber,
   checkDuplicateDcNumber,
 } from '@/services/newrelicChallanService';
-import { getCatalogItems, CatalogItem } from '@/services/newrelicCatalogService';
-import { getPricingItems, buildPricingMap, PricingItem } from '@/services/newrelicPricingService';
+import { getCatalogItems } from '@/services/newrelicCatalogService';
+import { getPricingItems, buildPricingMap } from '@/services/newrelicPricingService';
+import {
+  NewRelicChallan,
+  NewRelicChallanItem,
+  NewRelicLocation,
+  CatalogItem,
+  PricingItem,
+  challanSchema,
+  ChallanFormValues as FormValues
+} from '@/types/challan';
 import {
   parseUploadedInvoiceFile,
   parseSampleInvoice,
@@ -56,39 +62,7 @@ const DC_PREFIX_STRIP_RE = new RegExp('^(?:HMB|INV|SO|DOC|BILL|DC)[\\s:-]*', 'i'
 const ALPHANUMERIC_RE = /[^A-Za-z0-9]/g;
 const DIGITS_ONLY_RE = /^\d+$/;
 
-/* ─── Zod schema ─────────────────────────────────────────────────── */
-const lineItemSchema = z.object({
-  id: z.number(),
-  brandName: z.string().optional().default(''),
-  itemName: z.string().optional().default(''),
-  quantity: z.coerce.number().min(1, 'Quantity must be ≥ 1'),
-  expiry: z.string().min(1, 'Expiry is required'),
-  mrp: z.coerce.number().optional(),
-  procurementCost: z.coerce.number().optional(),
-});
 
-const challanSchema = z
-  .object({
-    dcNumber: z.string().min(1, 'DC Number is required'),
-    location: z.enum(['hyderabad', 'bangalore']),
-    dcDate: z.date(),
-    lineItems: z.array(lineItemSchema),
-    note: z.string().optional(),
-    transportCost: z.coerce.number().optional(),
-    otherCharges: z.coerce.number().optional(),
-  })
-  .refine(
-    (data) =>
-      data.lineItems.some(
-        (item) => item.itemName && item.itemName.trim() !== ''
-      ),
-    {
-      message: 'Add at least one item with an item name',
-      path: ['lineItems'],
-    }
-  );
-
-type FormValues = z.infer<typeof challanSchema>;
 
 /* ─── Props ──────────────────────────────────────────────────────── */
 interface NewRelicChallanFormProps {
@@ -126,7 +100,7 @@ export function NewRelicChallanForm({
     location: (initialData?.location as NewRelicLocation) ?? defaultLocation ?? 'hyderabad',
     dcDate: initialData?.dcDate ? new Date(initialData.dcDate) : new Date(),
     lineItems: initialData?.lineItems?.length
-      ? initialData.lineItems
+      ? (initialData.lineItems as any)
       : [{ id: 1, brandName: '', itemName: '', quantity: 1, expiry: '', mrp: undefined }],
     note: initialData?.note ?? '',
     transportCost: initialData?.transportCost ?? undefined,

@@ -1,9 +1,11 @@
 'use client';
 
+import { NewRelicChallanHistory } from '@/types/challan';
+
 import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { getGlobalAuditLogs } from '@/services/newrelicChallanService';
-import type { NewRelicChallanHistory } from '@/services/newrelicChallanService';
+import {getGlobalAuditLogs} from '@/services/newrelicChallanService';
+
 import { Loader2, Plus, Edit2, Trash2, RefreshCcw, Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 

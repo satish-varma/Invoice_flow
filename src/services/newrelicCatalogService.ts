@@ -9,12 +9,7 @@ import {
   limit,
 } from 'firebase/firestore';
 
-export interface CatalogItem {
-  id?: string;
-  brandName: string;
-  itemName: string;
-  defaultQuantity: number;
-}
+import { CatalogItem } from '@/types/challan';
 
 const CATALOG_COLLECTION = 'newrelic_catalog';
 

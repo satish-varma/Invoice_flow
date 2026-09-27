@@ -1,16 +1,11 @@
+import { NewRelicChallan, NewRelicLocation } from '@/types/challan';
 
 'use client';
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Loader2, FileText, MapPin, Filter } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import {
-  NewRelicChallan,
-  getNewRelicChallans,
-  deleteNewRelicChallan,
-  NewRelicLocation,
-  NEWRELIC_LOCATIONS,
-} from '@/services/newrelicChallanService';
+import {getNewRelicChallans, deleteNewRelicChallan, NEWRELIC_LOCATIONS} from '@/services/newrelicChallanService';
 import { NewRelicChallanForm } from '@/components/newrelic/newrelic-challan-form';
 import { NewRelicChallanList } from '@/components/newrelic/newrelic-challan-list';
 import { NewRelicInsights } from '@/components/newrelic/newrelic-insights';

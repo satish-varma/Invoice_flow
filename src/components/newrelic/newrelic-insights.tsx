@@ -1,9 +1,10 @@
+import { NewRelicChallan } from '@/types/challan';
 import React, { useMemo, useRef, useState } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { NewRelicChallan, NEWRELIC_LOCATIONS } from '@/services/newrelicChallanService';
+import {NEWRELIC_LOCATIONS} from '@/services/newrelicChallanService';
 import { FileText, Package, MapPin, Download, Loader2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';

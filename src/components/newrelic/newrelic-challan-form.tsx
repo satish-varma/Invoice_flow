@@ -44,6 +44,9 @@ import {
 } from '@/services/newrelicInvoiceParser';
 import { useToast } from '@/hooks/use-toast';
 import { NewRelicAttachmentModal } from '@/components/newrelic/newrelic-attachment-modal';
+import { PdfAutoParser } from './challan-form/pdf-auto-parser';
+import { ChallanSummary } from './challan-form/challan-summary';
+import { ChallanLineItem } from './challan-form/challan-line-item';
 
 /* ─── Module-level regex constants ───────────────────────────────────────────
  * Kept outside the component to prevent Turbopack's CSS scanner from
@@ -587,95 +590,12 @@ export function NewRelicChallanForm({
       </div>
 
       {/* ── Local Invoice Auto-Parser Banner ── */}
-      <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-blue-50 border border-indigo-100 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-[#3b2fc9]/10 rounded-xl text-[#3b2fc9]">
-              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-900 text-xs sm:text-sm flex items-center gap-1.5">
-                Local Invoice / Challan Parser
-                <span className="bg-[#3b2fc9] text-white text-[10px] px-2 py-0.5 rounded-full font-medium">
-                  Fast & Local
-                </span>
-              </h3>
-              <p className="text-[11px] sm:text-xs text-gray-500">
-                Upload any vendor invoice (PDF or Image) to automatically populate item rows using local parser
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-1">
-          {/* File Upload Button */}
-          <div className="relative flex-1">
-            <input
-              type="file"
-              accept=".pdf,.png,.jpg,.jpeg"
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              disabled={isParsingInvoice}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  handleParseInvoice(file);
-                  e.target.value = '';
-                }
-              }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isParsingInvoice}
-              className="w-full h-10 border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:border-indigo-300 text-xs gap-2 shadow-xs"
-            >
-              {isParsingInvoice ? (
-                <Loader2 className="h-4 w-4 animate-spin text-[#3b2fc9]" />
-              ) : (
-                <UploadCloud className="h-4 w-4 text-[#3b2fc9]" />
-              )}
-              {isParsingInvoice ? 'Extracting Items Locally...' : 'Upload & Extract Invoice (PDF/Image)'}
-            </Button>
-          </div>
-
-          <span className="text-xs text-gray-400 text-center font-medium">or</span>
-
-          {/* Sample Invoice Dropdown */}
-          <div className="flex-1 flex gap-1.5">
-            <Select
-              value={selectedSample}
-              onValueChange={setSelectedSample}
-              disabled={isParsingInvoice}
-            >
-              <SelectTrigger className="h-10 text-xs bg-white border-indigo-200 text-gray-700">
-                <SelectValue placeholder="Select sample invoice..." />
-              </SelectTrigger>
-              <SelectContent className="max-h-60 text-xs">
-                {SAMPLE_INVOICES_LIST.map((item) => (
-                  <SelectItem key={item.name} value={item.name} className="text-xs">
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={isParsingInvoice || !selectedSample}
-              onClick={() => handleParseInvoice(undefined, selectedSample)}
-              className="h-10 px-3 text-xs bg-indigo-100 text-indigo-800 hover:bg-indigo-200 whitespace-nowrap gap-1"
-            >
-              {isParsingInvoice ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <FileText className="h-3.5 w-3.5" />
-              )}
-              Parse Sample
-            </Button>
-          </div>
-        </div>
-      </div>
+      <PdfAutoParser 
+        isParsingInvoice={isParsingInvoice}
+        selectedSample={selectedSample}
+        setSelectedSample={setSelectedSample}
+        handleParseInvoice={handleParseInvoice}
+      />
 
       {/* Line items */}
       <div className="space-y-3">
@@ -710,159 +630,28 @@ export function NewRelicChallanForm({
         </div>
 
         {fields.map((field, index) => (
-          <div
+          <ChallanLineItem
             key={field.id}
-            className={cn(
-              "p-3 sm:p-0 bg-gray-50/80 sm:bg-transparent rounded-xl border border-gray-200/80 sm:border-0 grid grid-cols-1 gap-2.5 sm:gap-2 items-start",
-              canSeeMrp && canSeePCost ? "sm:grid-cols-[2fr_3fr_1fr_1.5fr_1fr_1fr_auto]" : 
-              canSeeMrp ? "sm:grid-cols-[2fr_3fr_1fr_1.5fr_1fr_auto]" : "sm:grid-cols-[2fr_3fr_1fr_1.5fr_auto]"
-            )}
-          >
-            {/* Brand Name */}
-            <div className="space-y-1 sm:space-y-0">
-              <Label className="text-xs text-gray-500 sm:hidden">Brand Name</Label>
-              <Input
-                {...register(`lineItems.${index}.brandName`, {
-                  onChange: () => {
-                    // Reset dependent fields when brand changes
-                    setValue(`lineItems.${index}.itemName`, '');
-                    setValue(`lineItems.${index}.quantity`, 1);
-                    setValue(`lineItems.${index}.mrp`, undefined);
-                    setValue(`lineItems.${index}.procurementCost`, undefined);
-                  },
-                })}
-                list="newrelic-brand-list"
-                placeholder="e.g. Happilo"
-                className={cn(errors.lineItems?.[index]?.brandName && 'border-red-400')}
-              />
-
-              {errors.lineItems?.[index]?.brandName && (
-                <p className="text-xs text-red-500 mt-0.5">
-                  {errors.lineItems[index]?.brandName?.message}
-                </p>
-              )}
-            </div>
-
-            {/* Item Name */}
-            <div className="space-y-1 sm:space-y-0">
-              <Label className="text-xs text-gray-500 sm:hidden">Item Name</Label>
-              {(() => {
-                const rowBrand = (watchedLineItems?.[index]?.brandName || '').trim().toLowerCase();
-                const filteredItems = rowBrand
-                  ? catalog.filter(c => c.brandName.toLowerCase() === rowBrand)
-                  : catalog;
-                const datalistId = `newrelic-item-list-${index}`;
-                return (
-                  <>
-                    <datalist id={datalistId}>
-                      {filteredItems.map((item, idx) => (
-                        <option key={`${item.itemName}-${idx}`} value={item.itemName} />
-                      ))}
-                    </datalist>
-                    <Input
-                      {...register(`lineItems.${index}.itemName`, {
-                        onChange: (e) => handleItemNameChange(index, e.target.value),
-                      })}
-                      list={datalistId}
-                      placeholder="e.g. Chilli garlic makhana"
-                      className={cn(errors.lineItems?.[index]?.itemName && 'border-red-400')}
-                    />
-                  </>
-                );
-              })()}
-              {errors.lineItems?.[index]?.itemName && (
-                <p className="text-xs text-red-500 mt-0.5">
-                  {errors.lineItems[index]?.itemName?.message}
-                </p>
-              )}
-            </div>
-
-            {/* Qty & Expiry on mobile grid */}
-            <div className="grid grid-cols-2 sm:contents gap-2">
-              <div className="space-y-1 sm:space-y-0">
-                <Label className="text-xs text-gray-500 sm:hidden">Qty</Label>
-                <Input
-                  {...register(`lineItems.${index}.quantity`)}
-                  type="number"
-                  min={1}
-                  placeholder="Qty"
-                  className={cn(errors.lineItems?.[index]?.quantity && 'border-red-400')}
-                />
-              </div>
-
-              <div className="space-y-1 sm:space-y-0">
-                <Label className="text-xs text-gray-500 sm:hidden">Expiry</Label>
-                <Input
-                  {...register(`lineItems.${index}.expiry`)}
-                  placeholder="Expiry (e.g. 15-05-2026)"
-                  className={cn(errors.lineItems?.[index]?.expiry && 'border-red-400')}
-                />
-                {errors.lineItems?.[index]?.expiry && (
-                  <p className="text-xs text-red-500 mt-0.5 sm:hidden">
-                    {errors.lineItems[index]?.expiry?.message}
-                  </p>
-                )}
-              </div>
-
-              {canSeeMrp && (
-                  <div className="space-y-1 sm:space-y-0">
-                    <Label className="text-xs text-gray-500 sm:hidden">MRP</Label>
-                    <Input
-                      {...register(`lineItems.${index}.mrp`)}
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      placeholder="MRP"
-                      className={cn(errors.lineItems?.[index]?.mrp && 'border-red-400')}
-                    />
-                  </div>
-              )}
-              {canSeePCost && (
-                  <div className="space-y-1 sm:space-y-0">
-                    <Label className="text-xs text-gray-500 sm:hidden">P.Cost</Label>
-                    <Input
-                      {...register(`lineItems.${index}.procurementCost`)}
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      placeholder="Cost"
-                      className={cn(errors.lineItems?.[index]?.procurementCost && 'border-red-400')}
-                    />
-                  </div>
-              )}
-            </div>
-
-            {/* Remove */}
-            <div className="flex justify-end sm:block pt-1 sm:pt-0">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-red-500 sm:text-red-400 hover:text-red-600 hover:bg-red-50 sm:h-9 sm:w-9 px-3 sm:px-0 text-xs sm:text-sm"
-                onClick={() => remove(index)}
-                disabled={fields.length === 1}
-              >
-                <Trash2 className="h-4 w-4 mr-1 sm:mr-0" />
-                <span className="sm:hidden">Remove Item</span>
-              </Button>
-            </div>
-          </div>
+            fieldId={field.id}
+            index={index}
+            register={register}
+            errors={errors}
+            setValue={setValue}
+            remove={remove}
+            fieldsLength={fields.length}
+            canSeeMrp={canSeeMrp}
+            canSeePCost={canSeePCost}
+            catalog={catalog}
+            watchedLineItems={watchedLineItems}
+            handleItemNameChange={handleItemNameChange}
+          />
         ))}
 
-        {canSeeMrp && (
-          <div className="flex flex-wrap items-center justify-between gap-4 py-2 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
-            <div className="flex gap-4">
-              <span>Items: <strong className="text-gray-900">{watch('lineItems')?.length || 0}</strong></span>
-              <span>Total Qty: <strong className="text-gray-900">{watch('lineItems')?.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0) || 0}</strong></span>
-            </div>
-            <div className="flex gap-4">
-              <span>Total MRP: <strong className="text-gray-900">₹{watch('lineItems')?.reduce((acc, item) => acc + ((Number(item.mrp) || 0) * (Number(item.quantity) || 0)), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</strong></span>
-              {canSeePCost && (
-                <span>Total P.Cost: <strong className="text-gray-900">₹{watch('lineItems')?.reduce((acc, item) => acc + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 0)), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</strong></span>
-              )}
-            </div>
-          </div>
-        )}
+        <ChallanSummary 
+          lineItems={watchedLineItems} 
+          canSeeMrp={canSeeMrp} 
+          canSeePCost={canSeePCost} 
+        />
 
         {/* Quick Add Batch Buttons directly below rows */}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100">

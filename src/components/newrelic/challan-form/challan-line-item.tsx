@@ -38,9 +38,12 @@ export function ChallanLineItem({
   handleItemNameChange,
 }: ChallanLineItemProps) {
   const rowBrand = (watchedLineItems?.[index]?.brandName || '').trim().toLowerCase();
-  const filteredItems = rowBrand
-    ? catalog.filter((c) => c.brandName.toLowerCase() === rowBrand)
+  const rawFilteredItems = rowBrand
+    ? catalog.filter((c) => c.brandName.trim().toLowerCase() === rowBrand)
     : catalog;
+    
+  // Deduplicate item names for the datalist
+  const uniqueItemNames = Array.from(new Set(rawFilteredItems.map(c => c.itemName.trim())));
   const datalistId = `newrelic-item-list-${index}`;
 
   return (
@@ -67,6 +70,7 @@ export function ChallanLineItem({
           })}
           list="newrelic-brand-list"
           placeholder="e.g. Happilo"
+          autoComplete="off"
           className={cn(errors.lineItems?.[index]?.brandName && 'border-red-400')}
         />
 
@@ -81,8 +85,8 @@ export function ChallanLineItem({
       <div className="space-y-1 sm:space-y-0">
         <Label className="text-xs text-gray-500 sm:hidden">Item Name</Label>
         <datalist id={datalistId}>
-          {filteredItems.map((item, idx) => (
-            <option key={`${item.itemName}-${idx}`} value={item.itemName} />
+          {uniqueItemNames.map((itemName, idx) => (
+            <option key={`${itemName}-${idx}`} value={itemName} />
           ))}
         </datalist>
         <Input
@@ -91,6 +95,7 @@ export function ChallanLineItem({
           })}
           list={datalistId}
           placeholder="e.g. Chilli garlic makhana"
+          autoComplete="off"
           className={cn(errors.lineItems?.[index]?.itemName && 'border-red-400')}
         />
         {errors.lineItems?.[index]?.itemName && (

@@ -311,10 +311,12 @@ export function NewRelicChallanForm({
     }
   };
 
-  const handleItemNameChange = (index: number, selectedItemName: string) => {
+  const handleItemNameChange = (index: number, selectedItemName: string, currentBrandName?: string) => {
     // If selected item exists in catalog, auto-fill default quantity & brand name
     const match = catalog.find(
-      (c) => c.itemName.toLowerCase() === selectedItemName.trim().toLowerCase()
+      (c) => 
+        c.itemName.toLowerCase() === selectedItemName.trim().toLowerCase() && 
+        (!currentBrandName || c.brandName.toLowerCase() === currentBrandName.trim().toLowerCase())
     );
     if (match) {
       if (match.brandName) {

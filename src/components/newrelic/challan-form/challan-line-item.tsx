@@ -20,7 +20,7 @@ interface ChallanLineItemProps {
   canSeePCost: boolean;
   catalog: CatalogItem[];
   watchedLineItems: any[];
-  handleItemNameChange: (index: number, selectedItemName: string) => void;
+  handleItemNameChange: (index: number, selectedItemName: string, currentBrandName?: string) => void;
 }
 
 export function ChallanLineItem({
@@ -87,7 +87,7 @@ export function ChallanLineItem({
         </datalist>
         <Input
           {...register(`lineItems.${index}.itemName`, {
-            onChange: (e) => handleItemNameChange(index, e.target.value),
+            onChange: (e) => handleItemNameChange(index, e.target.value, watchedLineItems?.[index]?.brandName),
           })}
           list={datalistId}
           placeholder="e.g. Chilli garlic makhana"

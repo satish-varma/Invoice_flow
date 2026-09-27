@@ -246,7 +246,7 @@ export default function StockRequestPage() {
                   <th className="px-3 py-2 w-[120px]">Quantity</th>
                   <th className="px-3 py-2 w-[120px]">Total Units</th>
                   <th className="px-3 py-2 w-[100px]">Ref MRP</th>
-                  <th className="px-3 py-2 w-[100px]">P.Cost</th>
+                  {role === 'admin' && <th className="px-3 py-2 w-[100px]">P.Cost</th>}
                   <th className="px-3 py-2 w-[50px]"></th>
                 </tr>
               </thead>
@@ -379,9 +379,11 @@ export default function StockRequestPage() {
                       <td className="px-2 py-2 text-gray-500">
                         {mrp ? `₹${mrp}` : '-'}
                       </td>
-                      <td className="px-2 py-2 text-gray-500">
-                        {pCost ? `₹${pCost}` : '-'}
-                      </td>
+                      {role === 'admin' && (
+                        <td className="px-2 py-2 text-gray-500">
+                          {pCost ? `₹${pCost}` : '-'}
+                        </td>
+                      )}
                       <td className="px-2 py-2 text-right">
                         <button
                           type="button"

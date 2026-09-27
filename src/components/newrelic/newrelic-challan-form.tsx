@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useId, useEffect, useState } from 'react';
+import React, { useId, useEffect, useState, useRef } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -111,6 +111,7 @@ export function NewRelicChallanForm({
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [pricingMap, setPricingMap] = useState<Map<string, number>>(new Map());
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const hasBackfilledPCost = useRef(false); // ensure backfill only fires once
   const [showSignedCopyModal, setShowSignedCopyModal] = useState(false);
   const [showGoodsReceivedModal, setShowGoodsReceivedModal] = useState(false);
   const [currentData, setCurrentData] = useState<NewRelicChallan | null>(initialData || null);
@@ -175,9 +176,11 @@ export function NewRelicChallanForm({
 
   /* ── In edit mode, backfill empty P.Cost cells once the pricing map is ready ── */
   useEffect(() => {
-    if (!isAdmin || pricingMap.size === 0) return;
+    // Guard: only run once per form instance — never overwrite values the user has set
+    if (!isAdmin || pricingMap.size === 0 || hasBackfilledPCost.current) return;
     const items = watchedLineItems;
     if (!items || items.length === 0) return;
+    hasBackfilledPCost.current = true; // mark as done before setValue calls
     items.forEach((item, index) => {
       const cost = Number(item.procurementCost);
       if (!cost || cost === 0) {
@@ -191,7 +194,6 @@ export function NewRelicChallanForm({
         }
       }
     });
-  // Run whenever the pricing map loads — not on every item change
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pricingMap]);
 

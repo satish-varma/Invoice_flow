@@ -155,15 +155,16 @@ export default function CatalogPage() {
       
       const mrpMap = new Map<string, number>();
       pricingItems.forEach(p => {
-         const key = `${p.brandName.trim().toLowerCase()}__${p.itemName.trim().toLowerCase()}`;
-         if (p.mrp > 0) mrpMap.set(key, p.mrp);
+         const key = `${(p.brandName || '').trim().toLowerCase()}__${(p.itemName || '').trim().toLowerCase()}`;
+         const mrpNum = Number(p.mrp);
+         if (mrpNum > 0) mrpMap.set(key, mrpNum);
       });
 
       let updatedCount = 0;
       for (const cat of catalog) {
-         const key = `${cat.brandName.trim().toLowerCase()}__${cat.itemName.trim().toLowerCase()}`;
+         const key = `${(cat.brandName || '').trim().toLowerCase()}__${(cat.itemName || '').trim().toLowerCase()}`;
          const pricingMrp = mrpMap.get(key);
-         if (pricingMrp !== undefined && cat.mrp !== pricingMrp) {
+         if (pricingMrp !== undefined && Number(cat.mrp) !== pricingMrp) {
             await saveCatalogItem({ 
               brandName: cat.brandName,
               itemName: cat.itemName,
@@ -178,8 +179,10 @@ export default function CatalogPage() {
       if (updatedCount > 0) {
         const refreshed = await getCatalogItems();
         setCatalog(refreshed);
+        alert(`Successfully synced ${updatedCount} items with MRP from the Pricing table!`);
+      } else {
+        alert(`0 items synced.\n\nDebug Info:\n- Pricing Items found: ${pricingItems.length}\n- Valid MRPs found: ${mrpMap.size}\n- Catalog Items found: ${catalog.length}\n\n(This means either your Pricing table is empty, or all matching items already have the exact same MRP in the Catalog).`);
       }
-      alert(`Successfully synced ${updatedCount} items with MRP from the Pricing table!`);
     } catch(e) {
       console.error(e);
       setError('Failed to sync MRPs. Please try again.');

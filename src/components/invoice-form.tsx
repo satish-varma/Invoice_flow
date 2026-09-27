@@ -1037,9 +1037,35 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                     </div>
                                 </div>
                             ))}
-                            <Button onClick={handleAddTax} variant="outline" size="sm" className="bg-transparent hover:bg-accent/10 h-8 active:scale-95">
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Tax
-                            </Button>
+                            <Select onValueChange={(val) => {
+                                if (val === 'custom') {
+                                    handleAddTax();
+                                    return;
+                                }
+                                const globalTaxList = settings?.customTaxes && settings.customTaxes.length > 0 ? settings.customTaxes : availableTaxes;
+                                const taxDef = globalTaxList.find(t => t.id === val);
+                                if (taxDef) {
+                                    const isApplied = appliedTaxes.some(t => t.name === taxDef.name);
+                                    if (!isApplied) {
+                                        setAppliedTaxes([...appliedTaxes, {
+                                            id: Date.now(),
+                                            name: taxDef.name,
+                                            rate: taxDef.rate,
+                                            amount: (subtotal * taxDef.rate) / 100,
+                                        }]);
+                                    }
+                                }
+                            }}>
+                                <SelectTrigger className="h-8 w-fit bg-transparent hover:bg-accent/10 active:scale-95 outline-none border-dashed">
+                                    <div className="flex items-center"><PlusCircle className="mr-2 h-4 w-4" /> Add Tax</div>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {(settings?.customTaxes && settings.customTaxes.length > 0 ? settings.customTaxes : availableTaxes).map(tax => (
+                                        <SelectItem key={tax.id} value={tax.id!}>{tax.name} ({tax.rate}%)</SelectItem>
+                                    ))}
+                                    <SelectItem value="custom" className="italic text-muted-foreground">Custom Tax...</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
 
 

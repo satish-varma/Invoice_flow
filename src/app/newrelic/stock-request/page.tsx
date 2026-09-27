@@ -22,7 +22,7 @@ export default function StockRequestPage() {
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [pricing, setPricing] = useState<PricingItem[]>([]);
   const [myRequests, setMyRequests] = useState<StockRequest[]>([]);
-  const [view, setView] = useState<'form' | 'history'>('form');
+  const [view, setView] = useState<'form' | 'history'>('history');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 

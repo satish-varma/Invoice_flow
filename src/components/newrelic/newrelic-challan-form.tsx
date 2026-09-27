@@ -144,40 +144,43 @@ export function NewRelicChallanForm({
 
   /* ── Load Pricing Map for P.Cost + MRP auto-fill ── */
   useEffect(() => {
-    if (isAdmin) {
+    if (canSeeMrp) {
       getPricingItems(watchedLocation).then((items) => {
         setPricingItems(items);
         setPricingMap(buildPricingMap(items));
       });
     }
-  }, [watchedLocation, isAdmin]);
+  }, [watchedLocation, canSeeMrp]);
 
-  /* ── In edit mode, backfill empty P.Cost cells once the pricing map is ready ── */
+  /* ── In edit mode, backfill empty P.Cost & MRP cells once the pricing map is ready ── */
   useEffect(() => {
     // Guard: only run once per form instance — never overwrite values the user has set
-    if (!isAdmin || pricingMap.size === 0 || hasBackfilledPCost.current) return;
+    if (!canSeeMrp || pricingMap.size === 0 || hasBackfilledPCost.current) return;
     const items = watchedLineItems;
     if (!items || items.length === 0) return;
     hasBackfilledPCost.current = true;
     items.forEach((item, index) => {
-      const cost = Number(item.procurementCost);
-      if (!cost || cost === 0) {
-        const brand = (item.brandName || '').trim().toLowerCase();
-        const name = (item.itemName || '').trim().toLowerCase();
-        if (!brand || !name) return;
-        const key = `${brand}__${name}`;
-        const priceFromMap = pricingMap.get(key);
-        if (priceFromMap !== undefined) {
-          setValue(`lineItems.${index}.procurementCost`, priceFromMap);
+      if (isAdmin) {
+        const cost = Number(item.procurementCost);
+        if (!cost || cost === 0) {
+          const brand = (item.brandName || '').trim().toLowerCase();
+          const name = (item.itemName || '').trim().toLowerCase();
+          if (brand && name) {
+            const key = `${brand}__${name}`;
+            const priceFromMap = pricingMap.get(key);
+            if (priceFromMap !== undefined) {
+              setValue(`lineItems.${index}.procurementCost`, priceFromMap);
+            }
+          }
         }
       }
+      
       // Also backfill MRP if empty
       const mrp = Number(item.mrp);
       if (!mrp || mrp === 0) {
         const brand = (item.brandName || '').trim().toLowerCase();
         const name = (item.itemName || '').trim().toLowerCase();
         if (!brand || !name) return;
-        const key = `${brand}__${name}`;
         const entry = pricingItems.find(p =>
           p.brandName.toLowerCase() === brand && p.itemName.toLowerCase() === name
         );
@@ -187,7 +190,7 @@ export function NewRelicChallanForm({
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pricingMap]);
+  }, [pricingMap, isAdmin]);
 
   /* ── Auto-suggest DC Number when location changes and DC field is empty ── */
   useEffect(() => {

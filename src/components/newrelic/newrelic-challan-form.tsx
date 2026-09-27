@@ -462,13 +462,6 @@ export function NewRelicChallanForm({
           <option key={b} value={b} />
         ))}
       </datalist>
-      <datalist id="newrelic-item-list">
-        {catalog.map((item, idx) => (
-          <option key={`${item.itemName}-${idx}`} value={item.itemName}>
-            {item.brandName ? `${item.brandName} · Default Qty: ${item.defaultQuantity}` : ''}
-          </option>
-        ))}
-      </datalist>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
@@ -716,14 +709,30 @@ export function NewRelicChallanForm({
             {/* Item Name */}
             <div className="space-y-1 sm:space-y-0">
               <Label className="text-xs text-gray-500 sm:hidden">Item Name</Label>
-              <Input
-                {...register(`lineItems.${index}.itemName`, {
-                  onChange: (e) => handleItemNameChange(index, e.target.value),
-                })}
-                list="newrelic-item-list"
-                placeholder="e.g. Chilli garlic maKhana"
-                className={cn(errors.lineItems?.[index]?.itemName && 'border-red-400')}
-              />
+              {(() => {
+                const rowBrand = (watchedLineItems?.[index]?.brandName || '').trim().toLowerCase();
+                const filteredItems = rowBrand
+                  ? catalog.filter(c => c.brandName.toLowerCase() === rowBrand)
+                  : catalog;
+                const datalistId = `newrelic-item-list-${index}`;
+                return (
+                  <>
+                    <datalist id={datalistId}>
+                      {filteredItems.map((item, idx) => (
+                        <option key={`${item.itemName}-${idx}`} value={item.itemName} />
+                      ))}
+                    </datalist>
+                    <Input
+                      {...register(`lineItems.${index}.itemName`, {
+                        onChange: (e) => handleItemNameChange(index, e.target.value),
+                      })}
+                      list={datalistId}
+                      placeholder="e.g. Chilli garlic makhana"
+                      className={cn(errors.lineItems?.[index]?.itemName && 'border-red-400')}
+                    />
+                  </>
+                );
+              })()}
               {errors.lineItems?.[index]?.itemName && (
                 <p className="text-xs text-red-500 mt-0.5">
                   {errors.lineItems[index]?.itemName?.message}

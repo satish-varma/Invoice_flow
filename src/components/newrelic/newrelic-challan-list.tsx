@@ -1,6 +1,5 @@
-import { NewRelicChallan } from '@/types/challan';
-
 'use client';
+import { NewRelicChallan } from '@/types/challan';
 
 import React from 'react';
 import { format } from 'date-fns';

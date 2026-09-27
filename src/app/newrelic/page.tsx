@@ -1,6 +1,5 @@
-import { NewRelicChallan, NewRelicLocation } from '@/types/challan';
-
 'use client';
+import { NewRelicChallan, NewRelicLocation } from '@/types/challan';
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Loader2, FileText, MapPin, Filter } from 'lucide-react';

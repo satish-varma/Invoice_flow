@@ -63,9 +63,13 @@ export default function StockRequestPage() {
       setCatalog(cat);
       setPricing(pri);
       
-      // Filter requests created by this user
+      // Filter requests created by this user (or show all for admin)
       const userIdentifier = user?.email || user?.id;
-      setMyRequests(reqs.filter(r => r.createdBy === userIdentifier || r.createdBy === 'Unknown'));
+      if (role === 'admin' || role === 'superadmin') {
+        setMyRequests(reqs);
+      } else {
+        setMyRequests(reqs.filter(r => r.createdBy === userIdentifier || r.createdBy === 'Unknown'));
+      }
     });
   }, [role, user?.email, user?.id, success]);
 

@@ -39,6 +39,7 @@ interface NewRelicChallanListProps {
   isTrashView?: boolean;
   onRestoreChallan?: (id: string) => void;
   role?: string | null;
+  showFinancials?: boolean;
 }
 
 const formatAuthorName = (email?: string | null) => {
@@ -58,6 +59,7 @@ export function NewRelicChallanList({
   isTrashView,
   onRestoreChallan,
   role,
+  showFinancials,
 }: NewRelicChallanListProps) {
   if (challans.length === 0) {
     return (
@@ -73,7 +75,7 @@ export function NewRelicChallanList({
         <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Saved Challans</h3>
         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-gray-500">
           <span>{challans.length} document{challans.length !== 1 ? 's' : ''}</span>
-          {role === 'admin' && (
+          {role === 'admin' && showFinancials && (
             <>
               <span className="hidden sm:inline text-gray-300">|</span>
               {(() => {
@@ -157,7 +159,7 @@ export function NewRelicChallanList({
               </div>
             )}
 
-            {role === 'admin' && (
+            {role === 'admin' && showFinancials && (
               <div className="flex flex-col gap-1 text-xs text-gray-500 border-t border-gray-50 pt-2">
                   {(() => {
                     const mrpTotal = (challan.lineItems || []).reduce((acc, item) => acc + ((item.mrp || 0) * (item.quantity || 1)), 0);
@@ -302,9 +304,13 @@ export function NewRelicChallanList({
               {role === 'admin' && (
                 <>
                   <TableHead className="font-semibold text-gray-600">{isTrashView ? 'Deleted By' : 'Author'}</TableHead>
-                  <TableHead className="font-semibold text-gray-600 text-right">Rev</TableHead>
-                  <TableHead className="font-semibold text-gray-600 text-right">Cost</TableHead>
-                  <TableHead className="font-semibold text-gray-600 text-right">Profit</TableHead>
+                  {showFinancials && (
+                    <>
+                      <TableHead className="font-semibold text-gray-600 text-right">Rev</TableHead>
+                      <TableHead className="font-semibold text-gray-600 text-right">Cost</TableHead>
+                      <TableHead className="font-semibold text-gray-600 text-right">Profit</TableHead>
+                    </>
+                  )}
                 </>
               )}
               <TableHead className="font-semibold text-gray-600 text-right">Actions</TableHead>
@@ -350,7 +356,7 @@ export function NewRelicChallanList({
                         )}
                       </div>
                     </TableCell>
-                      {(() => {
+                    {showFinancials && (() => {
                         const mrpTotal = (challan.lineItems || []).reduce((acc, item) => acc + ((item.mrp || 0) * (item.quantity || 1)), 0);
                         const commission = mrpTotal * 0.055;
                         const revenue = mrpTotal - commission;

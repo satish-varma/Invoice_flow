@@ -38,6 +38,7 @@ export default function NewRelicPage() {
   const [historyChallan, setHistoryChallan] = useState<NewRelicChallan | null>(null);
   const [previewChallan, setPreviewChallan] = useState<NewRelicChallan | null>(null);
   const [adminPreviewChallan, setAdminPreviewChallan] = useState<NewRelicChallan | null>(null);
+  const [showFinancials, setShowFinancials] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   /* ── Data fetching ── */
@@ -209,7 +210,7 @@ export default function NewRelicPage() {
 
         {/* Hero stats & Dashboard */}
         {role === 'admin' || role === 'superadmin' ? (
-          <NewRelicDashboard challans={displayChallans} />
+          <NewRelicDashboard challans={displayChallans} showFinancials={showFinancials} />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <StatCard
@@ -367,6 +368,20 @@ export default function NewRelicPage() {
               <option key={year} value={year}>{year}</option>
             ))}
           </select>
+          
+          {(role === 'admin' || role === 'superadmin') && (
+            <div className="ml-auto flex items-center gap-2">
+              <label className="text-sm text-gray-600 cursor-pointer flex items-center gap-2 font-medium">
+                <input
+                  type="checkbox"
+                  checked={showFinancials}
+                  onChange={(e) => setShowFinancials(e.target.checked)}
+                  className="rounded text-[#3b2fc9] focus:ring-[#3b2fc9] h-4 w-4"
+                />
+                Show Financials
+              </label>
+            </div>
+          )}
         </div>
 
         {/* Main Content Area */}
@@ -384,6 +399,7 @@ export default function NewRelicPage() {
               challans={displayChallans}
               isTrashView={true}
               role={role}
+              showFinancials={showFinancials}
               onSelectChallan={setSelectedChallan}
               onDownloadChallan={handleDownload}
               onDeleteChallan={handleDelete}
@@ -404,6 +420,7 @@ export default function NewRelicPage() {
             challans={displayChallans}
             isTrashView={false}
             role={role}
+            showFinancials={showFinancials}
             onSelectChallan={setSelectedChallan}
             onDownloadChallan={handleDownload}
             onDeleteChallan={handleDelete}

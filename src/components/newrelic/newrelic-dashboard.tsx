@@ -7,12 +7,14 @@ import { cn } from '@/lib/utils';
 
 interface NewRelicDashboardProps {
   challans: NewRelicChallan[];
+  showFinancials?: boolean;
 }
 
 const formatCurrency = (val: number) =>
   `₹${val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export function NewRelicDashboard({ challans }: NewRelicDashboardProps) {
+export function NewRelicDashboard({ challans, showFinancials }: NewRelicDashboardProps) {
+  if (!showFinancials) return null;
   const calculateMetrics = (items: NewRelicChallan[]) => {
     let totalMrp = 0;
     let totalPCost = 0;

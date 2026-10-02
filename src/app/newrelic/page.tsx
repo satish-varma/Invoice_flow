@@ -9,7 +9,6 @@ import * as XLSX from 'xlsx';
 import {getNewRelicChallans, deleteNewRelicChallan, NEWRELIC_LOCATIONS} from '@/services/newrelicChallanService';
 import { NewRelicChallanForm } from '@/components/newrelic/newrelic-challan-form';
 import { NewRelicChallanList } from '@/components/newrelic/newrelic-challan-list';
-import { NewRelicInsights } from '@/components/newrelic/newrelic-insights';
 import { NewRelicItemDashboard } from '@/components/newrelic/newrelic-item-dashboard';
 import { NewRelicChallanPreview } from '@/components/newrelic/newrelic-challan-preview';
 import { NewRelicChallanHistoryModal } from '@/components/newrelic/newrelic-challan-history-modal';
@@ -340,16 +339,12 @@ export default function NewRelicPage() {
 
           {role === 'admin' && (
             <>
-              <button
-                onClick={() => setActiveTab('insights')}
-                className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
-                  activeTab === 'insights'
-                    ? 'border-[#3b2fc9] text-[#3b2fc9]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
+              <Link
+                href="/newrelic/analytics"
+                className="pb-3 text-sm font-medium transition-colors border-b-2 border-transparent text-gray-500 hover:text-gray-700"
               >
-                Insights
-              </button>
+                Analytics Dashboard
+              </Link>
 
               <button
                 onClick={() => setActiveTab('items')}
@@ -452,8 +447,6 @@ export default function NewRelicPage() {
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
           </div>
-        ) : activeTab === 'insights' ? (
-          <NewRelicInsights challans={displayChallans} />
         ) : activeTab === 'items' ? (
           <NewRelicItemDashboard challans={displayChallans} />
         ) : activeTab === 'trash' ? (

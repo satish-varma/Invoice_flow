@@ -259,8 +259,8 @@ export function NewRelicItemDashboard({ challans }: NewRelicItemDashboardProps) 
         </div>
       </div>
 
-      {/* Data Table */}
-      <div className="overflow-x-auto">
+      {/* Data Table / List */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-white border-b border-gray-200">
@@ -312,6 +312,42 @@ export function NewRelicItemDashboard({ challans }: NewRelicItemDashboardProps) 
             </tfoot>
           )}
         </table>
+      </div>
+
+      {/* Mobile Card Layout */}
+      <div className="md:hidden divide-y divide-gray-100">
+        {paginatedData.length > 0 ? (
+          paginatedData.map((item) => (
+            <div 
+              key={item.id} 
+              onClick={() => setSelectedItem(item)}
+              className="p-4 hover:bg-gray-50 transition-colors cursor-pointer bg-white"
+            >
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className="font-medium text-gray-900 text-sm">{item.itemName}</h3>
+                  <p className="text-gray-500 text-xs mt-0.5">{item.brandName}</p>
+                </div>
+                <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#3b2fc9]/10 text-[#3b2fc9]">
+                  Qty: {item.totalQuantity}
+                </span>
+              </div>
+              <div className="text-xs text-gray-400">
+                In {item.occurrences} {item.occurrences === 1 ? 'challan' : 'challans'}
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="p-8 text-center text-gray-500 text-sm">
+            No items found matching your filters.
+          </div>
+        )}
+        {aggregatedData.length > 0 && (
+          <div className="bg-gray-50 p-4 flex justify-between items-center text-sm border-t border-gray-100">
+            <span className="font-medium text-gray-600">Total Filtered Qty:</span>
+            <span className="font-bold text-gray-900">{totalQuantityInView}</span>
+          </div>
+        )}
       </div>
       
       {/* Footer / Summary */}

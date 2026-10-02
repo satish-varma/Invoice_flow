@@ -239,171 +239,188 @@ export default function StockRequestPage() {
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-gray-900">Requested Items</h3>
           
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 border-y border-gray-200 text-gray-600 font-medium">
-                <tr>
-                  <th className="px-3 py-2 w-[200px]">Brand</th>
-                  <th className="px-3 py-2 w-[250px]">Item</th>
-                  <th className="px-3 py-2 w-[120px]">Order Type</th>
-                  <th className="px-3 py-2 w-[100px]">Case Size</th>
-                  <th className="px-3 py-2 w-[120px]">Quantity</th>
-                  <th className="px-3 py-2 w-[120px]">Total Units</th>
-                  <th className="px-3 py-2 w-[100px]">Ref MRP</th>
-                  {role === 'admin' && <th className="px-3 py-2 w-[100px]">P.Cost</th>}
-                  <th className="px-3 py-2 w-[50px]"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {fields.map((field, index) => {
-                  const currentBrand = lineItems[index]?.brandName || '';
-                  const currentItem = lineItems[index]?.itemName || '';
-                  const orderType = lineItems[index]?.orderType || 'cases';
-                  const caseSize = lineItems[index]?.caseSize || 1;
-                  const qty = lineItems[index]?.quantity || 0;
-                  const mrp = lineItems[index]?.mrp;
-                  const procurementCost = lineItems[index]?.procurementCost;
-                  
-                  // Allowed items for the current brand
-                  const allowedItems = catalog.filter(c => c.brandName === currentBrand).map(c => c.itemName).sort();
+          <div className="hidden md:grid grid-cols-12 gap-2 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-600 rounded-t-lg border border-gray-200">
+            <div className="col-span-2">Brand</div>
+            <div className="col-span-3">Item</div>
+            <div className="col-span-2">Order Type</div>
+            <div className="col-span-1">Case Size</div>
+            <div className="col-span-2">Quantity</div>
+            <div className="col-span-1">Total Units</div>
+            <div className="col-span-1"></div>
+          </div>
+          
+          <div className="space-y-4 md:space-y-0 md:border-x md:border-b md:border-gray-200 md:rounded-b-lg md:divide-y md:divide-gray-100">
+            {fields.map((field, index) => {
+              const currentBrand = lineItems[index]?.brandName || '';
+              const currentItem = lineItems[index]?.itemName || '';
+              const orderType = lineItems[index]?.orderType || 'cases';
+              const caseSize = lineItems[index]?.caseSize || 1;
+              const qty = lineItems[index]?.quantity || 0;
+              const mrp = lineItems[index]?.mrp;
+              const procurementCost = lineItems[index]?.procurementCost;
+              
+              // Allowed items for the current brand
+              const allowedItems = catalog.filter(c => c.brandName === currentBrand).map(c => c.itemName).sort();
 
-                  return (
-                    <tr key={field.id} className="hover:bg-gray-50/50">
-                      <td className="px-2 py-2">
-                        <input type="hidden" {...register(`lineItems.${index}.mrp` as const)} />
-                        <input type="hidden" {...register(`lineItems.${index}.procurementCost` as const)} />
-                        <input
-                          list={`brands-${index}`}
-                          {...register(`lineItems.${index}.brandName` as const)}
-                          autoComplete="off"
-                          onFocus={(e) => e.target.select()}
-                          onChange={(e) => {
-                            // Let react-hook-form handle the onChange first, but we also want to reset the item name
-                            setValue(`lineItems.${index}.brandName`, e.target.value);
-                            setValue(`lineItems.${index}.itemName`, '');
-                            setValue(`lineItems.${index}.caseSize`, 1);
-                            setValue(`lineItems.${index}.mrp`, 0);
-                            setValue(`lineItems.${index}.procurementCost`, 0);
-                            setValue(`lineItems.${index}.quantity`, 1);
-                            setValue(`lineItems.${index}.totalUnits`, 1);
-                          }}
-                          className={cn(
-                            "w-full rounded border px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]",
-                            errors.lineItems?.[index]?.brandName ? "border-red-500" : "border-gray-300"
-                          )}
-                          placeholder="Select Brand"
-                        />
-                        <datalist id={`brands-${index}`}>
-                          {brands.map(b => <option key={b} value={b} />)}
-                        </datalist>
-                      </td>
-                      <td className="px-2 py-2">
-                        <input
-                          list={`items-${index}`}
-                          {...register(`lineItems.${index}.itemName` as const)}
-                          autoComplete="off"
-                          onFocus={(e) => e.target.select()}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setValue(`lineItems.${index}.itemName`, val);
-                            
-                            // Auto-populate caseSize from catalog
-                            const catMatch = catalog.find(c => c.brandName === currentBrand && c.itemName === val);
-                            if (catMatch && catMatch.caseSize) {
-                              setValue(`lineItems.${index}.caseSize`, catMatch.caseSize);
-                              if (orderType === 'cases') {
-                                setValue(`lineItems.${index}.totalUnits`, (lineItems[index]?.quantity || 1) * catMatch.caseSize);
-                              }
-                            }
-                            
-                            // Auto-populate MRP and PCost from pricing
-                            const priceMatch = pricing.find(p => p.location === selectedLocation && p.brandName === currentBrand && p.itemName === val);
-                            if (priceMatch) {
-                              if (priceMatch.mrp) setValue(`lineItems.${index}.mrp`, priceMatch.mrp);
-                              if (priceMatch.purchaseCost) setValue(`lineItems.${index}.procurementCost`, priceMatch.purchaseCost);
-                            } else if (catMatch && catMatch.mrp) {
-                              setValue(`lineItems.${index}.mrp`, catMatch.mrp); // Fallback to catalog ref mrp
-                              setValue(`lineItems.${index}.procurementCost`, 0);
-                            }
-                          }}
-                          className={cn(
-                            "w-full rounded border px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]",
-                            errors.lineItems?.[index]?.itemName ? "border-red-500" : "border-gray-300"
-                          )}
-                          placeholder="Select Item"
-                        />
-                        <datalist id={`items-${index}`}>
-                          {allowedItems.map(i => <option key={i} value={i} />)}
-                        </datalist>
-                      </td>
-                      <td className="px-2 py-2">
-                        <select
-                          {...register(`lineItems.${index}.orderType` as const)}
-                          onChange={(e) => {
-                            const val = e.target.value as 'cases' | 'units';
-                            setValue(`lineItems.${index}.orderType`, val);
-                            setValue(`lineItems.${index}.totalUnits`, val === 'cases' ? qty * caseSize : qty);
-                          }}
-                          className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
-                        >
-                          <option value="cases">Cases</option>
-                          <option value="units">Units</option>
-                        </select>
-                      </td>
-                      <td className="px-2 py-2">
-                        <input
-                          type="number"
-                          {...register(`lineItems.${index}.caseSize` as const)}
-                          readOnly
-                          className="w-full rounded border border-gray-300 bg-gray-50 px-2 py-1.5 text-sm text-gray-500 cursor-not-allowed"
-                        />
-                      </td>
-                      <td className="px-2 py-2">
-                        <input
-                          type="number"
-                          min="1"
-                          {...register(`lineItems.${index}.quantity` as const)}
-                          onChange={(e) => {
-                            const val = Number(e.target.value);
-                            setValue(`lineItems.${index}.quantity`, val);
-                            setValue(`lineItems.${index}.totalUnits`, orderType === 'cases' ? val * caseSize : val);
-                          }}
-                          className={cn(
-                            "w-full rounded border px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]",
-                            errors.lineItems?.[index]?.quantity ? "border-red-500" : "border-gray-300"
-                          )}
-                        />
-                      </td>
-                      <td className="px-2 py-2">
-                        <input
-                          type="number"
-                          value={lineItems[index]?.totalUnits || 0}
-                          readOnly
-                          className="w-full rounded border border-transparent bg-transparent px-2 py-1.5 text-sm font-medium text-gray-900"
-                        />
-                      </td>
-                      <td className="px-2 py-2 text-gray-500">
-                        {mrp ? `₹${mrp}` : '-'}
-                      </td>
-                      {role === 'admin' && (
-                        <td className="px-2 py-2 text-gray-500">
-                          {procurementCost ? `₹${procurementCost}` : '-'}
-                        </td>
+              return (
+                <div key={field.id} className="relative grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-2 p-4 md:p-2 bg-gray-50/50 md:bg-white border md:border-0 border-gray-200 rounded-xl md:rounded-none shadow-sm md:shadow-none hover:bg-gray-50 items-center">
+                  
+                  {/* Mobile Only: Row Header & Delete */}
+                  <div className="flex items-center justify-between md:hidden mb-2 pb-2 border-b border-gray-200">
+                    <span className="font-semibold text-gray-700 text-sm">Item #{index + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => remove(index)}
+                      className="text-red-500 hover:text-red-700 p-1 bg-red-50 rounded-md"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Brand */}
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-medium text-gray-500 mb-1 block md:hidden">Brand</label>
+                    <input type="hidden" {...register(`lineItems.${index}.mrp` as const)} />
+                    <input type="hidden" {...register(`lineItems.${index}.procurementCost` as const)} />
+                    <input
+                      list={`brands-${index}`}
+                      {...register(`lineItems.${index}.brandName` as const)}
+                      autoComplete="off"
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        setValue(`lineItems.${index}.brandName`, e.target.value);
+                        setValue(`lineItems.${index}.itemName`, '');
+                        setValue(`lineItems.${index}.caseSize`, 1);
+                        setValue(`lineItems.${index}.mrp`, 0);
+                        setValue(`lineItems.${index}.procurementCost`, 0);
+                        setValue(`lineItems.${index}.quantity`, 1);
+                        setValue(`lineItems.${index}.totalUnits`, 1);
+                      }}
+                      className={cn(
+                        "w-full rounded-lg md:rounded border px-3 md:px-2 py-2 md:py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/50",
+                        errors.lineItems?.[index]?.brandName ? "border-red-500" : "border-gray-300 bg-white"
                       )}
-                      <td className="px-2 py-2 text-right">
-                        <button
-                          type="button"
-                          onClick={() => remove(index)}
-                          className="text-red-400 hover:text-red-600 p-1"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      placeholder="Select Brand"
+                    />
+                    <datalist id={`brands-${index}`}>
+                      {brands.map(b => <option key={b} value={b} />)}
+                    </datalist>
+                  </div>
+
+                  {/* Item Name */}
+                  <div className="md:col-span-3">
+                    <label className="text-xs font-medium text-gray-500 mb-1 block md:hidden">Item</label>
+                    <input
+                      list={`items-${index}`}
+                      {...register(`lineItems.${index}.itemName` as const)}
+                      autoComplete="off"
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setValue(`lineItems.${index}.itemName`, val);
+                        
+                        const catMatch = catalog.find(c => c.brandName === currentBrand && c.itemName === val);
+                        if (catMatch && catMatch.caseSize) {
+                          setValue(`lineItems.${index}.caseSize`, catMatch.caseSize);
+                          if (orderType === 'cases') {
+                            setValue(`lineItems.${index}.totalUnits`, (lineItems[index]?.quantity || 1) * catMatch.caseSize);
+                          }
+                        }
+                        
+                        const priceMatch = pricing.find(p => p.location === selectedLocation && p.brandName === currentBrand && p.itemName === val);
+                        if (priceMatch) {
+                          if (priceMatch.mrp) setValue(`lineItems.${index}.mrp`, priceMatch.mrp);
+                          if (priceMatch.purchaseCost) setValue(`lineItems.${index}.procurementCost`, priceMatch.purchaseCost);
+                        } else if (catMatch && catMatch.mrp) {
+                          setValue(`lineItems.${index}.mrp`, catMatch.mrp);
+                          setValue(`lineItems.${index}.procurementCost`, 0);
+                        }
+                      }}
+                      className={cn(
+                        "w-full rounded-lg md:rounded border px-3 md:px-2 py-2 md:py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/50",
+                        errors.lineItems?.[index]?.itemName ? "border-red-500" : "border-gray-300 bg-white"
+                      )}
+                      placeholder="Select Item"
+                    />
+                    <datalist id={`items-${index}`}>
+                      {allowedItems.map(i => <option key={i} value={i} />)}
+                    </datalist>
+                  </div>
+
+                  {/* Order Type & Case Size Container on Mobile */}
+                  <div className="grid grid-cols-2 gap-3 md:contents">
+                    <div className="md:col-span-2">
+                      <label className="text-xs font-medium text-gray-500 mb-1 block md:hidden">Order Type</label>
+                      <select
+                        {...register(`lineItems.${index}.orderType` as const)}
+                        onChange={(e) => {
+                          const val = e.target.value as 'cases' | 'units';
+                          setValue(`lineItems.${index}.orderType`, val);
+                          setValue(`lineItems.${index}.totalUnits`, val === 'cases' ? qty * caseSize : qty);
+                        }}
+                        className="w-full rounded-lg md:rounded border border-gray-300 bg-white px-3 md:px-2 py-2 md:py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/50"
+                      >
+                        <option value="cases">Cases</option>
+                        <option value="units">Units</option>
+                      </select>
+                    </div>
+
+                    <div className="md:col-span-1">
+                      <label className="text-xs font-medium text-gray-500 mb-1 block md:hidden">Case Size</label>
+                      <input
+                        type="number"
+                        {...register(`lineItems.${index}.caseSize` as const)}
+                        readOnly
+                        className="w-full rounded-lg md:rounded border border-gray-200 bg-gray-100/80 px-3 md:px-2 py-2 md:py-1.5 text-sm text-gray-500 cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quantity & Total Container on Mobile */}
+                  <div className="grid grid-cols-2 gap-3 md:contents">
+                    <div className="md:col-span-2">
+                      <label className="text-xs font-medium text-gray-500 mb-1 block md:hidden">Quantity</label>
+                      <input
+                        type="number"
+                        min="1"
+                        {...register(`lineItems.${index}.quantity` as const)}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setValue(`lineItems.${index}.quantity`, val);
+                          setValue(`lineItems.${index}.totalUnits`, orderType === 'cases' ? val * caseSize : val);
+                        }}
+                        className={cn(
+                          "w-full rounded-lg md:rounded border bg-white px-3 md:px-2 py-2 md:py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/50",
+                          errors.lineItems?.[index]?.quantity ? "border-red-500" : "border-gray-300"
+                        )}
+                      />
+                    </div>
+
+                    <div className="md:col-span-1">
+                      <label className="text-xs font-medium text-gray-500 mb-1 block md:hidden">Total Units</label>
+                      <input
+                        type="number"
+                        value={lineItems[index]?.totalUnits || 0}
+                        readOnly
+                        className="w-full rounded-lg md:rounded border border-transparent bg-transparent px-3 md:px-2 py-2 md:py-1.5 text-sm font-semibold text-gray-900"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Delete Button - Desktop Only */}
+                  <div className="hidden md:flex md:col-span-1 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => remove(index)}
+                      className="text-gray-400 hover:text-red-600 p-1.5 rounded-md hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  
+                </div>
+              );
+            })}
           </div>
           
           <div className="flex flex-wrap items-center gap-4">

@@ -21,6 +21,12 @@ export const metadata: Metadata = {
     title: "InvoiceFlow",
     statusBarStyle: "default",
   },
+  icons: {
+    apple: [
+      { url: '/icon-192x192.png' },
+      { url: '/icon-512x512.png', sizes: '512x512' }
+    ]
+  }
 };
 
 export const viewport: Viewport = {

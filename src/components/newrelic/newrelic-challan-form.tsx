@@ -100,7 +100,7 @@ export function NewRelicChallanForm({
     location: (initialData?.location as NewRelicLocation) ?? defaultLocation ?? 'hyderabad',
     dcDate: initialData?.dcDate ? new Date(initialData.dcDate) : new Date(),
     lineItems: initialData?.lineItems?.length
-      ? (initialData.lineItems as any)
+      ? (initialData.lineItems.map(item => ({ ...item, expiry: item.expiry || '' })) as any)
       : [{ id: 1, brandName: '', itemName: '', quantity: 1, expiry: '', mrp: undefined }],
     note: initialData?.note ?? '',
     transportCost: initialData?.transportCost ?? undefined,
@@ -370,14 +370,22 @@ export function NewRelicChallanForm({
       // Ignore any trailing or incomplete rows that only have brand name (no item name)
       const validItems = (values.lineItems || [])
         .filter((item) => item.itemName && item.itemName.trim() !== '')
-        .map((item) => ({
-          ...item,
-          brandName: item.brandName?.trim() || '',
-          itemName: item.itemName!.trim(),
-          quantity: Number(item.quantity) || 1,
-          expiry: item.expiry?.trim() || '',
-          procurementCost: item.procurementCost,
-        }));
+        .map((item, idx) => {
+          const originalItem = initialData?.lineItems?.[idx] || ({} as any);
+          // z.coerce.number() already coerced strings to numbers. "" becomes 0.
+          const mrp = item.mrp ?? originalItem.mrp;
+          const procurementCost = item.procurementCost ?? originalItem.procurementCost ?? originalItem.pCost ?? 0;
+
+          return {
+            ...item,
+            brandName: item.brandName?.trim() || '',
+            itemName: item.itemName!.trim(),
+            quantity: Number(item.quantity) || 1,
+            expiry: item.expiry?.trim() || '',
+            mrp,
+            procurementCost,
+          };
+        });
 
       if (validItems.length === 0) {
         toast({
@@ -451,6 +459,47 @@ export function NewRelicChallanForm({
     }
   };
 
+  // Show a toast when Zod / RHF validation fails so the buttons never appear "dead"
+  const onValidationError = (formErrors: any) => {
+    // Detailed logging for debugging
+    if (Array.isArray(formErrors.lineItems)) {
+      formErrors.lineItems.forEach((item: any, idx: number) => {
+        if (item) {
+          console.error(`  Item ${idx} errors:`, JSON.stringify(item));
+        }
+      });
+    }
+    console.error('Full form validation errors:', JSON.stringify(formErrors, null, 2));
+
+    // Find first error message for the toast
+    let firstMsg = 'Please check the form for errors.';
+    if (formErrors.lineItems?.message) {
+      firstMsg = formErrors.lineItems.message;
+    } else if (formErrors.lineItems?.root?.message) {
+      firstMsg = formErrors.lineItems.root.message;
+    } else if (Array.isArray(formErrors.lineItems)) {
+      for (const item of formErrors.lineItems) {
+        if (item) {
+          const field = Object.keys(item)[0];
+          if (field && item[field]?.message) {
+            firstMsg = `Line item ${field}: ${item[field].message}`;
+            break;
+          }
+        }
+      }
+    } else {
+      const field = Object.keys(formErrors)[0];
+      if (field && formErrors[field]?.message) {
+        firstMsg = formErrors[field].message;
+      }
+    }
+    toast({
+      variant: 'destructive',
+      title: 'Validation Error',
+      description: firstMsg,
+    });
+  };
+
   const isEditing = !!initialData?.id;
   const isDuplicating = !!initialData && !initialData.id;
   const locationConfig = NEWRELIC_LOCATIONS[watchedLocation];
@@ -463,7 +512,7 @@ export function NewRelicChallanForm({
   return (
     <form
       id={`${formId}-form`}
-      onSubmit={handleSubmit((v) => onSubmit(v, true))}
+      onSubmit={handleSubmit((v) => onSubmit(v, true), onValidationError)}
       className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6 space-y-5 sm:space-y-6"
     >
       {/* Autocomplete Datalists */}
@@ -774,7 +823,7 @@ export function NewRelicChallanForm({
           variant="outline"
           className="w-full sm:flex-1 h-11 sm:h-10 gap-2"
           disabled={isSaving}
-          onClick={handleSubmit((v) => onSubmit(v, false))}
+          onClick={handleSubmit((v) => onSubmit(v, false), onValidationError)}
         >
           <Save className="h-4 w-4" />
           {isEditing ? 'Update Only' : isDuplicating ? 'Save Duplicate Only' : 'Save Only'}

@@ -262,7 +262,7 @@ export default function StockRequestPage() {
                   const caseSize = lineItems[index]?.caseSize || 1;
                   const qty = lineItems[index]?.quantity || 0;
                   const mrp = lineItems[index]?.mrp;
-                  const pCost = lineItems[index]?.pCost;
+                  const procurementCost = lineItems[index]?.procurementCost;
                   
                   // Allowed items for the current brand
                   const allowedItems = catalog.filter(c => c.brandName === currentBrand).map(c => c.itemName).sort();
@@ -271,7 +271,7 @@ export default function StockRequestPage() {
                     <tr key={field.id} className="hover:bg-gray-50/50">
                       <td className="px-2 py-2">
                         <input type="hidden" {...register(`lineItems.${index}.mrp` as const)} />
-                        <input type="hidden" {...register(`lineItems.${index}.pCost` as const)} />
+                        <input type="hidden" {...register(`lineItems.${index}.procurementCost` as const)} />
                         <input
                           list={`brands-${index}`}
                           {...register(`lineItems.${index}.brandName` as const)}
@@ -283,7 +283,7 @@ export default function StockRequestPage() {
                             setValue(`lineItems.${index}.itemName`, '');
                             setValue(`lineItems.${index}.caseSize`, 1);
                             setValue(`lineItems.${index}.mrp`, 0);
-                            setValue(`lineItems.${index}.pCost`, 0);
+                            setValue(`lineItems.${index}.procurementCost`, 0);
                             setValue(`lineItems.${index}.quantity`, 1);
                             setValue(`lineItems.${index}.totalUnits`, 1);
                           }}
@@ -320,10 +320,10 @@ export default function StockRequestPage() {
                             const priceMatch = pricing.find(p => p.location === selectedLocation && p.brandName === currentBrand && p.itemName === val);
                             if (priceMatch) {
                               if (priceMatch.mrp) setValue(`lineItems.${index}.mrp`, priceMatch.mrp);
-                              if (priceMatch.purchaseCost) setValue(`lineItems.${index}.pCost`, priceMatch.purchaseCost);
+                              if (priceMatch.purchaseCost) setValue(`lineItems.${index}.procurementCost`, priceMatch.purchaseCost);
                             } else if (catMatch && catMatch.mrp) {
                               setValue(`lineItems.${index}.mrp`, catMatch.mrp); // Fallback to catalog ref mrp
-                              setValue(`lineItems.${index}.pCost`, 0);
+                              setValue(`lineItems.${index}.procurementCost`, 0);
                             }
                           }}
                           className={cn(
@@ -387,7 +387,7 @@ export default function StockRequestPage() {
                       </td>
                       {role === 'admin' && (
                         <td className="px-2 py-2 text-gray-500">
-                          {pCost ? `₹${pCost}` : '-'}
+                          {procurementCost ? `₹${procurementCost}` : '-'}
                         </td>
                       )}
                       <td className="px-2 py-2 text-right">

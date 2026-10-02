@@ -8,6 +8,7 @@ import {NEWRELIC_LOCATIONS} from '@/services/newrelicChallanService';
 import { FileText, Package, MapPin, Download, Loader2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { format } from 'date-fns';
 
 interface NewRelicInsightsProps {
   challans: NewRelicChallan[];
@@ -109,6 +110,42 @@ export function NewRelicInsights({ challans }: NewRelicInsightsProps) {
       };
     }, { revenue: 0, cost: 0, profit: 0 });
   }, [challans]);
+
+  // 5. Daily Financial Trends
+  const dailyFinancialData = useMemo(() => {
+    const dataMap: Record<string, { date: string, revenue: number, profit: number }> = {};
+    challans.forEach(c => {
+      if (!c.dcDate) return;
+      const dateStr = format(new Date(c.dcDate), 'dd MMM');
+      if (!dataMap[dateStr]) dataMap[dateStr] = { date: dateStr, revenue: 0, profit: 0 };
+      
+      const mrpTotal = (c.lineItems || []).reduce((sum, item) => sum + ((item.mrp || 0) * (item.quantity || 1)), 0);
+      const revenue = mrpTotal - (mrpTotal * 0.055);
+      
+      // Attempt to calculate cost. c.procurementCost is sometimes global or per-item
+      let pCost = 0;
+      if (c.procurementCost !== undefined && c.procurementCost !== null) {
+          pCost = Number(c.procurementCost);
+      } else {
+          pCost = (c.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+      }
+      
+      const cost = pCost + Number(c.transportCost || 0) + Number(c.otherCharges || 0);
+      const profit = revenue - cost;
+      
+      dataMap[dateStr].revenue += revenue;
+      dataMap[dateStr].profit += profit;
+    });
+
+    return Object.values(dataMap).sort((a: any, b: any) => {
+      const dateA = new Date(a.date + ' ' + new Date().getFullYear()).getTime();
+      const dateB = new Date(b.date + ' ' + new Date().getFullYear()).getTime();
+      return dateA - dateB;
+    });
+  }, [challans]);
+
+  const formatCurrency = (val: number) =>
+    `₹${val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const handleExportPDF = async () => {
     if (!dashboardRef.current) return;
@@ -244,6 +281,42 @@ export function NewRelicInsights({ challans }: NewRelicInsightsProps) {
                   activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 0, fill: '#10b981' }} 
                 />
               </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Financial Trends Chart */}
+        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm lg:col-span-3">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Financial Trends (Day by Day)</h3>
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dailyFinancialData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} dy={10} />
+                <YAxis 
+                  yAxisId="left" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tickFormatter={(val) => `₹${(val/1000).toFixed(0)}k`}
+                  tick={{ fontSize: 12, fill: '#6b7280' }} 
+                />
+                <YAxis 
+                  yAxisId="right" 
+                  orientation="right" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tickFormatter={(val) => `₹${(val/1000).toFixed(0)}k`}
+                  tick={{ fontSize: 12, fill: '#6b7280' }} 
+                />
+                <Tooltip 
+                  formatter={(value: number, name: string) => [formatCurrency(value), name.charAt(0).toUpperCase() + name.slice(1)]}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  cursor={{ fill: '#f9fafb' }}
+                />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: '16px', fontSize: '13px' }} />
+                <Bar yAxisId="left" dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Revenue" />
+                <Bar yAxisId="right" dataKey="profit" fill="#10b981" radius={[4, 4, 0, 0]} name="Profit" />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>

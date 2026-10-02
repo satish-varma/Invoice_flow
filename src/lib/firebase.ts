@@ -1,7 +1,7 @@
 
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApp, getApps } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 import { firebaseConfig } from '@/firebase/config';
@@ -11,7 +11,22 @@ const getFirebaseApp = () => {
   return !getApps().length ? initializeApp(firebaseConfig) : getApp();
 };
 
-const getDb = () => getFirestore(getFirebaseApp());
+const getDb = () => {
+  const app = getFirebaseApp();
+  if (typeof window !== "undefined") {
+    try {
+      // Enable multi-tab offline persistence
+      return initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+      });
+    } catch (e) {
+      // If already initialized, just return it
+      return getFirestore(app);
+    }
+  }
+  return getFirestore(app);
+};
+
 const getFirebaseStorage = () => getStorage(getFirebaseApp());
 
 export const app = getFirebaseApp();

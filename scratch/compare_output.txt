@@ -1,0 +1,133 @@
+Found 25 non-zero items in aggregator data.
+Found 19 challans in system for Sep 16-30 2026.
+Found 123 line items in our system.
+\nDifferences found:
+┌─────────┬────────────────────────┬────────────────────────────────────┬───────────────┬───────────────┬────────┬────────┬─────────────────────────────────┐
+│ (index) │ dcs                    │ item                               │ aggregatorQty │ aggregatorVal │ ourQty │ ourVal │ issue                           │
+├─────────┼────────────────────────┼────────────────────────────────────┼───────────────┼───────────────┼────────┼────────┼─────────────────────────────────┤
+│ 0       │ [ 'BLR056', 'BLR062' ] │ 'Storia Coconut Water'             │ 1860          │ 93000         │ 1860   │ 74400  │ 'Mismatch'                      │
+│ 1       │ [ 'BLR056' ]           │ 'Storia Pomogranate'               │ 90            │ 3600          │ 0      │ 0      │ 'Missing in our system'         │
+│ 2       │ [ 'BLR062' ]           │ 'Storia Banana Milkshake'          │ 60            │ 2700          │ 0      │ 0      │ 'Missing in our system'         │
+│ 3       │ [ 'BLR057' ]           │ 'Fab Box High Protein Soya Chips'  │ 200           │ 9400          │ 0      │ 0      │ 'Missing in our system'         │
+│ 4       │ [ 'BLR061' ]           │ 'Fab Box Chocochip banana cookies' │ 200           │ 9400          │ 0      │ 0      │ 'Missing in our system'         │
+│ 5       │ [ 'BLR059' ]           │ 'Peping Pineapple Ginger'          │ 250           │ 7500          │ 0      │ 0      │ 'Missing in our system'         │
+│ 6       │ [ 'BLR059' ]           │ 'Peping Coconut Fennel'            │ 250           │ 7500          │ 0      │ 0      │ 'Missing in our system'         │
+│ 7       │ [ 'BLR059' ]           │ 'Peping Oranage Spearmint'         │ 250           │ 7500          │ 0      │ 0      │ 'Missing in our system'         │
+│ 8       │ [ 'BLR062' ]           │ 'Epigamia Vanilla Milkshake'       │ 300           │ 11400         │ 0      │ 0      │ 'Missing in our system'         │
+│ 9       │ [ 'BLR062' ]           │ 'Epigamia Chocolate Milkshake'     │ 300           │ 11400         │ 0      │ 0      │ 'Missing in our system'         │
+│ 10      │ [ 'BLR062' ]           │ 'Epigamia Strawberry  Milkshake'   │ 300           │ 11400         │ 0      │ 0      │ 'Missing in our system'         │
+│ 11      │ [ 'BLR062', 'BLR063' ] │ 'Epigamia Everyday Yogurt'         │ 144           │ 5040          │ 96     │ 3360   │ 'Mismatch'                      │
+│ 12      │ [ 'BLR062', 'BLR063' ] │ 'Epigamia Alphonse Mango'          │ 144           │ 5040          │ 96     │ 3360   │ 'Mismatch'                      │
+│ 13      │ [ 'BLR065' ]           │ 'Epigamia Lichee'                  │ 64            │ 2240          │ 0      │ 0      │ 'Missing in our system'         │
+│ 14      │ [ 'BLR064' ]           │ 'Akshaykalpa Spicy Butter Milk'    │ 300           │ 8700          │ 0      │ 0      │ 'Missing in our system'         │
+│ 15      │ [ 'HYD584' ]           │ 'Akshaykalpa Plain butter milk'    │ 0             │ 0             │ 300    │ 8700   │ 'Missing in aggregator invoice' │
+│ 16      │ [ 'HYD584' ]           │ 'Akshaykalpa Spicy Buttermilk'     │ 0             │ 0             │ 300    │ 8700   │ 'Missing in aggregator invoice' │
+│ 17      │ [ 'HYD584' ]           │ 'Epigamia Lychee yogurt'           │ 0             │ 0             │ 48     │ 1680   │ 'Missing in aggregator invoice' │
+│ 18      │ [ 'HYD584' ]           │ 'Epigamia Mango yogurt'            │ 0             │ 0             │ 48     │ 1680   │ 'Missing in aggregator invoice' │
+│ 19      │ [ 'HYD584' ]           │ 'Epigamia Strawberry yoghurt'      │ 0             │ 0             │ 48     │ 1680   │ 'Missing in aggregator invoice' │
+│ 20      │ [ 'HYD587' ]           │ 'Storia Coconut Water'             │ 0             │ 0             │ 1320   │ 52800  │ 'Missing in aggregator invoice' │
+│ 21      │ [ 'HYD587' ]           │ 'Storia Pomegranate Juice'         │ 0             │ 0             │ 300    │ 12000  │ 'Missing in aggregator invoice' │
+│ 22      │ [ 'HYD583' ]           │ 'Heritage Chocolate caramel shake' │ 0             │ 0             │ 76     │ 3420   │ 'Missing in aggregator invoice' │
+│ 23      │ [ 'HYD583' ]           │ 'Epigamia Chocolate shake'         │ 0             │ 0             │ 44     │ 1672   │ 'Missing in aggregator invoice' │
+│ 24      │ [ 'HYD583' ]           │ 'Epigamia Vanilla Shake'           │ 0             │ 0             │ 25     │ 950    │ 'Missing in aggregator invoice' │
+│ 25      │ [ 'HYD583' ]           │ 'Epigamia Strawberry shake'        │ 0             │ 0             │ 300    │ 11400  │ 'Missing in aggregator invoice' │
+│ 26      │ [ 'HYD583' ]           │ 'Dodla Badam milk'                 │ 0             │ 0             │ 60     │ 2400   │ 'Missing in aggregator invoice' │
+│ 27      │ [ 'HYD583' ]           │ 'Milky Mist Butter milk'           │ 0             │ 0             │ 116    │ 2320   │ 'Missing in aggregator invoice' │
+│ 28      │ [ 'HYD580' ]           │ 'Storia Coconut water'             │ 0             │ 0             │ 1500   │ 60000  │ 'Missing in aggregator invoice' │
+│ 29      │ [ 'HYD580' ]           │ 'Storia Coffee shake'              │ 0             │ 0             │ 90     │ 4050   │ 'Missing in aggregator invoice' │
+│ 30      │ [ 'HYD580' ]           │ 'Storia Banana shake'              │ 0             │ 0             │ 150    │ 6750   │ 'Missing in aggregator invoice' │
+│ 31      │ [ 'HYD580' ]           │ 'Storia Mango shake'               │ 0             │ 0             │ 150    │ 6750   │ 'Missing in aggregator invoice' │
+│ 32      │ [ 'HYD580' ]           │ 'Storia Chocolate shake'           │ 0             │ 0             │ 210    │ 9450   │ 'Missing in aggregator invoice' │
+│ 33      │ [ 'HYD580' ]           │ 'Storia Pomegranate'               │ 0             │ 0             │ 150    │ 6000   │ 'Missing in aggregator invoice' │
+│ 34      │ [ 'HYD580' ]           │ 'Fab box Spicy lemony chickpeas'   │ 0             │ 0             │ 200    │ 9400   │ 'Missing in aggregator invoice' │
+│ 35      │ [ 'HYD580' ]           │ 'Fab box Soya chips'               │ 0             │ 0             │ 180    │ 8460   │ 'Missing in aggregator invoice' │
+│ 36      │ [ 'HYD580' ]           │ 'Fab box Chocochip Banana'         │ 0             │ 0             │ 200    │ 10000  │ 'Missing in aggregator invoice' │
+│ 37      │ [ 'BLR057' ]           │ 'Fab box Hihgh protein soya chips' │ 0             │ 0             │ 200    │ 9400   │ 'Missing in aggregator invoice' │
+│ 38      │ [ 'BLR063' ]           │ 'Epigamia Strawberry'              │ 0             │ 0             │ 48     │ 1680   │ 'Missing in aggregator invoice' │
+│ 39      │ [ 'BLR063' ]           │ 'Epigamia Alphonso mango'          │ 0             │ 0             │ 48     │ 1680   │ 'Missing in aggregator invoice' │
+│ 40      │ [ 'HYD586' ]           │ 'Yogabar Seeds 7in 1 mix'          │ 0             │ 0             │ 720    │ 28800  │ 'Missing in aggregator invoice' │
+│ 41      │ [ 'HYD586' ]           │ 'Yogabar Nut Mix'                  │ 0             │ 0             │ 48     │ 2400   │ 'Missing in aggregator invoice' │
+│ 42      │ [ 'HYD586' ]           │ 'Yogabar Panchmeva'                │ 0             │ 0             │ 70     │ 3500   │ 'Missing in aggregator invoice' │
+│ 43      │ [ 'HYD586' ]           │ 'Yogabar Pumpkin seeds'            │ 0             │ 0             │ 1344   │ 53760  │ 'Missing in aggregator invoice' │
+│ 44      │ [ 'HYD586' ]           │ 'Yogabar Sunflower seeds'          │ 0             │ 0             │ 1344   │ 53760  │ 'Missing in aggregator invoice' │
+│ 45      │ [ 'HYD586' ]           │ 'Yogabar Chia seeds'               │ 0             │ 0             │ 1344   │ 53760  │ 'Missing in aggregator invoice' │
+│ 46      │ [ 'HYD586' ]           │ 'Yogabar Flax seeds'               │ 0             │ 0             │ 1344   │ 53760  │ 'Missing in aggregator invoice' │
+│ 47      │ [ 'HYD586' ]           │ 'Yogabar Salted almonds'           │ 0             │ 0             │ 432    │ 21600  │ 'Missing in aggregator invoice' │
+│ 48      │ [ 'HYD586' ]           │ 'Yogabar Salted cashew'            │ 0             │ 0             │ 167    │ 8350   │ 'Missing in aggregator invoice' │
+│ 49      │ [ 'HYD586' ]           │ 'Yoga Bar Salted pista'            │ 0             │ 0             │ 14     │ 700    │ 'Missing in aggregator invoice' │
+│ 50      │ [ 'HYD586' ]           │ 'Yogabar Trailmix'                 │ 0             │ 0             │ 720    │ 36000  │ 'Missing in aggregator invoice' │
+│ 51      │ [ 'BLR064' ]           │ 'Akshaykalpa Spicy Buttermilk'     │ 0             │ 0             │ 300    │ 8700   │ 'Missing in aggregator invoice' │
+│ 52      │ [ 'HYD582' ]           │ 'Unibic Cashew badam'              │ 0             │ 0             │ 144    │ 2880   │ 'Missing in aggregator invoice' │
+│ 53      │ [ 'HYD582' ]           │ 'Unibic Butter classic'            │ 0             │ 0             │ 144    │ 2880   │ 'Missing in aggregator invoice' │
+│ 54      │ [ 'HYD582' ]           │ 'Unibic Choco ripple'              │ 0             │ 0             │ 144    │ 2880   │ 'Missing in aggregator invoice' │
+│ 55      │ [ 'HYD582' ]           │ 'Unibic Choco nut'                 │ 0             │ 0             │ 192    │ 3840   │ 'Missing in aggregator invoice' │
+│ 56      │ [ 'HYD582' ]           │ 'Unibic Fruit & nut'               │ 0             │ 0             │ 192    │ 3840   │ 'Missing in aggregator invoice' │
+│ 57      │ [ 'HYD582' ]           │ 'Unibic Choco chip'                │ 0             │ 0             │ 192    │ 3840   │ 'Missing in aggregator invoice' │
+│ 58      │ [ 'HYD582' ]           │ 'Town Bus Moong dal'               │ 0             │ 0             │ 144    │ 2880   │ 'Missing in aggregator invoice' │
+│ 59      │ [ 'HYD582' ]           │ 'Town Bus Soya Sticks'             │ 0             │ 0             │ 240    │ 4800   │ 'Missing in aggregator invoice' │
+│ 60      │ [ 'HYD582' ]           │ 'Cavins Cold coffee shake'         │ 0             │ 0             │ 150    │ 6000   │ 'Missing in aggregator invoice' │
+│ 61      │ [ 'HYD582' ]           │ 'Cavins Strawberry shake'          │ 0             │ 0             │ 150    │ 6000   │ 'Missing in aggregator invoice' │
+│ 62      │ [ 'HYD582' ]           │ 'Cavins Belgium chocolate shake'   │ 0             │ 0             │ 150    │ 6000   │ 'Missing in aggregator invoice' │
+│ 63      │ [ 'HYD582' ]           │ 'Cavins Kaju butterscotch shake'   │ 0             │ 0             │ 150    │ 6000   │ 'Missing in aggregator invoice' │
+│ 64      │ [ 'HYD582' ]           │ 'Cavins Masala Chaasa'             │ 0             │ 0             │ 150    │ 3000   │ 'Missing in aggregator invoice' │
+│ 65      │ [ 'HYD579' ]           │ 'Farmley Cream and onion'          │ 0             │ 0             │ 120    │ 3600   │ 'Missing in aggregator invoice' │
+│ 66      │ [ 'HYD579' ]           │ 'Farmley Aachari makhana'          │ 0             │ 0             │ 180    │ 5400   │ 'Missing in aggregator invoice' │
+│ 67      │ [ 'HYD579' ]           │ 'Farmley Peri peri makhana'        │ 0             │ 0             │ 120    │ 3600   │ 'Missing in aggregator invoice' │
+│ 68      │ [ 'HYD579' ]           │ 'Farmley Tangy tomato makhana'     │ 0             │ 0             │ 60     │ 1800   │ 'Missing in aggregator invoice' │
+│ 69      │ [ 'HYD579' ]           │ 'Happilo Chilli garlic makhana'    │ 0             │ 0             │ 144    │ 4320   │ 'Missing in aggregator invoice' │
+│ 70      │ [ 'HYD579' ]           │ 'Happilo Peri peri makhana'        │ 0             │ 0             │ 144    │ 4320   │ 'Missing in aggregator invoice' │
+│ 71      │ [ 'HYD579' ]           │ 'Happilo Perky pudina makhana'     │ 0             │ 0             │ 120    │ 3600   │ 'Missing in aggregator invoice' │
+│ 72      │ [ 'HYD579' ]           │ 'Britannia Good day butter'        │ 0             │ 0             │ 90     │ 900    │ 'Missing in aggregator invoice' │
+│ 73      │ [ 'HYD579' ]           │ 'Britannia Good day Cashew'        │ 0             │ 0             │ 90     │ 900    │ 'Missing in aggregator invoice' │
+│ 74      │ [ 'HYD579' ]           │ 'Paper Boat Jaljeera juice'        │ 0             │ 0             │ 90     │ 2250   │ 'Missing in aggregator invoice' │
+│ 75      │ [ 'HYD579' ]           │ 'Paper Boat Aamras'                │ 0             │ 0             │ 90     │ 2250   │ 'Missing in aggregator invoice' │
+│ 76      │ [ 'HYD579' ]           │ 'Paper boat Chilli guava juice'    │ 0             │ 0             │ 90     │ 2250   │ 'Missing in aggregator invoice' │
+│ 77      │ [ 'HYD579' ]           │ 'Karias Peanut chiki'              │ 0             │ 0             │ 480    │ 11040  │ 'Missing in aggregator invoice' │
+│ 78      │ [ 'HYD579' ]           │ 'ShantaG All Mix Khakhra'          │ 0             │ 0             │ 512    │ 10240  │ 'Missing in aggregator invoice' │
+│ 79      │ [ 'HYD579' ]           │ 'Coca Cola Thums up'               │ 0             │ 0             │ 240    │ 9600   │ 'Missing in aggregator invoice' │
+│ 80      │ [ 'HYD579' ]           │ 'Coca Cola Sprite'                 │ 0             │ 0             │ 120    │ 4800   │ 'Missing in aggregator invoice' │
+│ 81      │ [ 'HYD579' ]           │ 'Coca Cola Zero Coke'              │ 0             │ 0             │ 360    │ 14400  │ 'Missing in aggregator invoice' │
+│ 82      │ [ 'HYD581' ]           │ 'Epigamia Mishti doi'              │ 0             │ 0             │ 128    │ 4480   │ 'Missing in aggregator invoice' │
+│ 83      │ [ 'HYD581' ]           │ 'Epigamia Lychee'                  │ 0             │ 0             │ 38     │ 1330   │ 'Missing in aggregator invoice' │
+│ 84      │ [ 'HYD581' ]           │ 'Epigamia Mango'                   │ 0             │ 0             │ 39     │ 1365   │ 'Missing in aggregator invoice' │
+│ 85      │ [ 'HYD581' ]           │ 'Epigamia Strawberry'              │ 0             │ 0             │ 39     │ 1365   │ 'Missing in aggregator invoice' │
+│ 86      │ [ 'HYD581' ]           │ 'Epigamia Chocolate shake'         │ 0             │ 0             │ 208    │ 7904   │ 'Missing in aggregator invoice' │
+│ 87      │ [ 'HYD581' ]           │ 'Epigamia Vanilla Shake'           │ 0             │ 0             │ 250    │ 9500   │ 'Missing in aggregator invoice' │
+│ 88      │ [ 'HYD585' ]           │ 'Epigamia Lychee yogurt'           │ 0             │ 0             │ 48     │ 1680   │ 'Missing in aggregator invoice' │
+│ 89      │ [ 'HYD585' ]           │ 'Epigamia Mango yogurt'            │ 0             │ 0             │ 48     │ 1680   │ 'Missing in aggregator invoice' │
+│ 90      │ [ 'HYD585' ]           │ 'Epigamia Strawberry yogurt'       │ 0             │ 0             │ 48     │ 1680   │ 'Missing in aggregator invoice' │
+│ 91      │ [ 'HYD585' ]           │ 'Britannia Bourbon'                │ 0             │ 0             │ 140    │ 1400   │ 'Missing in aggregator invoice' │
+│ 92      │ [ 'HYD585' ]           │ 'Britannia Jim jam'                │ 0             │ 0             │ 120    │ 1200   │ 'Missing in aggregator invoice' │
+│ 93      │ [ 'HYD585' ]           │ 'Britannia Good day butter'        │ 0             │ 0             │ 90     │ 900    │ 'Missing in aggregator invoice' │
+│ 94      │ [ 'HYD585' ]           │ 'Britannia Good day Cashew'        │ 0             │ 0             │ 90     │ 900    │ 'Missing in aggregator invoice' │
+│ 95      │ [ 'HYD585' ]           │ 'Paper Boat Orange'                │ 0             │ 0             │ 90     │ 2250   │ 'Missing in aggregator invoice' │
+│ 96      │ [ 'HYD585' ]           │ 'Paper Boat Alphonse'              │ 0             │ 0             │ 90     │ 2250   │ 'Missing in aggregator invoice' │
+│ 97      │ [ 'HYD585' ]           │ 'Paper boat Mix fruit'             │ 0             │ 0             │ 90     │ 2250   │ 'Missing in aggregator invoice' │
+│ 98      │ [ 'HYD585' ]           │ 'Paper boat Lychee'                │ 0             │ 0             │ 90     │ 2250   │ 'Missing in aggregator invoice' │
+│ 99      │ [ 'HYD585' ]           │ 'Paper boat Apple'                 │ 0             │ 0             │ 90     │ 2250   │ 'Missing in aggregator invoice' │
+│ 100     │ [ 'HYD585' ]           │ 'Paper Boat Aamras'                │ 0             │ 0             │ 90     │ 2250   │ 'Missing in aggregator invoice' │
+│ 101     │ [ 'HYD585' ]           │ 'Coca Cola Thumbs Up'              │ 0             │ 0             │ 120    │ 4800   │ 'Missing in aggregator invoice' │
+│ 102     │ [ 'HYD585' ]           │ 'Coca Cola Sprite'                 │ 0             │ 0             │ 120    │ 4800   │ 'Missing in aggregator invoice' │
+│ 103     │ [ 'HYD585' ]           │ 'Coca Cola Dite Coke'              │ 0             │ 0             │ 120    │ 6000   │ 'Missing in aggregator invoice' │
+│ 104     │ [ 'HYD585' ]           │ 'Coca Cola Zero Coke'              │ 0             │ 0             │ 120    │ 4800   │ 'Missing in aggregator invoice' │
+│ 105     │ [ 'HYD585' ]           │ "Lay's Cream and Onion"            │ 0             │ 0             │ 120    │ 2400   │ 'Missing in aggregator invoice' │
+│ 106     │ [ 'HYD585' ]           │ "Lay's Magic Masala"               │ 0             │ 0             │ 120    │ 2400   │ 'Missing in aggregator invoice' │
+│ 107     │ [ 'HYD585' ]           │ 'Haldirams Salted peanuts'         │ 0             │ 0             │ 120    │ 2400   │ 'Missing in aggregator invoice' │
+│ 108     │ [ 'HYD585' ]           │ 'Haldiram Soya Sticks'             │ 0             │ 0             │ 96     │ 1920   │ 'Missing in aggregator invoice' │
+│ 109     │ [ 'HYD585' ]           │ 'Haldiram Lite chiwda'             │ 0             │ 0             │ 120    │ 2400   │ 'Missing in aggregator invoice' │
+│ 110     │ [ 'HYD585' ]           │ 'Haldiram Instant bhel'            │ 0             │ 0             │ 144    │ 2880   │ 'Missing in aggregator invoice' │
+│ 111     │ [ 'HYD585' ]           │ 'Haldiram Aloo bhujia'             │ 0             │ 0             │ 96     │ 1920   │ 'Missing in aggregator invoice' │
+│ 112     │ [ 'HYD585' ]           │ 'Haldiram Bhujiya Sev'             │ 0             │ 0             │ 120    │ 2400   │ 'Missing in aggregator invoice' │
+│ 113     │ [ 'BLR056' ]           │ 'Storia Pomegranate Juice'         │ 0             │ 0             │ 90     │ 3600   │ 'Missing in aggregator invoice' │
+│ 114     │ [ 'BLR062' ]           │ 'Storia Bnana shake'               │ 0             │ 0             │ 60     │ 2700   │ 'Missing in aggregator invoice' │
+│ 115     │ [ 'BLR062' ]           │ 'Epigamia Vanilla milk shake'      │ 0             │ 0             │ 300    │ 11400  │ 'Missing in aggregator invoice' │
+│ 116     │ [ 'BLR062' ]           │ 'Epigamia Chocolate milk shake'    │ 0             │ 0             │ 300    │ 11400  │ 'Missing in aggregator invoice' │
+│ 117     │ [ 'BLR062' ]           │ 'Epigamia Strawberry milk shake'   │ 0             │ 0             │ 300    │ 11400  │ 'Missing in aggregator invoice' │
+│ 118     │ [ 'BLR065' ]           │ 'Epigamia Lychee'                  │ 0             │ 0             │ 64     │ 2240   │ 'Missing in aggregator invoice' │
+│ 119     │ [ 'BLR061' ]           │ 'Fab box Chocochip bnana cookies'  │ 0             │ 0             │ 200    │ 10000  │ 'Missing in aggregator invoice' │
+│ 120     │ [ 'BLR059' ]           │ 'Peping Spearmint Orange'          │ 0             │ 0             │ 250    │ 7500   │ 'Missing in aggregator invoice' │
+│ 121     │ [ 'BLR059' ]           │ 'Peping Ginger pineapple'          │ 0             │ 0             │ 250    │ 7500   │ 'Missing in aggregator invoice' │
+│ 122     │ [ 'BLR059' ]           │ 'Peping Fennel coconut'            │ 0             │ 0             │ 250    │ 7500   │ 'Missing in aggregator invoice' │
+└─────────┴────────────────────────┴────────────────────────────────────┴───────────────┴───────────────┴────────┴────────┴─────────────────────────────────┘
+\nTotal Aggregator Value: 289770
+Total Our Value: 1046536

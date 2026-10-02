@@ -2,8 +2,10 @@
 import { NewRelicChallan, NewRelicLocation } from '@/types/challan';
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Loader2, FileText, MapPin, Filter } from 'lucide-react';
+import { Loader2, FileText, MapPin, Filter, FileSpreadsheet, RefreshCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
+import * as XLSX from 'xlsx';
 import {getNewRelicChallans, deleteNewRelicChallan, NEWRELIC_LOCATIONS} from '@/services/newrelicChallanService';
 import { NewRelicChallanForm } from '@/components/newrelic/newrelic-challan-form';
 import { NewRelicChallanList } from '@/components/newrelic/newrelic-challan-list';
@@ -13,7 +15,7 @@ import { NewRelicChallanPreview } from '@/components/newrelic/newrelic-challan-p
 import { NewRelicChallanHistoryModal } from '@/components/newrelic/newrelic-challan-history-modal';
 import { NewRelicChallanViewModal } from '@/components/newrelic/newrelic-challan-view-modal';
 import { NewRelicAdminPreviewModal } from '@/components/newrelic/newrelic-admin-preview-modal';
-import { NewRelicSignedCopyModal } from '@/components/newrelic/newrelic-signed-copy-modal';
+
 import { NewRelicGlobalAuditLog } from '@/components/newrelic/newrelic-global-audit-log';
 import { generateAndSavePdf } from '@/lib/pdf';
 import { NewRelicDashboard } from '@/components/newrelic/newrelic-dashboard';
@@ -34,6 +36,7 @@ export default function NewRelicPage() {
   const [filterLocation, setFilterLocation] = useState<string>('all');
   const [filterMonth, setFilterMonth] = useState<string>('all');
   const [filterYear, setFilterYear] = useState<string>('all');
+  const [filterCycle, setFilterCycle] = useState<string>('all');
 
   const [historyChallan, setHistoryChallan] = useState<NewRelicChallan | null>(null);
   const [previewChallan, setPreviewChallan] = useState<NewRelicChallan | null>(null);
@@ -151,6 +154,34 @@ export default function NewRelicPage() {
     }
   };
 
+  const handleExportExcel = () => {
+    try {
+      const exportData = displayChallans.flatMap((c) => 
+        (c.lineItems || []).map((item) => ({
+          'DC Number': c.dcNumber,
+          'Date': new Date(c.dcDate).toLocaleDateString('en-IN'),
+          'Location': NEWRELIC_LOCATIONS[c.location]?.label || c.location,
+          'Brand Name': item.brandName || '',
+          'Item Name': item.itemName,
+          'Quantity': item.quantity,
+          'MRP': item.mrp || 0,
+          'Procurement Cost': item.procurementCost || 0,
+          'Total Value': (item.mrp || 0) * item.quantity,
+          'Total P.Cost': (item.procurementCost || 0) * item.quantity,
+        }))
+      );
+      
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Challans');
+      XLSX.writeFile(wb, `Challans_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+      toast({ title: 'Export successful' });
+    } catch (err) {
+      console.error(err);
+      toast({ variant: 'destructive', title: 'Export failed' });
+    }
+  };
+
   /* ── PDF generation after preview mounts ── */
   useEffect(() => {
     if (!challanToDownload) return;
@@ -194,8 +225,16 @@ export default function NewRelicPage() {
     if (filterYear !== 'all') {
       list = list.filter((c) => new Date(c.dcDate).getFullYear().toString() === filterYear);
     }
+    if (filterCycle !== 'all') {
+      list = list.filter((c) => {
+        const date = new Date(c.dcDate).getDate();
+        if (filterCycle === '1-15') return date >= 1 && date <= 15;
+        if (filterCycle === '16-31') return date >= 16 && date <= 31;
+        return true;
+      });
+    }
     return list;
-  }, [activeTab, activeChallans, trashChallans, filterLocation, filterMonth, filterYear]);
+  }, [activeTab, activeChallans, trashChallans, filterLocation, filterMonth, filterYear, filterCycle]);
 
   const availableYears = useMemo(() => {
     return Array.from(new Set(challans.map(c => new Date(c.dcDate).getFullYear()))).sort((a, b) => b - a);
@@ -250,6 +289,20 @@ export default function NewRelicPage() {
             >
               <FileText className="h-5 w-5" />
               New Challan (Bangalore)
+            </button>
+            <Link
+              href="/newrelic/reconcile"
+              className="flex-1 bg-amber-500 text-white py-3 px-4 rounded-xl font-medium hover:bg-amber-600 transition-colors shadow-sm flex items-center justify-center gap-2"
+            >
+              <RefreshCcw className="h-5 w-5" />
+              Reconcile
+            </Link>
+            <button
+              onClick={handleExportExcel}
+              className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2"
+            >
+              <FileSpreadsheet className="h-5 w-5" />
+              Export Excel
             </button>
           </div>
         )}
@@ -367,6 +420,16 @@ export default function NewRelicPage() {
             {availableYears.map(year => (
               <option key={year} value={year}>{year}</option>
             ))}
+          </select>
+
+          <select
+            value={filterCycle}
+            onChange={(e) => setFilterCycle(e.target.value)}
+            className="h-9 w-full sm:w-auto px-3 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
+          >
+            <option value="all">All Cycles</option>
+            <option value="1-15">Cycle 1 (1st - 15th)</option>
+            <option value="16-31">Cycle 2 (16th - End)</option>
           </select>
           
           {(role === 'admin' || role === 'superadmin') && (

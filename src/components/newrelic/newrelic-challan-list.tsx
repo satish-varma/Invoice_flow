@@ -1,7 +1,7 @@
 'use client';
 import { NewRelicChallan } from '@/types/challan';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt } from 'lucide-react';
 import {
@@ -61,6 +61,26 @@ export function NewRelicChallanList({
   role,
   showFinancials,
 }: NewRelicChallanListProps) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(challans.filter(c => c.id).map(c => c.id as string)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (id: string, checked: boolean) => {
+    const next = new Set(selectedIds);
+    if (checked) {
+      next.add(id);
+    } else {
+      next.delete(id);
+    }
+    setSelectedIds(next);
+  };
+
   if (challans.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-10 text-center">
@@ -85,7 +105,15 @@ export function NewRelicChallanList({
                   
                   acc.mrp += mrp;
                   acc.commission += comm;
-                  acc.goods += (c.procurementCost || 0);
+
+                  let pCost = 0;
+                  if (c.procurementCost !== undefined && c.procurementCost !== null) {
+                    pCost = Number(c.procurementCost);
+                  } else {
+                    pCost = (c.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+                  }
+                  
+                  acc.goods += pCost;
                   acc.transport += (c.transportCost || 0);
                   
                   return acc;
@@ -112,14 +140,54 @@ export function NewRelicChallanList({
         </div>
       </div>
 
+      {/* Floating Selection Bar */}
+      {selectedIds.size > 0 && role === 'admin' && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl border border-gray-700 z-50 flex flex-wrap items-center justify-center gap-4 animate-in slide-in-from-bottom-8">
+          {(() => {
+            const challansToAggregate = challans.filter(c => c.id && selectedIds.has(c.id));
+            const totals = challansToAggregate.reduce((acc, c) => {
+              const mrp = (c.lineItems || []).reduce((sum, i) => sum + ((i.mrp || 0) * (i.quantity || 1)), 0);
+              acc.mrp += mrp;
+              return acc;
+            }, { mrp: 0 });
+
+            return (
+              <>
+                <div className="flex items-center gap-2 pr-4 border-r border-gray-700 font-medium">
+                  <span className="bg-[#3b2fc9] text-white text-xs px-2 py-0.5 rounded-full">{selectedIds.size}</span>
+                  Selected
+                </div>
+                <div className="flex items-center gap-4 text-sm font-bold">
+                  <span>MRP: ₹{totals.mrp.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <button 
+                  onClick={() => handleSelectAll(false)}
+                  className="ml-2 text-gray-400 hover:text-white transition-colors text-sm"
+                >
+                  Clear
+                </button>
+              </>
+            );
+          })()}
+        </div>
+      )}
+
       {/* Mobile Card List (< sm) */}
       <div className="block sm:hidden divide-y divide-gray-100">
         {challans.map((challan) => (
           <div key={challan.id} className="p-4 flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <span className="font-mono font-bold text-[#3b2fc9] text-base">
-                {challan.dcNumber}
-              </span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300 text-[#3b2fc9] focus:ring-[#3b2fc9] w-4 h-4"
+                  checked={!!challan.id && selectedIds.has(challan.id)}
+                  onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
+                />
+                <span className="font-mono font-bold text-[#3b2fc9] text-base">
+                  {challan.dcNumber}
+                </span>
+              </div>
               <Badge
                 variant="outline"
                 className={
@@ -166,7 +234,13 @@ export function NewRelicChallanList({
                     const commission = mrpTotal * 0.055;
                     const revenue = mrpTotal - commission;
                     
-                    const pCost = challan.procurementCost || 0;
+                    let pCost = 0;
+                    if (challan.procurementCost !== undefined && challan.procurementCost !== null) {
+                      pCost = Number(challan.procurementCost);
+                    } else {
+                      pCost = (challan.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+                    }
+                    
                     const tCost = challan.transportCost || 0;
                     const oCost = challan.otherCharges || 0;
                     const totalCost = pCost + tCost + oCost;
@@ -297,6 +371,14 @@ export function NewRelicChallanList({
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50 hover:bg-gray-50">
+              <TableHead className="w-[40px] pl-4">
+                <input 
+                  type="checkbox"
+                  className="rounded border-gray-300 text-[#3b2fc9] focus:ring-[#3b2fc9] w-4 h-4"
+                  checked={challans.length > 0 && selectedIds.size === challans.filter(c => c.id).length}
+                  onChange={(e) => handleSelectAll(e.target.checked)}
+                />
+              </TableHead>
               <TableHead className="font-semibold text-gray-600">DC No</TableHead>
               <TableHead className="font-semibold text-gray-600">Date</TableHead>
               <TableHead className="font-semibold text-gray-600">Location</TableHead>
@@ -319,6 +401,14 @@ export function NewRelicChallanList({
           <TableBody>
             {challans.map((challan) => (
               <TableRow key={challan.id} className="hover:bg-gray-50/50">
+                <TableCell className="pl-4">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-[#3b2fc9] focus:ring-[#3b2fc9] w-4 h-4"
+                    checked={!!challan.id && selectedIds.has(challan.id)}
+                    onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
+                  />
+                </TableCell>
                 <TableCell className="font-mono font-medium text-[#3b2fc9]">
                   {challan.dcNumber}
                 </TableCell>
@@ -361,7 +451,13 @@ export function NewRelicChallanList({
                         const commission = mrpTotal * 0.055;
                         const revenue = mrpTotal - commission;
                         
-                        const pCost = challan.procurementCost || 0;
+                        let pCost = 0;
+                        if (challan.procurementCost !== undefined && challan.procurementCost !== null) {
+                          pCost = Number(challan.procurementCost);
+                        } else {
+                          pCost = (challan.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+                        }
+                        
                         const tCost = challan.transportCost || 0;
                         const oCost = challan.otherCharges || 0;
                         const totalCost = pCost + tCost + oCost;

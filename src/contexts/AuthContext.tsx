@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { SessionProvider, useSession, signOut as nextAuthSignOut } from 'next-auth/react';
 
-export type UserRole = 'admin' | 'manager' | 'user';
+export type UserRole = 'admin' | 'superadmin' | 'manager' | 'user';
 
 export interface AppUser {
   id: string; // The firestore doc ID

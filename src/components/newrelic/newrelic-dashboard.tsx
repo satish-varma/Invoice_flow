@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { NewRelicChallan } from '@/types/challan';
 import { TrendingUp, TrendingDown, DollarSign, Package, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 interface NewRelicDashboardProps {
   challans: NewRelicChallan[];
@@ -25,10 +26,10 @@ export function NewRelicDashboard({ challans, showFinancials }: NewRelicDashboar
       totalTransport += Number(c.transportCost || 0);
       totalOther += Number(c.otherCharges || 0);
       let thisChallanItemPCost = 0;
-      c.lineItems?.forEach((item) => {
+      c.lineItems?.forEach((item: any) => {
         const qty = Number(item.quantity || 0);
         totalMrp += Number(item.mrp || 0) * qty;
-        thisChallanItemPCost += Number(item.procurementCost || 0) * qty;
+        thisChallanItemPCost += (Number(item.procurementCost) || 0) * qty;
       });
 
       // Prevent double counting: Use the explicitly saved global procurement cost,

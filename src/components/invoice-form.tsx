@@ -459,7 +459,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
 
             if (result.deliverTo) {
                 const dtUpper = result.deliverTo.toUpperCase();
-                let bestContact = null;
+                let bestContact: any = null;
                 let bestScore = 0;
 
                 settings.shipToContacts?.forEach(c => {

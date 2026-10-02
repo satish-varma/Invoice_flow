@@ -186,7 +186,7 @@ export default function StockRequestsAdminPage() {
   pendingRequests.forEach(r => {
     r.lineItems.forEach(item => {
       totalPendingMrp += (item.mrp || 0) * item.quantity;
-      totalPendingCost += (item.pCost || 0) * item.quantity;
+      totalPendingCost += (item.procurementCost || 0) * item.quantity;
     });
   });
 

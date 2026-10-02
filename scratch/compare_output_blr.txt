@@ -1,0 +1,39 @@
+Found 25 non-zero items in aggregator data.
+Found 10 challans in system for Sep 16-30 2026.
+Found 29 line items in our system.
+\nDifferences found:
+┌─────────┬────────────────────────┬────────────────────────────────────┬───────────────┬───────────────┬────────┬────────┬─────────────────────────────────┐
+│ (index) │ dcs                    │ item                               │ aggregatorQty │ aggregatorVal │ ourQty │ ourVal │ issue                           │
+├─────────┼────────────────────────┼────────────────────────────────────┼───────────────┼───────────────┼────────┼────────┼─────────────────────────────────┤
+│ 0       │ [ 'BLR056', 'BLR062' ] │ 'Storia Coconut Water'             │ 1860          │ 93000         │ 1860   │ 74400  │ 'Mismatch'                      │
+│ 1       │ [ 'BLR056' ]           │ 'Storia Pomogranate'               │ 90            │ 3600          │ 0      │ 0      │ 'Missing in our system'         │
+│ 2       │ [ 'BLR062' ]           │ 'Storia Banana Milkshake'          │ 60            │ 2700          │ 0      │ 0      │ 'Missing in our system'         │
+│ 3       │ [ 'BLR057' ]           │ 'Fab Box High Protein Soya Chips'  │ 200           │ 9400          │ 0      │ 0      │ 'Missing in our system'         │
+│ 4       │ [ 'BLR061' ]           │ 'Fab Box Chocochip banana cookies' │ 200           │ 9400          │ 0      │ 0      │ 'Missing in our system'         │
+│ 5       │ [ 'BLR059' ]           │ 'Peping Pineapple Ginger'          │ 250           │ 7500          │ 0      │ 0      │ 'Missing in our system'         │
+│ 6       │ [ 'BLR059' ]           │ 'Peping Coconut Fennel'            │ 250           │ 7500          │ 0      │ 0      │ 'Missing in our system'         │
+│ 7       │ [ 'BLR059' ]           │ 'Peping Oranage Spearmint'         │ 250           │ 7500          │ 0      │ 0      │ 'Missing in our system'         │
+│ 8       │ [ 'BLR062' ]           │ 'Epigamia Vanilla Milkshake'       │ 300           │ 11400         │ 0      │ 0      │ 'Missing in our system'         │
+│ 9       │ [ 'BLR062' ]           │ 'Epigamia Chocolate Milkshake'     │ 300           │ 11400         │ 0      │ 0      │ 'Missing in our system'         │
+│ 10      │ [ 'BLR062' ]           │ 'Epigamia Strawberry  Milkshake'   │ 300           │ 11400         │ 0      │ 0      │ 'Missing in our system'         │
+│ 11      │ [ 'BLR062', 'BLR063' ] │ 'Epigamia Everyday Yogurt'         │ 144           │ 5040          │ 96     │ 3360   │ 'Mismatch'                      │
+│ 12      │ [ 'BLR062', 'BLR063' ] │ 'Epigamia Alphonse Mango'          │ 144           │ 5040          │ 96     │ 3360   │ 'Mismatch'                      │
+│ 13      │ [ 'BLR065' ]           │ 'Epigamia Lichee'                  │ 64            │ 2240          │ 0      │ 0      │ 'Missing in our system'         │
+│ 14      │ [ 'BLR064' ]           │ 'Akshaykalpa Spicy Butter Milk'    │ 300           │ 8700          │ 0      │ 0      │ 'Missing in our system'         │
+│ 15      │ [ 'BLR057' ]           │ 'Fab box Hihgh protein soya chips' │ 0             │ 0             │ 200    │ 9400   │ 'Missing in aggregator invoice' │
+│ 16      │ [ 'BLR063' ]           │ 'Epigamia Strawberry'              │ 0             │ 0             │ 48     │ 1680   │ 'Missing in aggregator invoice' │
+│ 17      │ [ 'BLR063' ]           │ 'Epigamia Alphonso mango'          │ 0             │ 0             │ 48     │ 1680   │ 'Missing in aggregator invoice' │
+│ 18      │ [ 'BLR064' ]           │ 'Akshaykalpa Spicy Buttermilk'     │ 0             │ 0             │ 300    │ 8700   │ 'Missing in aggregator invoice' │
+│ 19      │ [ 'BLR056' ]           │ 'Storia Pomegranate Juice'         │ 0             │ 0             │ 90     │ 3600   │ 'Missing in aggregator invoice' │
+│ 20      │ [ 'BLR062' ]           │ 'Storia Bnana shake'               │ 0             │ 0             │ 60     │ 2700   │ 'Missing in aggregator invoice' │
+│ 21      │ [ 'BLR062' ]           │ 'Epigamia Vanilla milk shake'      │ 0             │ 0             │ 300    │ 11400  │ 'Missing in aggregator invoice' │
+│ 22      │ [ 'BLR062' ]           │ 'Epigamia Chocolate milk shake'    │ 0             │ 0             │ 300    │ 11400  │ 'Missing in aggregator invoice' │
+│ 23      │ [ 'BLR062' ]           │ 'Epigamia Strawberry milk shake'   │ 0             │ 0             │ 300    │ 11400  │ 'Missing in aggregator invoice' │
+│ 24      │ [ 'BLR065' ]           │ 'Epigamia Lychee'                  │ 0             │ 0             │ 64     │ 2240   │ 'Missing in aggregator invoice' │
+│ 25      │ [ 'BLR061' ]           │ 'Fab box Chocochip bnana cookies'  │ 0             │ 0             │ 200    │ 10000  │ 'Missing in aggregator invoice' │
+│ 26      │ [ 'BLR059' ]           │ 'Peping Spearmint Orange'          │ 0             │ 0             │ 250    │ 7500   │ 'Missing in aggregator invoice' │
+│ 27      │ [ 'BLR059' ]           │ 'Peping Ginger pineapple'          │ 0             │ 0             │ 250    │ 7500   │ 'Missing in aggregator invoice' │
+│ 28      │ [ 'BLR059' ]           │ 'Peping Fennel coconut'            │ 0             │ 0             │ 250    │ 7500   │ 'Missing in aggregator invoice' │
+└─────────┴────────────────────────┴────────────────────────────────────┴───────────────┴───────────────┴────────┴────────┴─────────────────────────────────┘
+\nTotal Aggregator Value: 289770
+Total Our Value: 271770

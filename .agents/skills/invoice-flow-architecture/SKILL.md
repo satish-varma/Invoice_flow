@@ -32,3 +32,13 @@ Firebase App Hosting uses Cloud Run (Serverless Edge runtimes) which imposes str
 *   **Firebase Structure:** 
     *   Collections: `invoices`, `quotations`, `deliveryChallans`, `clients`, `products`, `settings`.
     *   The `settings` collection stores persistent configurations like billing/shipping contacts, standard tax rates, and HSN codes, which are aggressively queried to build dropdown menus across the application.
+
+## 4. UI/UX Rules and Data Integrity (NewRelic Forms)
+
+*   **P.Cost / procurementCost Mapping:** The source of truth is now `procurementCost`. Do NOT use the legacy field `pCost`. During save/update operations, explicit cleanup (`deleteField()`) should be used to clear legacy data on Firebase to prevent conflict.
+*   **Zod Schema & Number Coercion:** Empty input fields (`<input type="number">`) return empty strings `""`. Do not use `.preprocess()` for handling these in Zod, as it breaks the `zodResolver` mapping to `react-hook-form`. Instead, use standard `z.coerce.number().optional()` to coerce `""` to `0` safely, and handle `0` vs original values explicitly in the `onSubmit` logic.
+*   **Silent Failures:** Always wire up the `onValidationError` callback on `handleSubmit` (passing it as the second argument) to display validation errors in a toast. Otherwise, form buttons will seem "unresponsive" and silent-fail when a nested line item fails validation.
+*   **Critical Features to Maintain:** The NewRelic dashboards and views must **ALWAYS** retain:
+    1.  **Reconcile Navigation:** A direct button/link to the `/newrelic/reconcile` interface.
+    2.  **Export to Excel:** A feature to download filtered tables directly to `.xlsx`.
+    3.  **Cycles Filters:** Date filters that specifically allow viewing Cycle 1 (1st-15th) and Cycle 2 (16th-End). Do not accidentally drop these filters during refactoring.

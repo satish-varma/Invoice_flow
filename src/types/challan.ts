@@ -3,35 +3,25 @@ import { z } from 'zod';
 export type NewRelicLocation = 'hyderabad' | 'bangalore';
 
 export const lineItemSchema = z.object({
-  id: z.number(),
+  id: z.any(),  // useFieldArray injects its own string id — accept any type
   brandName: z.string().optional().default(''),
   itemName: z.string().optional().default(''),
   quantity: z.coerce.number().min(1, 'Quantity must be ≥ 1'),
-  expiry: z.string().min(1, 'Expiry is required'),
+  expiry: z.string().optional().default(''),
   mrp: z.coerce.number().optional(),
   procurementCost: z.coerce.number().optional(),
-});
+}).passthrough();  // allow extra fields from Firestore data (orderType, caseSize, etc.)
 
-export const challanSchema = z
-  .object({
-    dcNumber: z.string().min(1, 'DC Number is required'),
-    location: z.enum(['hyderabad', 'bangalore']),
-    dcDate: z.date(),
-    lineItems: z.array(lineItemSchema),
-    note: z.string().optional(),
-    transportCost: z.coerce.number().optional(),
-    otherCharges: z.coerce.number().optional(),
-  })
-  .refine(
-    (data) =>
-      data.lineItems.some(
-        (item) => item.itemName && item.itemName.trim() !== ''
-      ),
-    {
-      message: 'Add at least one item with an item name',
-      path: ['lineItems'],
-    }
-  );
+export const challanSchema = z.object({
+  dcNumber: z.string().min(1, 'DC Number is required'),
+  location: z.enum(['hyderabad', 'bangalore']),
+  dcDate: z.date(),
+  lineItems: z.array(lineItemSchema),
+  note: z.string().optional(),
+  transportCost: z.coerce.number().optional(),
+  otherCharges: z.coerce.number().optional(),
+  procurementCost: z.coerce.number().optional(),
+});
 
 export type ChallanFormValues = z.infer<typeof challanSchema>;
 

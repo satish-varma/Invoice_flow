@@ -56,6 +56,7 @@ export function NewRelicAdminPreviewModal({
                   <TableHead className="font-semibold text-gray-900">Brand</TableHead>
                   <TableHead className="font-semibold text-gray-900">Item Name</TableHead>
                   <TableHead className="font-semibold text-gray-900 text-center">Qty</TableHead>
+                  <TableHead className="font-semibold text-gray-900 text-center">Expiry</TableHead>
                   <TableHead className="font-semibold text-gray-900 text-right">MRP</TableHead>
                   <TableHead className="font-semibold text-gray-900 text-right">P.Cost</TableHead>
                 </TableRow>
@@ -66,8 +67,9 @@ export function NewRelicAdminPreviewModal({
                     <TableCell className="text-gray-600">{item.brandName || '-'}</TableCell>
                     <TableCell className="font-medium text-gray-900">{item.itemName}</TableCell>
                     <TableCell className="text-center">{item.quantity}</TableCell>
+                    <TableCell className="text-center">{item.expiry || '-'}</TableCell>
                     <TableCell className="text-right">₹{(item.mrp || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                    <TableCell className="text-right">₹{(item.procurementCost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                    <TableCell className="text-right">₹{(Number(item.procurementCost) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

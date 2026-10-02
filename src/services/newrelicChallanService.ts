@@ -17,6 +17,7 @@ import {
   where,
   collectionGroup,
   limit,
+  deleteField,
 } from 'firebase/firestore';
 
 import { NewRelicLocation, NewRelicChallanItem, NewRelicChallan, NewRelicChallanHistory } from '@/types/challan';
@@ -126,11 +127,13 @@ export async function saveNewRelicChallan(challan: SaveInput, userEmail: string 
 
       // Update existing
       const { id, ...data } = challan;
-      await updateDoc(docRef, { 
+      const updatePayload = { 
         ...data,
+        pCost: deleteField(),
         updatedAt: serverTimestamp(),
         updatedBy: userEmail,
-      });
+      };
+      await updateDoc(docRef, updatePayload);
       const snap = await getDoc(docRef);
       finalData = { id: challan.id, ...snap.data() };
     } else {
@@ -224,6 +227,12 @@ export async function getNewRelicChallans(): Promise<NewRelicChallan[]> {
       challans.push({
         id: docSnap.id,
         ...data,
+        // Backward compatibility for old documents (handle 0 correctly if pCost exists)
+        procurementCost: (data.procurementCost === 0 && data.pCost > 0) ? data.pCost : (data.procurementCost ?? data.pCost),
+        lineItems: (data.lineItems || []).map((item: any) => ({
+          ...item,
+          procurementCost: (item.procurementCost === 0 && item.pCost > 0) ? item.pCost : (item.procurementCost ?? item.pCost),
+        })),
         dcDate,
         createdAt,
         deletedAt,

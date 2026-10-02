@@ -121,7 +121,7 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
                     {/* Mobile uses a single search input */}
                     <Input
                         placeholder="Search customer or invoice #..."
-                        value={searchText || (table.getColumn("billToName")?.getFilterValue() as string) ?? ""}
+                        value={(searchText || (table.getColumn("billToName")?.getFilterValue() as string)) ?? ""}
                         onChange={(event) => {
                             setSearchText(event.target.value);
                             table.getColumn("billToName")?.setFilterValue(event.target.value);

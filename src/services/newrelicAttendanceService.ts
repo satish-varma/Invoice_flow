@@ -1,0 +1,235 @@
+import { db, storage } from '@/lib/firebase';
+import {
+  collection,
+  addDoc,
+  getDocs,
+  doc,
+  updateDoc,
+  getDoc,
+  serverTimestamp,
+  query,
+  orderBy,
+  where,
+  Timestamp,
+} from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { NewRelicAttendance } from '@/types/employee';
+
+const ATTENDANCE_COLLECTION = 'newrelic_attendance';
+
+/** Upload a base64 data-URI selfie and return the download URL */
+export async function uploadSelfie(base64DataUri: string, folder: string): Promise<string> {
+  const timestamp = Date.now();
+  const storageRef = ref(storage, `newrelic-selfies/${folder}/${timestamp}.jpg`);
+  const uploadPromise = uploadString(storageRef, base64DataUri, 'data_url');
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Selfie upload timed out')), 20000)
+  );
+  const snapshot = await Promise.race([uploadPromise, timeoutPromise]);
+  return getDownloadURL(snapshot.ref);
+}
+
+/** Get today's attendance record for a given employee (by Firestore doc ID) */
+export async function getTodayAttendance(
+  employeeDocId: string,
+  date: string
+): Promise<NewRelicAttendance | null> {
+  const q = query(
+    collection(db, ATTENDANCE_COLLECTION),
+    where('employeeDocId', '==', employeeDocId),
+    where('date', '==', date)
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return { id: d.id, ...d.data() } as NewRelicAttendance;
+}
+
+// Shift configuration: Hyderabad starts at 6:00 AM with cutoff at 6:30 AM; 12-hour shift (720 mins)
+export const LOCATION_SHIFT_RULES: Record<string, { expectedStart: string; cutoff: string; expectedMinutes: number }> = {
+  hyderabad: {
+    expectedStart: '06:00',
+    cutoff: '06:30', // 6:30 AM deadline
+    expectedMinutes: 720, // 12 hours standard shift
+  },
+  bangalore: {
+    expectedStart: '09:00',
+    cutoff: '09:30',
+    expectedMinutes: 720, // 12 hours standard shift
+  },
+};
+
+/**
+ * Calculates whether an employee is late based on their check-in time and location.
+ * Converts timestamp to IST (Asia/Kolkata).
+ */
+export function evaluateCheckInLate(timeIso: string, location: string): { isLate: boolean; lateMinutes: number; cutoff: string } {
+  const rule = LOCATION_SHIFT_RULES[location.toLowerCase()] || LOCATION_SHIFT_RULES.hyderabad;
+  
+  // Format checkIn in Asia/Kolkata to extract HH:MM
+  const istFormatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const parts = istFormatter.formatToParts(new Date(timeIso));
+  const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
+  const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+  const checkInMinutes = hour * 60 + minute;
+
+  const [cutoffH, cutoffM] = rule.cutoff.split(':').map(Number);
+  const cutoffMinutes = cutoffH * 60 + cutoffM;
+
+  if (checkInMinutes > cutoffMinutes) {
+    return {
+      isLate: true,
+      lateMinutes: checkInMinutes - cutoffMinutes,
+      cutoff: rule.cutoff,
+    };
+  }
+
+  return {
+    isLate: false,
+    lateMinutes: 0,
+    cutoff: rule.cutoff,
+  };
+}
+
+/** Check in an employee */
+export async function checkInEmployee(
+  employee: { id: string; employeeId: string; name: string; location: string },
+  selfieUrl: string,
+  coordinates: { lat: number; lng: number; accuracy?: number } | null,
+  date: string
+): Promise<{ id: string; isLate: boolean; lateMinutes: number }> {
+  const now = new Date().toISOString();
+  const { isLate, lateMinutes, cutoff } = evaluateCheckInLate(now, employee.location);
+  const rule = LOCATION_SHIFT_RULES[employee.location.toLowerCase()] || LOCATION_SHIFT_RULES.hyderabad;
+
+  const data: Omit<NewRelicAttendance, 'id'> = {
+    employeeId: employee.employeeId,
+    employeeDocId: employee.id,
+    employeeName: employee.name,
+    location: employee.location as any,
+    date,
+    checkIn: {
+      time: now,
+      selfieUrl,
+      ...(coordinates ? { coordinates } : {}),
+    },
+    isLate,
+    lateMinutes,
+    shiftExpectedStart: rule.expectedStart,
+    status: 'present',
+    createdAt: serverTimestamp() as any,
+    updatedAt: serverTimestamp() as any,
+  };
+  const docRef = await addDoc(collection(db, ATTENDANCE_COLLECTION), data);
+  return { id: docRef.id, isLate, lateMinutes };
+}
+
+/** Check out an employee — updates existing record & calculates duration and overtime */
+export async function checkOutEmployee(
+  attendanceId: string,
+  selfieUrl: string,
+  coordinates: { lat: number; lng: number; accuracy?: number } | null,
+  checkInTime: string,
+  location?: string
+): Promise<{ durationMinutes: number; overtimeMinutes: number; status: NewRelicAttendance['status'] }> {
+  const now = new Date().toISOString();
+  const durationMinutes = Math.round(
+    (new Date(now).getTime() - new Date(checkInTime).getTime()) / 60000
+  );
+  const rule = location ? (LOCATION_SHIFT_RULES[location.toLowerCase()] || LOCATION_SHIFT_RULES.hyderabad) : LOCATION_SHIFT_RULES.hyderabad;
+  
+  // For 12-hour shift (720 min): half-day threshold is 360 min (6 hrs), full-day is >= 360 min
+  const status: NewRelicAttendance['status'] = durationMinutes >= 360 ? 'present' : 'half-day';
+  const overtimeMinutes = Math.max(0, durationMinutes - rule.expectedMinutes);
+
+  await updateDoc(doc(db, ATTENDANCE_COLLECTION, attendanceId), {
+    checkOut: {
+      time: now,
+      selfieUrl,
+      ...(coordinates ? { coordinates } : {}),
+    },
+    durationMinutes,
+    overtimeMinutes,
+    isMissedCheckOut: false,
+    status,
+    updatedAt: serverTimestamp(),
+  });
+
+  return { durationMinutes, overtimeMinutes, status };
+}
+
+/** Check for any unclosed attendance from previous days and mark missed checkout if overdue */
+export async function checkAndFlagMissedCheckouts(employeeDocId: string, currentDate: string): Promise<NewRelicAttendance[]> {
+  const q = query(
+    collection(db, ATTENDANCE_COLLECTION),
+    where('employeeDocId', '==', employeeDocId)
+  );
+  const snap = await getDocs(q);
+  const missedList: NewRelicAttendance[] = [];
+
+  for (const docSnap of snap.docs) {
+    const data = docSnap.data() as NewRelicAttendance;
+    // If it's from a date before today and has checkIn but no checkOut
+    if (data.date < currentDate && data.checkIn && !data.checkOut && !data.isMissedCheckOut) {
+      await updateDoc(doc(db, ATTENDANCE_COLLECTION, docSnap.id), {
+        isMissedCheckOut: true,
+        status: 'missed-checkout',
+        updatedAt: serverTimestamp(),
+      });
+      missedList.push({ id: docSnap.id, ...data, isMissedCheckOut: true, status: 'missed-checkout' });
+    }
+  }
+
+  return missedList;
+}
+
+/** Get attendance records for a date range (admin) */
+export async function getAttendanceByDateRange(
+  startDate: string,
+  endDate: string,
+  location?: string
+): Promise<NewRelicAttendance[]> {
+  const constraints: any[] = [
+    where('date', '>=', startDate),
+    where('date', '<=', endDate),
+  ];
+  if (location) constraints.push(where('location', '==', location));
+  const q = query(collection(db, ATTENDANCE_COLLECTION), ...constraints);
+  const snap = await getDocs(q);
+  const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance));
+  return list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+}
+
+/** Get today's attendance for all employees */
+export async function getTodayAllAttendance(date: string): Promise<NewRelicAttendance[]> {
+  const q = query(
+    collection(db, ATTENDANCE_COLLECTION),
+    where('date', '==', date)
+  );
+  const snap = await getDocs(q);
+  const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance));
+  return list.sort((a, b) => (a.employeeName || '').localeCompare(b.employeeName || ''));
+}
+
+/** Get attendance for one employee for a month */
+export async function getEmployeeMonthlyAttendance(
+  employeeDocId: string,
+  yearMonth: string // e.g. '2025-10'
+): Promise<NewRelicAttendance[]> {
+  const start = `${yearMonth}-01`;
+  const end = `${yearMonth}-31`;
+  const q = query(
+    collection(db, ATTENDANCE_COLLECTION),
+    where('employeeDocId', '==', employeeDocId),
+    where('date', '>=', start),
+    where('date', '<=', end)
+  );
+  const snap = await getDocs(q);
+  const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance));
+  return list.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+}

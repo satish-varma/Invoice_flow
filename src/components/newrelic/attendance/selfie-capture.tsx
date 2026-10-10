@@ -1,0 +1,218 @@
+'use client';
+
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { Camera, X, RotateCcw, Check, MapPin, AlertCircle } from 'lucide-react';
+
+interface Coordinates {
+  lat: number;
+  lng: number;
+  accuracy?: number;
+}
+
+interface SelfieCaptureProps {
+  onCapture: (base64DataUri: string, coordinates: Coordinates | null) => void;
+  onCancel: () => void;
+  title?: string;
+}
+
+export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: SelfieCaptureProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const [phase, setPhase] = useState<'camera' | 'preview'>('camera');
+  const [capturedUri, setCapturedUri] = useState<string | null>(null);
+  const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
+  const [geoStatus, setGeoStatus] = useState<'loading' | 'ok' | 'denied' | 'error'>('loading');
+  const [camError, setCamError] = useState<string | null>(null);
+
+  /* ── Geolocation ── */
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setGeoStatus('error');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoordinates({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: Math.round(pos.coords.accuracy),
+        });
+        setGeoStatus('ok');
+      },
+      (err) => {
+        setGeoStatus(err.code === 1 ? 'denied' : 'error');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, []);
+
+  /* ── Camera ── */
+  const startCamera = useCallback(async () => {
+    setCamError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (e: any) {
+      setCamError(e.message || 'Could not access camera');
+    }
+  }, []);
+
+  useEffect(() => {
+    startCamera();
+    return () => {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, [startCamera]);
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  };
+
+  /* ── Capture ── */
+  const handleCapture = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    // Mirror the image (selfie style)
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
+    const dataUri = canvas.toDataURL('image/jpeg', 0.85);
+    setCapturedUri(dataUri);
+    stopCamera();
+    setPhase('preview');
+  };
+
+  const handleRetake = () => {
+    setCapturedUri(null);
+    setPhase('camera');
+    startCamera();
+  };
+
+  const handleConfirm = () => {
+    if (capturedUri) onCapture(capturedUri, coordinates);
+  };
+
+  const handleCancel = () => {
+    stopCamera();
+    onCancel();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <Camera className="h-5 w-5 text-[#3b2fc9]" />
+            <span className="font-semibold text-gray-800 text-sm">{title}</span>
+          </div>
+          <button onClick={handleCancel} className="p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Camera / Preview Area */}
+        <div className="relative bg-black" style={{ aspectRatio: '4/3' }}>
+          {phase === 'camera' && (
+            <>
+              {camError ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white gap-3 p-4">
+                  <AlertCircle className="h-10 w-10 text-red-400" />
+                  <p className="text-sm text-center text-gray-300">{camError}</p>
+                  <button
+                    onClick={startCamera}
+                    className="text-xs bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full"
+                  >
+                    Retry Camera
+                  </button>
+                </div>
+              ) : (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                  style={{ transform: 'scaleX(-1)' }} /* mirror preview */
+                />
+              )}
+            </>
+          )}
+          {phase === 'preview' && capturedUri && (
+            <img src={capturedUri} alt="Selfie preview" className="w-full h-full object-cover" />
+          )}
+          <canvas ref={canvasRef} className="hidden" />
+        </div>
+
+        {/* Geo badge */}
+        <div className="px-4 py-2 flex items-center gap-1.5 text-xs">
+          <MapPin className="h-3.5 w-3.5 shrink-0" />
+          {geoStatus === 'loading' && <span className="text-gray-400">Fetching location…</span>}
+          {geoStatus === 'ok' && coordinates && (
+            <span className="text-emerald-600 font-medium">
+              {coordinates.lat.toFixed(5)}, {coordinates.lng.toFixed(5)}
+              {coordinates.accuracy !== undefined && ` (±${coordinates.accuracy}m)`}
+            </span>
+          )}
+          {geoStatus === 'denied' && <span className="text-amber-600">Location permission denied — attendance will be recorded without GPS</span>}
+          {geoStatus === 'error' && <span className="text-gray-400">Location unavailable</span>}
+        </div>
+
+        {/* Action buttons */}
+        <div className="px-4 pb-4 flex gap-3">
+          {phase === 'camera' && (
+            <>
+              <button
+                onClick={handleCancel}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCapture}
+                disabled={!!camError}
+                className="flex-1 py-2.5 rounded-xl bg-[#3b2fc9] text-white text-sm font-medium hover:bg-[#3b2fc9]/90 disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                <Camera className="h-4 w-4" />
+                Capture
+              </button>
+            </>
+          )}
+          {phase === 'preview' && (
+            <>
+              <button
+                onClick={handleRetake}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Retake
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 flex items-center justify-center gap-2"
+              >
+                <Check className="h-4 w-4" />
+                Use Photo
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

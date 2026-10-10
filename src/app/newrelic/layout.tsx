@@ -3,10 +3,51 @@
 import React, { useEffect, useState } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Users, UserCircle, ClipboardList, Calculator, BarChart2 } from 'lucide-react';
+import { FinancialAuthProvider, useFinancialAuth } from '@/contexts/FinancialAuthContext';
+import { LogOut, Users, UserCircle, ClipboardList, Calculator, BarChart2, Lock, Unlock } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { getStockRequests } from '@/services/newrelicStockRequestService';
+import { FinancialPasswordModal } from '@/components/newrelic/financial-password-modal';
+
+function FinancialStatusBadge() {
+  const { isUnlocked, remainingMinutes, lockFinancials } = useFinancialAuth();
+  const [showModal, setShowModal] = useState(false);
+
+  if (isUnlocked) {
+    return (
+      <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] px-2.5 py-1 rounded-full font-medium shadow-xs">
+        <Unlock className="w-3 h-3 text-emerald-600" />
+        <span>Financials ({remainingMinutes}m)</span>
+        <button
+          onClick={lockFinancials}
+          title="Lock financials now"
+          className="ml-1 text-emerald-950 hover:text-red-600 transition-colors p-0.5 rounded"
+        >
+          <Lock className="w-2.5 h-2.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setShowModal(true)}
+        className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors border border-gray-200"
+        title="Financials are locked. Click to enter admin password."
+      >
+        <Lock className="w-3 h-3 text-gray-500" />
+        <span>Financials Locked</span>
+      </button>
+
+      <FinancialPasswordModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+      />
+    </>
+  );
+}
 
 export default function NewRelicLayout({ children }: { children: React.ReactNode }) {
   const { user, role, signOut } = useAuth();
@@ -32,8 +73,9 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
   }, [role, pathname]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Minimal branded top bar */}
+    <FinancialAuthProvider>
+      <div className="min-h-screen bg-gray-50">
+        {/* Minimal branded top bar */}
       <header className="border-b border-gray-100 bg-white sticky top-0 z-10 shadow-sm">
         <div className="max-w-6xl mx-auto px-3 sm:px-8 h-14 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -62,6 +104,8 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
               Returnable Items · HYD & BLR
             </span>
             
+            {role === 'admin' && <FinancialStatusBadge />}
+
             <div className="hidden sm:flex flex-col items-end mr-2">
               <span className="text-xs font-semibold text-gray-700">{user?.email}</span>
               <span className="text-[10px] text-gray-500 uppercase tracking-wider">{role}</span>
@@ -197,7 +241,8 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
         </div>
       </div>
 
-      <main>{children}</main>
-    </div>
+        <main>{children}</main>
+      </div>
+    </FinancialAuthProvider>
   );
 }

@@ -24,6 +24,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import Link from 'next/link';
+import { FinancialGate } from '@/components/newrelic/financial-gate';
 import {
   BarChart,
   Bar,
@@ -409,8 +410,13 @@ export default function AnalyticsDashboardPage() {
           </div>
         </div>
 
-        {/* ── Executive KPI Metric Cards ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* ── Protected Financial Content Gated Behind Password ── */}
+        <FinancialGate
+          title="Executive Financials & P&L Locked"
+          description="Cafeteria P&L, monthly procurement spend, tuckshop revenue, and vendor margins are protected. Authenticate to view."
+        >
+          {/* ── Executive KPI Metric Cards ── */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-xs">
             <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">Tuckshop Revenue</span>
             <div className="flex items-baseline gap-2 mt-1">
@@ -798,6 +804,7 @@ export default function AnalyticsDashboardPage() {
 
           </div>
         )}
+        </FinancialGate>
 
       </div>
     </div>

@@ -53,6 +53,9 @@ import { NewRelicAttachmentModal } from '@/components/newrelic/newrelic-attachme
 import { PdfAutoParser } from './challan-form/pdf-auto-parser';
 import { ChallanSummary } from './challan-form/challan-summary';
 import { ChallanLineItem } from './challan-form/challan-line-item';
+import { useFinancialAuth } from '@/contexts/FinancialAuthContext';
+import { FinancialPasswordModal } from '@/components/newrelic/financial-password-modal';
+import { Lock, Unlock } from 'lucide-react';
 
 /* ─── Module-level regex constants ───────────────────────────────────────────
  * Kept outside the component to prevent Turbopack's CSS scanner from
@@ -109,10 +112,13 @@ export function NewRelicChallanForm({
   };
 
   const { role, user } = useAuth();
+  const { isUnlocked, remainingMinutes, lockFinancials } = useFinancialAuth();
+  const [showFinancialModal, setShowFinancialModal] = useState(false);
   const isAdmin = role === 'admin' || role === 'superadmin';
   const isManager = role === 'manager';
   const canSeeMrp = isAdmin || isManager;
-  const canSeePCost = isAdmin;
+  // Procurement cost is strictly hidden unless admin has unlocked financials with password
+  const canSeePCost = isAdmin && isUnlocked;
 
   const {
     register,
@@ -629,9 +635,37 @@ export function NewRelicChallanForm({
 
       {/* Line items */}
       <div className="space-y-3">
-        <div>
-          <Label className="text-sm sm:text-base font-semibold">Items</Label>
-          <p className="text-[11px] sm:text-xs text-gray-400">Type to search saved brands &amp; catalog</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-sm sm:text-base font-semibold">Items</Label>
+            <p className="text-[11px] sm:text-xs text-gray-400">Type to search saved brands &amp; catalog</p>
+          </div>
+          {isAdmin && (
+            <div>
+              {isUnlocked ? (
+                <div className="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                  <Unlock className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>P.Costs Unlocked ({remainingMinutes}m)</span>
+                  <button
+                    type="button"
+                    onClick={lockFinancials}
+                    className="text-[10px] text-red-600 underline font-medium ml-1"
+                  >
+                    Lock
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowFinancialModal(true)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200 px-2.5 py-1 rounded-lg transition-colors shadow-xs"
+                >
+                  <Lock className="w-3.5 h-3.5 text-gray-500" />
+                  Unlock P.Costs
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {isEditing && isAdmin && (initialData?.procurementCost || 0) > 0 && calculatedTotalPCost === 0 && (
@@ -855,6 +889,14 @@ export function NewRelicChallanForm({
           onUpdate={() => {}}
         />
       )}
+
+      {/* Financial Password Modal */}
+      <FinancialPasswordModal
+        isOpen={showFinancialModal}
+        onClose={() => setShowFinancialModal(false)}
+        title="Unlock Procurement Costs"
+        description="Line item procurement costs and transport expenses are confidential. Enter your admin password to view and edit."
+      />
     </form>
   );
 }

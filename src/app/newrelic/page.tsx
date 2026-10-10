@@ -19,6 +19,9 @@ import { NewRelicGlobalAuditLog } from '@/components/newrelic/newrelic-global-au
 import { generateAndSavePdf } from '@/lib/pdf';
 import { NewRelicDashboard } from '@/components/newrelic/newrelic-dashboard';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFinancialAuth } from '@/contexts/FinancialAuthContext';
+import { FinancialPasswordModal } from '@/components/newrelic/financial-password-modal';
+import { Lock, Unlock } from 'lucide-react';
 
 export default function NewRelicPage() {
   const { toast } = useToast();
@@ -40,6 +43,8 @@ export default function NewRelicPage() {
   const [historyChallan, setHistoryChallan] = useState<NewRelicChallan | null>(null);
   const [previewChallan, setPreviewChallan] = useState<NewRelicChallan | null>(null);
   const [adminPreviewChallan, setAdminPreviewChallan] = useState<NewRelicChallan | null>(null);
+  const { isUnlocked, remainingMinutes, lockFinancials } = useFinancialAuth();
+  const [showFinancialModal, setShowFinancialModal] = useState(false);
   const [showFinancials, setShowFinancials] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -248,7 +253,7 @@ export default function NewRelicPage() {
 
         {/* Hero stats & Dashboard */}
         {role === 'admin' || role === 'superadmin' ? (
-          <NewRelicDashboard challans={displayChallans} showFinancials={showFinancials} />
+          <NewRelicDashboard challans={displayChallans} showFinancials={isUnlocked && showFinancials} />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <StatCard
@@ -429,15 +434,39 @@ export default function NewRelicPage() {
           
           {(role === 'admin' || role === 'superadmin') && (
             <div className="ml-auto flex items-center gap-2">
-              <label className="text-sm text-gray-600 cursor-pointer flex items-center gap-2 font-medium">
-                <input
-                  type="checkbox"
-                  checked={showFinancials}
-                  onChange={(e) => setShowFinancials(e.target.checked)}
-                  className="rounded text-[#3b2fc9] focus:ring-[#3b2fc9] h-4 w-4"
-                />
-                Show Financials
-              </label>
+              {isUnlocked ? (
+                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg">
+                  <label className="text-xs text-emerald-800 cursor-pointer flex items-center gap-1.5 font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={showFinancials}
+                      onChange={(e) => setShowFinancials(e.target.checked)}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5"
+                    />
+                    <Unlock className="h-3.5 w-3.5 text-emerald-600" />
+                    Financials Visible ({remainingMinutes}m)
+                  </label>
+                  <button
+                    onClick={() => {
+                      lockFinancials();
+                      setShowFinancials(false);
+                    }}
+                    className="text-[10px] text-red-600 hover:text-red-800 underline font-medium ml-1"
+                    title="Lock now"
+                  >
+                    Lock
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowFinancialModal(true)}
+                  className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 shadow-xs transition-colors"
+                >
+                  <Lock className="h-3.5 w-3.5 text-gray-500" />
+                  Unlock Financials
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -455,7 +484,7 @@ export default function NewRelicPage() {
               challans={displayChallans}
               isTrashView={true}
               role={role}
-              showFinancials={showFinancials}
+              showFinancials={isUnlocked && showFinancials}
               onSelectChallan={setSelectedChallan}
               onDownloadChallan={handleDownload}
               onDeleteChallan={handleDelete}
@@ -476,7 +505,7 @@ export default function NewRelicPage() {
             challans={displayChallans}
             isTrashView={false}
             role={role}
-            showFinancials={showFinancials}
+            showFinancials={isUnlocked && showFinancials}
             onSelectChallan={setSelectedChallan}
             onDownloadChallan={handleDownload}
             onDeleteChallan={handleDelete}
@@ -518,6 +547,13 @@ export default function NewRelicPage() {
       />
 
       {/* Hidden PDF preview container for html2canvas */}
+      {/* Financial Authentication Password Modal */}
+      <FinancialPasswordModal
+        isOpen={showFinancialModal}
+        onClose={() => setShowFinancialModal(false)}
+        onSuccess={() => setShowFinancials(true)}
+      />
+
       {challanToDownload && (
         <div
           style={{

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Users, UserCircle, ClipboardList, Calculator } from 'lucide-react';
+import { LogOut, Users, UserCircle, ClipboardList, Calculator, BarChart2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { getStockRequests } from '@/services/newrelicStockRequestService';
@@ -138,6 +138,17 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
                     {pendingCount}
                   </span>
                 )}
+              </Link>
+              <Link 
+                href="/newrelic/analytics" 
+                className={`py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                  pathname === '/newrelic/analytics' 
+                    ? 'border-[#3b2fc9] text-[#3b2fc9]' 
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <BarChart2 className="h-3.5 w-3.5" />
+                Executive Insights
               </Link>
               <Link 
                 href="/newrelic/pricing" 

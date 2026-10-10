@@ -57,6 +57,21 @@ export const subscribeToTuckshopRecords = (
   });
 };
 
+export const getTuckshopRecords = async (): Promise<NewRelicTuckshopRecord[]> => {
+  const q = query(collection(db, NEWRELIC_TUCKSHOP_COLLECTION), orderBy('date', 'desc'), limit(1500));
+  const snap = await getDocs(q);
+  return snap.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      date: data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date,
+      createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
+      updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+    } as NewRelicTuckshopRecord;
+  });
+};
+
 export const saveTuckshopRecord = async (record: Partial<NewRelicTuckshopRecord>, userEmail: string | null): Promise<NewRelicTuckshopRecord> => {
   // Deep clean undefined to prevent Firebase addDoc/updateDoc errors
   const cleanUndefined = (obj: any): any => {

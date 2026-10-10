@@ -131,3 +131,13 @@ export async function getSalaryPaymentsForMonth(month: string): Promise<NewRelic
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as NewRelicSalaryPayment));
 }
+
+/** Get all recorded salary payments across all months */
+export async function getAllSalaryPayments(): Promise<NewRelicSalaryPayment[]> {
+  const q = query(
+    collection(db, SALARY_PAYMENTS_COLLECTION),
+    orderBy('createdAt', 'desc')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as NewRelicSalaryPayment));
+}

@@ -5,10 +5,34 @@ import { CatalogItem, PricingItem, NewRelicLocation } from '@/types/challan';
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import {getCatalogItems} from '@/services/newrelicCatalogService';
-import {getPricingItems, savePricingItem, deletePricingItem, calcPurchaseCost, getAllPricingItems, seedPricingFromChallans} from '@/services/newrelicPricingService';
-import {NEWRELIC_LOCATIONS} from '@/services/newrelicChallanService';
-import { Trash2, Plus, Pencil, Check, X, Search, TrendingUp, RefreshCw } from 'lucide-react';
+import { getCatalogItems } from '@/services/newrelicCatalogService';
+import {
+  getPricingItems,
+  savePricingItem,
+  deletePricingItem,
+  calcPurchaseCost,
+  getAllPricingItems,
+  seedPricingFromChallans,
+  bulkUpdateBrandPricing,
+} from '@/services/newrelicPricingService';
+import { NEWRELIC_LOCATIONS } from '@/services/newrelicChallanService';
+import {
+  Trash2,
+  Plus,
+  Pencil,
+  Check,
+  X,
+  Search,
+  TrendingUp,
+  RefreshCw,
+  AlertTriangle,
+  Sliders,
+  History,
+  Calendar,
+  Layers,
+  ArrowUpRight,
+  Percent,
+} from 'lucide-react';
 
 type EditRow = {
   brandName: string;
@@ -17,6 +41,7 @@ type EditRow = {
   mrp: string;
   discountPercent: string;
   purchaseCost: string;
+  effectiveDate?: string;
 };
 
 const emptyEdit = (location: NewRelicLocation): EditRow => ({
@@ -26,10 +51,11 @@ const emptyEdit = (location: NewRelicLocation): EditRow => ({
   mrp: '',
   discountPercent: '',
   purchaseCost: '',
+  effectiveDate: new Date().toISOString().substring(0, 10),
 });
 
 export default function PricingPage() {
-  const { role } = useAuth();
+  const { user, role } = useAuth();
   const router = useRouter();
 
   const [activeLocation, setActiveLocation] = useState<NewRelicLocation>('hyderabad');
@@ -43,6 +69,9 @@ export default function PricingPage() {
   const [isCleaning, setIsCleaning] = useState(false);
   const [seedResult, setSeedResult] = useState<string | null>(null);
 
+  // Filter tabs: 'all' | 'missing-cost' | 'missing-mrp'
+  const [filterMode, setFilterMode] = useState<'all' | 'missing-cost' | 'missing-mrp'>('all');
+
   // Inline editing
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<EditRow>(emptyEdit('hyderabad'));
@@ -50,6 +79,18 @@ export default function PricingPage() {
   // Add-new form state
   const [showAdd, setShowAdd] = useState(false);
   const [newRow, setNewRow] = useState<EditRow>(emptyEdit('hyderabad'));
+
+  // Bulk update modal state
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkBrand, setBulkBrand] = useState('');
+  const [bulkMode, setBulkMode] = useState<'percentage_increase' | 'set_discount' | 'fixed_increase'>('percentage_increase');
+  const [bulkApplyTo, setBulkApplyTo] = useState<'purchaseCost' | 'mrp'>('purchaseCost');
+  const [bulkValue, setBulkValue] = useState<number>(5);
+  const [bulkEffectiveDate, setBulkEffectiveDate] = useState<string>(() => new Date().toISOString().substring(0, 10));
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
+  // Price history modal state
+  const [historyItem, setHistoryItem] = useState<PricingItem | null>(null);
 
   useEffect(() => {
     if (role && role !== 'admin') {
@@ -76,19 +117,38 @@ export default function PricingPage() {
     [pricingItems, activeLocation]
   );
 
+  // Count items with alerts
+  const missingCostCount = useMemo(() =>
+    locationItems.filter(i => !i.purchaseCost || i.purchaseCost <= 0).length,
+    [locationItems]
+  );
+
+  const missingMrpCount = useMemo(() =>
+    locationItems.filter(i => !i.mrp || i.mrp <= 0).length,
+    [locationItems]
+  );
+
   const filteredItems = useMemo(() => {
-    if (!search.trim()) return locationItems;
+    let list = locationItems;
+    if (filterMode === 'missing-cost') {
+      list = list.filter(i => !i.purchaseCost || i.purchaseCost <= 0);
+    } else if (filterMode === 'missing-mrp') {
+      list = list.filter(i => !i.mrp || i.mrp <= 0);
+    }
+
+    if (!search.trim()) return list;
     const s = search.toLowerCase();
-    return locationItems.filter(i =>
+    return list.filter(i =>
       i.brandName.toLowerCase().includes(s) || i.itemName.toLowerCase().includes(s)
     );
-  }, [locationItems, search]);
+  }, [locationItems, search, filterMode]);
 
-  // Unique brands from catalog for typeahead
-  const catalogBrands = useMemo(() =>
-    [...new Set(catalog.map(c => c.brandName))].sort(),
-    [catalog]
-  );
+  // Unique brands from catalog for typeahead and bulk update
+  const availableBrands = useMemo(() => {
+    const fromPricing = locationItems.map(i => i.brandName);
+    const fromCat = catalog.map(c => c.brandName);
+    return [...new Set([...fromPricing, ...fromCat].map(b => b.trim()).filter(Boolean))].sort();
+  }, [locationItems, catalog]);
 
   const getCatalogItemsForBrand = (brand: string) =>
     catalog.filter(c => c.brandName === brand).map(c => c.itemName).sort();
@@ -121,8 +181,9 @@ export default function PricingPage() {
         mrp,
         discountPercent: disc,
         purchaseCost: cost,
+        effectiveDate: newRow.effectiveDate || new Date().toISOString().substring(0, 10),
       };
-      await savePricingItem(item);
+      await savePricingItem(item, user?.email);
       const refreshed = await getAllPricingItems();
       setPricingItems(refreshed);
       setNewRow(emptyEdit(activeLocation));
@@ -144,6 +205,7 @@ export default function PricingPage() {
       mrp: String(item.mrp),
       discountPercent: String(item.discountPercent),
       purchaseCost: String(item.purchaseCost),
+      effectiveDate: item.effectiveDate || new Date().toISOString().substring(0, 10),
     });
   }
 
@@ -165,8 +227,9 @@ export default function PricingPage() {
         mrp,
         discountPercent: disc,
         purchaseCost: cost,
+        effectiveDate: editRow.effectiveDate || new Date().toISOString().substring(0, 10),
       };
-      await savePricingItem(item);
+      await savePricingItem(item, user?.email);
       const refreshed = await getAllPricingItems();
       setPricingItems(refreshed);
       setEditingId(null);
@@ -174,6 +237,35 @@ export default function PricingPage() {
       setError('Failed to update. Please try again.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  // --- Bulk Update Brand Pricing ---
+  async function handleBulkUpdate() {
+    if (!bulkBrand.trim()) {
+      setError('Please select a brand to update.');
+      return;
+    }
+    setIsBulkUpdating(true);
+    setError('');
+    try {
+      const res = await bulkUpdateBrandPricing({
+        brandName: bulkBrand,
+        location: activeLocation,
+        mode: bulkMode,
+        value: Number(bulkValue),
+        applyTo: bulkApplyTo,
+        effectiveDate: bulkEffectiveDate,
+        userEmail: user?.email,
+      });
+      const refreshed = await getAllPricingItems();
+      setPricingItems(refreshed);
+      setShowBulkModal(false);
+      setSeedResult(`✓ Successfully updated ${res.updatedCount} item(s) for ${bulkBrand} in ${NEWRELIC_LOCATIONS[activeLocation].label}!`);
+    } catch (e: any) {
+      setError(e.message || 'Failed to perform bulk update.');
+    } finally {
+      setIsBulkUpdating(false);
     }
   }
 
@@ -238,6 +330,18 @@ export default function PricingPage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
+            onClick={() => {
+              setShowBulkModal(true);
+              setBulkBrand(availableBrands[0] || '');
+              setError('');
+            }}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-3.5 py-2 rounded-lg text-sm font-semibold hover:from-purple-700 hover:to-indigo-700 shadow-xs transition-all"
+          >
+            <Sliders className="h-4 w-4" />
+            Batch Price Update
+          </button>
+
+          <button
             onClick={async () => {
               if (!confirm('This will populate the Pricing table from your existing DC history (latest data wins). Continue?')) return;
               setIsSeeding(true);
@@ -286,21 +390,66 @@ export default function PricingPage() {
         </div>
       )}
 
-      {/* Location Tabs */}
-      <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
-        {locations.map(loc => (
+      {/* Location Tabs + Filter Pills Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        {/* Location switcher */}
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+          {locations.map(loc => (
+            <button
+              key={loc}
+              onClick={() => { setActiveLocation(loc); setEditingId(null); setShowAdd(false); }}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                activeLocation === loc
+                  ? 'bg-white text-[#3b2fc9] shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {NEWRELIC_LOCATIONS[loc].label}
+            </button>
+          ))}
+        </div>
+
+        {/* Missing Rate Audit Filter Pills */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button
-            key={loc}
-            onClick={() => { setActiveLocation(loc); setEditingId(null); setShowAdd(false); }}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              activeLocation === loc
-                ? 'bg-white text-[#3b2fc9] shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+            onClick={() => setFilterMode('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              filterMode === 'all'
+                ? 'bg-gray-800 text-white'
+                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}
           >
-            {NEWRELIC_LOCATIONS[loc].label}
+            All Items ({locationItems.length})
           </button>
-        ))}
+
+          <button
+            onClick={() => setFilterMode('missing-cost')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+              filterMode === 'missing-cost'
+                ? 'bg-red-600 text-white shadow-xs'
+                : missingCostCount > 0
+                ? 'bg-red-50 border border-red-200 text-red-700 hover:bg-red-100'
+                : 'bg-white border border-gray-200 text-gray-400 opacity-60'
+            }`}
+          >
+            <AlertTriangle className="h-3.5 w-3.5" />
+            Missing P.Cost ({missingCostCount})
+          </button>
+
+          <button
+            onClick={() => setFilterMode('missing-mrp')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+              filterMode === 'missing-mrp'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : missingMrpCount > 0
+                ? 'bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100'
+                : 'bg-white border border-gray-200 text-gray-400 opacity-60'
+            }`}
+          >
+            <AlertTriangle className="h-3.5 w-3.5" />
+            Missing MRP ({missingMrpCount})
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -323,7 +472,7 @@ export default function PricingPage() {
       {showAdd && (
         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">New Pricing Entry — {NEWRELIC_LOCATIONS[activeLocation].label}</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
             <div className="col-span-2 sm:col-span-1">
               <label className="text-xs text-gray-500 mb-0.5 block">Brand</label>
               <input
@@ -334,7 +483,7 @@ export default function PricingPage() {
                 className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30"
               />
               <datalist id="pricing-brands-new">
-                {catalogBrands.map(b => <option key={b} value={b} />)}
+                {availableBrands.map(b => <option key={b} value={b} />)}
               </datalist>
             </div>
             <div className="col-span-2 sm:col-span-1">
@@ -390,6 +539,15 @@ export default function PricingPage() {
                 className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 text-right"
               />
             </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-0.5 block">Effective Date</label>
+              <input
+                type="date"
+                value={newRow.effectiveDate}
+                onChange={e => setNewRow(r => ({ ...r, effectiveDate: e.target.value }))}
+                className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30"
+              />
+            </div>
           </div>
           <div className="flex gap-2 mt-3">
             <button
@@ -428,6 +586,7 @@ export default function PricingPage() {
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">MRP (₹)</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Disc (%)</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">P.Cost (₹)</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Effective Since</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -444,7 +603,7 @@ export default function PricingPage() {
                           className="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none"
                         />
                         <datalist id="pricing-brands-edit">
-                          {catalogBrands.map(b => <option key={b} value={b} />)}
+                          {availableBrands.map(b => <option key={b} value={b} />)}
                         </datalist>
                       </td>
                       <td className="px-3 py-2">
@@ -488,6 +647,14 @@ export default function PricingPage() {
                           className="w-24 px-2 py-1 text-sm border border-blue-300 rounded text-right focus:outline-none font-semibold"
                         />
                       </td>
+                      <td className="px-3 py-2 text-center">
+                        <input
+                          type="date"
+                          value={editRow.effectiveDate}
+                          onChange={e => setEditRow(r => ({ ...r, effectiveDate: e.target.value }))}
+                          className="px-2 py-1 text-xs border border-blue-300 rounded focus:outline-none"
+                        />
+                      </td>
                       <td className="px-3 py-2 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button onClick={handleSaveEdit} disabled={saving} className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors" title="Save">
@@ -502,16 +669,52 @@ export default function PricingPage() {
                   ) : (
                     <>
                       <td className="px-4 py-3 font-medium text-gray-800">{item.brandName}</td>
-                      <td className="px-4 py-3 text-gray-600">{item.itemName}</td>
-                      <td className="px-4 py-3 text-right text-gray-700">₹{item.mrp.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {item.itemName}
+                        {(!item.purchaseCost || item.purchaseCost <= 0) && (
+                          <span className="ml-2 inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-red-100 text-red-700">
+                            Zero Cost
+                          </span>
+                        )}
+                        {(!item.mrp || item.mrp <= 0) && (
+                          <span className="ml-2 inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-700">
+                            No MRP
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-700">
+                        {item.mrp > 0 ? `₹${item.mrp.toFixed(2)}` : <span className="text-red-400 font-medium">₹0.00</span>}
+                      </td>
                       <td className="px-4 py-3 text-right">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
                           {item.discountPercent}%
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-[#3b2fc9]">₹{item.purchaseCost.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-[#3b2fc9]">
+                        {item.purchaseCost > 0 ? `₹${item.purchaseCost.toFixed(2)}` : <span className="text-red-500 font-bold">₹0.00</span>}
+                      </td>
+                      <td className="px-4 py-3 text-center text-xs text-gray-500">
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-gray-400" />
+                          {item.effectiveDate || 'Initial'}
+                        </span>
+                        {item.history && item.history.length > 0 && (
+                          <span className="block text-[10px] text-blue-600 font-medium">
+                            {item.history.length} revision{item.history.length > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          {item.history && item.history.length > 0 && (
+                            <button
+                              onClick={() => setHistoryItem(item)}
+                              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                              title="View Price History"
+                            >
+                              <History className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                           <button onClick={() => startEdit(item)} className="p-1.5 text-gray-400 hover:text-[#3b2fc9] hover:bg-blue-50 rounded-md transition-colors" title="Edit">
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
@@ -528,6 +731,234 @@ export default function PricingPage() {
           </table>
           <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-400">
             {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''} · {NEWRELIC_LOCATIONS[activeLocation].label}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Batch Price Update Modal ─── */}
+      {showBulkModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-purple-100 text-purple-700 rounded-xl">
+                  <Sliders className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-base">Batch Price Update</h3>
+                  <p className="text-xs text-gray-500">Update rates across an entire brand in {NEWRELIC_LOCATIONS[activeLocation].label}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowBulkModal(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              {/* Select Brand */}
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Target Brand</label>
+                <select
+                  value={bulkBrand}
+                  onChange={(e) => setBulkBrand(e.target.value)}
+                  className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+                >
+                  <option value="">-- Choose Brand --</option>
+                  {availableBrands.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Affects all {locationItems.filter(i => i.brandName.toLowerCase() === bulkBrand.toLowerCase()).length} items currently configured under this brand.
+                </p>
+              </div>
+
+              {/* Update Strategy Mode */}
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Update Strategy</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setBulkMode('percentage_increase'); setBulkValue(5); }}
+                    className={`p-2 rounded-lg border text-center transition-all ${
+                      bulkMode === 'percentage_increase'
+                        ? 'border-purple-600 bg-purple-50 text-purple-800 font-bold'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <ArrowUpRight className="h-4 w-4 mx-auto mb-0.5 text-purple-600" />
+                    +X% Inflation
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setBulkMode('set_discount'); setBulkValue(20); }}
+                    className={`p-2 rounded-lg border text-center transition-all ${
+                      bulkMode === 'set_discount'
+                        ? 'border-purple-600 bg-purple-50 text-purple-800 font-bold'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Percent className="h-4 w-4 mx-auto mb-0.5 text-purple-600" />
+                    Set Disc %
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setBulkMode('fixed_increase'); setBulkValue(2); }}
+                    className={`p-2 rounded-lg border text-center transition-all ${
+                      bulkMode === 'fixed_increase'
+                        ? 'border-purple-600 bg-purple-50 text-purple-800 font-bold'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Layers className="h-4 w-4 mx-auto mb-0.5 text-purple-600" />
+                    Flat ₹ Shift
+                  </button>
+                </div>
+              </div>
+
+              {/* Field to apply to */}
+              {bulkMode !== 'set_discount' && (
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Apply Multiplier To</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={bulkApplyTo === 'purchaseCost'}
+                        onChange={() => setBulkApplyTo('purchaseCost')}
+                        className="text-purple-600"
+                      />
+                      <span>Purchase Cost (P.Cost)</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={bulkApplyTo === 'mrp'}
+                        onChange={() => setBulkApplyTo('mrp')}
+                        className="text-purple-600"
+                      />
+                      <span>MRP (Retail Price)</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Multiplier Value */}
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">
+                  {bulkMode === 'percentage_increase' ? 'Percentage Adjustment (+ / - %)' : bulkMode === 'set_discount' ? 'Uniform Discount (%)' : 'Flat Amount (₹)'}
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={bulkValue}
+                  onChange={(e) => setBulkValue(parseFloat(e.target.value) || 0)}
+                  className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+                  placeholder="e.g. 5"
+                />
+              </div>
+
+              {/* Effective Date */}
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Effective Date for New Prices</label>
+                <input
+                  type="date"
+                  value={bulkEffectiveDate}
+                  onChange={(e) => setBulkEffectiveDate(e.target.value)}
+                  className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Historical DCs dated prior to this date will preserve their original pricing.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setShowBulkModal(false)}
+                className="flex-1 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkUpdate}
+                disabled={isBulkUpdating || !bulkBrand}
+                className="flex-1 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs font-bold shadow-sm"
+              >
+                {isBulkUpdating ? 'Updating…' : 'Apply Batch Update'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Price History Audit Modal ─── */}
+      {historyItem && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-indigo-100 text-indigo-700 rounded-xl">
+                  <History className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-base">{historyItem.itemName}</h3>
+                  <p className="text-xs text-gray-500">{historyItem.brandName} · {NEWRELIC_LOCATIONS[historyItem.location].label}</p>
+                </div>
+              </div>
+              <button onClick={() => setHistoryItem(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {/* Current active rate */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Current Active Rate</span>
+                <div className="flex items-center justify-between mt-1">
+                  <div>
+                    <span className="font-bold text-emerald-950 text-sm">₹{historyItem.purchaseCost.toFixed(2)}</span>
+                    <span className="text-emerald-700 ml-2">MRP: ₹{historyItem.mrp.toFixed(2)} ({historyItem.discountPercent}% off)</span>
+                  </div>
+                  <span className="text-[11px] font-semibold text-emerald-800">Effective Since: {historyItem.effectiveDate || 'Initial'}</span>
+                </div>
+              </div>
+
+              {/* Historical logs */}
+              <div>
+                <h4 className="text-xs font-bold text-gray-700 mb-2">Previous Rate Timeline</h4>
+                {(!historyItem.history || historyItem.history.length === 0) ? (
+                  <p className="text-xs text-gray-400 py-4 text-center">No previous revisions recorded.</p>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {historyItem.history.slice().reverse().map((h, idx) => (
+                      <div key={idx} className="border border-gray-100 rounded-lg p-2.5 bg-gray-50/70 text-xs flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold text-gray-800">P.Cost: ₹{h.purchaseCost.toFixed(2)}</p>
+                          <p className="text-[11px] text-gray-500">MRP: ₹{h.mrp.toFixed(2)} · {h.discountPercent}% Disc</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[11px] font-medium text-gray-600 block">Valid around {h.effectiveDate}</span>
+                          {h.updatedBy && <span className="text-[10px] text-gray-400 block">{h.updatedBy}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setHistoryItem(null)}
+                className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

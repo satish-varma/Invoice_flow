@@ -51,11 +51,54 @@ export async function getAllPricingItems(): Promise<PricingItem[]> {
   }
 }
 
-/** Upsert a pricing row */
-export async function savePricingItem(item: Omit<PricingItem, 'id' | 'updatedAt'>): Promise<void> {
+import { getDoc } from 'firebase/firestore';
+
+/** Upsert a pricing row with automatic historical log tracking */
+export async function savePricingItem(
+  item: Omit<PricingItem, 'id' | 'updatedAt'>,
+  userEmail?: string | null
+): Promise<void> {
   const docId = getPricingDocId(item.brandName, item.itemName, item.location);
   const docRef = doc(db, PRICING_COLLECTION, docId);
-  await setDoc(docRef, { ...item, updatedAt: serverTimestamp() }, { merge: true });
+  const existingSnap = await getDoc(docRef);
+
+  let history = item.history || [];
+  const today = new Date().toISOString().substring(0, 10);
+  const effectiveDate = item.effectiveDate || today;
+
+  if (existingSnap.exists()) {
+    const existingData = existingSnap.data() as PricingItem;
+    const prevHistory = existingData.history || [];
+    // If the price changed, push previous rate into history
+    if (
+      existingData.purchaseCost !== item.purchaseCost ||
+      existingData.mrp !== item.mrp ||
+      existingData.discountPercent !== item.discountPercent
+    ) {
+      const historyEntry = {
+        mrp: existingData.mrp,
+        discountPercent: existingData.discountPercent,
+        purchaseCost: existingData.purchaseCost,
+        effectiveDate: existingData.effectiveDate || today,
+        updatedAt: new Date().toISOString(),
+        updatedBy: userEmail || undefined,
+      };
+      history = [...prevHistory, historyEntry];
+    } else {
+      history = prevHistory;
+    }
+  }
+
+  await setDoc(
+    docRef,
+    {
+      ...item,
+      effectiveDate,
+      history,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
 }
 
 /** Delete a pricing row by document ID */
@@ -63,14 +106,133 @@ export async function deletePricingItem(id: string): Promise<void> {
   await deleteDoc(doc(db, PRICING_COLLECTION, id));
 }
 
-/** Build a fast lookup map: "brand__item" -> purchaseCost for a location */
-export function buildPricingMap(items: PricingItem[]): Map<string, number> {
+/** 
+ * Resolve effective price for an item on a specific target date (YYYY-MM-DD).
+ * If targetDate is provided and is earlier than the item's current effectiveDate,
+ * it looks into the history entries to find what price was valid on that target date.
+ */
+export function resolveEffectivePricing(
+  item: PricingItem,
+  targetDate?: string
+): { mrp: number; discountPercent: number; purchaseCost: number } {
+  if (!targetDate || !item.effectiveDate || targetDate >= item.effectiveDate || !item.history || item.history.length === 0) {
+    return {
+      mrp: item.mrp,
+      discountPercent: item.discountPercent,
+      purchaseCost: item.purchaseCost,
+    };
+  }
+
+  // Sort history chronologically
+  const sorted = [...item.history].sort((a, b) => (a.effectiveDate || '').localeCompare(b.effectiveDate || ''));
+  // Find the latest history entry whose effectiveDate <= targetDate
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    if (sorted[i].effectiveDate <= targetDate) {
+      return {
+        mrp: sorted[i].mrp,
+        discountPercent: sorted[i].discountPercent,
+        purchaseCost: sorted[i].purchaseCost,
+      };
+    }
+  }
+
+  // Fallback to earliest historical rate or current
+  return sorted[0] || {
+    mrp: item.mrp,
+    discountPercent: item.discountPercent,
+    purchaseCost: item.purchaseCost,
+  };
+}
+
+/** Build a fast lookup map: "brand__item" -> purchaseCost for a location on a specific date */
+export function buildPricingMap(items: PricingItem[], targetDate?: string): Map<string, number> {
   const map = new Map<string, number>();
   for (const item of items) {
     const key = `${item.brandName.trim().toLowerCase()}__${item.itemName.trim().toLowerCase()}`;
-    map.set(key, item.purchaseCost);
+    const resolved = resolveEffectivePricing(item, targetDate);
+    map.set(key, resolved.purchaseCost);
   }
   return map;
+}
+
+/**
+ * Bulk update pricing for all items belonging to a specific Brand & Location.
+ * Supports:
+ * - 'percentage': Add X% inflation multiplier to MRP or purchaseCost (e.g. +5% across all Amul items)
+ * - 'discount': Set uniform discount % across all items for that brand
+ * - 'fixed_adjustment': Add or subtract flat ₹ to MRP or P.Cost
+ */
+export async function bulkUpdateBrandPricing({
+  brandName,
+  location,
+  mode,
+  value,
+  applyTo,
+  effectiveDate,
+  userEmail,
+}: {
+  brandName: string;
+  location: NewRelicLocation;
+  mode: 'percentage_increase' | 'set_discount' | 'fixed_increase';
+  value: number; // e.g. 5 for +5%, or 20 for 20% discount
+  applyTo?: 'mrp' | 'purchaseCost'; // default 'purchaseCost'
+  effectiveDate?: string;
+  userEmail?: string | null;
+}): Promise<{ updatedCount: number }> {
+  const targetBrand = brandName.trim().toLowerCase();
+  const allItems = await getPricingItems(location);
+  const matching = allItems.filter(i => i.brandName.trim().toLowerCase() === targetBrand);
+
+  let updatedCount = 0;
+  const dateStr = effectiveDate || new Date().toISOString().substring(0, 10);
+
+  for (const item of matching) {
+    let newMrp = item.mrp;
+    let newDiscount = item.discountPercent;
+    let newCost = item.purchaseCost;
+
+    if (mode === 'percentage_increase') {
+      const multiplier = 1 + value / 100;
+      if (applyTo === 'mrp') {
+        newMrp = parseFloat((item.mrp * multiplier).toFixed(2));
+        newCost = calcPurchaseCost(newMrp, newDiscount);
+      } else {
+        newCost = parseFloat((item.purchaseCost * multiplier).toFixed(2));
+        if (newMrp > 0) {
+          newDiscount = parseFloat(((1 - newCost / newMrp) * 100).toFixed(2));
+        }
+      }
+    } else if (mode === 'set_discount') {
+      newDiscount = value;
+      newCost = calcPurchaseCost(newMrp, newDiscount);
+    } else if (mode === 'fixed_increase') {
+      if (applyTo === 'mrp') {
+        newMrp = Math.max(0, parseFloat((item.mrp + value).toFixed(2)));
+        newCost = calcPurchaseCost(newMrp, newDiscount);
+      } else {
+        newCost = Math.max(0, parseFloat((item.purchaseCost + value).toFixed(2)));
+        if (newMrp > 0) {
+          newDiscount = parseFloat(((1 - newCost / newMrp) * 100).toFixed(2));
+        }
+      }
+    }
+
+    await savePricingItem(
+      {
+        brandName: item.brandName,
+        itemName: item.itemName,
+        location: item.location,
+        mrp: newMrp,
+        discountPercent: newDiscount,
+        purchaseCost: newCost,
+        effectiveDate: dateStr,
+      },
+      userEmail
+    );
+    updatedCount++;
+  }
+
+  return { updatedCount };
 }
 
 /**

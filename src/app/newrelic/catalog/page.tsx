@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { getCatalogItems, saveCatalogItem, deleteCatalogItem } from '@/services/newrelicCatalogService';
 import { getAllPricingItems } from '@/services/newrelicPricingService';
-import { Trash2, Plus, Pencil, Check, X, Search, Database, Download, RefreshCw } from 'lucide-react';
+import { Trash2, Plus, Pencil, Check, X, Search, Database, Download, RefreshCw, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function CatalogPage() {
@@ -18,6 +18,9 @@ export default function CatalogPage() {
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // Missing alerts filter tab: 'all' | 'missing-mrp' | 'missing-case'
+  const [filterMode, setFilterMode] = useState<'all' | 'missing-mrp' | 'missing-case'>('all');
 
   // Inline editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -49,15 +52,32 @@ export default function CatalogPage() {
     load();
   }, []);
 
+  const missingMrpCount = useMemo(() =>
+    catalog.filter(c => !c.mrp || c.mrp <= 0).length,
+    [catalog]
+  );
+
+  const missingCaseCount = useMemo(() =>
+    catalog.filter(c => !c.caseSize || c.caseSize <= 0).length,
+    [catalog]
+  );
+
   const filteredItems = useMemo(() => {
-    if (!search.trim()) return catalog;
+    let list = catalog;
+    if (filterMode === 'missing-mrp') {
+      list = list.filter(c => !c.mrp || c.mrp <= 0);
+    } else if (filterMode === 'missing-case') {
+      list = list.filter(c => !c.caseSize || c.caseSize <= 0);
+    }
+
+    if (!search.trim()) return list;
     const s = search.toLowerCase();
-    return catalog.filter(
+    return list.filter(
       (c) =>
         c.brandName.toLowerCase().includes(s) ||
         c.itemName.toLowerCase().includes(s)
     );
-  }, [catalog, search]);
+  }, [catalog, search, filterMode]);
 
   async function handleSaveNew() {
     if (!newBrand.trim() || !newItem.trim()) {
@@ -243,16 +263,60 @@ export default function CatalogPage() {
         </div>
       )}
 
-      {/* Search */}
-      <div className="mb-4 relative">
-        <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-        <input
-          type="text"
-          placeholder="Search catalog by brand or item name..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] transition-all"
-        />
+      {/* Search & Audit Filters */}
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search catalog by brand or item name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] transition-all"
+          />
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setFilterMode('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              filterMode === 'all'
+                ? 'bg-gray-800 text-white'
+                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            All Items ({catalog.length})
+          </button>
+
+          <button
+            onClick={() => setFilterMode('missing-mrp')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+              filterMode === 'missing-mrp'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : missingMrpCount > 0
+                ? 'bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100'
+                : 'bg-white border border-gray-200 text-gray-400 opacity-60'
+            }`}
+          >
+            <AlertTriangle className="h-3.5 w-3.5" />
+            Missing MRP ({missingMrpCount})
+          </button>
+
+          <button
+            onClick={() => setFilterMode('missing-case')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+              filterMode === 'missing-case'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : missingCaseCount > 0
+                ? 'bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100'
+                : 'bg-white border border-gray-200 text-gray-400 opacity-60'
+            }`}
+          >
+            <AlertTriangle className="h-3.5 w-3.5" />
+            Missing Case Size ({missingCaseCount})
+          </button>
+        </div>
       </div>
 
       {/* Table */}

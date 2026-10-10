@@ -73,6 +73,15 @@ export interface CatalogItem {
   mrp?: number;
 }
 
+export interface PricingHistoryEntry {
+  mrp: number;
+  discountPercent: number;
+  purchaseCost: number;
+  effectiveDate: string; // YYYY-MM-DD
+  updatedAt?: any;
+  updatedBy?: string;
+}
+
 export interface PricingItem {
   id?: string;
   brandName: string;
@@ -81,5 +90,8 @@ export interface PricingItem {
   mrp: number;
   discountPercent: number;
   purchaseCost: number;
+  effectiveDate?: string; // YYYY-MM-DD, defaults to current date if unspecified
+  history?: PricingHistoryEntry[];
   updatedAt?: any;
 }
+

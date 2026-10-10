@@ -134,6 +134,7 @@ export function NewRelicChallanForm({
 
   const watchedLocation = watch('location') as NewRelicLocation;
   const watchedDcNumber = watch('dcNumber');
+  const watchedDcDate = watch('dcDate');
   const watchedLineItems = watch('lineItems');
   const calculatedTotalPCost = watchedLineItems?.reduce((acc, item) => acc + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 0)), 0) || 0;
 
@@ -142,15 +143,16 @@ export function NewRelicChallanForm({
     getCatalogItems().then((items) => setCatalog(items));
   }, []);
 
-  /* ── Load Pricing Map for P.Cost + MRP auto-fill ── */
+  /* ── Load Pricing Map for P.Cost + MRP auto-fill (respects DC date) ── */
   useEffect(() => {
     if (canSeeMrp) {
+      const targetDateStr = watchedDcDate instanceof Date ? watchedDcDate.toISOString().substring(0, 10) : undefined;
       getPricingItems(watchedLocation).then((items) => {
         setPricingItems(items);
-        setPricingMap(buildPricingMap(items));
+        setPricingMap(buildPricingMap(items, targetDateStr));
       });
     }
-  }, [watchedLocation, canSeeMrp]);
+  }, [watchedLocation, canSeeMrp, watchedDcDate]);
 
   /* ── In edit mode, backfill empty P.Cost & MRP cells once the pricing map is ready ── */
   useEffect(() => {

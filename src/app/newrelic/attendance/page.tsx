@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Loader2, Camera, LogIn, LogOut, MapPin, Clock, CheckCircle, AlertCircle, Calendar, Users, IndianRupee, Phone, Mail, CalendarDays, ChevronDown, ChevronUp, User, FileSpreadsheet, Calculator } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
@@ -65,7 +66,8 @@ function getWorkingDaysInMonth(yearMonth: string, excludeSundays: boolean = fals
 export default function AttendancePage() {
   const { toast } = useToast();
   const { user, role } = useAuth();
-  const isAdmin = role === 'admin' || role === 'superadmin';
+  const searchParams = useSearchParams();
+  const isAdmin = role === 'admin' || role === 'superadmin' || role === 'manager';
 
   // --- Self service state ---
   const [employees, setEmployees] = useState<NewRelicEmployee[]>([]);
@@ -79,7 +81,21 @@ export default function AttendancePage() {
   // --- Admin state ---
   const [todayAll, setTodayAll] = useState<NewRelicAttendance[]>([]);
   const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
-  const [adminTab, setAdminTab] = useState<'today' | 'history' | 'payroll'>('today');
+  const [adminTab, setAdminTab] = useState<'today' | 'history' | 'payroll'>(() => {
+    const tabParam = searchParams?.get('tab');
+    if (tabParam === 'payroll' || tabParam === 'salaries') return 'payroll';
+    if (tabParam === 'history') return 'history';
+    return 'today';
+  });
+
+  useEffect(() => {
+    const tabParam = searchParams?.get('tab');
+    if (tabParam === 'payroll' || tabParam === 'salaries') {
+      setAdminTab('payroll');
+    } else if (tabParam === 'history') {
+      setAdminTab('history');
+    }
+  }, [searchParams]);
   const [adminPayrollMonth, setAdminPayrollMonth] = useState<string>(() => new Date().toISOString().substring(0, 7));
   const [adminPayrollRecords, setAdminPayrollRecords] = useState<NewRelicAttendance[]>([]);
   const [adminAdvances, setAdminAdvances] = useState<NewRelicSalaryAdvance[]>([]);
@@ -527,17 +543,48 @@ export default function AttendancePage() {
       <div className="max-w-4xl mx-auto px-3 sm:px-8 py-4 sm:py-8 space-y-6">
 
         {/* Date header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-lg font-bold text-gray-800">Attendance</h1>
-            <p className="text-xs text-gray-500 flex items-center gap-1">
+            <h1 className="text-xl font-bold text-gray-800">Attendance & Payroll</h1>
+            <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
               <Calendar className="h-3.5 w-3.5" /> {displayDate}
             </p>
+          </div>
+
+          {/* Quick tab switcher between Mark Attendance and Salaries/Admin tabs */}
+          <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-xl border border-gray-200">
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById('self-service-section');
+                el?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-700 hover:bg-white hover:shadow-xs transition-all flex items-center gap-1.5"
+            >
+              <Camera className="h-3.5 w-3.5 text-[#3b2fc9]" />
+              Mark Attendance
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAdminTab('payroll');
+                const el = document.getElementById('admin-management-panel');
+                el?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                adminTab === 'payroll'
+                  ? 'bg-[#3b2fc9] text-white shadow-xs'
+                  : 'text-gray-700 hover:bg-white hover:shadow-xs'
+              }`}
+            >
+              <Calculator className="h-3.5 w-3.5" />
+              Staff Salaries & Advances
+            </button>
           </div>
         </div>
 
         {/* ─── Self-service check-in panel ─── */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
+        <div id="self-service-section" className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
           <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
             <Camera className="h-4 w-4 text-[#3b2fc9]" />
             Mark Your Attendance
@@ -954,7 +1001,7 @@ export default function AttendancePage() {
 
         {/* ─── Admin Panel ─── */}
         {isAdmin && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div id="admin-management-panel" className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden scroll-mt-20">
             {/* Admin tabs */}
             <div className="flex border-b border-gray-100">
               <button

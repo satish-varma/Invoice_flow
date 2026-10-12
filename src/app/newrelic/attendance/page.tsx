@@ -130,6 +130,9 @@ export default function AttendancePage() {
   useEffect(() => {
     getActiveEmployees().then((list) => {
       setEmployees(list);
+      if (list.length === 0) return;
+
+      // 1. Try matching by userId or email
       if (user?.email) {
         const userEmailLower = user.email.toLowerCase().trim();
         const matched = list.find(
@@ -138,10 +141,30 @@ export default function AttendancePage() {
         );
         if (matched?.id) {
           setSelectedEmployeeId(matched.id);
+          return;
         }
+      }
+
+      // 2. Check localStorage for previously selected employee ID
+      const savedId = typeof window !== 'undefined' ? localStorage.getItem('nr_attendance_emp_id') : null;
+      if (savedId && list.some(e => e.id === savedId)) {
+        setSelectedEmployeeId(savedId);
+        return;
+      }
+
+      // 3. For non-admin users or default fallback, select the first employee if not set
+      if (!selectedEmployeeId && list[0]?.id) {
+        setSelectedEmployeeId(list[0].id);
       }
     });
   }, [user]);
+
+  // Persist selected employee ID in localStorage
+  useEffect(() => {
+    if (selectedEmployeeId) {
+      localStorage.setItem('nr_attendance_emp_id', selectedEmployeeId);
+    }
+  }, [selectedEmployeeId]);
 
   // --- Employee Profile & Monthly History ---
   const [selectedMonth, setSelectedMonth] = useState<string>(() => new Date().toISOString().substring(0, 7)); // YYYY-MM

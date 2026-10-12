@@ -25,12 +25,18 @@ export async function getEmployees(): Promise<NewRelicEmployee[]> {
 }
 
 export async function getActiveEmployees(location?: string): Promise<NewRelicEmployee[]> {
-  const constraints: any[] = [where('isActive', '==', true)];
-  if (location) constraints.push(where('location', '==', location));
-  const q = query(collection(db, EMPLOYEES_COLLECTION), ...constraints);
-  const snapshot = await getDocs(q);
-  const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicEmployee));
-  return list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  try {
+    const snapshot = await getDocs(collection(db, EMPLOYEES_COLLECTION));
+    let list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicEmployee));
+    list = list.filter((e) => e.isActive !== false);
+    if (location) {
+      list = list.filter((e) => e.location === location);
+    }
+    return list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  } catch (error) {
+    console.error('Error fetching active employees:', error);
+    return [];
+  }
 }
 
 export async function getEmployee(id: string): Promise<NewRelicEmployee | null> {

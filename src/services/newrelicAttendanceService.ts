@@ -34,15 +34,33 @@ export async function getTodayAttendance(
   employeeDocId: string,
   date: string
 ): Promise<NewRelicAttendance | null> {
-  const q = query(
-    collection(db, ATTENDANCE_COLLECTION),
-    where('employeeDocId', '==', employeeDocId),
-    where('date', '==', date)
-  );
-  const snap = await getDocs(q);
-  if (snap.empty) return null;
-  const d = snap.docs[0];
-  return { id: d.id, ...d.data() } as NewRelicAttendance;
+  try {
+    const q = query(
+      collection(db, ATTENDANCE_COLLECTION),
+      where('employeeDocId', '==', employeeDocId),
+      where('date', '==', date)
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+    const d = snap.docs[0];
+    return { id: d.id, ...d.data() } as NewRelicAttendance;
+  } catch (error) {
+    console.warn('Falling back for getTodayAttendance:', error);
+    // Fallback: Query by employeeDocId only, then filter date in-memory
+    try {
+      const fallbackQuery = query(
+        collection(db, ATTENDANCE_COLLECTION),
+        where('employeeDocId', '==', employeeDocId)
+      );
+      const snap = await getDocs(fallbackQuery);
+      const matched = snap.docs.find((d) => d.data().date === date);
+      if (!matched) return null;
+      return { id: matched.id, ...matched.data() } as NewRelicAttendance;
+    } catch (e2) {
+      console.error('Error fetching today attendance:', e2);
+      return null;
+    }
+  }
 }
 
 // Shift configuration: Hyderabad starts at 6:00 AM with cutoff at 6:30 AM; 12-hour shift (720 mins)
@@ -194,26 +212,56 @@ export async function getAttendanceByDateRange(
   endDate: string,
   location?: string
 ): Promise<NewRelicAttendance[]> {
-  const constraints: any[] = [
-    where('date', '>=', startDate),
-    where('date', '<=', endDate),
-  ];
-  if (location) constraints.push(where('location', '==', location));
-  const q = query(collection(db, ATTENDANCE_COLLECTION), ...constraints);
-  const snap = await getDocs(q);
-  const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance));
-  return list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  try {
+    const constraints: any[] = [
+      where('date', '>=', startDate),
+      where('date', '<=', endDate),
+    ];
+    if (location) constraints.push(where('location', '==', location));
+    const q = query(collection(db, ATTENDANCE_COLLECTION), ...constraints);
+    const snap = await getDocs(q);
+    const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance));
+    return list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  } catch (error) {
+    console.warn('Falling back for getAttendanceByDateRange:', error);
+    try {
+      const snap = await getDocs(collection(db, ATTENDANCE_COLLECTION));
+      let list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance));
+      list = list.filter((r) => r.date >= startDate && r.date <= endDate);
+      if (location) {
+        list = list.filter((r) => r.location === location);
+      }
+      return list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    } catch (e2) {
+      console.error('Error fetching date range attendance:', e2);
+      return [];
+    }
+  }
 }
 
 /** Get today's attendance for all employees */
 export async function getTodayAllAttendance(date: string): Promise<NewRelicAttendance[]> {
-  const q = query(
-    collection(db, ATTENDANCE_COLLECTION),
-    where('date', '==', date)
-  );
-  const snap = await getDocs(q);
-  const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance));
-  return list.sort((a, b) => (a.employeeName || '').localeCompare(b.employeeName || ''));
+  try {
+    const q = query(
+      collection(db, ATTENDANCE_COLLECTION),
+      where('date', '==', date)
+    );
+    const snap = await getDocs(q);
+    const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance));
+    return list.sort((a, b) => (a.employeeName || '').localeCompare(b.employeeName || ''));
+  } catch (error) {
+    console.warn('Falling back for getTodayAllAttendance:', error);
+    try {
+      const snap = await getDocs(collection(db, ATTENDANCE_COLLECTION));
+      const list = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance))
+        .filter((d) => d.date === date);
+      return list.sort((a, b) => (a.employeeName || '').localeCompare(b.employeeName || ''));
+    } catch (e2) {
+      console.error('Error fetching today all attendance:', e2);
+      return [];
+    }
+  }
 }
 
 /** Get attendance for one employee for a month */
@@ -223,13 +271,32 @@ export async function getEmployeeMonthlyAttendance(
 ): Promise<NewRelicAttendance[]> {
   const start = `${yearMonth}-01`;
   const end = `${yearMonth}-31`;
-  const q = query(
-    collection(db, ATTENDANCE_COLLECTION),
-    where('employeeDocId', '==', employeeDocId),
-    where('date', '>=', start),
-    where('date', '<=', end)
-  );
-  const snap = await getDocs(q);
-  const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance));
-  return list.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  try {
+    const q = query(
+      collection(db, ATTENDANCE_COLLECTION),
+      where('employeeDocId', '==', employeeDocId),
+      where('date', '>=', start),
+      where('date', '<=', end)
+    );
+    const snap = await getDocs(q);
+    const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance));
+    return list.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  } catch (error) {
+    console.warn('Falling back for getEmployeeMonthlyAttendance:', error);
+    try {
+      // Query by employeeDocId only, filter dates in memory to bypass composite index requirement
+      const fallbackQuery = query(
+        collection(db, ATTENDANCE_COLLECTION),
+        where('employeeDocId', '==', employeeDocId)
+      );
+      const snap = await getDocs(fallbackQuery);
+      const list = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance))
+        .filter((d) => d.date >= start && d.date <= end);
+      return list.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    } catch (e2) {
+      console.error('Error fetching monthly attendance:', e2);
+      return [];
+    }
+  }
 }

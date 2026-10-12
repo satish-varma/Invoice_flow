@@ -149,6 +149,20 @@ export function NewRelicChallanForm({
     getCatalogItems().then((items) => setCatalog(items));
   }, []);
 
+  /* ── Auto-scroll to form top / items when opened for edit ── */
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const timer = setTimeout(() => {
+      const itemsEl = document.getElementById('challan-line-items-section');
+      if (itemsEl && initialData?.id && window.innerWidth < 640) {
+        itemsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [initialData?.id]);
+
   /* ── Load Pricing Map for P.Cost + MRP auto-fill (respects DC date) ── */
   useEffect(() => {
     if (canSeeMrp) {
@@ -636,7 +650,7 @@ export function NewRelicChallanForm({
       </div>
 
       {/* Line items */}
-      <div className="space-y-3">
+      <div id="challan-line-items-section" className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <Label className="text-sm sm:text-base font-semibold">Items</Label>

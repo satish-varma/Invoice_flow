@@ -97,6 +97,35 @@ export default function NewRelicPage() {
   }, [user]);
 
   /* ── Handlers ── */
+  const handleEditChallan = (challan: NewRelicChallan) => {
+    setSelectedChallan(challan);
+    setIsCreatingNew(null);
+    setFormKey(`edit-${challan.id}-${Date.now()}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      const el = document.getElementById('challan-form-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }, 80);
+  };
+
+  const handleStartCreateNew = (loc: NewRelicLocation) => {
+    setSelectedChallan(null);
+    setIsCreatingNew(loc);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      const el = document.getElementById('challan-form-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }, 80);
+  };
+
   const handleSave = (saved?: NewRelicChallan) => {
     fetchData();
     setSelectedChallan(null);
@@ -319,14 +348,14 @@ export default function NewRelicPage() {
           <>
             <div className="hidden sm:flex flex-row gap-3">
               <button
-                onClick={() => setIsCreatingNew('hyderabad')}
+                onClick={() => handleStartCreateNew('hyderabad')}
                 className="flex-1 bg-[#3b2fc9] text-white py-3 px-4 rounded-xl font-medium hover:bg-[#3b2fc9]/90 transition-colors shadow-sm flex items-center justify-center gap-2"
               >
                 <FileText className="h-5 w-5" />
                 New Challan (Hyderabad)
               </button>
               <button
-                onClick={() => setIsCreatingNew('bangalore')}
+                onClick={() => handleStartCreateNew('bangalore')}
                 className="flex-1 bg-emerald-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-emerald-700 transition-colors shadow-sm flex items-center justify-center gap-2"
               >
                 <FileText className="h-5 w-5" />
@@ -350,7 +379,7 @@ export default function NewRelicPage() {
 
             {/* Native Mobile Floating Action Button (+) */}
             <MobileFloatingActions
-              onNewChallan={(loc) => setIsCreatingNew(loc)}
+              onNewChallan={(loc) => handleStartCreateNew(loc)}
               onExportExcel={handleExportExcel}
             />
           </>
@@ -358,20 +387,22 @@ export default function NewRelicPage() {
 
         {/* Form Container */}
         {(selectedChallan || isCreatingNew) && (
-          <NewRelicChallanForm
-            key={selectedChallan?.id ?? (isCreatingNew ? `new-${isCreatingNew}` : formKey)}
-            initialData={selectedChallan}
-            defaultLocation={isCreatingNew || undefined}
-            onChallanSave={handleSave}
-            onAddNew={() => {
-              setSelectedChallan(null);
-              setIsCreatingNew(null);
-            }}
-            onCancel={() => {
-              setSelectedChallan(null);
-              setIsCreatingNew(null);
-            }}
-          />
+          <div id="challan-form-section">
+            <NewRelicChallanForm
+              key={selectedChallan?.id ?? (isCreatingNew ? `new-${isCreatingNew}` : formKey)}
+              initialData={selectedChallan}
+              defaultLocation={isCreatingNew || undefined}
+              onChallanSave={handleSave}
+              onAddNew={() => {
+                setSelectedChallan(null);
+                setIsCreatingNew(null);
+              }}
+              onCancel={() => {
+                setSelectedChallan(null);
+                setIsCreatingNew(null);
+              }}
+            />
+          </div>
         )}
 
         {/* Tabs */}
@@ -586,7 +617,7 @@ export default function NewRelicPage() {
               isTrashView={true}
               role={role}
               showFinancials={isUnlocked && showFinancials}
-              onSelectChallan={setSelectedChallan}
+              onSelectChallan={handleEditChallan}
               onDownloadChallan={handleDownload}
               onDeleteChallan={handleDelete}
               onDuplicateChallan={handleDuplicate}
@@ -607,7 +638,7 @@ export default function NewRelicPage() {
             isTrashView={false}
             role={role}
             showFinancials={isUnlocked && showFinancials}
-            onSelectChallan={setSelectedChallan}
+            onSelectChallan={handleEditChallan}
             onDownloadChallan={handleDownload}
             onDeleteChallan={handleDelete}
             onDuplicateChallan={handleDuplicate}

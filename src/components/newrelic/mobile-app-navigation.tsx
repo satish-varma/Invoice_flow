@@ -117,7 +117,7 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
   return (
     <>
       {/* ── Fixed Native Bottom Navigation Bar ── */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 z-40 safe-bottom shadow-lg">
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200/80 z-40 safe-bottom shadow-lg">
         <div className="flex items-center justify-around h-16 px-1">
           {navTabs.map((tab) => {
             const Icon = tab.icon;
@@ -126,24 +126,29 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`flex-1 flex flex-col items-center justify-center py-1 transition-all relative active:scale-95 ${
-                  active ? 'text-[#3b2fc9]' : 'text-gray-400 hover:text-gray-600'
-                }`}
+                className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-95 group"
               >
                 <div className="relative">
-                  <Icon className={`w-5 h-5 transition-transform ${active ? 'scale-110 stroke-[2.4]' : 'stroke-[1.8]'}`} />
+                  <div
+                    className={`px-3.5 py-1 rounded-full transition-all flex items-center justify-center ${
+                      active
+                        ? 'bg-indigo-100/80 text-[#3b2fc9]'
+                        : 'text-gray-400 group-hover:text-gray-600'
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 transition-transform ${active ? 'scale-105 stroke-[2.3]' : 'stroke-[1.8]'}`} />
+                  </div>
                   {tab.badge !== undefined && (
-                    <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center shadow-xs">
                       {tab.badge}
                     </span>
                   )}
                 </div>
-                <span className={`text-[10px] mt-1 tracking-tight ${active ? 'font-bold' : 'font-medium'}`}>
+                <span className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
+                  active ? 'font-bold text-[#3b2fc9]' : 'font-medium text-gray-500'
+                }`}>
                   {tab.label}
                 </span>
-                {active && (
-                  <span className="absolute bottom-1 w-1.5 h-1.5 bg-[#3b2fc9] rounded-full" />
-                )}
               </Link>
             );
           })}
@@ -151,17 +156,22 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
           {/* "More" Sheet Trigger */}
           <button
             onClick={() => setShowMoreMenu(true)}
-            className={`flex-1 flex flex-col items-center justify-center py-1 transition-all relative active:scale-95 ${
-              showMoreMenu || isMoreActive ? 'text-[#3b2fc9]' : 'text-gray-400 hover:text-gray-600'
-            }`}
+            className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-95 group"
           >
-            <MoreHorizontal className={`w-5 h-5 ${showMoreMenu || isMoreActive ? 'stroke-[2.4]' : 'stroke-[1.8]'}`} />
-            <span className={`text-[10px] mt-1 tracking-tight ${showMoreMenu || isMoreActive ? 'font-bold' : 'font-medium'}`}>
+            <div
+              className={`px-3.5 py-1 rounded-full transition-all flex items-center justify-center ${
+                showMoreMenu || isMoreActive
+                  ? 'bg-indigo-100/80 text-[#3b2fc9]'
+                  : 'text-gray-400 group-hover:text-gray-600'
+              }`}
+            >
+              <MoreHorizontal className={`w-5 h-5 transition-transform ${showMoreMenu || isMoreActive ? 'scale-105 stroke-[2.3]' : 'stroke-[1.8]'}`} />
+            </div>
+            <span className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
+              showMoreMenu || isMoreActive ? 'font-bold text-[#3b2fc9]' : 'font-medium text-gray-500'
+            }`}>
               More
             </span>
-            {isMoreActive && (
-              <span className="absolute bottom-1 w-1.5 h-1.5 bg-[#3b2fc9] rounded-full" />
-            )}
           </button>
         </div>
       </nav>

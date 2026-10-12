@@ -29,6 +29,9 @@ export default function CatalogPage() {
   const [editCaseSize, setEditCaseSize] = useState<string>('');
   const [editMrp, setEditMrp] = useState<string>('');
 
+  // Single field quick-edit state (Case Size or Ref MRP)
+  const [quickEdit, setQuickEdit] = useState<{ id: string; field: 'caseSize' | 'mrp'; value: string } | null>(null);
+
   // Add-new form state
   const [showAdd, setShowAdd] = useState(false);
   const [newBrand, setNewBrand] = useState('');
@@ -128,6 +131,35 @@ export default function CatalogPage() {
       setEditingId(null);
     } catch (e) {
       setError('Failed to update. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleQuickSaveField(item: CatalogItem, field: 'caseSize' | 'mrp', valueStr: string) {
+    const numVal = valueStr.trim() === '' ? undefined : Number(valueStr);
+    if (valueStr.trim() !== '' && (isNaN(Number(valueStr)) || Number(valueStr) < 0)) {
+      setError('Please enter a valid positive number.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      await saveCatalogItem(
+        {
+          brandName: item.brandName,
+          itemName: item.itemName,
+          defaultQuantity: item.defaultQuantity || 1,
+          caseSize: field === 'caseSize' ? numVal : item.caseSize,
+          mrp: field === 'mrp' ? numVal : item.mrp,
+        },
+        item.id!
+      );
+      const refreshed = await getCatalogItems();
+      setCatalog(refreshed);
+      setQuickEdit(null);
+    } catch (e) {
+      setError('Failed to update value.');
     } finally {
       setSaving(false);
     }
@@ -481,8 +513,11 @@ export default function CatalogPage() {
 
             const isMissingCase = !item.caseSize || item.caseSize <= 0;
             const isMissingMrp = !item.mrp || item.mrp <= 0;
+            const isEditingCase = quickEdit?.id === item.id && quickEdit?.field === 'caseSize';
+            const isEditingMrp = quickEdit?.id === item.id && quickEdit?.field === 'mrp';
 
-            const startEdit = () => {
+            const startFullEdit = () => {
+              setQuickEdit(null);
               setEditingId(item.id!);
               setEditBrand(item.brandName);
               setEditItem(item.itemName);
@@ -503,14 +538,24 @@ export default function CatalogPage() {
                         {item.brandName}
                       </span>
                       {isMissingCase && (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                          No Case Size
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setQuickEdit({ id: item.id!, field: 'caseSize', value: '' })}
+                          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 active:scale-95"
+                          title="Click to set case size"
+                        >
+                          + Set Case Size
+                        </button>
                       )}
                       {isMissingMrp && (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                          No MRP
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setQuickEdit({ id: item.id!, field: 'mrp', value: '' })}
+                          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 active:scale-95"
+                          title="Click to set MRP"
+                        >
+                          + Set MRP
+                        </button>
                       )}
                     </div>
                     <h4 className="text-sm font-semibold text-gray-900 leading-snug break-words">
@@ -519,10 +564,10 @@ export default function CatalogPage() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <button
-                      onClick={startEdit}
+                      onClick={startFullEdit}
                       className="p-2 text-gray-500 hover:text-[#3b2fc9] hover:bg-indigo-50 rounded-xl transition-colors active:scale-95"
-                      title="Edit Item"
-                      aria-label="Edit Item"
+                      title="Edit Item Details"
+                      aria-label="Edit Item Details"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
@@ -538,23 +583,117 @@ export default function CatalogPage() {
                   </div>
                 </div>
 
-                {/* Tap-to-edit values bar */}
-                <div
-                  onClick={startEdit}
-                  className="grid grid-cols-2 gap-2 pt-2.5 border-t border-gray-100 bg-gray-50/70 -mx-4 -mb-4 px-4 py-2.5 rounded-b-2xl cursor-pointer hover:bg-gray-100/70 transition-colors"
-                  title="Tap to edit"
-                >
-                  <div>
-                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">Case Size</span>
-                    <span className="text-sm font-medium text-gray-800">
-                      {item.caseSize ? `${item.caseSize} pcs` : <span className="text-blue-600 text-xs font-semibold">Tap to set</span>}
+                {/* Individual field quick-edit bar */}
+                <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-gray-100 bg-gray-50/70 -mx-4 -mb-4 px-3 py-2.5 rounded-b-2xl">
+                  {/* Case Size column */}
+                  <div className="p-1 rounded-xl transition-colors">
+                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-0.5">
+                      Case Size
                     </span>
+                    {isEditingCase ? (
+                      <div className="flex items-center gap-1 mt-1 bg-white p-1 rounded-lg border border-[#3b2fc9] shadow-xs">
+                        <input
+                          type="number"
+                          autoFocus
+                          placeholder="pcs"
+                          value={quickEdit.value}
+                          onChange={(e) => setQuickEdit({ ...quickEdit, value: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleQuickSaveField(item, 'caseSize', quickEdit.value);
+                            if (e.key === 'Escape') setQuickEdit(null);
+                          }}
+                          className="w-full px-1.5 py-0.5 text-xs font-semibold text-gray-800 bg-transparent focus:outline-none min-w-0"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleQuickSaveField(item, 'caseSize', quickEdit.value)}
+                          disabled={saving}
+                          className="p-1 bg-[#3b2fc9] text-white rounded hover:bg-[#2f25a8] active:scale-90 shrink-0"
+                        >
+                          <Check className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setQuickEdit(null)}
+                          className="p-1 text-gray-400 hover:text-gray-600 rounded active:scale-90 shrink-0"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setQuickEdit({ id: item.id!, field: 'caseSize', value: item.caseSize?.toString() || '' })}
+                        className="text-left w-full group py-0.5"
+                      >
+                        {item.caseSize ? (
+                          <span className="text-sm font-semibold text-gray-800 group-hover:text-[#3b2fc9] flex items-center gap-1">
+                            {item.caseSize} pcs
+                            <Pencil className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 text-[#3b2fc9]" />
+                          </span>
+                        ) : (
+                          <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md inline-block">
+                            Tap to set
+                          </span>
+                        )}
+                      </button>
+                    )}
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">Ref MRP</span>
-                    <span className="text-sm font-bold text-gray-900">
-                      {item.mrp ? `₹${item.mrp}` : <span className="text-amber-600 text-xs font-semibold">Tap to set</span>}
+
+                  {/* Ref MRP column */}
+                  <div className="p-1 rounded-xl transition-colors text-right">
+                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-0.5">
+                      Ref MRP
                     </span>
+                    {isEditingMrp ? (
+                      <div className="flex items-center gap-1 mt-1 bg-white p-1 rounded-lg border border-[#3b2fc9] shadow-xs justify-end">
+                        <span className="text-[11px] text-gray-400 font-bold pl-0.5">₹</span>
+                        <input
+                          type="number"
+                          autoFocus
+                          placeholder="0"
+                          value={quickEdit.value}
+                          onChange={(e) => setQuickEdit({ ...quickEdit, value: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleQuickSaveField(item, 'mrp', quickEdit.value);
+                            if (e.key === 'Escape') setQuickEdit(null);
+                          }}
+                          className="w-full px-1.5 py-0.5 text-xs font-semibold text-gray-800 bg-transparent focus:outline-none text-right min-w-0"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleQuickSaveField(item, 'mrp', quickEdit.value)}
+                          disabled={saving}
+                          className="p-1 bg-[#3b2fc9] text-white rounded hover:bg-[#2f25a8] active:scale-90 shrink-0"
+                        >
+                          <Check className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setQuickEdit(null)}
+                          className="p-1 text-gray-400 hover:text-gray-600 rounded active:scale-90 shrink-0"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setQuickEdit({ id: item.id!, field: 'mrp', value: item.mrp?.toString() || '' })}
+                        className="text-right w-full group py-0.5 flex flex-col items-end"
+                      >
+                        {item.mrp ? (
+                          <span className="text-sm font-bold text-gray-900 group-hover:text-[#3b2fc9] flex items-center gap-1">
+                            ₹{item.mrp}
+                            <Pencil className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 text-[#3b2fc9]" />
+                          </span>
+                        ) : (
+                          <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md inline-block">
+                            Tap to set
+                          </span>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

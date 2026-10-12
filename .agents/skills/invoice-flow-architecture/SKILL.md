@@ -40,5 +40,12 @@ Firebase App Hosting uses Cloud Run (Serverless Edge runtimes) which imposes str
 *   **Silent Failures:** Always wire up the `onValidationError` callback on `handleSubmit` (passing it as the second argument) to display validation errors in a toast. Otherwise, form buttons will seem "unresponsive" and silent-fail when a nested line item fails validation.
 *   **Critical Features to Maintain:** The NewRelic dashboards and views must **ALWAYS** retain:
     1.  **Reconcile Navigation:** A direct button/link to the `/newrelic/reconcile` interface.
-    2.  **Export to Excel:** A feature to download filtered tables directly to `.xlsx`.
-    3.  **Cycles Filters:** Date filters that specifically allow viewing Cycle 1 (1st-15th) and Cycle 2 (16th-End). Do not accidentally drop these filters during refactoring.
+    2.  **Export to Excel:** Restricted to `admin` and `superadmin`. Hidden from regular `user` and `manager` roles.
+    3.  **Cycles Filters:** Date filters that specifically allow viewing Cycle 1 (1st-15th) and Cycle 2 (16th-End). Visible ONLY to `admin` / `superadmin`. Non-admin users see simplified month/year pickers with their preferred location preselected by default.
+
+## 5. Mobile & Android Hydration Guidelines
+
+*   **Mounted Guard against SSR Mismatch:** Any page reading `localStorage`, `sessionStorage`, or user preferences (e.g., `user.preferredLocations`) MUST implement a `mounted` guard (`if (!mounted) return <Loader />`) or add `suppressHydrationWarning`. This prevents Chrome extensions (injecting `_gcruniqueid="1"`, `_gcruniqueid="2"`, etc.) and client-only state from throwing hydration mismatch fatal warnings.
+*   **Tactile Feedback (`triggerHaptic`):** All interactive steps on mobile (tab switches, +/- steppers, photo shutter, and saves) must trigger lightweight haptics via `src/lib/haptics.ts`.
+*   **Android Capacitor Bridge:** Mobile builds are managed via Capacitor 8 in `./android`. Keep `allowMixedContent` and `cleartext` enabled in `capacitor.config.ts` during local testing.
+

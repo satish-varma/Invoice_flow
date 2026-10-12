@@ -24,6 +24,14 @@ A dedicated module for managing NewRelic operations, featuring:
 - **Secure Cloud Storage:** All documents are securely saved to Firebase Firestore, with real-time syncing and robust data structure.
 - **Serverless-Optimized Architecture:** Specifically tuned for deployment on Firebase App Hosting, utilizing App Router API routes to safely bypass Next.js Server Action payload limits.
 
+### 📱 Mobile PWA & Native Android (Capacitor)
+- **Native Android APK & Emulator:** Packaged with **Capacitor 8** (`com.hungerbox.invoiceflow`) with full hardware access, camera permissions, and Chrome remote inspection support (`chrome://inspect`).
+- **Tactile Haptic Feedback Engine (`src/lib/haptics.ts`):** Micro-vibrations across tabs, quantity steppers, quick edits, camera shutter button, and confirmations.
+- **Offline & Weak Connection Toast:** Automatic network status banner alerting staff in basements/cold storages before form submissions or photo uploads.
+- **Single-Thumb Navigation:** Material 3 / iOS 18 style bottom capsule bar (`mobile-app-navigation.tsx`) optimized for cafeteria floor operators.
+- **Tap-to-Expand Mobile Cards & Web Share:** Challans feed allows inline inspection of line items without modal popups and 1-tap WhatsApp / native document sharing.
+- **Selfie Attendance & Live Shutter:** Front-camera selfie check-in with GPS geo-tagging, live digital shift timer, and automated shift duration calculations.
+
 ## Getting Started
 
 To run this application locally, you will need Node.js (v20+), npm, and the Firebase CLI.
@@ -42,29 +50,46 @@ To run this application locally, you will need Node.js (v20+), npm, and the Fire
     # ...other firebase config
     ```
 
-3.  **Run the Development Server:**
+3.  **Run the Web Development Server:**
     ```bash
     npm run dev
     ```
+    The application will be available at `http://localhost:9002` (or your configured port).
 
-The application will be available at `http://localhost:9002` (or your configured port).
+4.  **Run & Build the Native Android App (Capacitor):**
+    ```bash
+    # Sync web build and plugins into android project
+    npm run cap:sync
+
+    # Open Android project in Android Studio
+    npm run cap:open:android
+
+    # Build debug APK via Gradle directly
+    npm run cap:build:android
+    ```
+    *Debug APK will be generated at:* `android/app/build/outputs/apk/debug/app-debug.apk`
 
 ## Project Architecture
 
 - **`src/app`**: Next.js App Router structure containing all main modules (invoices, quotations, challans, newrelic, payslips).
-  - **`/newrelic/stock-request`**: Managerial facing UI to submit stock needs.
+  - **`/newrelic`**: Main Delivery Challans hub with segmented location switching, 1-row stats, and role-based cycle presets.
+  - **`/newrelic/attendance`**: Selfie check-in/out attendance tracking, location shift rules, and staff monthly payroll calculation.
+  - **`/newrelic/stock-request`**: Managerial facing UI to submit stock needs with touch quantity steppers.
   - **`/newrelic/stock-requests-admin`**: Administrative dashboard for fulfilling requests and reviewing financial impact.
   - **`/newrelic/pricing`**: Administrative dashboard for calculating and assigning supplier discounts across locations.
+  - **`/newrelic/catalog`**: Master item catalog with single-field inline editing for Case Sizes and MRPs.
 - **`src/app/api/newrelic/parse-invoice`**: The dedicated AI endpoint for parsing NewRelic vendor invoices using the `@google/genai` SDK.
 - **`src/app/api/extract-invoice`**: A lightweight REST API route that handles server-side text extraction for standard PDFs using `unpdf`.
-- **`src/components`**: Reusable Shadcn UI components and complex form handlers (e.g., `invoice-form.tsx`, `newrelic-challan-form.tsx`).
+- **`src/components`**: Reusable Shadcn UI components, forms, and mobile interfaces (`mobile-app-navigation.tsx`, `network-status-indicator.tsx`, `newrelic-challan-list.tsx`).
 - **`src/services`**: Firebase Firestore communication layers and role verification logic.
-- **`scripts/sync-pricing.js`**: Maintenance script to synchronize catalog changes into the location-based pricing collections.
+- **`src/lib/haptics.ts`**: Universal cross-platform haptic feedback engine for tactile user interactions.
+- **`android`**: Native Android project wrapper generated and synchronized by Capacitor CLI.
 
 ## Technologies Used
 
 - **Next.js 15 (App Router)**
-- **Firebase (Firestore, Auth, App Hosting)**
+- **Capacitor 8** (Android native app bridge)
+- **Firebase (Firestore, Auth, Storage, App Hosting)**
 - **Google Gemini API** for unstructured image/PDF parsing
 - **unpdf (PDF.js)** for lightweight text extraction
 - **react-hook-form & Zod** for robust form state management and payload validation

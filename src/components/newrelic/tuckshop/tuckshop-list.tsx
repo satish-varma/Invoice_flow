@@ -153,7 +153,80 @@ export function TuckshopList({ records, showDashboard }: Props) {
 
 
 
-      <div className="overflow-x-auto flex-1">
+      {/* Mobile Card List View (md:hidden) */}
+      <div className="md:hidden divide-y divide-gray-100 flex-1 overflow-y-auto">
+        {paginatedRecords.length === 0 ? (
+          <div className="p-8 text-center text-sm text-gray-500">
+            No records found.
+          </div>
+        ) : (
+          paginatedRecords.map((record) => (
+            <div key={record.id} className="p-4 hover:bg-gray-50/50 transition-colors space-y-2.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                      record.type === 'expense'
+                        ? 'bg-red-50 text-red-600 border border-red-100'
+                        : 'bg-green-50 text-green-700 border border-green-100'
+                    }`}>
+                      {record.type.toUpperCase()}
+                    </span>
+                    <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-600">
+                      {record.location}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {new Date(record.date).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-semibold text-gray-800 capitalize leading-snug">
+                    {record.category.replace('_', ' ')}
+                  </h4>
+                  {record.description && (
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                      {record.description}
+                    </p>
+                  )}
+                </div>
+
+                <div className="text-right shrink-0">
+                  <div className={`text-base font-bold ${
+                    record.type === 'expense' ? 'text-red-600' : 'text-green-600'
+                  }`}>
+                    {record.type === 'expense' ? '-' : '+'}₹{record.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </div>
+                  {record.billUrl && (
+                    <a
+                      href={record.billUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 mt-1 text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded hover:bg-blue-100"
+                    >
+                      <FileText className="h-3 w-3" /> View Bill
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-gray-50">
+                <span className="truncate max-w-[200px]">By: {record.createdBy || 'Unknown'}</span>
+                {role === 'admin' && (
+                  <button
+                    onClick={() => handleDelete(record.id!)}
+                    className="text-red-500 hover:text-red-700 p-1 flex items-center gap-1"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Delete</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table View (hidden md:block) */}
+      <div className="hidden md:block overflow-x-auto flex-1">
         <table className="w-full text-left border-collapse min-w-[700px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
@@ -225,7 +298,7 @@ export function TuckshopList({ records, showDashboard }: Props) {
       </div>
 
       {totalPages > 1 && (
-        <div className="p-4 border-t border-gray-200 flex items-center justify-between bg-white text-sm text-gray-600">
+        <div className="p-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white text-xs sm:text-sm text-gray-600">
           <div>
             Showing <span className="font-medium">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-medium">{Math.min(currentPage * ITEMS_PER_PAGE, filteredRecords.length)}</span> of <span className="font-medium">{filteredRecords.length}</span> results
           </div>

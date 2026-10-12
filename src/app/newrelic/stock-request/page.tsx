@@ -519,7 +519,39 @@ export default function StockRequestPage() {
                   </div>
                 </div>
 
-                <div className="p-3 sm:p-6 overflow-x-auto">
+                {/* Mobile Line Items Cards (md:hidden) */}
+                <div className="md:hidden divide-y divide-gray-100 p-3">
+                  {req.lineItems.map((item, idx) => (
+                    <div key={idx} className="py-2.5 first:pt-0 last:pb-0 space-y-1.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="font-semibold text-gray-900 text-sm">{item.brandName}</span>
+                          <span className="text-gray-500 text-xs block">{item.itemName}</span>
+                        </div>
+                        <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                          {item.orderType}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50 p-2 rounded-lg">
+                        <div>
+                          <span className="text-[10px] text-gray-400 uppercase block font-semibold">Requested</span>
+                          <span className="font-medium text-gray-800">
+                            {item.quantity} {item.orderType === 'cases' && `(${item.totalUnits} pcs)`}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] text-gray-400 uppercase block font-semibold">Fulfilled</span>
+                          <span className="font-bold text-[#3b2fc9]">
+                            {item.fulfilledQuantity !== undefined ? `${item.fulfilledQuantity} (${item.fulfilledTotalUnits ?? 0} pcs)` : '-'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Line Items Table (hidden md:block) */}
+                <div className="hidden md:block p-4 sm:p-6 overflow-x-auto">
                   <table className="w-full text-sm text-left min-w-[540px]">
                     <thead className="text-gray-500 font-medium border-b border-gray-100">
                       <tr>

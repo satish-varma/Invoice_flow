@@ -337,7 +337,61 @@ export default function StockRequestsAdminPage() {
                 </div>
               </div>
 
-              <div className="p-3 sm:p-6 overflow-x-auto">
+              {/* Mobile Line Items Cards (md:hidden) */}
+              <div className="md:hidden divide-y divide-gray-100 p-3">
+                {req.lineItems.map((item, idx) => {
+                  const isFulfilling = activeFulfillId === req.id;
+                  const fQty = isFulfilling 
+                    ? (fulfillData[idx.toString()] ?? 0)
+                    : (item.fulfilledQuantity ?? item.quantity);
+                  const fUnits = item.orderType === 'cases' ? fQty * (item.caseSize || 1) : fQty;
+
+                  return (
+                    <div key={idx} className="py-2.5 first:pt-0 last:pb-0 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="font-semibold text-gray-900 text-sm">{item.brandName}</span>
+                          <span className="text-gray-500 text-xs block">{item.itemName}</span>
+                        </div>
+                        <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                          {item.orderType}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50 p-2.5 rounded-lg">
+                        <div>
+                          <span className="text-[10px] text-gray-400 uppercase block font-semibold">Req Qty / Units</span>
+                          <span className="font-medium text-gray-800">
+                            {item.quantity} {item.orderType === 'cases' && `(${item.totalUnits} pcs)`}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] text-gray-400 uppercase block font-semibold">Fulfilled</span>
+                          {isFulfilling ? (
+                            <div className="flex items-center justify-end gap-1 mt-1">
+                              <input
+                                type="number"
+                                min="0"
+                                value={fQty}
+                                onChange={(e) => setFulfillData(prev => ({ ...prev, [idx]: Number(e.target.value) }))}
+                                className="w-16 rounded border border-gray-300 px-1.5 py-1 text-xs text-right bg-white focus:border-[#3b2fc9] focus:outline-none"
+                              />
+                              <span className="text-[11px] font-bold text-[#3b2fc9]">({fUnits})</span>
+                            </div>
+                          ) : (
+                            <span className="font-bold text-[#3b2fc9]">
+                              {item.fulfilledQuantity ?? '-'} {item.fulfilledTotalUnits !== undefined && `(${item.fulfilledTotalUnits} pcs)`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Line Items Table (hidden md:block) */}
+              <div className="hidden md:block p-4 sm:p-6 overflow-x-auto">
                 <table className="w-full text-sm text-left min-w-[620px]">
                   <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
                     <tr>

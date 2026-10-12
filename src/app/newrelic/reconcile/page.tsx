@@ -575,8 +575,47 @@ export default function ReconcilePage() {
               </div>
             ) : (
               <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                <div className="overflow-x-auto max-h-[500px]">
-                  <table className="w-full text-sm text-left">
+                {/* Mobile Cards (md:hidden) */}
+                <div className="md:hidden divide-y divide-gray-100 max-h-[550px] overflow-y-auto">
+                  {differences
+                    .filter(d => filterTab === 'all' || (filterTab === 'issues' && d.status !== 'match') || (filterTab === 'matches' && d.status === 'match'))
+                    .map((diff, idx) => (
+                      <div key={idx} className={`p-4 space-y-2.5 ${diff.status === 'match' ? 'bg-emerald-50/20' : diff.status === 'missing' ? 'bg-rose-50/20' : 'bg-amber-50/20'}`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <span className="font-semibold text-gray-900 text-sm block leading-snug">
+                              {diff.item}
+                            </span>
+                            <span className="text-[11px] text-gray-500 font-mono mt-0.5 block truncate" title={diff.dcs.join(', ')}>
+                              DC: {diff.dcs.join(', ')}
+                            </span>
+                          </div>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold shrink-0 ${
+                            diff.status === 'match' ? 'bg-emerald-100 text-emerald-700' : diff.status === 'missing' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            {diff.issue}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs bg-white/80 p-2.5 rounded-lg border border-gray-100">
+                          <div>
+                            <span className="text-[10px] text-gray-400 uppercase font-semibold block">Aggregator</span>
+                            <span className="font-medium text-gray-800">{diff.aggQty} pcs</span>
+                            <span className="text-gray-500 block text-[11px]">₹{diff.aggVal.toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] text-gray-400 uppercase font-semibold block">Our Record</span>
+                            <span className="font-medium text-gray-800">{diff.ourQty} pcs</span>
+                            <span className="text-gray-500 block text-[11px]">₹{diff.ourVal.toLocaleString('en-IN')}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+
+                {/* Desktop Table (hidden md:block) */}
+                <div className="hidden md:block overflow-x-auto max-h-[500px]">
+                  <table className="w-full text-sm text-left min-w-[700px]">
                     <thead className="bg-gray-50 text-gray-600 font-medium sticky top-0 shadow-sm">
                       <tr>
                         <th className="px-4 py-3 border-b">DC Numbers</th>

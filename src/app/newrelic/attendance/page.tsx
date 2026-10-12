@@ -397,10 +397,13 @@ function AttendancePageContent() {
 
   /* ── Export Individual Monthly Attendance to Excel ── */
   const exportMyMonthlyExcel = () => {
-    if (!selectedEmployee) return;
+    if (!isOwnerOrAdmin || !selectedEmployee) return;
     try {
+      const siteId = resolveSiteId(selectedEmployee.siteId);
+      const siteName = siteId === 'dsm' ? 'DSM' : siteId === 'ntt_data' ? 'NTT Data' : 'NewRelic';
       const rows = myMonthlyRecords.map((r) => ({
         'Date': r.date,
+        'Company Site': siteName,
         'Employee ID': r.employeeId,
         'Employee Name': r.employeeName,
         'Location': r.location,
@@ -415,6 +418,7 @@ function AttendancePageContent() {
       const summaryRows = [
         { 'Metric': 'Employee Name', 'Value': selectedEmployee.name },
         { 'Metric': 'Employee ID', 'Value': selectedEmployee.employeeId },
+        { 'Metric': 'Company Site', 'Value': siteName },
         { 'Metric': 'Location', 'Value': selectedEmployee.location },
         { 'Metric': 'Month', 'Value': selectedMonth },
         { 'Metric': 'Total Days in Month', 'Value': myMonthlySummary.totalDaysInMonth },

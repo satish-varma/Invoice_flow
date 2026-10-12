@@ -11,6 +11,7 @@ import { getAllPricingItems } from '@/services/newrelicPricingService';
 import { saveStockRequest, getStockRequests } from '@/services/newrelicStockRequestService';
 import { CatalogItem, PricingItem } from '@/types/challan';
 import { StockRequest } from '@/types/stockRequest';
+import { SiteId, SITE_OPTIONS, COMPANY_SITES, resolveSiteId } from '@/types/site';
 import { Plus, Minus, Trash2, CheckCircle, PackageSearch, List, Copy, Pencil, Clock, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -26,6 +27,14 @@ export default function StockRequestPage() {
   const [view, setView] = useState<'form' | 'history'>('history');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  const isAdmin = role === 'admin' || role === 'superadmin';
+  const [adminSite, setAdminSite] = useState<SiteId>(() => {
+    return user?.assignedSite ? resolveSiteId(user.assignedSite) : 'newrelic';
+  });
+
+  const activeSite = isAdmin ? adminSite : (user?.assignedSite ? resolveSiteId(user.assignedSite) : 'newrelic');
+  const isHydOnlySite = activeSite === 'dsm' || activeSite === 'ntt_data';
 
   const {
     register,
@@ -54,14 +63,17 @@ export default function StockRequestPage() {
   const selectedLocation = watch('location');
   const lineItems = watch('lineItems');
 
-  const activeSite = user?.assignedSite || 'newrelic';
-  const isAdmin = role === 'admin' || role === 'superadmin';
-  const isHydOnlySite = !isAdmin && (activeSite === 'dsm' || activeSite === 'ntt_data');
+  const handleSiteChange = (newSite: SiteId) => {
+    setAdminSite(newSite);
+    if (newSite === 'dsm' || newSite === 'ntt_data') {
+      setValue('location', 'hyderabad');
+    }
+  };
 
   useEffect(() => {
     if (!role) return;
     Promise.all([
-      getCatalogItems(isAdmin ? undefined : activeSite), 
+      getCatalogItems(activeSite), 
       getAllPricingItems(),
       getStockRequests(undefined, isAdmin ? undefined : activeSite)
     ]).then(([cat, pri, reqs]) => {
@@ -221,6 +233,22 @@ export default function StockRequestPage() {
         
         {/* Header Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-gray-100">
+          {isAdmin && (
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Company Site</label>
+              <select
+                value={adminSite}
+                onChange={(e) => handleSiteChange(e.target.value as SiteId)}
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#3b2fc9] focus:ring-[#3b2fc9] p-2 border bg-white font-medium"
+              >
+                {SITE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label} ({COMPANY_SITES[opt.value]?.name || opt.value})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
             <select
@@ -233,7 +261,7 @@ export default function StockRequestPage() {
             </select>
             {isHydOnlySite && (
               <span className="text-[10px] text-amber-600 mt-1 block">
-                📍 Locked to Hyderabad for {activeSite === 'dsm' ? 'DSM' : 'NTT Data'}
+                📍 Locked to Hyderabad for {COMPANY_SITES[activeSite]?.name || activeSite}
               </span>
             )}
           </div>

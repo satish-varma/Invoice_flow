@@ -130,6 +130,7 @@ export default function StockRequestsAdminPage() {
 
   const handleExport = () => {
     const filtered = requests.filter(r => {
+      if (filterSite !== 'all' && (r.siteId || 'newrelic') !== filterSite) return false;
       if (filterLocation !== 'all' && r.location !== filterLocation) return false;
       if (filterStatus !== 'all' && r.status !== filterStatus) return false;
       return true;
@@ -140,14 +141,31 @@ export default function StockRequestsAdminPage() {
       return;
     }
 
-    const headers = ['Request Date', 'Requested By', 'Location', 'Status', 'Brand Name', 'Item Name', 'Order Type', 'Case Size', 'Quantity', 'Total Units', 'Reference MRP', 'Fulfilled Qty', 'Fulfilled Units'];
+    const headers = [
+      'Request Date',
+      'Company Site',
+      'Requested By',
+      'Location',
+      'Status',
+      'Brand Name',
+      'Item Name',
+      'Order Type',
+      'Case Size',
+      'Quantity',
+      'Total Units',
+      'Reference MRP',
+      'Fulfilled Qty',
+      'Fulfilled Units'
+    ];
     const rows: string[][] = [];
 
     filtered.forEach(req => {
       const date = format(new Date(req.requestDate), 'dd MMM yyyy');
+      const siteName = COMPANY_SITES[req.siteId || 'newrelic']?.name || 'NewRelic';
       req.lineItems.forEach(item => {
         rows.push([
           date,
+          `"${siteName}"`,
           `"${req.createdBy}"`,
           req.location,
           req.status,
@@ -169,7 +187,8 @@ export default function StockRequestsAdminPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `stock_requests_${filterLocation}_${filterStatus}.csv`);
+    const siteSuffix = filterSite === 'all' ? 'all_sites' : filterSite;
+    link.setAttribute('download', `stock_requests_${siteSuffix}_${filterLocation}_${filterStatus}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -184,7 +203,12 @@ export default function StockRequestsAdminPage() {
     return true;
   });
 
-  const pendingRequests = requests.filter(r => r.status === 'PENDING');
+  const pendingRequests = requests.filter(r => {
+    if (r.status !== 'PENDING') return false;
+    if (filterSite !== 'all' && (r.siteId || 'newrelic') !== filterSite) return false;
+    if (filterLocation !== 'all' && r.location !== filterLocation) return false;
+    return true;
+  });
   let totalPendingMrp = 0;
   let totalPendingCost = 0;
   pendingRequests.forEach(r => {

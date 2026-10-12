@@ -91,9 +91,10 @@ export default function EmployeesPage() {
     return matchSite && matchLoc && matchSearch;
   });
 
-  const hydCount = employees.filter((e) => e.location === 'hyderabad' && e.isActive).length;
-  const blrCount = employees.filter((e) => e.location === 'bangalore' && e.isActive).length;
-  const totalSalary = employees.filter(e => e.isActive).reduce((s, e) => s + (e.monthlySalary || 0), 0);
+  const siteScopedEmployees = employees.filter(e => filterSite === 'all' || resolveSiteId(e.siteId) === filterSite);
+  const hydCount = siteScopedEmployees.filter((e) => e.location === 'hyderabad' && e.isActive).length;
+  const blrCount = siteScopedEmployees.filter((e) => e.location === 'bangalore' && e.isActive).length;
+  const totalSalary = siteScopedEmployees.filter(e => e.isActive).reduce((s, e) => s + (e.monthlySalary || 0), 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -101,7 +102,7 @@ export default function EmployeesPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Total Employees" value={employees.length} color="text-[#3b2fc9]" bg="bg-[#3b2fc9]/5" />
+          <StatCard label="Total Employees" value={siteScopedEmployees.length} color="text-[#3b2fc9]" bg="bg-[#3b2fc9]/5" />
           <StatCard label="Hyderabad" value={hydCount} color="text-blue-600" bg="bg-blue-50" />
           <StatCard label="Bangalore" value={blrCount} color="text-emerald-600" bg="bg-emerald-50" />
           {isAdmin && (

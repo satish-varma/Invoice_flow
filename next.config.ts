@@ -16,6 +16,12 @@ const nextConfig = {
         serverActions: {
             bodySizeLimit: '10mb',
         },
+        allowedDevOrigins: [
+            '192.168.29.101',
+            'localhost:9002',
+            '192.168.29.101:9002',
+            '10.0.2.2:9002',
+        ],
     },
     typescript: {
         ignoreBuildErrors: true,

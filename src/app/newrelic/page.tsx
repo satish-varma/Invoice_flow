@@ -51,7 +51,12 @@ export default function NewRelicPage() {
   const [showFinancials, setShowFinancials] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -313,8 +318,19 @@ export default function NewRelicPage() {
   const hydCount = activeChallans.filter((c) => c.location === 'hyderabad').length;
   const blrCount = activeChallans.filter((c) => c.location === 'bangalore').length;
 
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Loader2 className="h-6 w-6 animate-spin text-[#3b2fc9]" />
+          Loading Delivery Challans...
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" suppressHydrationWarning>
       <div className="max-w-6xl mx-auto px-3 sm:px-8 py-3 sm:py-8 space-y-4 sm:space-y-8">
 
         {/* Mobile Pull-to-Refresh Indicator & Action Bar */}

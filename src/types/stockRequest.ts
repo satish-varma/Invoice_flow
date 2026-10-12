@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { NewRelicLocation } from './challan';
 
+import { SiteId } from './site';
+
 export const stockRequestItemSchema = z.object({
   id: z.string().optional(),
   brandName: z.string().min(1, 'Brand is required'),
@@ -17,6 +19,7 @@ export const stockRequestItemSchema = z.object({
 
 export const stockRequestSchema = z.object({
   id: z.string().optional(),
+  siteId: z.enum(['newrelic', 'dsm', 'ntt_data']).optional(),
   location: z.enum(['hyderabad', 'bangalore']),
   requestDate: z.date(),
   status: z.enum(['PENDING', 'PARTIALLY_FULFILLED', 'FULFILLED', 'CANCELLED']),
@@ -43,6 +46,7 @@ export interface StockRequestItem {
 
 export interface StockRequest {
   id?: string;
+  siteId?: SiteId;
   location: NewRelicLocation;
   requestDate: string; // ISO string
   status: 'PENDING' | 'PARTIALLY_FULFILLED' | 'FULFILLED' | 'CANCELLED';

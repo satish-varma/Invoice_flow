@@ -18,19 +18,33 @@ const EMPLOYEES_COLLECTION = 'newrelic_employees';
 const SALARY_ADVANCES_COLLECTION = 'newrelic_salary_advances';
 const SALARY_PAYMENTS_COLLECTION = 'newrelic_salary_payments';
 
-export async function getEmployees(): Promise<NewRelicEmployee[]> {
+export async function getEmployees(siteId?: string): Promise<NewRelicEmployee[]> {
   const snapshot = await getDocs(collection(db, EMPLOYEES_COLLECTION));
-  const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicEmployee));
+  let list = snapshot.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+    siteId: d.data().siteId || 'newrelic',
+  } as NewRelicEmployee));
+  if (siteId) {
+    list = list.filter((e) => (e.siteId || 'newrelic') === siteId);
+  }
   return list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 }
 
-export async function getActiveEmployees(location?: string): Promise<NewRelicEmployee[]> {
+export async function getActiveEmployees(location?: string, siteId?: string): Promise<NewRelicEmployee[]> {
   try {
     const snapshot = await getDocs(collection(db, EMPLOYEES_COLLECTION));
-    let list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicEmployee));
+    let list = snapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+      siteId: d.data().siteId || 'newrelic',
+    } as NewRelicEmployee));
     list = list.filter((e) => e.isActive !== false);
     if (location) {
       list = list.filter((e) => e.location === location);
+    }
+    if (siteId) {
+      list = list.filter((e) => (e.siteId || 'newrelic') === siteId);
     }
     return list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   } catch (error) {
@@ -42,7 +56,7 @@ export async function getActiveEmployees(location?: string): Promise<NewRelicEmp
 export async function getEmployee(id: string): Promise<NewRelicEmployee | null> {
   const snap = await getDoc(doc(db, EMPLOYEES_COLLECTION, id));
   if (!snap.exists()) return null;
-  return { id: snap.id, ...snap.data() } as NewRelicEmployee;
+  return { id: snap.id, ...snap.data(), siteId: snap.data().siteId || 'newrelic' } as NewRelicEmployee;
 }
 
 export async function saveEmployee(
@@ -50,15 +64,19 @@ export async function saveEmployee(
   editorEmail: string | null,
   existingId?: string
 ): Promise<string> {
+  const payload = {
+    ...data,
+    siteId: data.siteId || 'newrelic',
+  };
   if (existingId) {
     await updateDoc(doc(db, EMPLOYEES_COLLECTION, existingId), {
-      ...data,
+      ...payload,
       updatedAt: serverTimestamp(),
     });
     return existingId;
   }
   const docRef = await addDoc(collection(db, EMPLOYEES_COLLECTION), {
-    ...data,
+    ...payload,
     createdBy: editorEmail,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -70,14 +88,18 @@ export async function deleteEmployee(id: string): Promise<void> {
   await deleteDoc(doc(db, EMPLOYEES_COLLECTION, id));
 }
 
-export async function generateEmployeeId(location: 'hyderabad' | 'bangalore'): Promise<string> {
-  const prefix = location === 'hyderabad' ? 'NR-HYD' : 'NR-BLR';
-  const q = query(
-    collection(db, EMPLOYEES_COLLECTION),
-    where('location', '==', location)
-  );
-  const snap = await getDocs(q);
-  const next = snap.size + 1;
+export async function generateEmployeeId(location: 'hyderabad' | 'bangalore', siteId: string = 'newrelic'): Promise<string> {
+  let prefix = location === 'hyderabad' ? 'NR-HYD' : 'NR-BLR';
+  if (siteId === 'dsm') prefix = 'DSM-HYD';
+  if (siteId === 'ntt_data') prefix = 'NTT-HYD';
+
+  const snapshot = await getDocs(collection(db, EMPLOYEES_COLLECTION));
+  const count = snapshot.docs.filter((d) => {
+    const data = d.data();
+    const docSite = data.siteId || 'newrelic';
+    return docSite === siteId && data.location === location;
+  }).length;
+  const next = count + 1;
   return `${prefix}-${String(next).padStart(3, '0')}`;
 }
 

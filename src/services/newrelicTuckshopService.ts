@@ -15,12 +15,15 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
+import { SiteId } from '@/types/site';
+
 export const NEWRELIC_TUCKSHOP_COLLECTION = 'newrelic_tuckshop';
 
 export type TuckshopType = 'expense' | 'sale';
 
 export interface NewRelicTuckshopRecord {
   id?: string;
+  siteId?: SiteId; // Company site: 'newrelic' | 'dsm' | 'ntt_data' (defaults to 'newrelic')
   date: string; // ISO string
   location: string;
   type: TuckshopType;
@@ -35,21 +38,26 @@ export interface NewRelicTuckshopRecord {
 }
 
 export const subscribeToTuckshopRecords = (
-  callback: (records: NewRelicTuckshopRecord[]) => void
+  callback: (records: NewRelicTuckshopRecord[]) => void,
+  siteIdFilter?: string
 ) => {
   const q = query(collection(db, NEWRELIC_TUCKSHOP_COLLECTION), orderBy('date', 'desc'), limit(1000));
   
   return onSnapshot(q, (snapshot) => {
-    const records = snapshot.docs.map((doc) => {
+    let records = snapshot.docs.map((doc) => {
       const data = doc.data();
       return {
         id: doc.id,
         ...data,
+        siteId: (data.siteId as SiteId) || 'newrelic',
         date: data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date,
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
         updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
       } as NewRelicTuckshopRecord;
     });
+    if (siteIdFilter) {
+      records = records.filter((r) => (r.siteId || 'newrelic') === siteIdFilter);
+    }
     callback(records);
   }, (error) => {
     console.error("Error fetching tuckshop records:", error);
@@ -57,19 +65,24 @@ export const subscribeToTuckshopRecords = (
   });
 };
 
-export const getTuckshopRecords = async (): Promise<NewRelicTuckshopRecord[]> => {
+export const getTuckshopRecords = async (siteIdFilter?: string): Promise<NewRelicTuckshopRecord[]> => {
   const q = query(collection(db, NEWRELIC_TUCKSHOP_COLLECTION), orderBy('date', 'desc'), limit(1500));
   const snap = await getDocs(q);
-  return snap.docs.map((doc) => {
+  let records = snap.docs.map((doc) => {
     const data = doc.data();
     return {
       id: doc.id,
       ...data,
+      siteId: (data.siteId as SiteId) || 'newrelic',
       date: data.date instanceof Timestamp ? data.date.toDate().toISOString() : data.date,
       createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
       updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
     } as NewRelicTuckshopRecord;
   });
+  if (siteIdFilter) {
+    records = records.filter((r) => (r.siteId || 'newrelic') === siteIdFilter);
+  }
+  return records;
 };
 
 export const saveTuckshopRecord = async (record: Partial<NewRelicTuckshopRecord>, userEmail: string | null): Promise<NewRelicTuckshopRecord> => {

@@ -24,6 +24,7 @@ export async function saveStockRequest(request: Omit<StockRequest, 'id'>, id?: s
       
     const dataToSave = {
       ...request,
+      siteId: request.siteId || 'newrelic',
       updatedAt: serverTimestamp(),
       ...(id ? {} : { createdAt: serverTimestamp() }),
     };
@@ -36,7 +37,7 @@ export async function saveStockRequest(request: Omit<StockRequest, 'id'>, id?: s
   }
 }
 
-export async function getStockRequests(location?: NewRelicLocation): Promise<StockRequest[]> {
+export async function getStockRequests(location?: NewRelicLocation, siteId?: string): Promise<StockRequest[]> {
   try {
     let q = query(collection(db, STOCK_REQUEST_COLLECTION));
     if (location) {
@@ -44,10 +45,20 @@ export async function getStockRequests(location?: NewRelicLocation): Promise<Sto
     }
     
     const snap = await getDocs(q);
-    const requests: StockRequest[] = [];
+    let requests: StockRequest[] = [];
     snap.forEach((d) => {
-      requests.push({ id: d.id, ...d.data() } as StockRequest);
+      const data = d.data();
+      requests.push({
+        id: d.id,
+        ...data,
+        siteId: data.siteId || 'newrelic',
+      } as StockRequest);
     });
+
+    if (siteId) {
+      requests = requests.filter((r) => (r.siteId || 'newrelic') === siteId);
+    }
+
     // In-memory sort by createdAt desc (or requestDate) to avoid composite index requirements
     return requests.sort((a, b) => {
       const timeA = a.createdAt ? new Date(a.createdAt).getTime() : (a.requestDate ? new Date(a.requestDate).getTime() : 0);

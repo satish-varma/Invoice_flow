@@ -1,8 +1,11 @@
+import { SiteId } from './site';
+
 export type NewRelicLocation = 'hyderabad' | 'bangalore';
 
 export interface NewRelicEmployee {
   id?: string;
-  employeeId: string;       // e.g. NR-HYD-001
+  siteId?: SiteId;          // defaults to 'newrelic'
+  employeeId: string;       // e.g. NR-HYD-001 or DSM-HYD-001
   userId?: string;          // Firestore doc ID from the 'users' collection (links login account)
   name: string;
   email?: string;
@@ -20,6 +23,7 @@ export interface NewRelicEmployee {
 
 export interface NewRelicAttendance {
   id?: string;
+  siteId?: SiteId;          // defaults to 'newrelic'
   employeeId: string;       // references NewRelicEmployee.id
   employeeDocId: string;    // Firestore doc ID of the employee
   employeeName: string;

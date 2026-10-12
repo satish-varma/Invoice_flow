@@ -116,7 +116,7 @@ export function evaluateCheckInLate(timeIso: string, location: string): { isLate
 
 /** Check in an employee */
 export async function checkInEmployee(
-  employee: { id: string; employeeId: string; name: string; location: string },
+  employee: { id: string; employeeId: string; name: string; location: string; siteId?: string },
   selfieUrl: string,
   coordinates: { lat: number; lng: number; accuracy?: number } | null,
   date: string
@@ -129,6 +129,7 @@ export async function checkInEmployee(
     employeeId: employee.employeeId,
     employeeDocId: employee.id,
     employeeName: employee.name,
+    siteId: (employee.siteId as any) || 'newrelic',
     location: employee.location as any,
     date,
     checkIn: {
@@ -206,11 +207,12 @@ export async function checkAndFlagMissedCheckouts(employeeDocId: string, current
   return missedList;
 }
 
-/** Get attendance records for a date range (admin) */
+/** Get attendance records for a date range (admin / manager) */
 export async function getAttendanceByDateRange(
   startDate: string,
   endDate: string,
-  location?: string
+  location?: string,
+  siteId?: string
 ): Promise<NewRelicAttendance[]> {
   try {
     const constraints: any[] = [
@@ -220,16 +222,30 @@ export async function getAttendanceByDateRange(
     if (location) constraints.push(where('location', '==', location));
     const q = query(collection(db, ATTENDANCE_COLLECTION), ...constraints);
     const snap = await getDocs(q);
-    const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance));
+    let list = snap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+      siteId: d.data().siteId || 'newrelic',
+    } as NewRelicAttendance));
+    if (siteId) {
+      list = list.filter((r) => (r.siteId || 'newrelic') === siteId);
+    }
     return list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   } catch (error) {
     console.warn('Falling back for getAttendanceByDateRange:', error);
     try {
       const snap = await getDocs(collection(db, ATTENDANCE_COLLECTION));
-      let list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance));
+      let list = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+        siteId: d.data().siteId || 'newrelic',
+      } as NewRelicAttendance));
       list = list.filter((r) => r.date >= startDate && r.date <= endDate);
       if (location) {
         list = list.filter((r) => r.location === location);
+      }
+      if (siteId) {
+        list = list.filter((r) => (r.siteId || 'newrelic') === siteId);
       }
       return list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     } catch (e2) {
@@ -240,22 +256,36 @@ export async function getAttendanceByDateRange(
 }
 
 /** Get today's attendance for all employees */
-export async function getTodayAllAttendance(date: string): Promise<NewRelicAttendance[]> {
+export async function getTodayAllAttendance(date: string, siteId?: string): Promise<NewRelicAttendance[]> {
   try {
     const q = query(
       collection(db, ATTENDANCE_COLLECTION),
       where('date', '==', date)
     );
     const snap = await getDocs(q);
-    const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance));
+    let list = snap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+      siteId: d.data().siteId || 'newrelic',
+    } as NewRelicAttendance));
+    if (siteId) {
+      list = list.filter((r) => (r.siteId || 'newrelic') === siteId);
+    }
     return list.sort((a, b) => (a.employeeName || '').localeCompare(b.employeeName || ''));
   } catch (error) {
     console.warn('Falling back for getTodayAllAttendance:', error);
     try {
       const snap = await getDocs(collection(db, ATTENDANCE_COLLECTION));
-      const list = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance))
+      let list = snap.docs
+        .map((d) => ({
+          id: d.id,
+          ...d.data(),
+          siteId: d.data().siteId || 'newrelic',
+        } as NewRelicAttendance))
         .filter((d) => d.date === date);
+      if (siteId) {
+        list = list.filter((r) => (r.siteId || 'newrelic') === siteId);
+      }
       return list.sort((a, b) => (a.employeeName || '').localeCompare(b.employeeName || ''));
     } catch (e2) {
       console.error('Error fetching today all attendance:', e2);

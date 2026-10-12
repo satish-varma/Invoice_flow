@@ -71,6 +71,8 @@ export interface CatalogItem {
   defaultQuantity: number;
   caseSize?: number;
   mrp?: number;
+  /** Sites where this item can be requested/stocked. Missing/empty defaults to ['newrelic'] */
+  applicableSites?: ('newrelic' | 'dsm' | 'ntt_data' | 'all')[];
 }
 
 export interface PricingHistoryEntry {

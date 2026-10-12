@@ -155,7 +155,7 @@ const DEFAULT_CATALOG: CatalogItem[] = [
   { brandName: 'Parle', itemName: 'Monaco', defaultQuantity: 1 }
 ];
 
-export async function getCatalogItems(): Promise<CatalogItem[]> {
+export async function getCatalogItems(siteId?: string): Promise<CatalogItem[]> {
   try {
     const q = query(collection(db, CATALOG_COLLECTION), limit(300));
     const snap = await getDocs(q);
@@ -163,7 +163,7 @@ export async function getCatalogItems(): Promise<CatalogItem[]> {
     // If Firestore collection has fewer items than dataset, overwrite & seed full dataset
     if (snap.size < DEFAULT_CATALOG.length) {
       await seedDefaultCatalog();
-      return DEFAULT_CATALOG;
+      return siteId && siteId !== 'newrelic' ? [] : DEFAULT_CATALOG;
     }
 
     const items: CatalogItem[] = [];
@@ -171,10 +171,21 @@ export async function getCatalogItems(): Promise<CatalogItem[]> {
       items.push({ id: docSnap.id, ...docSnap.data() } as CatalogItem);
     });
 
-    return items.length > 0 ? items : DEFAULT_CATALOG;
+    const allItems = items.length > 0 ? items : DEFAULT_CATALOG;
+
+    if (!siteId) {
+      return allItems;
+    }
+
+    // Filter items based on siteId (missing/empty applicableSites defaults to ['newrelic'])
+    return allItems.filter((item) => {
+      const sites = item.applicableSites && item.applicableSites.length > 0 ? item.applicableSites : ['newrelic'];
+      if (sites.includes('all')) return true;
+      return sites.includes(siteId as any);
+    });
   } catch (error) {
     console.error('Error fetching catalog items:', error);
-    return DEFAULT_CATALOG;
+    return siteId && siteId !== 'newrelic' ? [] : DEFAULT_CATALOG;
   }
 }
 
@@ -218,6 +229,7 @@ export async function saveCatalogItem(item: Omit<CatalogItem, 'id'>, id?: string
     };
     if (item.caseSize !== undefined) dataToSave.caseSize = item.caseSize;
     if (item.mrp !== undefined) dataToSave.mrp = item.mrp;
+    if (item.applicableSites !== undefined) dataToSave.applicableSites = item.applicableSites;
     
     await setDoc(docRef, dataToSave, { merge: true });
   } catch (error) {

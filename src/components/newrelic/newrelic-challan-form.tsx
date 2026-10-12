@@ -538,7 +538,7 @@ export function NewRelicChallanForm({
     <form
       id={`${formId}-form`}
       onSubmit={handleSubmit((v) => onSubmit(v, true), onValidationError)}
-      className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6 space-y-5 sm:space-y-6 pb-20 sm:pb-6"
+      className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6 space-y-5 sm:space-y-6 pb-32 sm:pb-6"
     >
       {/* Autocomplete Datalists */}
       <datalist id="newrelic-brand-list">
@@ -937,55 +937,65 @@ export function NewRelicChallanForm({
         description="Line item procurement costs and transport expenses are confidential. Enter your admin password to view and edit."
       />
 
-      {/* ── Mobile Floating Quick Action Dock ── */}
-      <div className="sm:hidden fixed bottom-3 left-3 right-3 z-50 max-w-md mx-auto">
+      {/* ── Mobile Floating Quick Action Dock (Enlarged & Vibrantly Highlighted) ── */}
+      <div className="sm:hidden fixed bottom-4 left-3 right-3 z-50 max-w-lg mx-auto">
         {isDockMinimized ? (
           <div className="flex justify-end">
             <button
               type="button"
               onClick={() => setIsDockMinimized(false)}
-              className="bg-gray-900/90 hover:bg-gray-900 text-white shadow-2xl backdrop-blur-xl px-4 py-2.5 rounded-full flex items-center gap-2.5 text-xs font-semibold active:scale-95 transition-all border border-white/15"
+              className="bg-gradient-to-r from-[#181156] via-[#281e8c] to-[#3b2fc9] text-white shadow-[0_12px_36px_rgba(24,17,86,0.55)] backdrop-blur-xl px-5 py-3 rounded-full flex items-center gap-3 text-sm font-bold active:scale-95 transition-all border-2 border-indigo-400/40"
             >
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              </span>
               <span>{fields.length} {fields.length === 1 ? 'Item' : 'Items'}</span>
               {canSeeMrp && calculatedTotalMrp > 0 && (
-                <span className="text-emerald-300 font-bold">₹{calculatedTotalMrp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                <span className="text-emerald-300 font-extrabold pl-2 border-l border-white/20">
+                  ₹{calculatedTotalMrp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                </span>
               )}
-              <ChevronUp className="w-3.5 h-3.5 text-gray-400 ml-0.5" />
+              <ChevronUp className="w-4 h-4 text-indigo-200 ml-1" />
             </button>
           </div>
         ) : (
-          <div className="bg-white/95 backdrop-blur-xl border border-gray-200/90 rounded-2xl p-2.5 pl-3 shadow-[0_12px_36px_rgba(0,0,0,0.14)] flex items-center justify-between gap-2 transition-all">
-            {/* Left: Summary pill & minimize toggle */}
-            <div className="flex items-center gap-2 min-w-0">
+          <div className="bg-gradient-to-r from-slate-950 via-[#181156] to-[#251b85] text-white backdrop-blur-2xl border-2 border-indigo-400/40 rounded-2xl p-3 sm:p-3.5 shadow-[0_16px_45px_rgba(15,23,42,0.65)] flex items-center justify-between gap-3 transition-all">
+            {/* Left: Stat badge & minimize toggle */}
+            <div className="flex items-center gap-2.5 min-w-0">
               <button
                 type="button"
                 onClick={() => setIsDockMinimized(true)}
-                className="h-8 w-8 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center shrink-0 transition-colors"
+                className="h-10 w-8 rounded-xl bg-white/10 hover:bg-white/20 text-indigo-200 hover:text-white flex items-center justify-center shrink-0 transition-colors border border-white/10"
                 title="Minimize toolbar"
               >
                 <ChevronDown className="w-4 h-4" />
               </button>
+
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#3b2fc9] to-[#6366f1] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-indigo-900/50 border border-white/20">
+                {fields.length}
+              </div>
+
               <div className="min-w-0">
-                <p className="text-xs font-bold text-gray-900 truncate leading-tight">
+                <p className="text-sm font-black text-emerald-400 truncate leading-tight tracking-tight">
                   {canSeeMrp && calculatedTotalMrp > 0
                     ? `₹${calculatedTotalMrp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
                     : `${fields.length} ${fields.length === 1 ? 'Item' : 'Items'}`}
                 </p>
-                <p className="text-[10px] text-gray-400 truncate">
-                  {fields.length} {fields.length === 1 ? 'item' : 'items'} · {locationConfig.label}
+                <p className="text-[11px] text-indigo-200 truncate font-medium">
+                  {locationConfig.label}
                 </p>
               </div>
             </div>
 
-            {/* Right: Actions */}
-            <div className="flex items-center gap-1.5 shrink-0">
+            {/* Right: Bold, Colorful Action Buttons */}
+            <div className="flex items-center gap-2 shrink-0">
               {onCancel && (
                 <button
                   type="button"
                   onClick={onCancel}
                   disabled={isSaving}
-                  className="h-8.5 px-2.5 rounded-xl text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors"
+                  className="h-10 px-2.5 rounded-xl text-xs font-semibold text-rose-300 hover:text-white hover:bg-white/10 transition-colors"
                 >
                   Cancel
                 </button>
@@ -997,10 +1007,10 @@ export function NewRelicChallanForm({
                 size="sm"
                 disabled={isSaving}
                 onClick={handleSubmit((v) => onSubmit(v, false), onValidationError)}
-                className="h-8.5 px-2.5 rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50 text-xs gap-1 active:scale-95 transition-transform"
+                className="h-10 px-3 rounded-xl bg-white/10 hover:bg-white/20 border-white/25 text-white hover:text-white font-bold text-xs gap-1.5 active:scale-95 transition-transform shadow-xs"
                 title="Save without downloading"
               >
-                <Save className="h-3.5 w-3.5" />
+                <Save className="h-4 w-4 text-amber-300" />
                 <span>Save</span>
               </Button>
 
@@ -1008,12 +1018,12 @@ export function NewRelicChallanForm({
                 type="submit"
                 size="sm"
                 disabled={isSaving}
-                className="h-8.5 px-3 rounded-xl bg-[#3b2fc9] hover:bg-[#2d23a0] text-white text-xs font-semibold gap-1.5 shadow-sm shadow-[#3b2fc9]/25 active:scale-95 transition-transform"
+                className="h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold text-xs gap-1.5 shadow-lg shadow-emerald-500/35 border border-emerald-400/30 active:scale-95 transition-transform"
               >
                 {isSaving ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <FileDown className="h-3.5 w-3.5" />
+                  <FileDown className="h-4 w-4" />
                 )}
                 <span>{isEditing ? 'Update' : 'Download'}</span>
               </Button>

@@ -49,3 +49,17 @@ Firebase App Hosting uses Cloud Run (Serverless Edge runtimes) which imposes str
 *   **Tactile Feedback (`triggerHaptic`):** All interactive steps on mobile (tab switches, +/- steppers, photo shutter, and saves) must trigger lightweight haptics via `src/lib/haptics.ts`.
 *   **Android Capacitor Bridge:** Mobile builds are managed via Capacitor 8 in `./android`. Keep `allowMixedContent` and `cleartext` enabled in `capacitor.config.ts` during local testing.
 
+## 6. Multi-Site Architecture & Zero Data Loss Guarantee
+
+The operations and tuckshop suite supports multiple company stalls in Hyderabad & Bangalore:
+- **NewRelic (`newrelic`):** Locations in `hyderabad` and `bangalore`. Has full feature access including Delivery Challans (`/delivery-challans`).
+- **DSM (`dsm`):** Tuckshop stall strictly in `hyderabad`. Delivery Challans is completely forbidden & hidden.
+- **NTT Data (`ntt_data`):** Tuckshop stall strictly in `hyderabad`. Delivery Challans is completely forbidden & hidden.
+
+### Core Rules to Preserve:
+1.  **Zero Data Loss Fallback (`resolveSiteId`):** Legacy Firestore documents (in `newrelic_tuckshop`, `newrelic_stock_requests`, `newrelic_employees`, `newrelic_catalog`) do NOT have a `siteId` property. Any reader/query MUST use `docData.siteId || 'newrelic'` or `resolveSiteId(siteId)`. Never perform destructive migrations or assume missing `siteId` is invalid.
+2.  **Location Locking:** When DSM or NTT Data is selected or assigned, the location MUST be locked to `hyderabad`. Bangalore is strictly disabled.
+3.  **Delivery Challans Isolation:** Non-admin managers assigned to DSM or NTT Data are blocked from accessing delivery challans both via navigation bars and layout route redirects. In stock request approvals, "Create Challan" is restricted to NewRelic requests only.
+4.  **Catalog Scoping:** Catalog items have `applicableSites?: ('newrelic' | 'dsm' | 'ntt_data' | 'all')[]`. Items without this field default to `['newrelic']`, preserving the entire 113-item existing catalog for NewRelic.
+
+

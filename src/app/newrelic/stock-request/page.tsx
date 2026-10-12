@@ -480,10 +480,10 @@ export default function StockRequestPage() {
           ) : (
             myRequests.map(req => (
               <div key={req.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex flex-wrap justify-between items-center gap-4">
-                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:text-sm">
                     <span className="font-medium text-gray-900">{format(new Date(req.requestDate), 'dd MMM yyyy, hh:mm a')}</span>
-                    <span className="capitalize text-gray-600">{req.location}</span>
+                    <span className="capitalize text-gray-600 font-medium">{req.location}</span>
                     <div className="flex items-center gap-1.5">
                       {req.status === 'PENDING' && <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><Clock className="h-3 w-3"/> PENDING</span>}
                       {req.status === 'PARTIALLY_FULFILLED' && <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3"/> PARTIAL</span>}
@@ -492,25 +492,25 @@ export default function StockRequestPage() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                     {req.status === 'PENDING' && (
                       <button
                         onClick={() => handleEdit(req)}
-                        className="text-gray-500 hover:text-[#3b2fc9] bg-white border border-gray-200 hover:border-[#3b2fc9] px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
+                        className="text-gray-500 hover:text-[#3b2fc9] bg-white border border-gray-200 hover:border-[#3b2fc9] px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5"
                       >
                         <Pencil className="h-3.5 w-3.5" /> Edit
                       </button>
                     )}
                     <button
                       onClick={() => handleDuplicate(req)}
-                      className="text-gray-500 hover:text-[#3b2fc9] bg-white border border-gray-200 hover:border-[#3b2fc9] px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
+                      className="text-gray-500 hover:text-[#3b2fc9] bg-white border border-gray-200 hover:border-[#3b2fc9] px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5"
                     >
                       <Copy className="h-3.5 w-3.5" /> Duplicate
                     </button>
                     {(req.status === 'FULFILLED' || req.status === 'PARTIALLY_FULFILLED') && (
                       <button
                         onClick={() => handleCreateChallan(req)}
-                        className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors flex items-center gap-1.5"
+                        className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-200 transition-colors flex items-center gap-1.5"
                         title="Convert to Delivery Challan"
                       >
                         <FileText className="h-3.5 w-3.5" /> Create Challan
@@ -519,11 +519,11 @@ export default function StockRequestPage() {
                   </div>
                 </div>
 
-                <div className="p-4 sm:p-6 overflow-x-auto">
-                  <table className="w-full text-sm text-left">
+                <div className="p-3 sm:p-6 overflow-x-auto">
+                  <table className="w-full text-sm text-left min-w-[540px]">
                     <thead className="text-gray-500 font-medium border-b border-gray-100">
                       <tr>
-                        <th className="pb-2 pr-4">Item</th>
+                        <th className="pb-2 pr-4 min-w-[160px]">Item</th>
                         <th className="pb-2 pr-4">Order Type</th>
                         <th className="pb-2 pr-4 text-right">Req. Qty</th>
                         <th className="pb-2 pr-4 text-right">Req. Units</th>

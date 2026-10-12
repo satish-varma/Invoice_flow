@@ -470,269 +470,466 @@ export default function PricingPage() {
 
       {/* Add New Row Form */}
       {showAdd && (
-        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">New Pricing Entry — {NEWRELIC_LOCATIONS[activeLocation].label}</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-            <div className="col-span-2 sm:col-span-1">
-              <label className="text-xs text-gray-500 mb-0.5 block">Brand</label>
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-2xl shadow-xs">
+          <h3 className="text-sm font-bold text-gray-800 mb-3">New Pricing Entry — {NEWRELIC_LOCATIONS[activeLocation].label}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-6 gap-2.5 sm:gap-2">
+            <div className="sm:col-span-1">
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Brand</label>
               <input
                 list="pricing-brands-new"
                 value={newRow.brandName}
                 onChange={e => setNewRow(r => ({ ...r, brandName: e.target.value }))}
                 placeholder="Brand"
-                className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30"
+                className="w-full px-3 py-2 sm:py-1.5 text-sm border border-gray-300 rounded-xl sm:rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30"
               />
               <datalist id="pricing-brands-new">
                 {availableBrands.map(b => <option key={b} value={b} />)}
               </datalist>
             </div>
-            <div className="col-span-2 sm:col-span-1">
-              <label className="text-xs text-gray-500 mb-0.5 block">Item Name</label>
+            <div className="sm:col-span-2">
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Item Name</label>
               <input
                 list="pricing-items-new"
                 value={newRow.itemName}
                 onChange={e => setNewRow(r => ({ ...r, itemName: e.target.value }))}
                 placeholder="Item Name"
-                className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30"
+                className="w-full px-3 py-2 sm:py-1.5 text-sm border border-gray-300 rounded-xl sm:rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30"
               />
               <datalist id="pricing-items-new">
                 {getCatalogItemsForBrand(newRow.brandName).map(it => <option key={it} value={it} />)}
               </datalist>
             </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-0.5 block">MRP (₹)</label>
-              <input
-                type="number"
-                value={newRow.mrp}
-                onChange={e => setNewRow(r => {
-                  const updated = { ...r, mrp: e.target.value };
-                  return { ...updated, purchaseCost: autoCalcCost(e.target.value, r.discountPercent) };
-                })}
-                placeholder="0.00"
-                min="0"
-                className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 text-right"
-              />
+            <div className="grid grid-cols-2 sm:contents gap-2">
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-1 block">MRP (₹)</label>
+                <input
+                  type="number"
+                  value={newRow.mrp}
+                  onChange={e => setNewRow(r => {
+                    const updated = { ...r, mrp: e.target.value };
+                    return { ...updated, purchaseCost: autoCalcCost(e.target.value, r.discountPercent) };
+                  })}
+                  placeholder="0.00"
+                  min="0"
+                  className="w-full px-3 py-2 sm:py-1.5 text-sm border border-gray-300 rounded-xl sm:rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 text-right font-medium"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-1 block">Disc (%)</label>
+                <input
+                  type="number"
+                  value={newRow.discountPercent}
+                  onChange={e => setNewRow(r => {
+                    const updated = { ...r, discountPercent: e.target.value };
+                    return { ...updated, purchaseCost: autoCalcCost(r.mrp, e.target.value) };
+                  })}
+                  placeholder="0"
+                  min="0"
+                  max="100"
+                  className="w-full px-3 py-2 sm:py-1.5 text-sm border border-gray-300 rounded-xl sm:rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 text-right font-medium"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-0.5 block">Disc (%)</label>
-              <input
-                type="number"
-                value={newRow.discountPercent}
-                onChange={e => setNewRow(r => {
-                  const updated = { ...r, discountPercent: e.target.value };
-                  return { ...updated, purchaseCost: autoCalcCost(r.mrp, e.target.value) };
-                })}
-                placeholder="0"
-                min="0"
-                max="100"
-                className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 text-right"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-0.5 block">P.Cost (₹)</label>
-              <input
-                type="number"
-                value={newRow.purchaseCost}
-                onChange={e => setNewRow(r => ({ ...r, purchaseCost: e.target.value }))}
-                placeholder="0.00"
-                min="0"
-                className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 text-right"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-0.5 block">Effective Date</label>
-              <input
-                type="date"
-                value={newRow.effectiveDate}
-                onChange={e => setNewRow(r => ({ ...r, effectiveDate: e.target.value }))}
-                className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30"
-              />
+            <div className="grid grid-cols-2 sm:contents gap-2">
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-1 block">P.Cost (₹)</label>
+                <input
+                  type="number"
+                  value={newRow.purchaseCost}
+                  onChange={e => setNewRow(r => ({ ...r, purchaseCost: e.target.value }))}
+                  placeholder="0.00"
+                  min="0"
+                  className="w-full px-3 py-2 sm:py-1.5 text-sm border border-gray-300 rounded-xl sm:rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 text-right font-bold text-[#3b2fc9]"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-1 block">Effective Date</label>
+                <input
+                  type="date"
+                  value={newRow.effectiveDate}
+                  onChange={e => setNewRow(r => ({ ...r, effectiveDate: e.target.value }))}
+                  className="w-full px-2 py-2 sm:py-1.5 text-xs border border-gray-300 rounded-xl sm:rounded-md bg-white focus:outline-none"
+                />
+              </div>
             </div>
           </div>
           <div className="flex gap-2 mt-3">
             <button
               onClick={handleSaveNew}
               disabled={saving}
-              className="flex items-center gap-1.5 bg-[#3b2fc9] text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-[#2f25a8] disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 bg-[#3b2fc9] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#2f25a8] disabled:opacity-50 transition-colors shadow-xs active:scale-95"
             >
-              <Check className="h-3.5 w-3.5" /> Save
+              <Check className="h-4 w-4" /> Save Entry
             </button>
             <button
               onClick={() => { setShowAdd(false); setError(''); }}
-              className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-600 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-1.5 bg-white border border-gray-300 text-gray-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
             >
-              <X className="h-3.5 w-3.5" /> Cancel
+              <X className="h-4 w-4" /> Cancel
             </button>
           </div>
         </div>
       )}
 
-      {/* Table */}
+      {/* Table & Cards */}
       {loading ? (
         <div className="py-16 text-center text-gray-400 text-sm">Loading pricing data…</div>
       ) : filteredItems.length === 0 ? (
-        <div className="py-16 text-center text-gray-400 text-sm">
+        <div className="py-16 text-center text-gray-400 text-sm bg-white rounded-2xl border border-gray-200 border-dashed">
           No pricing entries for {NEWRELIC_LOCATIONS[activeLocation].label} yet.
           <br />
-          <span className="text-xs text-gray-400">Click "Add Pricing Row" to get started.</span>
+          <span className="text-xs text-gray-400">Click &ldquo;Add Pricing Row&rdquo; to get started.</span>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Brand</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Item Name</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">MRP (₹)</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Disc (%)</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">P.Cost (₹)</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Effective Since</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredItems.map(item => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                  {editingId === item.id ? (
-                    <>
-                      <td className="px-3 py-2">
+        <>
+          {/* ── Mobile Card List View (< md) ── */}
+          <div className="md:hidden space-y-3">
+            {filteredItems.map(item => (
+              <div key={item.id} className="bg-white rounded-2xl border border-gray-200 p-4 shadow-2xs space-y-3">
+                {editingId === item.id ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                      <span className="text-xs font-bold text-[#3b2fc9]">Edit Pricing</span>
+                      <span className="text-xs font-medium text-gray-500">{item.brandName}</span>
+                    </div>
+                    <div className="space-y-2.5">
+                      <div>
+                        <label className="text-[11px] font-semibold text-gray-500 mb-0.5 block">Brand Name</label>
                         <input
-                          list="pricing-brands-edit"
+                          list="pricing-brands-edit-mob"
                           value={editRow.brandName}
                           onChange={e => setEditRow(r => ({ ...r, brandName: e.target.value }))}
-                          className="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20"
                         />
-                        <datalist id="pricing-brands-edit">
+                        <datalist id="pricing-brands-edit-mob">
                           {availableBrands.map(b => <option key={b} value={b} />)}
                         </datalist>
-                      </td>
-                      <td className="px-3 py-2">
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-semibold text-gray-500 mb-0.5 block">Item Name</label>
                         <input
-                          list="pricing-items-edit"
+                          list="pricing-items-edit-mob"
                           value={editRow.itemName}
                           onChange={e => setEditRow(r => ({ ...r, itemName: e.target.value }))}
-                          className="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20"
                         />
-                        <datalist id="pricing-items-edit">
+                        <datalist id="pricing-items-edit-mob">
                           {getCatalogItemsForBrand(editRow.brandName).map(it => <option key={it} value={it} />)}
                         </datalist>
-                      </td>
-                      <td className="px-3 py-2">
-                        <input
-                          type="number"
-                          value={editRow.mrp}
-                          onChange={e => setEditRow(r => {
-                            const updated = { ...r, mrp: e.target.value };
-                            return { ...updated, purchaseCost: autoCalcCost(e.target.value, r.discountPercent) };
-                          })}
-                          className="w-24 px-2 py-1 text-sm border border-blue-300 rounded text-right focus:outline-none"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <input
-                          type="number"
-                          value={editRow.discountPercent}
-                          onChange={e => setEditRow(r => {
-                            const updated = { ...r, discountPercent: e.target.value };
-                            return { ...updated, purchaseCost: autoCalcCost(r.mrp, e.target.value) };
-                          })}
-                          className="w-20 px-2 py-1 text-sm border border-blue-300 rounded text-right focus:outline-none"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <input
-                          type="number"
-                          value={editRow.purchaseCost}
-                          onChange={e => setEditRow(r => ({ ...r, purchaseCost: e.target.value }))}
-                          className="w-24 px-2 py-1 text-sm border border-blue-300 rounded text-right focus:outline-none font-semibold"
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input
-                          type="date"
-                          value={editRow.effectiveDate}
-                          onChange={e => setEditRow(r => ({ ...r, effectiveDate: e.target.value }))}
-                          className="px-2 py-1 text-xs border border-blue-300 rounded focus:outline-none"
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={handleSaveEdit} disabled={saving} className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors" title="Save">
-                            <Check className="h-4 w-4" />
-                          </button>
-                          <button onClick={() => { setEditingId(null); setError(''); }} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-md transition-colors" title="Cancel">
-                            <X className="h-4 w-4" />
-                          </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[11px] font-semibold text-gray-500 mb-0.5 block">MRP (₹)</label>
+                          <input
+                            type="number"
+                            value={editRow.mrp}
+                            onChange={e => setEditRow(r => {
+                              const updated = { ...r, mrp: e.target.value };
+                              return { ...updated, purchaseCost: autoCalcCost(e.target.value, r.discountPercent) };
+                            })}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white text-right font-medium"
+                          />
                         </div>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="px-4 py-3 font-medium text-gray-800">{item.brandName}</td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {item.itemName}
-                        {(!item.purchaseCost || item.purchaseCost <= 0) && (
-                          <span className="ml-2 inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-red-100 text-red-700">
-                            Zero Cost
+                        <div>
+                          <label className="text-[11px] font-semibold text-gray-500 mb-0.5 block">Disc (%)</label>
+                          <input
+                            type="number"
+                            value={editRow.discountPercent}
+                            onChange={e => setEditRow(r => {
+                              const updated = { ...r, discountPercent: e.target.value };
+                              return { ...updated, purchaseCost: autoCalcCost(r.mrp, e.target.value) };
+                            })}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white text-right font-medium"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-gray-500 mb-0.5 block">P.Cost (₹)</label>
+                          <input
+                            type="number"
+                            value={editRow.purchaseCost}
+                            onChange={e => setEditRow(r => ({ ...r, purchaseCost: e.target.value }))}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white text-right font-bold text-[#3b2fc9]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-gray-500 mb-0.5 block">Effective Date</label>
+                          <input
+                            type="date"
+                            value={editRow.effectiveDate}
+                            onChange={e => setEditRow(r => ({ ...r, effectiveDate: e.target.value }))}
+                            className="w-full px-2 py-2 text-xs border border-gray-300 rounded-xl bg-white"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={handleSaveEdit}
+                          disabled={saving}
+                          className="flex-1 py-2.5 rounded-xl bg-[#3b2fc9] text-white text-xs font-semibold hover:bg-[#2d23a0] flex items-center justify-center gap-1.5 shadow-xs active:scale-95"
+                        >
+                          <Check className="h-4 w-4" /> Save
+                        </button>
+                        <button
+                          onClick={() => { setEditingId(null); setError(''); }}
+                          className="py-2.5 px-4 rounded-xl border border-gray-200 bg-white text-gray-600 text-xs font-medium hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Card Header */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-[11px] bg-indigo-50 text-[#3b2fc9] px-2 py-0.5 rounded-md border border-indigo-100">
+                            {item.brandName}
                           </span>
-                        )}
-                        {(!item.mrp || item.mrp <= 0) && (
-                          <span className="ml-2 inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-700">
-                            No MRP
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-700">
-                        {item.mrp > 0 ? `₹${item.mrp.toFixed(2)}` : <span className="text-red-400 font-medium">₹0.00</span>}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
-                          {item.discountPercent}%
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-[#3b2fc9]">
-                        {item.purchaseCost > 0 ? `₹${item.purchaseCost.toFixed(2)}` : <span className="text-red-500 font-bold">₹0.00</span>}
-                      </td>
-                      <td className="px-4 py-3 text-center text-xs text-gray-500">
-                        <span className="inline-flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-gray-400" />
-                          {item.effectiveDate || 'Initial'}
-                        </span>
-                        {item.history && item.history.length > 0 && (
-                          <span className="block text-[10px] text-blue-600 font-medium">
-                            {item.history.length} revision{item.history.length > 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {item.history && item.history.length > 0 && (
-                            <button
-                              onClick={() => setHistoryItem(item)}
-                              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
-                              title="View Price History"
-                            >
-                              <History className="h-3.5 w-3.5" />
-                            </button>
+                          {(!item.purchaseCost || item.purchaseCost <= 0) && (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-red-100 text-red-700">
+                              Zero Cost
+                            </span>
                           )}
-                          <button onClick={() => startEdit(item)} className="p-1.5 text-gray-400 hover:text-[#3b2fc9] hover:bg-blue-50 rounded-md transition-colors" title="Edit">
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button onClick={() => handleDelete(item.id!)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors" title="Delete">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          {(!item.mrp || item.mrp <= 0) && (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-700">
+                              No MRP
+                            </span>
+                          )}
                         </div>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-400">
-            {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''} · {NEWRELIC_LOCATIONS[activeLocation].label}
+                        <p className="font-semibold text-gray-900 text-sm mt-1 leading-snug">
+                          {item.itemName}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Metrics 3-box Grid */}
+                    <div className="grid grid-cols-3 gap-2 bg-gray-50/80 rounded-xl p-2.5 border border-gray-100">
+                      <div>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">MRP</p>
+                        <p className="text-xs font-bold text-gray-800 mt-0.5">
+                          {item.mrp > 0 ? `₹${item.mrp.toFixed(2)}` : <span className="text-red-400">₹0.00</span>}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Discount</p>
+                        <p className="text-xs font-bold text-emerald-600 mt-0.5">
+                          {item.discountPercent}%
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">P.Cost</p>
+                        <p className="text-sm font-extrabold text-[#3b2fc9] mt-0.5">
+                          {item.purchaseCost > 0 ? `₹${item.purchaseCost.toFixed(2)}` : <span className="text-red-500">₹0.00</span>}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Card Footer: Effective date & actions */}
+                    <div className="flex items-center justify-between pt-1 border-t border-gray-100 text-xs">
+                      <div className="flex items-center gap-1.5 text-gray-400 text-[11px]">
+                        <Calendar className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                        <span>{item.effectiveDate || 'Initial'}</span>
+                        {item.history && item.history.length > 0 && (
+                          <span className="text-[#3b2fc9] font-semibold">
+                            ({item.history.length} rev)
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        {item.history && item.history.length > 0 && (
+                          <button
+                            onClick={() => setHistoryItem(item)}
+                            className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-gray-100 active:scale-95"
+                            title="View Price History"
+                          >
+                            <History className="h-4 w-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => startEdit(item)}
+                          className="p-1.5 text-gray-600 hover:text-[#3b2fc9] hover:bg-blue-50 rounded-lg transition-colors border border-gray-100 active:scale-95"
+                          title="Edit"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item.id!)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-100 active:scale-95"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
+
+          {/* ── Desktop Table View (>= md) with full horizontal scroll protection ── */}
+          <div className="hidden md:block bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[760px]">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Brand</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Item Name</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">MRP (₹)</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Disc (%)</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">P.Cost (₹)</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Effective Since</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredItems.map(item => (
+                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                      {editingId === item.id ? (
+                        <>
+                          <td className="px-3 py-2">
+                            <input
+                              list="pricing-brands-edit"
+                              value={editRow.brandName}
+                              onChange={e => setEditRow(r => ({ ...r, brandName: e.target.value }))}
+                              className="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none"
+                            />
+                            <datalist id="pricing-brands-edit">
+                              {availableBrands.map(b => <option key={b} value={b} />)}
+                            </datalist>
+                          </td>
+                          <td className="px-3 py-2">
+                            <input
+                              list="pricing-items-edit"
+                              value={editRow.itemName}
+                              onChange={e => setEditRow(r => ({ ...r, itemName: e.target.value }))}
+                              className="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none"
+                            />
+                            <datalist id="pricing-items-edit">
+                              {getCatalogItemsForBrand(editRow.brandName).map(it => <option key={it} value={it} />)}
+                            </datalist>
+                          </td>
+                          <td className="px-3 py-2">
+                            <input
+                              type="number"
+                              value={editRow.mrp}
+                              onChange={e => setEditRow(r => {
+                                const updated = { ...r, mrp: e.target.value };
+                                return { ...updated, purchaseCost: autoCalcCost(e.target.value, r.discountPercent) };
+                              })}
+                              className="w-24 px-2 py-1 text-sm border border-blue-300 rounded text-right focus:outline-none"
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <input
+                              type="number"
+                              value={editRow.discountPercent}
+                              onChange={e => setEditRow(r => {
+                                const updated = { ...r, discountPercent: e.target.value };
+                                return { ...updated, purchaseCost: autoCalcCost(r.mrp, e.target.value) };
+                              })}
+                              className="w-20 px-2 py-1 text-sm border border-blue-300 rounded text-right focus:outline-none"
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <input
+                              type="number"
+                              value={editRow.purchaseCost}
+                              onChange={e => setEditRow(r => ({ ...r, purchaseCost: e.target.value }))}
+                              className="w-24 px-2 py-1 text-sm border border-blue-300 rounded text-right focus:outline-none font-semibold"
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <input
+                              type="date"
+                              value={editRow.effectiveDate}
+                              onChange={e => setEditRow(r => ({ ...r, effectiveDate: e.target.value }))}
+                              className="px-2 py-1 text-xs border border-blue-300 rounded focus:outline-none"
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button onClick={handleSaveEdit} disabled={saving} className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors" title="Save">
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => { setEditingId(null); setError(''); }} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-md transition-colors" title="Cancel">
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-4 py-3 font-medium text-gray-800">{item.brandName}</td>
+                          <td className="px-4 py-3 text-gray-600">
+                            {item.itemName}
+                            {(!item.purchaseCost || item.purchaseCost <= 0) && (
+                              <span className="ml-2 inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-red-100 text-red-700">
+                                Zero Cost
+                              </span>
+                            )}
+                            {(!item.mrp || item.mrp <= 0) && (
+                              <span className="ml-2 inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-700">
+                                No MRP
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-700">
+                            {item.mrp > 0 ? `₹${item.mrp.toFixed(2)}` : <span className="text-red-400 font-medium">₹0.00</span>}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
+                              {item.discountPercent}%
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold text-[#3b2fc9]">
+                            {item.purchaseCost > 0 ? `₹${item.purchaseCost.toFixed(2)}` : <span className="text-red-500 font-bold">₹0.00</span>}
+                          </td>
+                          <td className="px-4 py-3 text-center text-xs text-gray-500">
+                            <span className="inline-flex items-center gap-1">
+                              <Calendar className="h-3 w-3 text-gray-400" />
+                              {item.effectiveDate || 'Initial'}
+                            </span>
+                            {item.history && item.history.length > 0 && (
+                              <span className="block text-[10px] text-blue-600 font-medium">
+                                {item.history.length} revision{item.history.length > 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {item.history && item.history.length > 0 && (
+                                <button
+                                  onClick={() => setHistoryItem(item)}
+                                  className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                                  title="View Price History"
+                                >
+                                  <History className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              <button onClick={() => startEdit(item)} className="p-1.5 text-gray-400 hover:text-[#3b2fc9] hover:bg-blue-50 rounded-md transition-colors" title="Edit">
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                              <button onClick={() => handleDelete(item.id!)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors" title="Delete">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-400">
+              {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''} · {NEWRELIC_LOCATIONS[activeLocation].label}
+            </div>
+          </div>
+        </>
       )}
 
       {/* ─── Batch Price Update Modal ─── */}

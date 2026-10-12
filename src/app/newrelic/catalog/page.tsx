@@ -319,16 +319,224 @@ export default function CatalogPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      {/* Mobile Add Form (Shown when showAdd is true on mobile) */}
+      {showAdd && (
+        <div className="md:hidden mb-4 bg-white border-2 border-[#3b2fc9]/20 rounded-xl p-4 shadow-sm space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+            <h3 className="text-xs font-bold text-[#3b2fc9] uppercase tracking-wider">Add New Catalog Item</h3>
+            <button onClick={() => setShowAdd(false)} className="text-gray-400 hover:text-gray-600 p-1">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div>
+            <label className="text-[11px] font-semibold text-gray-500 uppercase">Brand Name *</label>
+            <input
+              className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#3b2fc9]"
+              placeholder="e.g. Haldiram"
+              value={newBrand}
+              onChange={(e) => setNewBrand(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="text-[11px] font-semibold text-gray-500 uppercase">Item Name *</label>
+            <input
+              className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#3b2fc9]"
+              placeholder="e.g. Soya Sticks"
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-semibold text-gray-500 uppercase">Case Size</label>
+              <input
+                type="number"
+                className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#3b2fc9]"
+                placeholder="e.g. 144"
+                value={newCaseSize}
+                onChange={(e) => setNewCaseSize(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold text-gray-500 uppercase">Ref MRP (₹)</label>
+              <input
+                type="number"
+                className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#3b2fc9]"
+                placeholder="e.g. 50"
+                value={newMrp}
+                onChange={(e) => setNewMrp(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={() => setShowAdd(false)}
+              disabled={saving}
+              className="flex-1 py-2 text-sm font-medium border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveNew}
+              disabled={saving}
+              className="flex-1 py-2 text-sm font-medium bg-[#3b2fc9] text-white rounded-lg hover:bg-[#2f25a8] flex items-center justify-center gap-1.5 shadow-sm"
+            >
+              <Check className="h-4 w-4" /> Save Item
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Card View (md:hidden) */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-500 text-sm">
+            Loading catalog...
+          </div>
+        ) : filteredItems.length === 0 && !showAdd ? (
+          <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-500 text-sm">
+            No catalog items found.
+          </div>
+        ) : (
+          filteredItems.map((item) => {
+            const isEditing = editingId === item.id;
+
+            if (isEditing) {
+              return (
+                <div key={item.id} className="bg-blue-50/40 border-2 border-[#3b2fc9]/30 rounded-xl p-4 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between pb-1 border-b border-blue-100">
+                    <span className="text-xs font-bold text-[#3b2fc9] uppercase tracking-wider">Edit Catalog Item</span>
+                    <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-gray-500 uppercase">Brand Name</label>
+                    <input
+                      className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#3b2fc9] bg-white"
+                      value={editBrand}
+                      onChange={(e) => setEditBrand(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-gray-500 uppercase">Item Name</label>
+                    <input
+                      className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#3b2fc9] bg-white"
+                      value={editItem}
+                      onChange={(e) => setEditItem(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-semibold text-gray-500 uppercase">Case Size</label>
+                      <input
+                        type="number"
+                        className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#3b2fc9] bg-white"
+                        value={editCaseSize}
+                        onChange={(e) => setEditCaseSize(e.target.value)}
+                        placeholder="-"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-gray-500 uppercase">Ref MRP (₹)</label>
+                      <input
+                        type="number"
+                        className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#3b2fc9] bg-white"
+                        value={editMrp}
+                        onChange={(e) => setEditMrp(e.target.value)}
+                        placeholder="-"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => setEditingId(null)}
+                      disabled={saving}
+                      className="flex-1 py-2 text-sm font-medium border border-gray-200 rounded-lg text-gray-600 bg-white hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleSaveEdit(item.id!)}
+                      disabled={saving}
+                      className="flex-1 py-2 text-sm font-medium bg-[#3b2fc9] text-white rounded-lg hover:bg-[#2f25a8] flex items-center justify-center gap-1.5 shadow-sm"
+                    >
+                      <Check className="h-4 w-4" /> Save Changes
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-gray-300 transition-colors">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="min-w-0 flex-1">
+                    <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-indigo-50 text-[#3b2fc9] border border-indigo-100 mb-1">
+                      {item.brandName}
+                    </span>
+                    <h4 className="text-sm font-semibold text-gray-900 leading-snug break-words">
+                      {item.itemName}
+                    </h4>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => {
+                        setEditingId(item.id!);
+                        setEditBrand(item.brandName);
+                        setEditItem(item.itemName);
+                        setEditCaseSize(item.caseSize?.toString() || '');
+                        setEditMrp(item.mrp?.toString() || '');
+                        setError('');
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-[#3b2fc9] hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Edit"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item.id!)}
+                      disabled={saving}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100 bg-gray-50/50 -mx-4 -mb-4 p-3 rounded-b-xl">
+                  <div>
+                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">Case Size</span>
+                    <span className="text-sm font-medium text-gray-800">
+                      {item.caseSize ? `${item.caseSize} pcs` : <span className="text-amber-500 text-xs italic font-normal">Missing</span>}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">Ref MRP</span>
+                    <span className="text-sm font-bold text-gray-900">
+                      {item.mrp ? `₹${item.mrp}` : <span className="text-amber-500 text-xs italic font-normal">Missing</span>}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop Table (hidden md:block) */}
+      <div className="hidden md:block bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+          <table className="w-full text-sm text-left min-w-[650px]">
             <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
               <tr>
                 <th className="px-4 py-3 min-w-[180px]">Brand Name</th>
                 <th className="px-4 py-3 min-w-[200px]">Item Name</th>
-                <th className="px-4 py-3 w-[100px]">Case Size</th>
-                <th className="px-4 py-3 w-[100px]">Ref MRP</th>
+                <th className="px-4 py-3 w-[110px]">Case Size</th>
+                <th className="px-4 py-3 w-[110px]">Ref MRP</th>
                 <th className="px-4 py-3 w-[120px] text-right">Actions</th>
               </tr>
             </thead>
@@ -395,7 +603,7 @@ export default function CatalogPage() {
 
               {loading ? (
                 <tr>
-                  <td colSpan={3} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
                     Loading catalog...
                   </td>
                 </tr>

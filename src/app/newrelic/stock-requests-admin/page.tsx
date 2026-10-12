@@ -260,19 +260,19 @@ export default function StockRequestsAdminPage() {
         <div className="space-y-4">
           {filteredRequests.map(req => (
             <div key={req.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex flex-wrap justify-between items-center gap-4">
-                <div className="flex flex-wrap items-center gap-4 text-sm">
+              <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:text-sm">
                   <div className="flex items-center gap-1.5 text-gray-600">
-                    <Calendar className="h-4 w-4" />
+                    <Calendar className="h-4 w-4 shrink-0" />
                     <span className="font-medium text-gray-900">{format(new Date(req.requestDate), 'dd MMM yyyy, hh:mm a')}</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-gray-600">
-                    <User className="h-4 w-4" />
-                    <span>{req.createdBy}</span>
+                    <User className="h-4 w-4 shrink-0" />
+                    <span className="truncate max-w-[150px]">{req.createdBy}</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-gray-600">
-                    <MapPin className="h-4 w-4" />
-                    <span className="capitalize">{req.location}</span>
+                    <MapPin className="h-4 w-4 shrink-0" />
+                    <span className="capitalize font-medium">{req.location}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     {req.status === 'PENDING' && <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><Clock className="h-3 w-3"/> PENDING</span>}
@@ -281,15 +281,15 @@ export default function StockRequestsAdminPage() {
                     {req.status === 'CANCELLED' && <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><Trash2 className="h-3 w-3"/> CANCELLED</span>}
                   </div>
                   {req.notes && (
-                    <div className="text-gray-500 italic">" {req.notes} "</div>
+                    <div className="text-gray-500 italic w-full sm:w-auto">" {req.notes} "</div>
                   )}
                 </div>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                   {(req.status === 'PENDING' || req.status === 'PARTIALLY_FULFILLED') && activeFulfillId !== req.id && (
                     <button
                       onClick={() => handleStartFulfill(req)}
-                      className="bg-[#3b2fc9] text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-[#2f25a8] transition-colors flex items-center gap-1"
+                      className="bg-[#3b2fc9] text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-[#2f25a8] transition-colors flex items-center gap-1"
                     >
                       <Check className="h-4 w-4" /> Fulfill
                     </button>
@@ -298,13 +298,13 @@ export default function StockRequestsAdminPage() {
                     <>
                       <button
                         onClick={() => setActiveFulfillId(null)}
-                        className="bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                        className="bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-gray-200 transition-colors"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={() => handleSaveFulfill(req)}
-                        className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                        className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-green-700 transition-colors"
                       >
                         Save & Mark
                       </button>
@@ -313,7 +313,7 @@ export default function StockRequestsAdminPage() {
                   {req.status === 'FULFILLED' && (
                     <button
                       onClick={() => handleStatusChange(req.id!, 'PENDING')}
-                      className="bg-gray-100 text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                      className="bg-gray-100 text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-gray-200 transition-colors"
                     >
                       Undo Fulfill
                     </button>
@@ -321,7 +321,7 @@ export default function StockRequestsAdminPage() {
                   {(req.status === 'FULFILLED' || req.status === 'PARTIALLY_FULFILLED') && (
                     <button
                       onClick={() => handleCreateChallan(req)}
-                      className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors flex items-center gap-1"
+                      className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-200 transition-colors flex items-center gap-1"
                       title="Convert to Delivery Challan"
                     >
                       <FileText className="h-4 w-4" /> Create Challan
@@ -337,8 +337,8 @@ export default function StockRequestsAdminPage() {
                 </div>
               </div>
 
-              <div className="p-6">
-                <table className="w-full text-sm text-left">
+              <div className="p-3 sm:p-6 overflow-x-auto">
+                <table className="w-full text-sm text-left min-w-[620px]">
                   <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
                     <tr>
                       <th className="px-4 py-2">Brand & Item</th>

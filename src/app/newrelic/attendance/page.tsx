@@ -7,6 +7,7 @@ import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { NewRelicEmployee, NewRelicAttendance, NewRelicSalaryAdvance, NewRelicSalaryPayment } from '@/types/employee';
+import { SiteId, resolveSiteId, SITE_OPTIONS, COMPANY_SITES } from '@/types/site';
 import {
   getActiveEmployees,
   recordSalaryAdvance,
@@ -133,9 +134,29 @@ function AttendancePageContent() {
   const [payReferenceNote, setPayReferenceNote] = useState<string>('');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
 
+  const assignedSite = user?.assignedSite || 'newrelic';
+  const [adminSiteFilter, setAdminSiteFilter] = useState<string>(() => isOwnerOrAdmin ? 'all' : assignedSite);
+
+  useEffect(() => {
+    if (!isOwnerOrAdmin) {
+      setAdminSiteFilter(user?.assignedSite || 'newrelic');
+    }
+  }, [user?.assignedSite, isOwnerOrAdmin]);
+
+  const displayTodayAll = useMemo(() => {
+    return todayAll.filter(
+      (rec) => adminSiteFilter === 'all' || resolveSiteId(rec.siteId) === adminSiteFilter
+    );
+  }, [todayAll, adminSiteFilter]);
+
+  const payrollEmployees = useMemo(() => {
+    return employees.filter(
+      (e) => e.isActive && (adminSiteFilter === 'all' || resolveSiteId(e.siteId) === adminSiteFilter)
+    );
+  }, [employees, adminSiteFilter]);
+
   /* ── Load employees list and auto-bind logged-in user ── */
   useEffect(() => {
-    const assignedSite = user?.assignedSite || 'newrelic';
     const siteParam = isOwnerOrAdmin ? undefined : assignedSite;
     getActiveEmployees(undefined, siteParam).then((list) => {
       setEmployees(list);
@@ -425,7 +446,7 @@ function AttendancePageContent() {
       const totalDaysInMonth = getDaysInMonth(adminPayrollMonth);
       const workingDaysInMonth = totalDaysInMonth;
 
-      const payrollRows = employees.filter(e => e.isActive).map((emp) => {
+      const payrollRows = payrollEmployees.map((emp) => {
         const empRecords = adminPayrollRecords.filter(r => r.employeeDocId === emp.id || r.employeeId === emp.employeeId);
         let presentDays = 0;
         let halfDays = 0;
@@ -451,10 +472,13 @@ function AttendancePageContent() {
         const advancesTotal = empAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
         const netPayable = Math.max(0, payableAmount - advancesTotal);
         const existingPayment = adminPayments.find(p => p.employeeDocId === emp.id || p.employeeId === emp.employeeId);
+        const sId = resolveSiteId(emp.siteId);
+        const siteName = sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic';
 
         return {
           'Employee ID': emp.employeeId,
           'Employee Name': emp.name,
+          'Company Site': siteName,
           'Location': emp.location,
           'Designation': emp.designation,
           'Monthly Gross (INR)': grossSalary,
@@ -474,8 +498,9 @@ function AttendancePageContent() {
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(payrollRows);
+      const siteSuffix = adminSiteFilter === 'all' ? 'All_Sites' : adminSiteFilter.toUpperCase();
       XLSX.utils.book_append_sheet(wb, ws, `Payroll_${adminPayrollMonth}`);
-      XLSX.writeFile(wb, `NewRelic_Staff_Payroll_${adminPayrollMonth}.xlsx`);
+      XLSX.writeFile(wb, `Staff_Payroll_${siteSuffix}_${adminPayrollMonth}.xlsx`);
       toast({ title: 'Company payroll exported successfully' });
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Export failed', description: e.message });
@@ -571,7 +596,8 @@ function AttendancePageContent() {
   const handleLoadHistory = async () => {
     setIsLoadingHistory(true);
     try {
-      const records = await getAttendanceByDateRange(historyStart, historyEnd);
+      const siteParam = adminSiteFilter === 'all' ? (isOwnerOrAdmin ? undefined : assignedSite) : adminSiteFilter;
+      const records = await getAttendanceByDateRange(historyStart, historyEnd, undefined, siteParam);
       setHistoryRecords(records);
     } catch {
       toast({ variant: 'destructive', title: 'Failed to load history' });
@@ -1209,7 +1235,7 @@ function AttendancePageContent() {
                   adminTab === 'today' ? 'text-[#3b2fc9] border-b-2 border-[#3b2fc9]' : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Today ({todayAll.length})
+                Today ({displayTodayAll.length})
               </button>
               <button
                 onClick={() => setAdminTab('history')}
@@ -1231,14 +1257,29 @@ function AttendancePageContent() {
             </div>
 
             {adminTab === 'today' && (
-              <div className="p-4">
+              <div className="p-4 space-y-3">
+                {isOwnerOrAdmin && (
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-semibold text-gray-600">Company Site:</label>
+                    <select
+                      value={adminSiteFilter}
+                      onChange={(e) => setAdminSiteFilter(e.target.value)}
+                      className="h-8 px-2.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
+                    >
+                      <option value="all">All Sites</option>
+                      {SITE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 {isLoadingAdmin ? (
                   <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
-                ) : todayAll.length === 0 ? (
+                ) : displayTodayAll.length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-8">No attendance marked today yet.</p>
                 ) : (
                   <div className="space-y-3">
-                    {todayAll.map((rec) => (
+                    {displayTodayAll.map((rec) => (
                       <AdminAttendanceCard
                         key={rec.id}
                         record={rec}
@@ -1255,6 +1296,21 @@ function AttendancePageContent() {
               <div className="p-4 space-y-4">
                 {/* Date range picker */}
                 <div className="flex flex-col sm:flex-row gap-3">
+                  {isOwnerOrAdmin && (
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Company Site</label>
+                      <select
+                        value={adminSiteFilter}
+                        onChange={(e) => setAdminSiteFilter(e.target.value)}
+                        className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
+                      >
+                        <option value="all">All Sites</option>
+                        {SITE_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div className="flex-1">
                     <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
                     <input
@@ -1317,14 +1373,32 @@ function AttendancePageContent() {
               <div className="p-4 space-y-4">
                 {/* Header controls */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gray-50/80 p-3.5 rounded-xl border border-gray-200">
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs font-semibold text-gray-600">Payroll Month:</label>
-                    <input
-                      type="month"
-                      value={adminPayrollMonth}
-                      onChange={(e) => setAdminPayrollMonth(e.target.value)}
-                      className="h-8 px-2.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
-                    />
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-gray-600">Payroll Month:</label>
+                      <input
+                        type="month"
+                        value={adminPayrollMonth}
+                        onChange={(e) => setAdminPayrollMonth(e.target.value)}
+                        className="h-8 px-2.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
+                      />
+                    </div>
+
+                    {isOwnerOrAdmin && (
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-semibold text-gray-600">Company Site:</label>
+                        <select
+                          value={adminSiteFilter}
+                          onChange={(e) => setAdminSiteFilter(e.target.value)}
+                          className="h-8 px-2.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
+                        >
+                          <option value="all">All Sites</option>
+                          {SITE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
 
                   {isOwnerOrAdmin && (
@@ -1350,50 +1424,67 @@ function AttendancePageContent() {
                   <div className="space-y-4">
                     {/* Employee Salary Mobile Cards (md:hidden) */}
                     <div className="md:hidden space-y-3">
-                      {employees.filter(e => e.isActive).map((emp) => {
-                        const empRecords = adminPayrollRecords.filter(r => r.employeeDocId === emp.id || r.employeeId === emp.employeeId);
-                        const totalDaysInMonth = getDaysInMonth(adminPayrollMonth);
-                        let presentDays = 0;
-                        let halfDays = 0;
-                        let lateDays = 0;
+                      {payrollEmployees.length === 0 ? (
+                        <div className="p-8 text-center text-sm text-gray-400 bg-white rounded-xl border border-gray-200">
+                          No active employees found for the selected site.
+                        </div>
+                      ) : (
+                        payrollEmployees.map((emp) => {
+                          const empRecords = adminPayrollRecords.filter(r => r.employeeDocId === emp.id || r.employeeId === emp.employeeId);
+                          const totalDaysInMonth = getDaysInMonth(adminPayrollMonth);
+                          let presentDays = 0;
+                          let halfDays = 0;
+                          let lateDays = 0;
 
-                        empRecords.forEach(r => {
-                          if (r.status === 'present') presentDays++;
-                          else if (r.status === 'half-day' || r.status === 'missed-checkout') halfDays++;
-                          if (r.isLate) lateDays++;
-                        });
+                          empRecords.forEach(r => {
+                            if (r.status === 'present') presentDays++;
+                            else if (r.status === 'half-day' || r.status === 'missed-checkout') halfDays++;
+                            if (r.isLate) lateDays++;
+                          });
 
-                        const effectivePaidDays = presentDays + 0.5 * halfDays;
-                        const gross = emp.monthlySalary || 0;
-                        const attendanceEarned = totalDaysInMonth > 0 
-                          ? Math.round((effectivePaidDays / totalDaysInMonth) * gross)
-                          : 0;
+                          const effectivePaidDays = presentDays + 0.5 * halfDays;
+                          const gross = emp.monthlySalary || 0;
+                          const attendanceEarned = totalDaysInMonth > 0 
+                            ? Math.round((effectivePaidDays / totalDaysInMonth) * gross)
+                            : 0;
 
-                        const empAdvances = adminAdvances.filter(a => a.employeeDocId === emp.id || a.employeeId === emp.employeeId);
-                        const advancesTotal = empAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
-                        const netPayable = Math.max(0, attendanceEarned - advancesTotal);
-                        const existingPayment = adminPayments.find(p => p.employeeDocId === emp.id || p.employeeId === emp.employeeId);
+                          const empAdvances = adminAdvances.filter(a => a.employeeDocId === emp.id || a.employeeId === emp.employeeId);
+                          const advancesTotal = empAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
+                          const netPayable = Math.max(0, attendanceEarned - advancesTotal);
+                          const existingPayment = adminPayments.find(p => p.employeeDocId === emp.id || p.employeeId === emp.employeeId);
+                          const sId = resolveSiteId(emp.siteId);
 
-                        const summaryObj = {
-                          totalDaysInMonth,
-                          presentDays,
-                          halfDays,
-                          absentDays: Math.max(0, totalDaysInMonth - presentDays - halfDays),
-                          effectivePaidDays,
-                          attendanceEarned,
-                          advancesTotal,
-                          netPayable,
-                        };
+                          const summaryObj = {
+                            totalDaysInMonth,
+                            presentDays,
+                            halfDays,
+                            absentDays: Math.max(0, totalDaysInMonth - presentDays - halfDays),
+                            effectivePaidDays,
+                            attendanceEarned,
+                            advancesTotal,
+                            netPayable,
+                          };
 
-                        return (
-                          <div key={emp.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-xs space-y-3">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0 flex-1">
-                                <h4 className="font-bold text-gray-900 text-sm truncate">{emp.name}</h4>
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                  {emp.employeeId} · <span className="capitalize">{emp.location}</span>
-                                </p>
-                              </div>
+                          return (
+                            <div key={emp.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-xs space-y-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <h4 className="font-bold text-gray-900 text-sm truncate">{emp.name}</h4>
+                                    <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${
+                                      sId === 'dsm'
+                                        ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
+                                        : sId === 'ntt_data'
+                                        ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                        : 'bg-indigo-50 text-[#3b2fc9] border-indigo-200'
+                                    }`}>
+                                      {sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic'}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-400 mt-0.5">
+                                    {emp.employeeId} · <span className="capitalize">{emp.location}</span>
+                                  </p>
+                                </div>
                               {existingPayment ? (
                                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1 shrink-0">
                                   <CheckCircle className="h-3 w-3" /> Paid
@@ -1472,7 +1563,7 @@ function AttendancePageContent() {
                             </div>
                           </div>
                         );
-                      })}
+                      }))}
                     </div>
 
                     {/* Desktop Employee Salary Table (hidden md:block) */}
@@ -1492,134 +1583,154 @@ function AttendancePageContent() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
-                            {employees.filter(e => e.isActive).map((emp) => {
-                              const empRecords = adminPayrollRecords.filter(r => r.employeeDocId === emp.id || r.employeeId === emp.employeeId);
-                              const totalDaysInMonth = getDaysInMonth(adminPayrollMonth);
-                              let presentDays = 0;
-                              let halfDays = 0;
-                              let lateDays = 0;
+                            {payrollEmployees.length === 0 ? (
+                              <tr>
+                                <td colSpan={8} className="p-8 text-center text-sm text-gray-400">
+                                  No active employees found for the selected site.
+                                </td>
+                              </tr>
+                            ) : (
+                              payrollEmployees.map((emp) => {
+                                const empRecords = adminPayrollRecords.filter(r => r.employeeDocId === emp.id || r.employeeId === emp.employeeId);
+                                const totalDaysInMonth = getDaysInMonth(adminPayrollMonth);
+                                let presentDays = 0;
+                                let halfDays = 0;
+                                let lateDays = 0;
 
-                              empRecords.forEach(r => {
-                                if (r.status === 'present') presentDays++;
-                                else if (r.status === 'half-day' || r.status === 'missed-checkout') halfDays++;
-                                if (r.isLate) lateDays++;
-                              });
+                                empRecords.forEach(r => {
+                                  if (r.status === 'present') presentDays++;
+                                  else if (r.status === 'half-day' || r.status === 'missed-checkout') halfDays++;
+                                  if (r.isLate) lateDays++;
+                                });
 
-                              const effectivePaidDays = presentDays + 0.5 * halfDays;
-                              const gross = emp.monthlySalary || 0;
-                              const attendanceEarned = totalDaysInMonth > 0 
-                                ? Math.round((effectivePaidDays / totalDaysInMonth) * gross)
-                                : 0;
+                                const effectivePaidDays = presentDays + 0.5 * halfDays;
+                                const gross = emp.monthlySalary || 0;
+                                const attendanceEarned = totalDaysInMonth > 0 
+                                  ? Math.round((effectivePaidDays / totalDaysInMonth) * gross)
+                                  : 0;
 
-                              const empAdvances = adminAdvances.filter(a => a.employeeDocId === emp.id || a.employeeId === emp.employeeId);
-                              const advancesTotal = empAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
-                              const netPayable = Math.max(0, attendanceEarned - advancesTotal);
-                              const existingPayment = adminPayments.find(p => p.employeeDocId === emp.id || p.employeeId === emp.employeeId);
+                                const empAdvances = adminAdvances.filter(a => a.employeeDocId === emp.id || a.employeeId === emp.employeeId);
+                                const advancesTotal = empAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
+                                const netPayable = Math.max(0, attendanceEarned - advancesTotal);
+                                const existingPayment = adminPayments.find(p => p.employeeDocId === emp.id || p.employeeId === emp.employeeId);
+                                const sId = resolveSiteId(emp.siteId);
 
-                              const summaryObj = {
-                                totalDaysInMonth,
-                                presentDays,
-                                halfDays,
-                                absentDays: Math.max(0, totalDaysInMonth - presentDays - halfDays),
-                                effectivePaidDays,
-                                attendanceEarned,
-                                advancesTotal,
-                                netPayable,
-                              };
+                                const summaryObj = {
+                                  totalDaysInMonth,
+                                  presentDays,
+                                  halfDays,
+                                  absentDays: Math.max(0, totalDaysInMonth - presentDays - halfDays),
+                                  effectivePaidDays,
+                                  attendanceEarned,
+                                  advancesTotal,
+                                  netPayable,
+                                };
 
-                              return (
-                                <tr key={emp.id} className="hover:bg-gray-50/70 transition-colors">
-                                  <td className="p-3">
-                                    <p className="font-bold text-gray-900">{emp.name}</p>
-                                    <p className="text-[11px] text-gray-400">
-                                      {emp.employeeId} · <span className="capitalize">{emp.location}</span>
-                                    </p>
-                                  </td>
+                                return (
+                                  <tr key={emp.id} className="hover:bg-gray-50/70 transition-colors">
+                                    <td className="p-3">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <p className="font-bold text-gray-900">{emp.name}</p>
+                                        <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${
+                                          sId === 'dsm'
+                                            ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
+                                            : sId === 'ntt_data'
+                                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                            : 'bg-indigo-50 text-[#3b2fc9] border-indigo-200'
+                                        }`}>
+                                          {sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic'}
+                                        </span>
+                                      </div>
+                                      <p className="text-[11px] text-gray-400">
+                                        {emp.employeeId} · <span className="capitalize">{emp.location}</span>
+                                      </p>
+                                    </td>
 
-                                  <td className="p-3 font-semibold text-gray-800">
-                                    ₹{gross.toLocaleString('en-IN')}
-                                  </td>
+                                    <td className="p-3 font-semibold text-gray-800">
+                                      ₹{gross.toLocaleString('en-IN')}
+                                    </td>
 
-                                  <td className="p-3">
-                                    <div className="text-[11px] text-gray-600">
-                                      <span className="font-medium text-emerald-700">{presentDays} Full</span> · 
-                                      <span className="font-medium text-amber-700 ml-1">{halfDays} Half</span>
-                                      <span className="block text-[10px] text-gray-400">
-                                        = {effectivePaidDays} / {totalDaysInMonth} paid days
-                                        {lateDays > 0 && ` (${lateDays} late)`}
+                                    <td className="p-3">
+                                      <div className="text-[11px] text-gray-600">
+                                        <span className="font-medium text-emerald-700">{presentDays} Full</span> · 
+                                        <span className="font-medium text-amber-700 ml-1">{halfDays} Half</span>
+                                        <span className="block text-[10px] text-gray-400">
+                                          = {effectivePaidDays} / {totalDaysInMonth} paid days
+                                          {lateDays > 0 && ` (${lateDays} late)`}
+                                        </span>
+                                      </div>
+                                    </td>
+
+                                    <td className="p-3 font-semibold text-gray-900">
+                                      ₹{attendanceEarned.toLocaleString('en-IN')}
+                                    </td>
+
+                                    <td className="p-3">
+                                      {advancesTotal > 0 ? (
+                                        <span className="text-red-600 font-semibold">
+                                          -₹{advancesTotal.toLocaleString('en-IN')}
+                                          <span className="block text-[10px] text-gray-400 font-normal">({empAdvances.length} advance{empAdvances.length > 1 ? 's' : ''})</span>
+                                        </span>
+                                      ) : (
+                                        <span className="text-gray-400">₹0</span>
+                                      )}
+                                    </td>
+
+                                    <td className="p-3">
+                                      <span className="text-sm font-extrabold text-[#3b2fc9]">
+                                        ₹{netPayable.toLocaleString('en-IN')}
                                       </span>
-                                    </div>
-                                  </td>
+                                    </td>
 
-                                  <td className="p-3 font-semibold text-gray-900">
-                                    ₹{attendanceEarned.toLocaleString('en-IN')}
-                                  </td>
+                                    <td className="p-3">
+                                      {existingPayment ? (
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1 w-fit">
+                                          <CheckCircle className="h-3 w-3" /> Paid
+                                        </span>
+                                      ) : (
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 w-fit">
+                                          Pending
+                                        </span>
+                                      )}
+                                    </td>
 
-                                  <td className="p-3">
-                                    {advancesTotal > 0 ? (
-                                      <span className="text-red-600 font-semibold">
-                                        -₹{advancesTotal.toLocaleString('en-IN')}
-                                        <span className="block text-[10px] text-gray-400 font-normal">({empAdvances.length} advance{empAdvances.length > 1 ? 's' : ''})</span>
-                                      </span>
-                                    ) : (
-                                      <span className="text-gray-400">₹0</span>
-                                    )}
-                                  </td>
-
-                                  <td className="p-3">
-                                    <span className="text-sm font-extrabold text-[#3b2fc9]">
-                                      ₹{netPayable.toLocaleString('en-IN')}
-                                    </span>
-                                  </td>
-
-                                  <td className="p-3">
-                                    {existingPayment ? (
-                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1 w-fit">
-                                        <CheckCircle className="h-3 w-3" /> Paid
-                                      </span>
-                                    ) : (
-                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 w-fit">
-                                        Pending
-                                      </span>
-                                    )}
-                                  </td>
-
-                                  <td className="p-3 text-right">
-                                    <div className="flex items-center justify-end gap-1.5">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setAdvanceModalEmployee(emp);
-                                          setAdvanceAmount(0);
-                                          setAdvanceReason('');
-                                        }}
-                                        className="px-2.5 py-1 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-medium transition-colors"
-                                      >
-                                        + Advance
-                                      </button>
-
-                                      {!existingPayment ? (
+                                    <td className="p-3 text-right">
+                                      <div className="flex items-center justify-end gap-1.5">
                                         <button
                                           type="button"
                                           onClick={() => {
-                                            setPayModalData({ employee: emp, summary: summaryObj });
-                                            setPayPaymentMode('bank_transfer');
-                                            setPayReferenceNote('');
+                                            setAdvanceModalEmployee(emp);
+                                            setAdvanceAmount(0);
+                                            setAdvanceReason('');
                                           }}
-                                          className="px-2.5 py-1 rounded-lg bg-[#3b2fc9] hover:bg-[#2d23a0] text-white text-[11px] font-medium transition-colors shadow-xs"
+                                          className="px-2.5 py-1 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-medium transition-colors"
                                         >
-                                          Pay Salary
+                                          + Advance
                                         </button>
-                                      ) : (
-                                        <span className="text-[10px] text-gray-400 italic">
-                                          {existingPayment.paymentDate}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
+
+                                        {!existingPayment ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setPayModalData({ employee: emp, summary: summaryObj });
+                                              setPayPaymentMode('bank_transfer');
+                                              setPayReferenceNote('');
+                                            }}
+                                            className="px-2.5 py-1 rounded-lg bg-[#3b2fc9] hover:bg-[#2d23a0] text-white text-[11px] font-medium transition-colors shadow-xs"
+                                          >
+                                            Pay Salary
+                                          </button>
+                                        ) : (
+                                          <span className="text-[10px] text-gray-400 italic">
+                                            {existingPayment.paymentDate}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            )}
                           </tbody>
                         </table>
                       </div>
@@ -1896,6 +2007,20 @@ function AdminAttendanceCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-medium text-gray-800 truncate">{record.employeeName}</p>
+            {(() => {
+              const sId = resolveSiteId(record.siteId);
+              return (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${
+                  sId === 'dsm'
+                    ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
+                    : sId === 'ntt_data'
+                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                    : 'bg-indigo-50 text-[#3b2fc9] border-indigo-200'
+                }`}>
+                  {sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic'}
+                </span>
+              );
+            })()}
             {record.isLate && (
               <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.2 rounded font-bold">
                 Late (+{record.lateMinutes || 0}m)
@@ -1908,6 +2033,7 @@ function AdminAttendanceCard({
             ) : null}
           </div>
           <p className="text-xs text-gray-400">
+            <span className="capitalize font-medium text-gray-500 mr-1.5">{record.location} ·</span>
             {record.checkIn ? `In: ${new Date(record.checkIn.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}` : 'Not checked in'}
             {record.checkOut ? ` · Out: ${new Date(record.checkOut.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}` : ''}
             {record.durationMinutes ? ` · ${formatDuration(record.durationMinutes)}` : ''}

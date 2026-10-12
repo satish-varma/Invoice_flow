@@ -5,6 +5,7 @@ import { Trash2, Filter, FileText, Search, ChevronLeft, ChevronRight, TrendingUp
 import { NewRelicTuckshopRecord, deleteTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { TuckshopDashboard } from './tuckshop-dashboard';
 import { useAuth } from '@/contexts/AuthContext';
+import { SiteId, resolveSiteId, SITE_OPTIONS } from '@/types/site';
 
 interface Props {
   records: NewRelicTuckshopRecord[];
@@ -16,6 +17,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
   const { role, user } = useAuth();
   const isOwnerOrAdmin = role === 'admin' || role === 'superadmin';
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'sale'>('all');
+  const [filterSite, setFilterSite] = useState<string>('all');
   const [filterMonth, setFilterMonth] = useState<string>('all');
   const [filterYear, setFilterYear] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,7 +39,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
   // Reset to page 1 when filters change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [filterType, filterLocation, filterMonth, filterYear, searchQuery]);
+  }, [filterType, filterLocation, filterSite, filterMonth, filterYear, searchQuery]);
 
   // Also update if user object loads later
   React.useEffect(() => {
@@ -76,6 +78,10 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
   const filteredRecords = records.filter(record => {
     if (filterType !== 'all' && record.type !== filterType) return false;
     if (filterLocation !== 'all' && record.location !== filterLocation) return false;
+    if (filterSite !== 'all') {
+      const recSite = resolveSiteId(record.siteId);
+      if (recSite !== filterSite) return false;
+    }
     
     if (filterMonth !== 'all') {
       if (new Date(record.date).getMonth().toString() !== filterMonth) return false;
@@ -128,6 +134,19 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
           </div>
 
           <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
+            {isOwnerOrAdmin && (
+              <select
+                value={filterSite}
+                onChange={(e) => setFilterSite(e.target.value)}
+                className="w-full px-2.5 py-2 sm:py-1.5 text-xs sm:text-sm border border-gray-200 rounded-xl sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white"
+              >
+                <option value="all">All Sites</option>
+                {SITE_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            )}
+
             <div className="relative">
               <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
               <select
@@ -198,6 +217,20 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                     }`}>
                       {record.type.toUpperCase()}
                     </span>
+                    {(() => {
+                      const sId = resolveSiteId(record.siteId);
+                      return (
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+                          sId === 'dsm'
+                            ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
+                            : sId === 'ntt_data'
+                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                            : 'bg-indigo-50 text-[#3b2fc9] border-indigo-200'
+                        }`}>
+                          {sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic'}
+                        </span>
+                      );
+                    })()}
                     <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-600">
                       {record.location}
                     </span>
@@ -270,6 +303,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Date</th>
+              <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Site</th>
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Location</th>
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Category</th>
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">User</th>
@@ -282,7 +316,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
           <tbody className="divide-y divide-gray-100">
             {paginatedRecords.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-5 py-8 text-center text-sm text-gray-500">
+                <td colSpan={9} className="px-5 py-8 text-center text-sm text-gray-500">
                   No records found.
                 </td>
               </tr>
@@ -291,6 +325,22 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                 <tr key={record.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-5 py-3 text-sm text-gray-600">
                     {new Date(record.date).toLocaleDateString()}
+                  </td>
+                  <td className="px-5 py-3 text-sm">
+                    {(() => {
+                      const sId = resolveSiteId(record.siteId);
+                      return (
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold border ${
+                          sId === 'dsm'
+                            ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
+                            : sId === 'ntt_data'
+                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                            : 'bg-indigo-50 text-[#3b2fc9] border-indigo-200'
+                        }`}>
+                          {sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic'}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-5 py-3 text-sm font-medium text-gray-700">
                     {record.location}

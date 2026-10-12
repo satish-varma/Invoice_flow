@@ -23,6 +23,7 @@ import { useFinancialAuth } from '@/contexts/FinancialAuthContext';
 import { FinancialPasswordModal } from '@/components/newrelic/financial-password-modal';
 import { Lock, Unlock } from 'lucide-react';
 import { MobileFloatingActions } from '@/components/newrelic/mobile-floating-actions';
+import { triggerHaptic } from '@/lib/haptics';
 
 export default function NewRelicPage() {
   const { toast } = useToast();
@@ -501,116 +502,222 @@ export default function NewRelicPage() {
             )}
           </div>
 
-          {/* Filters: Native Horizontal Scrollable Pill Chips on Mobile, Standard Flex on Desktop */}
-          <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none no-scrollbar flex-1">
-              <div className="flex items-center gap-1.5 text-gray-500 text-xs font-bold shrink-0 mr-1">
-                <Filter className="h-3.5 w-3.5 text-[#3b2fc9]" />
-                <span>Filter:</span>
-              </div>
-            
-            {/* Location Pill */}
-            <div className="relative shrink-0">
-              <select
-                value={filterLocation}
-                onChange={(e) => setFilterLocation(e.target.value)}
-                className="h-8 pl-3 pr-7 border border-gray-200 rounded-full text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] bg-gray-50/70 hover:bg-gray-100/70 capitalize appearance-none cursor-pointer"
-              >
+          {/* Filters Section: Segmented Location Switcher + Quick Presets + More Filters */}
+          <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200/80 shadow-xs space-y-2.5">
+            {/* Top Row: Segmented Location Switcher (Mobile & Desktop) */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="inline-flex p-1 bg-gray-100/80 rounded-xl max-w-full overflow-x-auto scrollbar-none no-scrollbar">
                 {user?.preferredLocations && user.preferredLocations.length > 0 && (
-                  <option value="preferred">📍 Preferred</option>
-                )}
-                <option value="all">📍 All Locations</option>
-                {Object.entries(NEWRELIC_LOCATIONS).map(([key, loc]) => (
-                  <option key={key} value={key}>📍 {loc.label}</option>
-                ))}
-              </select>
-              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-gray-400">▼</span>
-            </div>
-
-            {/* Month Pill */}
-            <div className="relative shrink-0">
-              <select
-                value={filterMonth}
-                onChange={(e) => setFilterMonth(e.target.value)}
-                className="h-8 pl-3 pr-7 border border-gray-200 rounded-full text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] bg-gray-50/70 hover:bg-gray-100/70 appearance-none cursor-pointer"
-              >
-                <option value="all">📅 All Months</option>
-                {Array.from({ length: 12 }, (_, i) => {
-                  const date = new Date(2000, i, 1);
-                  return <option key={i} value={i}>{date.toLocaleString('default', { month: 'short' })}</option>;
-                })}
-              </select>
-              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-gray-400">▼</span>
-            </div>
-
-            {/* Year Pill */}
-            <div className="relative shrink-0">
-              <select
-                value={filterYear}
-                onChange={(e) => setFilterYear(e.target.value)}
-                className="h-8 pl-3 pr-7 border border-gray-200 rounded-full text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] bg-gray-50/70 hover:bg-gray-100/70 appearance-none cursor-pointer"
-              >
-                <option value="all">🗓️ All Years</option>
-                {availableYears.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-gray-400">▼</span>
-            </div>
-
-            {/* Cycle Pill */}
-            <div className="relative shrink-0">
-              <select
-                value={filterCycle}
-                onChange={(e) => setFilterCycle(e.target.value)}
-                className="h-8 pl-3 pr-7 border border-gray-200 rounded-full text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] bg-gray-50/70 hover:bg-gray-100/70 appearance-none cursor-pointer"
-              >
-                <option value="all">🔄 All Cycles</option>
-                <option value="1-15">Cycle 1 (1–15)</option>
-                <option value="16-31">Cycle 2 (16–End)</option>
-              </select>
-              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-gray-400">▼</span>
-            </div>
-          </div>
-          
-          {(role === 'admin' || role === 'superadmin') && (
-            <div className="ml-auto flex items-center gap-2">
-              {isUnlocked ? (
-                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg">
-                  <label className="text-xs text-emerald-800 cursor-pointer flex items-center gap-1.5 font-semibold">
-                    <input
-                      type="checkbox"
-                      checked={showFinancials}
-                      onChange={(e) => setShowFinancials(e.target.checked)}
-                      className="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5"
-                    />
-                    <Unlock className="h-3.5 w-3.5 text-emerald-600" />
-                    Financials Visible ({remainingMinutes}m)
-                  </label>
                   <button
+                    type="button"
                     onClick={() => {
-                      lockFinancials();
-                      setShowFinancials(false);
+                      triggerHaptic('light');
+                      setFilterLocation('preferred');
                     }}
-                    className="text-[10px] text-red-600 hover:text-red-800 underline font-medium ml-1"
-                    title="Lock now"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                      filterLocation === 'preferred'
+                        ? 'bg-white text-[#3b2fc9] shadow-xs'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
                   >
-                    Lock
+                    ⭐ Preferred
                   </button>
-                </div>
-              ) : (
+                )}
                 <button
                   type="button"
-                  onClick={() => setShowFinancialModal(true)}
-                  className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 shadow-xs transition-colors"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setFilterLocation('all');
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                    filterLocation === 'all'
+                      ? 'bg-white text-[#3b2fc9] shadow-xs'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
                 >
-                  <Lock className="h-3.5 w-3.5 text-gray-500" />
-                  Unlock Financials
+                  All ({activeChallans.length})
                 </button>
+                {Object.entries(NEWRELIC_LOCATIONS).map(([key, loc]) => {
+                  const count = activeChallans.filter(c => c.location === key).length;
+                  const isSelected = filterLocation === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setFilterLocation(key);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                        isSelected
+                          ? 'bg-white text-[#3b2fc9] shadow-xs'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      {loc.label} <span className="text-[10px] opacity-70">({count})</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Financial Unlock Toggle (Admin) */}
+              {(role === 'admin' || role === 'superadmin') && (
+                <div className="flex items-center gap-2 sm:ml-auto">
+                  {isUnlocked ? (
+                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg w-full sm:w-auto justify-between sm:justify-start">
+                      <label className="text-xs text-emerald-800 cursor-pointer flex items-center gap-1.5 font-semibold">
+                        <input
+                          type="checkbox"
+                          checked={showFinancials}
+                          onChange={(e) => setShowFinancials(e.target.checked)}
+                          className="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5"
+                        />
+                        <Unlock className="h-3.5 w-3.5 text-emerald-600" />
+                        Financials Visible ({remainingMinutes}m)
+                      </label>
+                      <button
+                        onClick={() => {
+                          lockFinancials();
+                          setShowFinancials(false);
+                        }}
+                        className="text-[10px] text-red-600 hover:text-red-800 underline font-medium ml-1"
+                        title="Lock now"
+                      >
+                        Lock
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowFinancialModal(true)}
+                      className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 shadow-xs transition-colors"
+                    >
+                      <Lock className="h-3.5 w-3.5 text-gray-500" />
+                      Unlock Financials
+                    </button>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
+
+            {/* Bottom Row: Quick Cycles + Date Presets & Filter Drawer Toggle */}
+            <div className="pt-2 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2">
+              {/* Cycle Presets */}
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar py-0.5">
+                <span className="text-[11px] font-bold text-gray-400 mr-1 hidden sm:inline">Cycle:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setFilterCycle('all');
+                  }}
+                  className={`h-7 px-2.5 rounded-full text-xs font-medium transition-all ${
+                    filterCycle === 'all'
+                      ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-bold border border-[#3b2fc9]/30'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200/70'
+                  }`}
+                >
+                  All Dates
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setFilterCycle('1-15');
+                  }}
+                  className={`h-7 px-2.5 rounded-full text-xs font-medium transition-all ${
+                    filterCycle === '1-15'
+                      ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-bold border border-[#3b2fc9]/30'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200/70'
+                  }`}
+                >
+                  Cycle 1 (1–15)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setFilterCycle('16-31');
+                  }}
+                  className={`h-7 px-2.5 rounded-full text-xs font-medium transition-all ${
+                    filterCycle === '16-31'
+                      ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-bold border border-[#3b2fc9]/30'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200/70'
+                  }`}
+                >
+                  Cycle 2 (16–End)
+                </button>
+              </div>
+
+              {/* Date Pickers (Month & Year) & Clear Filters */}
+              <div className="flex items-center gap-2 ml-auto">
+                {/* Month Pill */}
+                <div className="relative">
+                  <select
+                    value={filterMonth}
+                    onChange={(e) => {
+                      triggerHaptic('light');
+                      setFilterMonth(e.target.value);
+                    }}
+                    className={`h-7 pl-2.5 pr-6 rounded-full text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] appearance-none cursor-pointer border transition-colors ${
+                      filterMonth !== 'all'
+                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] border-[#3b2fc9]/30'
+                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    <option value="all">📅 All Months</option>
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const date = new Date(2000, i, 1);
+                      return <option key={i} value={i}>{date.toLocaleString('default', { month: 'short' })}</option>;
+                    })}
+                  </select>
+                  <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[8px] text-gray-400">▼</span>
+                </div>
+
+                {/* Year Pill */}
+                <div className="relative">
+                  <select
+                    value={filterYear}
+                    onChange={(e) => {
+                      triggerHaptic('light');
+                      setFilterYear(e.target.value);
+                    }}
+                    className={`h-7 pl-2.5 pr-6 rounded-full text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] appearance-none cursor-pointer border transition-colors ${
+                      filterYear !== 'all'
+                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] border-[#3b2fc9]/30'
+                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    <option value="all">🗓️ All Years</option>
+                    {availableYears.map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[8px] text-gray-400">▼</span>
+                </div>
+
+                {/* Clear Active Filters Button */}
+                {(filterLocation !== 'all' || filterMonth !== 'all' || filterYear !== 'all' || filterCycle !== 'all' || searchQuery.trim() !== '') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('medium');
+                      setFilterLocation('all');
+                      setFilterMonth('all');
+                      setFilterYear('all');
+                      setFilterCycle('all');
+                      setSearchQuery('');
+                    }}
+                    className="h-7 px-2 rounded-full text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center gap-1"
+                    title="Reset all filters"
+                  >
+                    <X className="w-3 h-3" />
+                    <span>Reset</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
 
           {searchQuery && (
             <div className="flex items-center justify-between text-xs px-2 text-gray-500">

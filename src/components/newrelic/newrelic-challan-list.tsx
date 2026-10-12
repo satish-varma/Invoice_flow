@@ -3,7 +3,9 @@ import { NewRelicChallan } from '@/types/challan';
 
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText } from 'lucide-react';
+import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, Share2, ChevronDown, ChevronUp } from 'lucide-react';
+import { triggerHaptic } from '@/lib/haptics';
+import { useToast } from '@/hooks/use-toast';
 import {
   Table,
   TableBody,
@@ -68,8 +70,50 @@ export function NewRelicChallanList({
   role,
   showFinancials,
 }: NewRelicChallanListProps) {
+  const { toast } = useToast();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteConfirmChallan, setDeleteConfirmChallan] = useState<NewRelicChallan | null>(null);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+
+  const toggleCardExpand = (id: string) => {
+    triggerHaptic('light');
+    setExpandedCards(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleShareChallan = async (challan: NewRelicChallan) => {
+    triggerHaptic('medium');
+    const locLabel = NEWRELIC_LOCATIONS[challan.location]?.label || challan.location;
+    const dateFormatted = challan.dcDate ? format(new Date(challan.dcDate), 'dd MMM yyyy') : '';
+    const itemsCount = challan.lineItems?.length || 0;
+    const totalQty = (challan.lineItems || []).reduce((sum, item) => sum + (item.quantity || 1), 0);
+    const mrpTotal = (challan.lineItems || []).reduce((sum, item) => sum + ((item.mrp || 0) * (item.quantity || 1)), 0);
+
+    const shareText = `📦 Delivery Challan: ${challan.dcNumber}\n📍 Location: ${locLabel}\n📅 Date: ${dateFormatted}\n📋 Items: ${itemsCount} items (${totalQty} units)\n💰 Total MRP: ₹${mrpTotal.toLocaleString('en-IN')}`;
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: `Challan ${challan.dcNumber}`,
+          text: shareText,
+        });
+        return;
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    // Fallback: copy to clipboard or WhatsApp
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+    window.open(waUrl, '_blank');
+  };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -223,26 +267,71 @@ export function NewRelicChallanList({
                 </Badge>
               </div>
 
-              {/* Items Preview Snippet */}
-              <div className="bg-gray-50 rounded-xl p-2.5 text-xs text-gray-600 space-y-1">
-                <div className="flex items-center justify-between font-medium text-gray-700">
-                  <span className="flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5 text-gray-400" />
-                    <span>{challan.lineItems?.length || 0} line item{challan.lineItems?.length !== 1 ? 's' : ''}</span>
-                  </span>
-                  {mrpTotal > 0 && (
-                    <span className="font-semibold text-gray-900">
-                      ₹{mrpTotal.toLocaleString('en-IN')}
-                    </span>
-                  )}
-                </div>
-                {topItems.length > 0 && (
-                  <p className="text-[11px] text-gray-500 truncate pt-0.5">
-                    {topItems.map(i => `${i.quantity}x ${i.itemName}`).join(', ')}
-                    {extraItemsCount > 0 ? ` +${extraItemsCount} more` : ''}
-                  </p>
-                )}
-              </div>
+              {/* Items Preview Snippet with Tap-to-Expand */}
+              {(() => {
+                const isExpanded = challan.id ? expandedCards.has(challan.id) : false;
+                const items = challan.lineItems || [];
+
+                return (
+                  <div className="bg-gray-50/90 rounded-xl p-2.5 text-xs text-gray-600 space-y-1.5 transition-all">
+                    <div className="flex items-center justify-between font-medium text-gray-700">
+                      <span className="flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-gray-400" />
+                        <span>{items.length} line item{items.length !== 1 ? 's' : ''}</span>
+                      </span>
+                      {mrpTotal > 0 && (
+                        <span className="font-semibold text-gray-900">
+                          ₹{mrpTotal.toLocaleString('en-IN')}
+                        </span>
+                      )}
+                    </div>
+
+                    {!isExpanded ? (
+                      <div>
+                        {topItems.length > 0 && (
+                          <p className="text-[11px] text-gray-500 truncate">
+                            {topItems.map(i => `${i.quantity}x ${i.itemName}`).join(', ')}
+                            {extraItemsCount > 0 ? ` +${extraItemsCount} more` : ''}
+                          </p>
+                        )}
+                        {items.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => challan.id && toggleCardExpand(challan.id)}
+                            className="text-[11px] text-[#3b2fc9] font-semibold flex items-center gap-1 mt-1 hover:underline cursor-pointer"
+                          >
+                            <span>Show all {items.length} items</span>
+                            <ChevronDown className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 pt-1 border-t border-gray-200/70 animate-in fade-in duration-200">
+                        <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                          {items.map((item, idx) => (
+                            <div key={idx} className="flex items-center justify-between text-[11px] py-0.5 border-b border-gray-100 last:border-0">
+                              <span className="text-gray-700 truncate pr-2">
+                                <span className="font-semibold text-gray-900">{item.quantity}x</span> {item.itemName}
+                              </span>
+                              <span className="text-gray-500 font-medium shrink-0">
+                                ₹{((item.mrp || 0) * (item.quantity || 1)).toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => challan.id && toggleCardExpand(challan.id)}
+                          className="text-[11px] text-gray-500 font-semibold flex items-center gap-1 pt-1 hover:text-gray-700 cursor-pointer"
+                        >
+                          <span>Collapse items</span>
+                          <ChevronUp className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Author & Audit Info (if admin or trash) */}
               {role === 'admin' && (
@@ -294,25 +383,31 @@ export function NewRelicChallanList({
                 );
               })()}
 
-              {/* Mobile Actions: Primary View/PDF Button + 3-Dot Overflow Menu */}
+              {/* Mobile Actions: Primary View/PDF Button + Share + 3-Dot Overflow Menu */}
               <div className="flex items-center gap-1.5 sm:gap-2 pt-1 flex-wrap">
                 {isTrashView ? (
                   <Button
                     variant="outline"
                     size="sm"
                     className="flex-1 h-10 text-xs gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-xl font-semibold"
-                    onClick={() => onRestoreChallan && challan.id && onRestoreChallan(challan.id)}
+                    onClick={() => {
+                      triggerHaptic('medium');
+                      onRestoreChallan && challan.id && onRestoreChallan(challan.id);
+                    }}
                   >
                     <RefreshCcw className="h-4 w-4" /> Restore Challan
                   </Button>
                 ) : (
                   <>
-                    {/* View Document (compact size) */}
+                    {/* View Document */}
                     <Button
                       variant="default"
                       size="sm"
                       className="h-9 px-3 bg-[#3b2fc9] hover:bg-[#2f25a8] text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs active:scale-95 transition-transform"
-                      onClick={() => onPreviewChallan ? onPreviewChallan(challan) : onDownloadChallan(challan)}
+                      onClick={() => {
+                        triggerHaptic('light');
+                        onPreviewChallan ? onPreviewChallan(challan) : onDownloadChallan(challan);
+                      }}
                       title="View Document"
                     >
                       <Eye className="h-3.5 w-3.5" />
@@ -325,7 +420,10 @@ export function NewRelicChallanList({
                         variant="outline"
                         size="sm"
                         className="h-9 px-2.5 border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-[#3b2fc9] rounded-xl text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-transform"
-                        onClick={() => onAdminPreviewChallan(challan)}
+                        onClick={() => {
+                          triggerHaptic('light');
+                          onAdminPreviewChallan(challan);
+                        }}
                         title="Admin Quick View"
                       >
                         <Receipt className="h-3.5 w-3.5" />
@@ -339,7 +437,10 @@ export function NewRelicChallanList({
                         variant="outline"
                         size="sm"
                         className="h-9 px-2.5 border-gray-200 text-gray-700 hover:text-[#3b2fc9] hover:border-[#3b2fc9]/40 rounded-xl text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-transform"
-                        onClick={() => onSelectChallan(challan)}
+                        onClick={() => {
+                          triggerHaptic('light');
+                          onSelectChallan(challan);
+                        }}
                         title="Edit Challan"
                       >
                         <Edit2 className="h-3.5 w-3.5" />
@@ -352,10 +453,24 @@ export function NewRelicChallanList({
                       variant="outline"
                       size="sm"
                       className="h-9 w-9 p-0 border-gray-200 text-gray-700 hover:text-[#3b2fc9] hover:border-[#3b2fc9]/40 rounded-xl active:scale-95 transition-transform"
-                      onClick={() => onDownloadChallan(challan)}
+                      onClick={() => {
+                        triggerHaptic('medium');
+                        onDownloadChallan(challan);
+                      }}
                       title="Download PDF"
                     >
                       <Download className="h-3.5 w-3.5" />
+                    </Button>
+
+                    {/* Native Share / WhatsApp Dispatch Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-9 p-0 border-gray-200 text-gray-700 hover:text-[#3b2fc9] hover:border-[#3b2fc9]/40 rounded-xl active:scale-95 transition-transform"
+                      onClick={() => handleShareChallan(challan)}
+                      title="Share Summary"
+                    >
+                      <Share2 className="h-3.5 w-3.5 text-gray-600" />
                     </Button>
 
                     {/* Three-Dot Overflow Menu (Contains Duplicate, History, and Delete) */}
@@ -373,7 +488,10 @@ export function NewRelicChallanList({
                       <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-lg">
                         {role !== 'user' && (
                           <DropdownMenuItem
-                            onClick={() => onDuplicateChallan(challan)}
+                            onClick={() => {
+                              triggerHaptic('light');
+                              onDuplicateChallan(challan);
+                            }}
                             className="cursor-pointer gap-2 py-2"
                           >
                             <Copy className="h-4 w-4 text-amber-500" />
@@ -382,7 +500,10 @@ export function NewRelicChallanList({
                         )}
                         {role === 'admin' && onViewHistory && (
                           <DropdownMenuItem
-                            onClick={() => onViewHistory(challan)}
+                            onClick={() => {
+                              triggerHaptic('light');
+                              onViewHistory(challan);
+                            }}
                             className="cursor-pointer gap-2 py-2"
                           >
                             <History className="h-4 w-4 text-blue-500" />
@@ -393,7 +514,10 @@ export function NewRelicChallanList({
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => setDeleteConfirmChallan(challan)}
+                              onClick={() => {
+                                triggerHaptic('warning');
+                                setDeleteConfirmChallan(challan);
+                              }}
                               className="cursor-pointer gap-2 py-2 text-red-600 focus:text-red-600 focus:bg-red-50"
                             >
                               <Trash2 className="h-4 w-4 text-red-500" />

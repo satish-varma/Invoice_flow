@@ -51,8 +51,44 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
   /* ── Camera ── */
   const startCamera = useCallback(async () => {
     setCamError(null);
+
+    // Cross-browser & legacy compatibility helper
+    const getMediaDevices = () => {
+      if (typeof navigator.mediaDevices !== 'undefined' && typeof navigator.mediaDevices.getUserMedia === 'function') {
+        return navigator.mediaDevices;
+      }
+      // Legacy WebKit / Moz polyfill
+      const legacyGetUserMedia =
+        (navigator as any).getUserMedia ||
+        (navigator as any).webkitGetUserMedia ||
+        (navigator as any).mozGetUserMedia ||
+        (navigator as any).msGetUserMedia;
+
+      if (legacyGetUserMedia) {
+        return {
+          getUserMedia: (constraints: MediaStreamConstraints) =>
+            new Promise<MediaStream>((resolve, reject) => {
+              legacyGetUserMedia.call(navigator, constraints, resolve, reject);
+            }),
+        } as MediaDevices;
+      }
+      return null;
+    };
+
+    const mediaDevices = getMediaDevices();
+
+    if (!mediaDevices) {
+      const isHttp = typeof window !== 'undefined' && window.location.protocol === 'http:' && window.location.hostname !== 'localhost';
+      if (isHttp) {
+        setCamError('Camera requires HTTPS or localhost. Please access via HTTPS or use the Take Photo button below.');
+      } else {
+        setCamError('Live camera not supported on this browser. Use the Take Photo button below.');
+      }
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const stream = await mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
         audio: false,
       });
@@ -61,7 +97,12 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
         videoRef.current.srcObject = stream;
       }
     } catch (e: any) {
-      setCamError(e.message || 'Could not access camera');
+      console.warn('Camera error:', e);
+      if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+        setCamError('Camera permission denied. Please allow camera access in browser settings.');
+      } else {
+        setCamError(e.message || 'Could not access live camera. You can use the Take Photo button below.');
+      }
     }
   }, []);
 
@@ -75,6 +116,25 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
+  };
+
+  /* ── Native File / Camera Input Fallback (works on HTTP, older Safari, iOS & Android) ── */
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleNativePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setCapturedUri(result);
+        stopCamera();
+        setPhase('preview');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   /* ── Capture ── */
@@ -126,20 +186,41 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
           </button>
         </div>
 
+        {/* Hidden native camera/file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="user"
+          className="hidden"
+          onChange={handleNativePhotoUpload}
+        />
+
         {/* Camera / Preview Area */}
         <div className="relative bg-black" style={{ aspectRatio: '4/3' }}>
           {phase === 'camera' && (
             <>
               {camError ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-white gap-3 p-4">
-                  <AlertCircle className="h-10 w-10 text-red-400" />
-                  <p className="text-sm text-center text-gray-300">{camError}</p>
-                  <button
-                    onClick={startCamera}
-                    className="text-xs bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full"
-                  >
-                    Retry Camera
-                  </button>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white gap-3 p-5">
+                  <AlertCircle className="h-10 w-10 text-amber-400" />
+                  <p className="text-xs text-center text-gray-300 leading-relaxed max-w-xs">{camError}</p>
+                  <div className="flex flex-col sm:flex-row gap-2 mt-1 w-full max-w-xs">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex-1 text-xs bg-[#3b2fc9] hover:bg-[#3b2fc9]/90 text-white font-medium px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm"
+                    >
+                      <Camera className="h-3.5 w-3.5" />
+                      Take Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={startCamera}
+                      className="text-xs bg-white/20 hover:bg-white/30 text-white px-3 py-2.5 rounded-xl font-medium"
+                    >
+                      Retry Live Camera
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <video
@@ -183,14 +264,24 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
               >
                 Cancel
               </button>
-              <button
-                onClick={handleCapture}
-                disabled={!!camError}
-                className="flex-1 py-2.5 rounded-xl bg-[#3b2fc9] text-white text-sm font-medium hover:bg-[#3b2fc9]/90 disabled:opacity-40 flex items-center justify-center gap-2"
-              >
-                <Camera className="h-4 w-4" />
-                Capture
-              </button>
+              {camError ? (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex-1 py-2.5 rounded-xl bg-[#3b2fc9] text-white text-sm font-medium hover:bg-[#3b2fc9]/90 flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <Camera className="h-4 w-4" />
+                  Take Photo
+                </button>
+              ) : (
+                <button
+                  onClick={handleCapture}
+                  className="flex-1 py-2.5 rounded-xl bg-[#3b2fc9] text-white text-sm font-medium hover:bg-[#3b2fc9]/90 flex items-center justify-center gap-2"
+                >
+                  <Camera className="h-4 w-4" />
+                  Capture
+                </button>
+              )}
             </>
           )}
           {phase === 'preview' && (

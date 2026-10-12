@@ -106,10 +106,18 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
         ]),
   ];
 
+  const isMoreActive = moreMenuItems.some((item) => {
+    if (item.href.includes('?')) {
+      const base = item.href.split('?')[0];
+      return pathname.startsWith(base);
+    }
+    return pathname === item.href;
+  });
+
   return (
     <>
       {/* ── Fixed Native Bottom Navigation Bar ── */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 z-40 safe-bottom">
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 z-40 safe-bottom shadow-lg">
         <div className="flex items-center justify-around h-16 px-1">
           {navTabs.map((tab) => {
             const Icon = tab.icon;
@@ -118,7 +126,7 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`flex-1 flex flex-col items-center justify-center py-1 transition-all relative ${
+                className={`flex-1 flex flex-col items-center justify-center py-1 transition-all relative active:scale-95 ${
                   active ? 'text-[#3b2fc9]' : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
@@ -134,7 +142,7 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
                   {tab.label}
                 </span>
                 {active && (
-                  <span className="absolute bottom-1 w-1 h-1 bg-[#3b2fc9] rounded-full" />
+                  <span className="absolute bottom-1 w-1.5 h-1.5 bg-[#3b2fc9] rounded-full" />
                 )}
               </Link>
             );
@@ -143,12 +151,17 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
           {/* "More" Sheet Trigger */}
           <button
             onClick={() => setShowMoreMenu(true)}
-            className={`flex-1 flex flex-col items-center justify-center py-1 transition-all ${
-              showMoreMenu ? 'text-[#3b2fc9]' : 'text-gray-400 hover:text-gray-600'
+            className={`flex-1 flex flex-col items-center justify-center py-1 transition-all relative active:scale-95 ${
+              showMoreMenu || isMoreActive ? 'text-[#3b2fc9]' : 'text-gray-400 hover:text-gray-600'
             }`}
           >
-            <MoreHorizontal className="w-5 h-5 stroke-[1.8]" />
-            <span className="text-[10px] mt-1 font-medium">More</span>
+            <MoreHorizontal className={`w-5 h-5 ${showMoreMenu || isMoreActive ? 'stroke-[2.4]' : 'stroke-[1.8]'}`} />
+            <span className={`text-[10px] mt-1 tracking-tight ${showMoreMenu || isMoreActive ? 'font-bold' : 'font-medium'}`}>
+              More
+            </span>
+            {isMoreActive && (
+              <span className="absolute bottom-1 w-1.5 h-1.5 bg-[#3b2fc9] rounded-full" />
+            )}
           </button>
         </div>
       </nav>
@@ -163,15 +176,18 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
           />
 
           {/* Sheet Container */}
-          <div className="relative bg-white rounded-t-3xl max-h-[80vh] overflow-y-auto p-5 pb-8 shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-200">
+          <div className="relative bg-white rounded-t-3xl max-h-[82vh] overflow-y-auto p-5 pb-9 shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-200">
             {/* Sheet Handle */}
             <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto" />
 
             <div className="flex items-center justify-between pt-1">
-              <h3 className="text-base font-bold text-gray-900">All Modules & Tools</h3>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">All Modules & Tools</h3>
+                <p className="text-xs text-gray-500">Quick access to cafeteria management</p>
+              </div>
               <button
                 onClick={() => setShowMoreMenu(false)}
-                className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400"
+                className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 active:scale-95"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -186,13 +202,15 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
                     key={item.href}
                     href={item.href}
                     onClick={() => setShowMoreMenu(false)}
-                    className={`flex items-center gap-3.5 p-3 rounded-2xl border transition-all ${
+                    className={`flex items-center gap-3.5 p-3 rounded-2xl border transition-all active:scale-98 ${
                       isSelected
-                        ? 'border-[#3b2fc9]/30 bg-[#3b2fc9]/5 text-[#3b2fc9]'
+                        ? 'border-[#3b2fc9]/40 bg-[#3b2fc9]/5 text-[#3b2fc9] shadow-2xs'
                         : 'border-gray-100 bg-gray-50/70 hover:bg-gray-100 text-gray-800'
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-[#3b2fc9] shadow-xs shrink-0">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xs shrink-0 ${
+                      isSelected ? 'bg-[#3b2fc9] text-white' : 'bg-white border border-gray-100 text-[#3b2fc9]'
+                    }`}>
                       <Icon className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">

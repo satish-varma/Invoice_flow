@@ -11,7 +11,7 @@ import { getAllPricingItems } from '@/services/newrelicPricingService';
 import { saveStockRequest, getStockRequests } from '@/services/newrelicStockRequestService';
 import { CatalogItem, PricingItem } from '@/types/challan';
 import { StockRequest } from '@/types/stockRequest';
-import { Plus, Trash2, CheckCircle, PackageSearch, List, Copy, Pencil, Clock, FileText } from 'lucide-react';
+import { Plus, Minus, Trash2, CheckCircle, PackageSearch, List, Copy, Pencil, Clock, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -377,33 +377,62 @@ export default function StockRequestPage() {
                   </div>
 
                   {/* Quantity & Total Container on Mobile */}
-                  <div className="grid grid-cols-2 gap-3 md:contents">
+                  <div className="grid grid-cols-2 gap-3 md:contents items-center">
                     <div className="md:col-span-2">
                       <label className="text-xs font-medium text-gray-500 mb-1 block md:hidden">Quantity</label>
-                      <input
-                        type="number"
-                        min="1"
-                        {...register(`lineItems.${index}.quantity` as const)}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          setValue(`lineItems.${index}.quantity`, val);
-                          setValue(`lineItems.${index}.totalUnits`, orderType === 'cases' ? val * caseSize : val);
-                        }}
-                        className={cn(
-                          "w-full rounded-lg md:rounded border bg-white px-3 md:px-2 py-2 md:py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/50",
-                          errors.lineItems?.[index]?.quantity ? "border-red-500" : "border-gray-300"
-                        )}
-                      />
+                      <div className={cn(
+                        "flex items-center border rounded-lg md:rounded bg-white overflow-hidden shadow-2xs focus-within:ring-2 focus-within:ring-[#3b2fc9]/30 focus-within:border-[#3b2fc9] transition-all",
+                        errors.lineItems?.[index]?.quantity ? "border-red-500" : "border-gray-300"
+                      )}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = Number(lineItems[index]?.quantity) || 1;
+                            const next = Math.max(1, cur - 1);
+                            setValue(`lineItems.${index}.quantity`, next, { shouldValidate: true });
+                            setValue(`lineItems.${index}.totalUnits`, orderType === 'cases' ? next * caseSize : next);
+                          }}
+                          disabled={(lineItems[index]?.quantity || 1) <= 1}
+                          className="px-3 md:px-2 py-2 md:py-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 active:bg-gray-200 transition-colors shrink-0 disabled:opacity-25 disabled:pointer-events-none"
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          {...register(`lineItems.${index}.quantity` as const, { valueAsNumber: true })}
+                          onChange={(e) => {
+                            const val = Math.max(1, Number(e.target.value) || 1);
+                            setValue(`lineItems.${index}.quantity`, val);
+                            setValue(`lineItems.${index}.totalUnits`, orderType === 'cases' ? val * caseSize : val);
+                          }}
+                          className="w-full text-center border-0 bg-transparent py-2 md:py-1.5 text-sm font-bold text-gray-800 focus:outline-none focus:ring-0 min-w-0"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cur = Number(lineItems[index]?.quantity) || 1;
+                            const next = cur + 1;
+                            setValue(`lineItems.${index}.quantity`, next, { shouldValidate: true });
+                            setValue(`lineItems.${index}.totalUnits`, orderType === 'cases' ? next * caseSize : next);
+                          }}
+                          className="px-3 md:px-2 py-2 md:py-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 active:bg-gray-200 transition-colors shrink-0"
+                          aria-label="Increase quantity"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="md:col-span-1">
                       <label className="text-xs font-medium text-gray-500 mb-1 block md:hidden">Total Units</label>
-                      <input
-                        type="number"
-                        value={lineItems[index]?.totalUnits || 0}
-                        readOnly
-                        className="w-full rounded-lg md:rounded border border-transparent bg-transparent px-3 md:px-2 py-2 md:py-1.5 text-sm font-semibold text-gray-900"
-                      />
+                      <div className="flex items-center h-10 md:h-auto px-3 md:px-2 bg-gray-100/80 md:bg-transparent rounded-lg md:rounded">
+                        <span className="text-sm font-bold text-gray-900">
+                          {lineItems[index]?.totalUnits || 0}
+                        </span>
+                        <span className="text-[11px] text-gray-500 ml-1.5 md:hidden font-medium">units</span>
+                      </div>
                     </div>
                   </div>
 

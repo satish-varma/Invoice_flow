@@ -393,27 +393,36 @@ export default function PricingPage() {
       {/* Location Tabs + Filter Pills Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         {/* Location switcher */}
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
-          {locations.map(loc => (
-            <button
-              key={loc}
-              onClick={() => { setActiveLocation(loc); setEditingId(null); setShowAdd(false); }}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                activeLocation === loc
-                  ? 'bg-white text-[#3b2fc9] shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {NEWRELIC_LOCATIONS[loc].label}
-            </button>
-          ))}
+        <div className="w-full sm:w-auto flex p-1 bg-gray-100 rounded-xl border border-gray-200/80 shadow-2xs">
+          {locations.map(loc => {
+            const isSelected = activeLocation === loc;
+            const count = pricingItems.filter(i => i.location === loc).length;
+            return (
+              <button
+                key={loc}
+                onClick={() => { setActiveLocation(loc); setEditingId(null); setShowAdd(false); }}
+                className={`flex-1 sm:flex-initial px-4 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-bold sm:font-medium transition-all flex items-center justify-center gap-1.5 active:scale-98 ${
+                  isSelected
+                    ? 'bg-white text-[#3b2fc9] shadow-xs'
+                    : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                <span>{NEWRELIC_LOCATIONS[loc].label}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-medium ${
+                  isSelected ? 'bg-indigo-50 text-[#3b2fc9]' : 'bg-gray-200/70 text-gray-500'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Missing Rate Audit Filter Pills */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
           <button
             onClick={() => setFilterMode('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors shrink-0 ${
               filterMode === 'all'
                 ? 'bg-gray-800 text-white'
                 : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
@@ -424,7 +433,7 @@ export default function PricingPage() {
 
           <button
             onClick={() => setFilterMode('missing-cost')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-colors shrink-0 ${
               filterMode === 'missing-cost'
                 ? 'bg-red-600 text-white shadow-xs'
                 : missingCostCount > 0
@@ -438,7 +447,7 @@ export default function PricingPage() {
 
           <button
             onClick={() => setFilterMode('missing-mrp')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-colors shrink-0 ${
               filterMode === 'missing-mrp'
                 ? 'bg-amber-600 text-white shadow-xs'
                 : missingMrpCount > 0
@@ -460,8 +469,17 @@ export default function PricingPage() {
           placeholder="Search brand or item..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30"
+          className="w-full pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 bg-white"
         />
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-100"
+            title="Clear search"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
 
       {error && (

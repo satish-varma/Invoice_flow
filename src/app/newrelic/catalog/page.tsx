@@ -272,15 +272,24 @@ export default function CatalogPage() {
             placeholder="Search catalog by brand or item name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] transition-all"
+            className="w-full pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] transition-all"
           />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-100"
+              title="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
           <button
             onClick={() => setFilterMode('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors shrink-0 ${
               filterMode === 'all'
                 ? 'bg-gray-800 text-white'
                 : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
@@ -291,7 +300,7 @@ export default function CatalogPage() {
 
           <button
             onClick={() => setFilterMode('missing-mrp')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-colors shrink-0 ${
               filterMode === 'missing-mrp'
                 ? 'bg-amber-600 text-white shadow-xs'
                 : missingMrpCount > 0
@@ -305,7 +314,7 @@ export default function CatalogPage() {
 
           <button
             onClick={() => setFilterMode('missing-case')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-colors shrink-0 ${
               filterMode === 'missing-case'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : missingCaseCount > 0
@@ -470,54 +479,81 @@ export default function CatalogPage() {
               );
             }
 
+            const isMissingCase = !item.caseSize || item.caseSize <= 0;
+            const isMissingMrp = !item.mrp || item.mrp <= 0;
+
+            const startEdit = () => {
+              setEditingId(item.id!);
+              setEditBrand(item.brandName);
+              setEditItem(item.itemName);
+              setEditCaseSize(item.caseSize?.toString() || '');
+              setEditMrp(item.mrp?.toString() || '');
+              setError('');
+            };
+
             return (
-              <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-gray-300 transition-colors">
-                <div className="flex items-start justify-between gap-2 mb-2">
+              <div
+                key={item.id}
+                className="bg-white border border-gray-200 rounded-2xl p-4 shadow-2xs hover:border-gray-300 transition-all space-y-3"
+              >
+                <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-indigo-50 text-[#3b2fc9] border border-indigo-100 mb-1">
-                      {item.brandName}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-[#3b2fc9] border border-indigo-100">
+                        {item.brandName}
+                      </span>
+                      {isMissingCase && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                          No Case Size
+                        </span>
+                      )}
+                      {isMissingMrp && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                          No MRP
+                        </span>
+                      )}
+                    </div>
                     <h4 className="text-sm font-semibold text-gray-900 leading-snug break-words">
                       {item.itemName}
                     </h4>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <button
-                      onClick={() => {
-                        setEditingId(item.id!);
-                        setEditBrand(item.brandName);
-                        setEditItem(item.itemName);
-                        setEditCaseSize(item.caseSize?.toString() || '');
-                        setEditMrp(item.mrp?.toString() || '');
-                        setError('');
-                      }}
-                      className="p-1.5 text-gray-400 hover:text-[#3b2fc9] hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Edit"
+                      onClick={startEdit}
+                      className="p-2 text-gray-500 hover:text-[#3b2fc9] hover:bg-indigo-50 rounded-xl transition-colors active:scale-95"
+                      title="Edit Item"
+                      aria-label="Edit Item"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(item.id!)}
                       disabled={saving}
-                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Delete"
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors active:scale-95"
+                      title="Delete Item"
+                      aria-label="Delete Item"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100 bg-gray-50/50 -mx-4 -mb-4 p-3 rounded-b-xl">
+                {/* Tap-to-edit values bar */}
+                <div
+                  onClick={startEdit}
+                  className="grid grid-cols-2 gap-2 pt-2.5 border-t border-gray-100 bg-gray-50/70 -mx-4 -mb-4 px-4 py-2.5 rounded-b-2xl cursor-pointer hover:bg-gray-100/70 transition-colors"
+                  title="Tap to edit"
+                >
                   <div>
                     <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">Case Size</span>
                     <span className="text-sm font-medium text-gray-800">
-                      {item.caseSize ? `${item.caseSize} pcs` : <span className="text-amber-500 text-xs italic font-normal">Missing</span>}
+                      {item.caseSize ? `${item.caseSize} pcs` : <span className="text-blue-600 text-xs font-semibold">Tap to set</span>}
                     </span>
                   </div>
                   <div className="text-right">
                     <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">Ref MRP</span>
                     <span className="text-sm font-bold text-gray-900">
-                      {item.mrp ? `₹${item.mrp}` : <span className="text-amber-500 text-xs italic font-normal">Missing</span>}
+                      {item.mrp ? `₹${item.mrp}` : <span className="text-amber-600 text-xs font-semibold">Tap to set</span>}
                     </span>
                   </div>
                 </div>

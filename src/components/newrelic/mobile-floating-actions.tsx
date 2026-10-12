@@ -7,7 +7,7 @@ import { NewRelicLocation } from '@/types/challan';
 
 interface MobileFloatingActionsProps {
   onNewChallan: (loc: NewRelicLocation) => void;
-  onExportExcel: () => void;
+  onExportExcel?: () => void;
 }
 
 export function MobileFloatingActions({
@@ -87,7 +87,7 @@ export function MobileFloatingActions({
               </div>
             </button>
 
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className={`grid ${onExportExcel ? 'grid-cols-2' : 'grid-cols-1'} gap-2 pt-1`}>
               {/* Reconcile */}
               <Link
                 href="/newrelic/reconcile"
@@ -98,17 +98,19 @@ export function MobileFloatingActions({
                 Reconcile
               </Link>
 
-              {/* Export Excel */}
-              <button
-                onClick={() => {
-                  setIsOpen(false);
-                  onExportExcel();
-                }}
-                className="flex items-center justify-center gap-2 p-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 font-bold text-xs"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                Export Excel
-              </button>
+              {/* Export Excel (Admin / Superadmin only) */}
+              {onExportExcel && (
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    onExportExcel();
+                  }}
+                  className="flex items-center justify-center gap-2 p-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 font-bold text-xs"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                  Export Excel
+                </button>
+              )}
             </div>
           </div>
         </div>

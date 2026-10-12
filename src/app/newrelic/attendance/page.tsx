@@ -67,7 +67,8 @@ function AttendancePageContent() {
   const { toast } = useToast();
   const { user, role } = useAuth();
   const searchParams = useSearchParams();
-  const isAdmin = role === 'admin' || role === 'superadmin' || role === 'manager';
+  const isOwnerOrAdmin = role === 'admin' || role === 'superadmin';
+  const isAdmin = isOwnerOrAdmin || role === 'manager';
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -1036,16 +1037,18 @@ function AttendancePageContent() {
                       onChange={(e) => setSelectedMonth(e.target.value)}
                       className="h-8 px-2.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
                     />
-                    <button
-                      type="button"
-                      onClick={exportMyMonthlyExcel}
-                      disabled={myMonthlyRecords.length === 0}
-                      className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-medium flex items-center gap-1.5 shadow-xs transition-colors"
-                      title="Download Excel report"
-                    >
-                      <FileSpreadsheet className="h-3.5 w-3.5" />
-                      Export Excel
-                    </button>
+                    {isOwnerOrAdmin && (
+                      <button
+                        type="button"
+                        onClick={exportMyMonthlyExcel}
+                        disabled={myMonthlyRecords.length === 0}
+                        className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-medium flex items-center gap-1.5 shadow-xs transition-colors"
+                        title="Download Excel report"
+                      >
+                        <FileSpreadsheet className="h-3.5 w-3.5" />
+                        Export Excel
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -1297,17 +1300,19 @@ function AttendancePageContent() {
                     />
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={exportAdminPayrollExcel}
-                      disabled={isLoadingPayroll}
-                      className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-medium flex items-center gap-1.5 shadow-xs transition-colors"
-                    >
-                      <FileSpreadsheet className="h-3.5 w-3.5" />
-                      Export Company Payroll (.xlsx)
-                    </button>
-                  </div>
+                  {isOwnerOrAdmin && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={exportAdminPayrollExcel}
+                        disabled={isLoadingPayroll}
+                        className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-medium flex items-center gap-1.5 shadow-xs transition-colors"
+                      >
+                        <FileSpreadsheet className="h-3.5 w-3.5" />
+                        Export Company Payroll (.xlsx)
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {isLoadingPayroll ? (

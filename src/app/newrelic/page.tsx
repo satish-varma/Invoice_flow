@@ -377,19 +377,21 @@ export default function NewRelicPage() {
                 <RefreshCcw className="h-5 w-5" />
                 Reconcile
               </Link>
-              <button
-                onClick={handleExportExcel}
-                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2"
-              >
-                <FileSpreadsheet className="h-5 w-5" />
-                Export Excel
-              </button>
+              {(role === 'admin' || role === 'superadmin') && (
+                <button
+                  onClick={handleExportExcel}
+                  className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2"
+                >
+                  <FileSpreadsheet className="h-5 w-5" />
+                  Export Excel
+                </button>
+              )}
             </div>
 
             {/* Native Mobile Floating Action Button (+) */}
             <MobileFloatingActions
               onNewChallan={(loc) => handleStartCreateNew(loc)}
-              onExportExcel={handleExportExcel}
+              onExportExcel={(role === 'admin' || role === 'superadmin') ? handleExportExcel : undefined}
             />
 
             {/* Floating Back to Top Button on Mobile */}

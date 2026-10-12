@@ -20,6 +20,7 @@ export default function TuckshopPage() {
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogInitialTab, setDialogInitialTab] = useState<'expense' | 'sale'>('expense');
+  const [editingRecord, setEditingRecord] = useState<NewRelicTuckshopRecord | null>(null);
 
   useEffect(() => {
     const unsubscribe = subscribeToTuckshopRecords((data) => {
@@ -41,7 +42,14 @@ export default function TuckshopPage() {
   }, [records]);
 
   const openDialog = (tab: 'expense' | 'sale') => {
+    setEditingRecord(null);
     setDialogInitialTab(tab);
+    setIsDialogOpen(true);
+  };
+
+  const handleEditRecord = (record: NewRelicTuckshopRecord) => {
+    setEditingRecord(record);
+    setDialogInitialTab(record.type);
     setIsDialogOpen(true);
   };
   
@@ -71,13 +79,23 @@ export default function TuckshopPage() {
           </button>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) setEditingRecord(null);
+        }}>
           <DialogContent className="sm:max-w-[500px] p-0 border-0 overflow-hidden bg-transparent shadow-none">
-            <DialogTitle className="sr-only">Log Tuckshop Record</DialogTitle>
+            <DialogTitle className="sr-only">
+              {editingRecord ? 'Edit Tuckshop Record' : 'Log Tuckshop Record'}
+            </DialogTitle>
             <TuckshopForm 
+              key={editingRecord ? `edit-${editingRecord.id}` : `new-${dialogInitialTab}`}
               initialTab={dialogInitialTab}
+              editRecord={editingRecord}
               existingCategories={existingCategories} 
-              onSuccess={() => setIsDialogOpen(false)} 
+              onSuccess={() => {
+                setIsDialogOpen(false);
+                setEditingRecord(null);
+              }} 
             />
           </DialogContent>
         </Dialog>
@@ -91,7 +109,11 @@ export default function TuckshopPage() {
       ) : (
         <>
           <div className="w-full">
-            <TuckshopList records={records} showDashboard={role === 'admin'} />
+            <TuckshopList
+              records={records}
+              showDashboard={role === 'admin' || role === 'superadmin'}
+              onEdit={handleEditRecord}
+            />
           </div>
         </>
       )}

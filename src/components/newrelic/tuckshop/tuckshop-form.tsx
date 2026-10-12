@@ -9,16 +9,19 @@ import { PlusCircle, Loader2, IndianRupee, TrendingDown } from 'lucide-react';
 interface Props {
   existingCategories: string[];
   initialTab?: 'expense' | 'sale';
+  editRecord?: NewRelicTuckshopRecord | null;
   onSuccess?: () => void;
 }
 
-export function TuckshopForm({ existingCategories, initialTab = 'expense', onSuccess }: Props) {
+export function TuckshopForm({ existingCategories, initialTab = 'expense', editRecord, onSuccess }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'expense' | 'sale'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'expense' | 'sale'>(editRecord?.type || initialTab);
 
-  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState<string>(
+    editRecord?.date ? editRecord.date.split('T')[0] : new Date().toISOString().split('T')[0]
+  );
   
   // Map full names to codes since they are stored as 'bangalore' / 'hyderabad' in users collection
   const getMappedLocation = (locStr?: string) => {
@@ -29,25 +32,36 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', onSuc
   };
   
   const defaultLoc = getMappedLocation(user?.preferredLocations?.[0]);
-  const [location, setLocation] = useState<'HYD' | 'BLR'>(defaultLoc || 'BLR');
+  const [location, setLocation] = useState<'HYD' | 'BLR'>(
+    (editRecord?.location as 'HYD' | 'BLR') || defaultLoc || 'BLR'
+  );
 
-  // Also update if user object loads later
-  React.useEffect(() => {
-    const mappedLoc = getMappedLocation(user?.preferredLocations?.[0]);
-    if (mappedLoc && location === 'BLR') {
-      setLocation(mappedLoc);
-    }
-  }, [user?.preferredLocations]);
-  
   // Expense states
-  const [category, setCategory] = useState<string>('Dosa Batter');
-  const [customCategory, setCustomCategory] = useState<string>('');
-  const [expenseAmount, setExpenseAmount] = useState<string>('');
-  const [expenseDesc, setExpenseDesc] = useState<string>('');
+  const isPredefinedCategory = ['Dosa Batter', 'Vegetables', 'Groceries', 'Bread', 'Cutlery', 'Fruits'].includes(
+    editRecord?.category || ''
+  );
+  const [category, setCategory] = useState<string>(
+    editRecord
+      ? isPredefinedCategory
+        ? editRecord.category
+        : 'other'
+      : 'Dosa Batter'
+  );
+  const [customCategory, setCustomCategory] = useState<string>(
+    editRecord && !isPredefinedCategory ? editRecord.category : ''
+  );
+  const [expenseAmount, setExpenseAmount] = useState<string>(
+    editRecord && editRecord.type === 'expense' ? String(editRecord.amount) : ''
+  );
+  const [expenseDesc, setExpenseDesc] = useState<string>(
+    editRecord?.description || ''
+  );
   const [billFile, setBillFile] = useState<File | null>(null);
   
   // Sale states
-  const [saleAmount, setSaleAmount] = useState<string>('');
+  const [saleAmount, setSaleAmount] = useState<string>(
+    editRecord && editRecord.type === 'sale' ? String(editRecord.amount) : ''
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,12 +89,13 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', onSuc
 
     setIsSaving(true);
     try {
-      let billUrl = undefined;
+      let billUrl = editRecord?.billUrl || undefined;
       if (activeTab === 'expense' && billFile) {
         billUrl = await uploadTuckshopBill(billFile);
       }
 
       const record: Partial<NewRelicTuckshopRecord> = {
+        ...(editRecord?.id ? { id: editRecord.id } : {}),
         date,
         location,
         type: activeTab,
@@ -91,7 +106,7 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', onSuc
       };
 
       await saveTuckshopRecord(record, user?.email || null);
-      toast({ title: 'Record saved successfully' });
+      toast({ title: editRecord ? 'Record updated successfully' : 'Record saved successfully' });
       
       // Reset form
       if (activeTab === 'expense') {
@@ -124,7 +139,7 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', onSuc
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
       <div className={`p-4 border-b border-gray-100 flex items-center gap-2 font-semibold ${activeTab === 'expense' ? 'text-red-600 bg-red-50/50' : 'text-green-600 bg-green-50/50'}`}>
         {activeTab === 'expense' ? <TrendingDown className="h-5 w-5" /> : <IndianRupee className="h-5 w-5" />}
-        {activeTab === 'expense' ? 'Log Expense' : 'Log Daily Sale'}
+        {editRecord ? `Edit ${activeTab === 'expense' ? 'Expense' : 'Sale'}` : activeTab === 'expense' ? 'Log Expense' : 'Log Daily Sale'}
       </div>
 
       <form onSubmit={handleSubmit} className="p-4 sm:p-6">
@@ -248,8 +263,12 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', onSuc
               activeTab === 'sale' ? 'bg-green-600 hover:bg-green-700' : 'bg-[#3b2fc9] hover:bg-[#2a2296]'
             }`}
           >
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
-            {activeTab === 'sale' ? 'Record Sale' : 'Save Expense'}
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <PlusCircle className="h-4 w-4" />
+            )}
+            {editRecord ? 'Update Record' : activeTab === 'sale' ? 'Record Sale' : 'Save Expense'}
           </button>
         </div>
       </form>

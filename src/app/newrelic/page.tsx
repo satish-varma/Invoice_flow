@@ -102,7 +102,11 @@ export default function NewRelicPage() {
   // Initialize filterLocation based on preferredLocations
   useEffect(() => {
     if (user?.preferredLocations && user.preferredLocations.length > 0) {
-      setFilterLocation('preferred');
+      if (user.preferredLocations.length === 1) {
+        setFilterLocation(user.preferredLocations[0]);
+      } else {
+        setFilterLocation('preferred');
+      }
     }
   }, [user]);
 
@@ -331,21 +335,21 @@ export default function NewRelicPage() {
         {role === 'admin' || role === 'superadmin' ? (
           <NewRelicDashboard challans={displayChallans} showFinancials={isUnlocked && showFinancials} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <StatCard
-              icon={<FileText className="h-5 w-5 text-[#3b2fc9]" />}
+              icon={<FileText className="h-4 sm:h-5 w-4 sm:w-5 text-[#3b2fc9]" />}
               label="Total Challans"
               value={challans.length}
               bg="bg-[#3b2fc9]/5"
             />
             <StatCard
-              icon={<MapPin className="h-5 w-5 text-blue-500" />}
+              icon={<MapPin className="h-4 sm:h-5 w-4 sm:w-5 text-blue-500" />}
               label="Hyderabad"
               value={hydCount}
               bg="bg-blue-50"
             />
             <StatCard
-              icon={<MapPin className="h-5 w-5 text-emerald-500" />}
+              icon={<MapPin className="h-4 sm:h-5 w-4 sm:w-5 text-emerald-500" />}
               label="Bangalore"
               value={blrCount}
               bg="bg-emerald-50"
@@ -600,54 +604,60 @@ export default function NewRelicPage() {
               )}
             </div>
 
-            {/* Bottom Row: Quick Cycles + Date Presets & Filter Drawer Toggle */}
+            {/* Bottom Row: Date Presets & Filter Reset (Cycle only shown for admin/superadmin) */}
             <div className="pt-2 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2">
-              {/* Cycle Presets */}
-              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar py-0.5">
-                <span className="text-[11px] font-bold text-gray-400 mr-1 hidden sm:inline">Cycle:</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setFilterCycle('all');
-                  }}
-                  className={`h-7 px-2.5 rounded-full text-xs font-medium transition-all ${
-                    filterCycle === 'all'
-                      ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-bold border border-[#3b2fc9]/30'
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200/70'
-                  }`}
-                >
-                  All Dates
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setFilterCycle('1-15');
-                  }}
-                  className={`h-7 px-2.5 rounded-full text-xs font-medium transition-all ${
-                    filterCycle === '1-15'
-                      ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-bold border border-[#3b2fc9]/30'
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200/70'
-                  }`}
-                >
-                  Cycle 1 (1–15)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setFilterCycle('16-31');
-                  }}
-                  className={`h-7 px-2.5 rounded-full text-xs font-medium transition-all ${
-                    filterCycle === '16-31'
-                      ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-bold border border-[#3b2fc9]/30'
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200/70'
-                  }`}
-                >
-                  Cycle 2 (16–End)
-                </button>
-              </div>
+              {/* Cycle Presets: Only visible to Admin / Superadmin */}
+              {(role === 'admin' || role === 'superadmin') ? (
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar py-0.5">
+                  <span className="text-[11px] font-bold text-gray-400 mr-1 hidden sm:inline">Cycle:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setFilterCycle('all');
+                    }}
+                    className={`h-7 px-2.5 rounded-full text-xs font-medium transition-all ${
+                      filterCycle === 'all'
+                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-bold border border-[#3b2fc9]/30'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200/70'
+                    }`}
+                  >
+                    All Dates
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setFilterCycle('1-15');
+                    }}
+                    className={`h-7 px-2.5 rounded-full text-xs font-medium transition-all ${
+                      filterCycle === '1-15'
+                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-bold border border-[#3b2fc9]/30'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200/70'
+                    }`}
+                  >
+                    Cycle 1 (1–15)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setFilterCycle('16-31');
+                    }}
+                    className={`h-7 px-2.5 rounded-full text-xs font-medium transition-all ${
+                      filterCycle === '16-31'
+                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-bold border border-[#3b2fc9]/30'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200/70'
+                    }`}
+                  >
+                    Cycle 2 (16–End)
+                  </button>
+                </div>
+              ) : (
+                <div className="text-xs font-medium text-gray-400 flex items-center gap-1">
+                  <span>📅 Filter by Date:</span>
+                </div>
+              )}
 
               {/* Date Pickers (Month & Year) & Clear Filters */}
               <div className="flex items-center gap-2 ml-auto">
@@ -697,12 +707,15 @@ export default function NewRelicPage() {
                 </div>
 
                 {/* Clear Active Filters Button */}
-                {(filterLocation !== 'all' || filterMonth !== 'all' || filterYear !== 'all' || filterCycle !== 'all' || searchQuery.trim() !== '') && (
+                {(filterLocation !== (user?.preferredLocations && user.preferredLocations.length === 1 ? user.preferredLocations[0] : (user?.preferredLocations?.length ? 'preferred' : 'all')) || filterMonth !== 'all' || filterYear !== 'all' || filterCycle !== 'all' || searchQuery.trim() !== '') && (
                   <button
                     type="button"
                     onClick={() => {
                       triggerHaptic('medium');
-                      setFilterLocation('all');
+                      const defaultLoc = user?.preferredLocations && user.preferredLocations.length === 1 
+                        ? user.preferredLocations[0] 
+                        : (user?.preferredLocations?.length ? 'preferred' : 'all');
+                      setFilterLocation(defaultLoc);
                       setFilterMonth('all');
                       setFilterYear('all');
                       setFilterCycle('all');
@@ -849,11 +862,11 @@ function StatCard({
   bg: string;
 }) {
   return (
-    <div className={`rounded-2xl border border-gray-200 bg-white shadow-sm p-4 sm:p-5 flex items-center gap-3.5 sm:gap-4`}>
-      <div className={`${bg} p-2.5 sm:p-3 rounded-xl shrink-0`}>{icon}</div>
-      <div>
-        <p className="text-xl sm:text-2xl font-bold text-gray-900">{value}</p>
-        <p className="text-xs sm:text-sm text-gray-500">{label}</p>
+    <div className={`rounded-xl sm:rounded-2xl border border-gray-200 bg-white shadow-2xs sm:shadow-sm p-2.5 sm:p-5 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4`}>
+      <div className={`${bg} p-2 sm:p-3 rounded-lg sm:rounded-xl shrink-0`}>{icon}</div>
+      <div className="min-w-0">
+        <p className="text-base sm:text-2xl font-bold text-gray-900 leading-tight">{value}</p>
+        <p className="text-[10px] sm:text-sm text-gray-500 font-medium truncate">{label}</p>
       </div>
     </div>
   );

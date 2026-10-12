@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Loader2, Camera, LogIn, LogOut, MapPin, Clock, CheckCircle, AlertCircle, Calendar, Users, IndianRupee, Phone, Mail, CalendarDays, ChevronDown, ChevronUp, User, FileSpreadsheet, Calculator } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -63,11 +63,16 @@ function getWorkingDaysInMonth(yearMonth: string, excludeSundays: boolean = fals
   return working;
 }
 
-export default function AttendancePage() {
+function AttendancePageContent() {
   const { toast } = useToast();
   const { user, role } = useAuth();
   const searchParams = useSearchParams();
   const isAdmin = role === 'admin' || role === 'superadmin' || role === 'manager';
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // --- Self service state ---
   const [employees, setEmployees] = useState<NewRelicEmployee[]>([]);
@@ -559,7 +564,18 @@ export default function AttendancePage() {
   };
 
   const todayDate = getTodayDate();
-  const displayDate = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const [displayDate, setDisplayDate] = useState<string>('');
+
+  useEffect(() => {
+    setDisplayDate(
+      new Date().toLocaleDateString('en-IN', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    );
+  }, []);
 
   /* group history by date */
   const historyByDate = useMemo(() => {
@@ -579,8 +595,8 @@ export default function AttendancePage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold text-gray-800">Attendance & Payroll</h1>
-            <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-              <Calendar className="h-3.5 w-3.5" /> {displayDate}
+            <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5" suppressHydrationWarning>
+              <Calendar className="h-3.5 w-3.5" /> {displayDate || 'Loading date…'}
             </p>
           </div>
 
@@ -654,7 +670,7 @@ export default function AttendancePage() {
               </div>
 
               {/* Live Digital Clock */}
-              <h2 className="text-3xl font-extrabold tracking-tight font-mono text-white mb-1 z-10">
+              <h2 className="text-3xl font-extrabold tracking-tight font-mono text-white mb-1 z-10" suppressHydrationWarning>
                 {currentTime || '00:00:00'}
               </h2>
               <p className="text-xs text-white/80 font-medium mb-6 z-10">
@@ -1905,6 +1921,23 @@ function AdminAttendanceCard({
         </div>
       )}
     </div>
+  );
+}
+
+export default function AttendancePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Loader2 className="h-5 w-5 animate-spin text-[#3b2fc9]" />
+            Loading attendance...
+          </div>
+        </div>
+      }
+    >
+      <AttendancePageContent />
+    </Suspense>
   );
 }
 

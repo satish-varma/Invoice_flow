@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { saveTuckshopRecord, uploadTuckshopBill, NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { PlusCircle, Loader2, IndianRupee, TrendingDown } from 'lucide-react';
+import { SiteId, SITE_OPTIONS, resolveSiteId, COMPANY_SITES } from '@/types/site';
 
 interface Props {
   existingCategories: string[];
@@ -14,7 +15,8 @@ interface Props {
 }
 
 export function TuckshopForm({ existingCategories, initialTab = 'expense', editRecord, onSuccess }: Props) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isAdmin = role === 'admin' || role === 'superadmin';
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'expense' | 'sale'>(editRecord?.type || initialTab);
@@ -30,13 +32,26 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
     if (locStr.toLowerCase() === 'hyderabad' || locStr === 'HYD') return 'HYD';
     return undefined;
   };
+
+  const [selectedSite, setSelectedSite] = useState<SiteId>(() => {
+    if (editRecord?.siteId) return resolveSiteId(editRecord.siteId);
+    return user?.assignedSite ? resolveSiteId(user.assignedSite) : 'newrelic';
+  });
+
+  const effectiveSite = isAdmin ? selectedSite : (user?.assignedSite ? resolveSiteId(user.assignedSite) : 'newrelic');
+  const isHydOnlySite = effectiveSite === 'dsm' || effectiveSite === 'ntt_data';
   
-  const userSite = user?.assignedSite || 'newrelic';
-  const isHydOnlySite = userSite === 'dsm' || userSite === 'ntt_data';
   const defaultLoc = isHydOnlySite ? 'HYD' : getMappedLocation(user?.preferredLocations?.[0]);
   const [location, setLocation] = useState<'HYD' | 'BLR'>(
     (editRecord?.location as 'HYD' | 'BLR') || defaultLoc || (isHydOnlySite ? 'HYD' : 'BLR')
   );
+
+  const handleSiteChange = (newSite: SiteId) => {
+    setSelectedSite(newSite);
+    if (newSite === 'dsm' || newSite === 'ntt_data') {
+      setLocation('HYD');
+    }
+  };
 
   // Expense states
   const isPredefinedCategory = ['Dosa Batter', 'Vegetables', 'Groceries', 'Bread', 'Cutlery', 'Fruits'].includes(
@@ -98,9 +113,9 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
 
       const record: Partial<NewRelicTuckshopRecord> = {
         ...(editRecord?.id ? { id: editRecord.id } : {}),
-        siteId: editRecord?.siteId || user?.assignedSite || 'newrelic',
+        siteId: effectiveSite,
         date,
-        location,
+        location: isHydOnlySite ? 'HYD' : location,
         type: activeTab,
         category: activeTab === 'sale' ? 'Sales' : finalCategory,
         amount: Number(amount),
@@ -148,6 +163,25 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
       <form onSubmit={handleSubmit} className="p-4 sm:p-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
           
+          {isAdmin && (
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Company Site <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedSite}
+                onChange={(e) => handleSiteChange(e.target.value as SiteId)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white font-medium"
+              >
+                {SITE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label} ({COMPANY_SITES[opt.value]?.tagline || opt.value})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Date <span className="text-red-500">*</span></label>
             <input
@@ -172,7 +206,7 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
             </select>
             {isHydOnlySite && (
               <span className="text-[10px] text-amber-600 mt-1 block">
-                📍 Locked to Hyderabad for {userSite === 'dsm' ? 'DSM' : 'NTT Data'}
+                📍 Locked to Hyderabad for {COMPANY_SITES[effectiveSite]?.name || effectiveSite}
               </span>
             )}
           </div>

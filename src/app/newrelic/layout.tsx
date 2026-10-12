@@ -11,6 +11,7 @@ import { getStockRequests } from '@/services/newrelicStockRequestService';
 import { FinancialPasswordModal } from '@/components/newrelic/financial-password-modal';
 import { MobileAppNavigation } from '@/components/newrelic/mobile-app-navigation';
 import { MobileAppBar } from '@/components/newrelic/mobile-app-bar';
+import { NetworkStatusIndicator } from '@/components/newrelic/network-status-indicator';
 
 function FinancialStatusBadge() {
   const { isUnlocked, remainingMinutes, lockFinancials } = useFinancialAuth();
@@ -83,6 +84,9 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
   return (
     <FinancialAuthProvider>
       <div className="min-h-screen bg-gray-50">
+      {/* Network offline/restored indicator */}
+      <NetworkStatusIndicator />
+
       {/* Mobile Top App Bar (sm:hidden) */}
       <div className="sm:hidden">
         <MobileAppBar>

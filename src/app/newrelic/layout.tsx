@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { getStockRequests } from '@/services/newrelicStockRequestService';
 import { FinancialPasswordModal } from '@/components/newrelic/financial-password-modal';
+import { MobileAppNavigation } from '@/components/newrelic/mobile-app-navigation';
 
 function FinancialStatusBadge() {
   const { isUnlocked, remainingMinutes, lockFinancials } = useFinancialAuth();
@@ -100,7 +101,7 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
                 Users
               </Link>
             )}
-            <span className="text-[11px] sm:text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 truncate">
+            <span className="text-[11px] sm:text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 truncate hidden md:inline">
               Returnable Items · HYD & BLR
             </span>
             
@@ -122,8 +123,8 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
         </div>
       </header>
 
-      {/* Secondary Navigation */}
-      <div className="bg-white border-b border-gray-200">
+      {/* Secondary Navigation (Desktop only: hidden on mobile, replaced by bottom nav) */}
+      <div className="hidden sm:block bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-8 flex items-center gap-6">
           <Link 
             href="/newrelic" 
@@ -241,7 +242,10 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
         </div>
       </div>
 
-        <main>{children}</main>
+        <main className="pb-20 sm:pb-0">{children}</main>
+
+        {/* Native Mobile Bottom Navigation Bar */}
+        <MobileAppNavigation pendingStockCount={pendingCount} />
       </div>
     </FinancialAuthProvider>
   );

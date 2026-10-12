@@ -2,8 +2,8 @@
 
 import { NewRelicChallan } from '@/types/challan';
 
-import React from 'react';
-import { Eye, Download } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Eye, Download, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,31 +27,118 @@ export function NewRelicChallanViewModal({
   challan,
   onDownload,
 }: NewRelicChallanViewModalProps) {
+  const [zoomMode, setZoomMode] = useState<'fit' | '100%'>('fit');
+  const [scale, setScale] = useState<number>(0.8);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const allItems = challan?.lineItems ?? [];
+  const pageCount = allItems.length <= 10 ? 1 : 1 + Math.ceil((allItems.length - 10) / 18);
+  const totalHeight = pageCount * 1123;
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const computeScale = () => {
+      if (!containerRef.current) return;
+      const padding = window.innerWidth < 640 ? 16 : 48;
+      const availableWidth = containerRef.current.clientWidth - padding;
+      if (zoomMode === 'fit') {
+        const fitScale = Math.min(1.05, Math.max(0.35, availableWidth / 794));
+        setScale(fitScale);
+      } else {
+        setScale(1.0);
+      }
+    };
+
+    computeScale();
+    window.addEventListener('resize', computeScale);
+    const timer = setTimeout(computeScale, 150);
+    return () => {
+      window.removeEventListener('resize', computeScale);
+      clearTimeout(timer);
+    };
+  }, [isOpen, zoomMode, challan]);
+
   if (!challan) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[850px] max-h-[90vh] flex flex-col p-0 overflow-hidden rounded-2xl bg-[#e5e7eb]">
-        <DialogHeader className="px-6 py-4 border-b border-gray-200 bg-white shadow-sm shrink-0 flex flex-row items-center justify-between z-10">
-          <div className="flex items-center gap-2 text-[#3b2fc9]">
-            <Eye className="h-5 w-5" />
-            <DialogTitle className="text-xl">Preview: {challan.dcNumber || 'New Document'}</DialogTitle>
+      <DialogContent className="w-[96vw] max-w-[850px] max-h-[92vh] flex flex-col p-0 overflow-hidden rounded-2xl bg-[#e5e7eb] shadow-2xl">
+        <DialogHeader className="px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-200 bg-white shadow-xs shrink-0 flex flex-row items-center justify-between gap-2 z-10">
+          <div className="flex items-center gap-2 text-[#3b2fc9] min-w-0">
+            <Eye className="h-5 w-5 shrink-0" />
+            <DialogTitle className="text-base sm:text-xl font-bold truncate">
+              {challan.dcNumber || 'Document'}
+            </DialogTitle>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Zoom Mode Toggle */}
+            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200">
+              <button
+                type="button"
+                onClick={() => setZoomMode('fit')}
+                className={`px-2 py-1 text-[11px] sm:text-xs font-semibold rounded-md transition-all flex items-center gap-1 ${
+                  zoomMode === 'fit'
+                    ? 'bg-white text-[#3b2fc9] shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                title="Fit full document to screen"
+              >
+                <Maximize2 className="h-3 w-3" />
+                <span>Fit</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoomMode('100%')}
+                className={`px-2 py-1 text-[11px] sm:text-xs font-semibold rounded-md transition-all flex items-center gap-1 ${
+                  zoomMode === '100%'
+                    ? 'bg-white text-[#3b2fc9] shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                title="View actual 100% size (scrollable)"
+              >
+                <ZoomIn className="h-3 w-3" />
+                <span>100%</span>
+              </button>
+            </div>
+
             <Button
               onClick={() => onDownload(challan)}
-              className="h-9 gap-2 bg-[#3b2fc9] hover:bg-[#2a2296] text-white"
+              size="sm"
+              className="h-8 sm:h-9 px-2.5 sm:px-3.5 gap-1.5 bg-[#3b2fc9] hover:bg-[#2a2296] text-white rounded-xl text-xs font-semibold shadow-xs"
             >
-              <Download className="h-4 w-4" /> Download PDF
+              <Download className="h-3.5 w-3.5" />
+              <span className="hidden xs:inline">PDF</span>
             </Button>
           </div>
         </DialogHeader>
 
         {/* Scrollable area for the document preview */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center items-start">
-          <div className="shadow-2xl rounded overflow-hidden scale-[0.7] md:scale-100 origin-top bg-white ring-1 ring-black/5">
-            <div className="pointer-events-none">
-              <NewRelicChallanPreview challan={challan} showMrp={true} />
+        <div
+          ref={containerRef}
+          className="flex-1 overflow-x-auto overflow-y-auto p-2 sm:p-6 flex justify-center items-start bg-gray-200/90"
+        >
+          <div
+            style={{
+              width: `${794 * scale}px`,
+              height: `${totalHeight * scale}px`,
+              position: 'relative',
+              transition: 'width 0.2s ease, height 0.2s ease',
+            }}
+            className="shrink-0"
+          >
+            <div
+              style={{
+                transform: `scale(${scale})`,
+                transformOrigin: 'top left',
+                width: '794px',
+              }}
+              className="shadow-2xl rounded-sm bg-white ring-1 ring-black/10 origin-top-left"
+            >
+              <div className="pointer-events-none">
+                <NewRelicChallanPreview challan={challan} showMrp={true} />
+              </div>
             </div>
           </div>
         </div>

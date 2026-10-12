@@ -69,6 +69,7 @@ export function NewRelicChallanList({
   showFinancials,
 }: NewRelicChallanListProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteConfirmChallan, setDeleteConfirmChallan] = useState<NewRelicChallan | null>(null);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -306,35 +307,64 @@ export function NewRelicChallanList({
                   </Button>
                 ) : (
                   <>
-                    {/* Primary Button: View & Preview Challan */}
+                    {/* View Document (compact size) */}
                     <Button
                       variant="default"
                       size="sm"
-                      className="flex-1 h-10 bg-[#3b2fc9] hover:bg-[#2f25a8] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-xs active:scale-[0.98] transition-transform"
+                      className="h-9 px-3 bg-[#3b2fc9] hover:bg-[#2f25a8] text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs active:scale-95 transition-transform"
                       onClick={() => onPreviewChallan ? onPreviewChallan(challan) : onDownloadChallan(challan)}
+                      title="View Document"
                     >
-                      <Eye className="h-4 w-4" />
-                      View Document
+                      <Eye className="h-3.5 w-3.5" />
+                      <span>View</span>
                     </Button>
 
-                    {/* Secondary Quick PDF Download Button */}
+                    {/* Admin Quick View (in main view) */}
+                    {role === 'admin' && onAdminPreviewChallan && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9 px-2.5 border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-[#3b2fc9] rounded-xl text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-transform"
+                        onClick={() => onAdminPreviewChallan(challan)}
+                        title="Admin Quick View"
+                      >
+                        <Receipt className="h-3.5 w-3.5" />
+                        <span>Quick View</span>
+                      </Button>
+                    )}
+
+                    {/* Edit Challan (in main view) */}
+                    {role !== 'user' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9 px-2.5 border-gray-200 text-gray-700 hover:text-[#3b2fc9] hover:border-[#3b2fc9]/40 rounded-xl text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-transform"
+                        onClick={() => onSelectChallan(challan)}
+                        title="Edit Challan"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                        <span>Edit</span>
+                      </Button>
+                    )}
+
+                    {/* Quick PDF Download Button */}
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-10 px-3 border-gray-200 text-gray-700 hover:text-[#3b2fc9] hover:border-[#3b2fc9]/40 rounded-xl"
+                      className="h-9 w-9 p-0 border-gray-200 text-gray-700 hover:text-[#3b2fc9] hover:border-[#3b2fc9]/40 rounded-xl active:scale-95 transition-transform"
                       onClick={() => onDownloadChallan(challan)}
                       title="Download PDF"
                     >
-                      <Download className="h-4 w-4" />
+                      <Download className="h-3.5 w-3.5" />
                     </Button>
 
-                    {/* Three-Dot Overflow Menu for Secondary Actions */}
+                    {/* Three-Dot Overflow Menu (Contains Duplicate, History, and Delete) */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-10 w-10 p-0 border-gray-200 text-gray-600 hover:text-gray-900 rounded-xl"
+                          className="h-9 w-9 p-0 border-gray-200 text-gray-600 hover:text-gray-900 rounded-xl ml-auto active:scale-95 transition-transform"
                           aria-label="More actions"
                         >
                           <MoreVertical className="h-4 w-4" />
@@ -343,29 +373,11 @@ export function NewRelicChallanList({
                       <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-lg">
                         {role !== 'user' && (
                           <DropdownMenuItem
-                            onClick={() => onSelectChallan(challan)}
-                            className="cursor-pointer gap-2 py-2"
-                          >
-                            <Edit2 className="h-4 w-4 text-gray-500" />
-                            <span>Edit Challan</span>
-                          </DropdownMenuItem>
-                        )}
-                        {role !== 'user' && (
-                          <DropdownMenuItem
                             onClick={() => onDuplicateChallan(challan)}
                             className="cursor-pointer gap-2 py-2"
                           >
                             <Copy className="h-4 w-4 text-amber-500" />
                             <span>Duplicate Challan</span>
-                          </DropdownMenuItem>
-                        )}
-                        {role === 'admin' && onAdminPreviewChallan && (
-                          <DropdownMenuItem
-                            onClick={() => onAdminPreviewChallan(challan)}
-                            className="cursor-pointer gap-2 py-2"
-                          >
-                            <Receipt className="h-4 w-4 text-[#3b2fc9]" />
-                            <span>Admin Quick View</span>
                           </DropdownMenuItem>
                         )}
                         {role === 'admin' && onViewHistory && (
@@ -377,46 +389,21 @@ export function NewRelicChallanList({
                             <span>Edit History</span>
                           </DropdownMenuItem>
                         )}
+                        {role === 'admin' && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => setDeleteConfirmChallan(challan)}
+                              className="cursor-pointer gap-2 py-2 text-red-600 focus:text-red-600 focus:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                              <span>{isTrashView ? 'Delete Permanently' : 'Delete Challan'}</span>
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </>
-                )}
-
-                {/* Delete / Permanent Delete with Alert Dialog */}
-                {role === 'admin' && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-10 w-10 p-0 border-red-100 text-red-500 hover:bg-red-50 rounded-xl"
-                        title={isTrashView ? 'Delete permanently' : 'Move to trash'}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="w-[90vw] max-w-lg rounded-2xl">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>{isTrashView ? 'Permanently Delete?' : 'Delete Challan?'}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {isTrashView ? (
-                            <>This will <strong>permanently destroy</strong> challan <strong>{challan.dcNumber}</strong>. This action cannot be undone.</>
-                          ) : (
-                            <>This will move challan <strong>{challan.dcNumber}</strong> to the Trash view.</>
-                          )}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          className="bg-red-500 hover:bg-red-600 rounded-xl"
-                          onClick={() => challan.id && onDeleteChallan(challan.id)}
-                        >
-                          {isTrashView ? 'Delete Permanently' : 'Move to Trash'}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
                 )}
               </div>
             </div>
@@ -638,39 +625,15 @@ export function NewRelicChallanList({
                       </>
                     )}
                         {role === 'admin' && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-gray-400 hover:text-red-500"
-                                title="Delete"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>{isTrashView ? 'Permanently Delete?' : 'Delete Challan?'}</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  {isTrashView ? (
-                                    <>This will <strong>permanently destroy</strong> challan <strong>{challan.dcNumber}</strong>. This action cannot be undone.</>
-                                  ) : (
-                                    <>This will move challan <strong>{challan.dcNumber}</strong> to the Trash view.</>
-                                  )}
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  className="bg-red-500 hover:bg-red-600"
-                                  onClick={() => challan.id && onDeleteChallan(challan.id)}
-                                >
-                                  {isTrashView ? 'Delete Permanently' : 'Move to Trash'}
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-400 hover:text-red-500"
+                            title="Delete"
+                            onClick={() => setDeleteConfirmChallan(challan)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         )}
                   </div>
                 </TableCell>
@@ -679,6 +642,36 @@ export function NewRelicChallanList({
           </TableBody>
         </Table>
       </div>
+
+      {/* Shared Delete Confirmation Alert Dialog */}
+      <AlertDialog open={!!deleteConfirmChallan} onOpenChange={(open) => !open && setDeleteConfirmChallan(null)}>
+        <AlertDialogContent className="w-[90vw] max-w-lg rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{isTrashView ? 'Permanently Delete?' : 'Delete Challan?'}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isTrashView ? (
+                <>This will <strong>permanently destroy</strong> challan <strong>{deleteConfirmChallan?.dcNumber}</strong>. This action cannot be undone.</>
+              ) : (
+                <>This will move challan <strong>{deleteConfirmChallan?.dcNumber}</strong> to the Trash view.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600 rounded-xl"
+              onClick={() => {
+                if (deleteConfirmChallan?.id) {
+                  onDeleteChallan(deleteConfirmChallan.id);
+                }
+                setDeleteConfirmChallan(null);
+              }}
+            >
+              {isTrashView ? 'Delete Permanently' : 'Move to Trash'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

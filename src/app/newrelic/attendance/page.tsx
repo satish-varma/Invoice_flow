@@ -1276,10 +1276,137 @@ export default function AttendancePage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {/* Employee Salary List View */}
-                    <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-xs">
+                    {/* Employee Salary Mobile Cards (md:hidden) */}
+                    <div className="md:hidden space-y-3">
+                      {employees.filter(e => e.isActive).map((emp) => {
+                        const empRecords = adminPayrollRecords.filter(r => r.employeeDocId === emp.id || r.employeeId === emp.employeeId);
+                        const totalDaysInMonth = getDaysInMonth(adminPayrollMonth);
+                        let presentDays = 0;
+                        let halfDays = 0;
+                        let lateDays = 0;
+
+                        empRecords.forEach(r => {
+                          if (r.status === 'present') presentDays++;
+                          else if (r.status === 'half-day' || r.status === 'missed-checkout') halfDays++;
+                          if (r.isLate) lateDays++;
+                        });
+
+                        const effectivePaidDays = presentDays + 0.5 * halfDays;
+                        const gross = emp.monthlySalary || 0;
+                        const attendanceEarned = totalDaysInMonth > 0 
+                          ? Math.round((effectivePaidDays / totalDaysInMonth) * gross)
+                          : 0;
+
+                        const empAdvances = adminAdvances.filter(a => a.employeeDocId === emp.id || a.employeeId === emp.employeeId);
+                        const advancesTotal = empAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
+                        const netPayable = Math.max(0, attendanceEarned - advancesTotal);
+                        const existingPayment = adminPayments.find(p => p.employeeDocId === emp.id || p.employeeId === emp.employeeId);
+
+                        const summaryObj = {
+                          totalDaysInMonth,
+                          presentDays,
+                          halfDays,
+                          absentDays: Math.max(0, totalDaysInMonth - presentDays - halfDays),
+                          effectivePaidDays,
+                          attendanceEarned,
+                          advancesTotal,
+                          netPayable,
+                        };
+
+                        return (
+                          <div key={emp.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-xs space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <h4 className="font-bold text-gray-900 text-sm truncate">{emp.name}</h4>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  {emp.employeeId} · <span className="capitalize">{emp.location}</span>
+                                </p>
+                              </div>
+                              {existingPayment ? (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1 shrink-0">
+                                  <CheckCircle className="h-3 w-3" /> Paid
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 shrink-0">
+                                  Pending
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Metrics Grid */}
+                            <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50/80 p-2.5 rounded-lg border border-gray-100">
+                              <div>
+                                <span className="text-[10px] text-gray-400 font-semibold uppercase block">Gross / Earned</span>
+                                <span className="text-gray-500 font-medium">₹{gross.toLocaleString('en-IN')}</span>
+                                <span className="text-gray-900 font-bold block">₹{attendanceEarned.toLocaleString('en-IN')}</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[10px] text-gray-400 font-semibold uppercase block">Advances</span>
+                                <span className={`font-semibold ${advancesTotal > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                                  {advancesTotal > 0 ? `-₹${advancesTotal.toLocaleString('en-IN')}` : '₹0'}
+                                </span>
+                                {advancesTotal > 0 && (
+                                  <span className="text-[10px] text-gray-400 block">({empAdvances.length} adv)</span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Net Payable & Attendance row */}
+                            <div className="flex items-center justify-between pt-1">
+                              <div>
+                                <span className="text-[10px] text-gray-400 uppercase font-semibold block">Net Payable</span>
+                                <span className="text-base font-extrabold text-[#3b2fc9]">
+                                  ₹{netPayable.toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[11px] font-medium text-emerald-700">{presentDays} Full</span> · 
+                                <span className="text-[11px] font-medium text-amber-700 ml-1">{halfDays} Half</span>
+                                <span className="text-[10px] text-gray-400 block">{effectivePaidDays}/{totalDaysInMonth} paid days</span>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2 pt-1 border-t border-gray-100">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAdvanceModalEmployee(emp);
+                                  setAdvanceAmount(0);
+                                  setAdvanceReason('');
+                                }}
+                                className="flex-1 py-2 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-medium transition-colors text-center"
+                              >
+                                + Advance
+                              </button>
+
+                              {!existingPayment ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPayModalData({ employee: emp, summary: summaryObj });
+                                    setPayPaymentMode('bank_transfer');
+                                    setPayReferenceNote('');
+                                  }}
+                                  className="flex-1 py-2 rounded-lg bg-[#3b2fc9] hover:bg-[#2d23a0] text-white text-xs font-medium transition-colors text-center shadow-xs"
+                                >
+                                  Pay Salary
+                                </button>
+                              ) : (
+                                <div className="flex-1 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-400 text-xs text-center">
+                                  Paid on {existingPayment.paymentDate}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop Employee Salary Table (hidden md:block) */}
+                    <div className="hidden md:block border border-gray-200 rounded-xl overflow-hidden bg-white shadow-xs">
                       <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs">
+                        <table className="w-full text-left text-xs min-w-[760px]">
                           <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-semibold uppercase tracking-wider text-[10px]">
                             <tr>
                               <th className="p-3">Employee</th>

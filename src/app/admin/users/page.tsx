@@ -180,82 +180,157 @@ export default function AdminUsersPage() {
         </Button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-gray-50">
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Assigned Apps</TableHead>
-              <TableHead>Preferred Locations</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-gray-500">
-                  <Loader2 className="h-5 w-5 animate-spin mx-auto" />
-                </TableCell>
-              </TableRow>
-            ) : users.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-gray-500">
-                  No users found
-                </TableCell>
-              </TableRow>
-            ) : (
-              users.map(u => (
-                <TableRow key={u.id}>
-                  <TableCell className="font-medium">{u.email}</TableCell>
-                  <TableCell>
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+      {/* Mobile Card List View (md:hidden) */}
+      <div className="md:hidden divide-y divide-gray-100 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {isLoading ? (
+          <div className="p-8 text-center text-gray-500">
+            <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+            <p className="text-xs">Loading users...</p>
+          </div>
+        ) : users.length === 0 ? (
+          <div className="p-8 text-center text-sm text-gray-500">
+            No users found
+          </div>
+        ) : (
+          users.map(u => (
+            <div key={u.id} className="p-4 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-gray-900 text-sm truncate">{u.email}</p>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                       u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
                       u.role === 'manager' ? 'bg-emerald-100 text-emerald-700' :
                       'bg-gray-100 text-gray-700'
                     }`}>
                       {u.role.toUpperCase()}
                     </span>
-                  </TableCell>
-                  <TableCell>
-                    {u.role === 'admin' ? (
-                      <span className="text-xs text-gray-500 font-medium">All Access</span>
-                    ) : u.assignedApps && u.assignedApps.length > 0 ? (
-                      <span className="text-xs font-medium text-gray-600">{u.assignedApps.length} Apps</span>
-                    ) : (
-                      <span className="text-xs text-red-500 italic">No Access</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {u.preferredLocations && u.preferredLocations.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {u.preferredLocations.map(loc => (
-                          <span key={loc} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 capitalize border border-blue-100">
-                            {loc}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-gray-400 text-xs italic">None</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-gray-500 text-sm">
-                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleOpenModal(u)}>
-                      <Edit2 className="h-4 w-4 text-gray-500 hover:text-[#3b2fc9]" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(u.id, u.email)} disabled={u.email === user?.email}>
-                      <Trash2 className={`h-4 w-4 ${u.email === user?.email ? 'text-gray-300' : 'text-gray-500 hover:text-red-600'}`} />
-                    </Button>
+                    <span className="text-[11px] text-gray-400">
+                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : ''}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenModal(u)}>
+                    <Edit2 className="h-4 w-4 text-gray-500 hover:text-[#3b2fc9]" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(u.id, u.email)} disabled={u.email === user?.email}>
+                    <Trash2 className={`h-4 w-4 ${u.email === user?.email ? 'text-gray-300' : 'text-gray-500 hover:text-red-600'}`} />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Badges details grid */}
+              <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50 p-2.5 rounded-lg">
+                <div>
+                  <span className="text-[10px] text-gray-400 font-semibold uppercase block mb-1">Assigned Apps</span>
+                  {u.role === 'admin' ? (
+                    <span className="text-xs text-purple-700 font-medium">All Access</span>
+                  ) : u.assignedApps && u.assignedApps.length > 0 ? (
+                    <span className="text-xs font-medium text-gray-700">{u.assignedApps.length} Apps Allowed</span>
+                  ) : (
+                    <span className="text-xs text-red-500 italic">No Access</span>
+                  )}
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-400 font-semibold uppercase block mb-1">Locations</span>
+                  {u.preferredLocations && u.preferredLocations.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {u.preferredLocations.map(loc => (
+                        <span key={loc} className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 capitalize border border-blue-100">
+                          {loc}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400 text-xs italic">All / None</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table (hidden md:block) */}
+      <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table className="min-w-[700px]">
+            <TableHeader>
+              <TableRow className="bg-gray-50">
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Assigned Apps</TableHead>
+                <TableHead>Preferred Locations</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center text-gray-500">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : users.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center text-gray-500">
+                    No users found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                users.map(u => (
+                  <TableRow key={u.id}>
+                    <TableCell className="font-medium">{u.email}</TableCell>
+                    <TableCell>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
+                        u.role === 'manager' ? 'bg-emerald-100 text-emerald-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {u.role.toUpperCase()}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {u.role === 'admin' ? (
+                        <span className="text-xs text-gray-500 font-medium">All Access</span>
+                      ) : u.assignedApps && u.assignedApps.length > 0 ? (
+                        <span className="text-xs font-medium text-gray-600">{u.assignedApps.length} Apps</span>
+                      ) : (
+                        <span className="text-xs text-red-500 italic">No Access</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {u.preferredLocations && u.preferredLocations.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {u.preferredLocations.map(loc => (
+                            <span key={loc} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 capitalize border border-blue-100">
+                              {loc}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs italic">None</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-gray-500 text-sm">
+                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenModal(u)}>
+                        <Edit2 className="h-4 w-4 text-gray-500 hover:text-[#3b2fc9]" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(u.id, u.email)} disabled={u.email === user?.email}>
+                        <Trash2 className={`h-4 w-4 ${u.email === user?.email ? 'text-gray-300' : 'text-gray-500 hover:text-red-600'}`} />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

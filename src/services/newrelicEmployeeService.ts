@@ -19,12 +19,9 @@ const SALARY_ADVANCES_COLLECTION = 'newrelic_salary_advances';
 const SALARY_PAYMENTS_COLLECTION = 'newrelic_salary_payments';
 
 export async function getEmployees(): Promise<NewRelicEmployee[]> {
-  const q = query(
-    collection(db, EMPLOYEES_COLLECTION),
-    orderBy('name', 'asc')
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicEmployee));
+  const snapshot = await getDocs(collection(db, EMPLOYEES_COLLECTION));
+  const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicEmployee));
+  return list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 }
 
 export async function getActiveEmployees(location?: string): Promise<NewRelicEmployee[]> {
@@ -134,10 +131,11 @@ export async function getSalaryPaymentsForMonth(month: string): Promise<NewRelic
 
 /** Get all recorded salary payments across all months */
 export async function getAllSalaryPayments(): Promise<NewRelicSalaryPayment[]> {
-  const q = query(
-    collection(db, SALARY_PAYMENTS_COLLECTION),
-    orderBy('createdAt', 'desc')
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as NewRelicSalaryPayment));
+  const snap = await getDocs(collection(db, SALARY_PAYMENTS_COLLECTION));
+  const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as NewRelicSalaryPayment));
+  return list.sort((a, b) => {
+    const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+    const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+    return timeB - timeA;
+  });
 }

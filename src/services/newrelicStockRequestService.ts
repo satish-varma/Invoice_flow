@@ -38,7 +38,7 @@ export async function saveStockRequest(request: Omit<StockRequest, 'id'>, id?: s
 
 export async function getStockRequests(location?: NewRelicLocation): Promise<StockRequest[]> {
   try {
-    let q = query(collection(db, STOCK_REQUEST_COLLECTION), orderBy('createdAt', 'desc'));
+    let q = query(collection(db, STOCK_REQUEST_COLLECTION));
     if (location) {
       q = query(q, where('location', '==', location));
     }
@@ -48,7 +48,12 @@ export async function getStockRequests(location?: NewRelicLocation): Promise<Sto
     snap.forEach((d) => {
       requests.push({ id: d.id, ...d.data() } as StockRequest);
     });
-    return requests;
+    // In-memory sort by createdAt desc (or requestDate) to avoid composite index requirements
+    return requests.sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : (a.requestDate ? new Date(a.requestDate).getTime() : 0);
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : (b.requestDate ? new Date(b.requestDate).getTime() : 0);
+      return timeB - timeA;
+    });
   } catch (error) {
     console.error('Error fetching stock requests:', error);
     throw error;

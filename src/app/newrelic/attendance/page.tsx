@@ -91,19 +91,21 @@ function AttendancePageContent() {
   const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
   const [adminTab, setAdminTab] = useState<'today' | 'history' | 'payroll'>(() => {
     const tabParam = searchParams?.get('tab');
-    if (tabParam === 'payroll' || tabParam === 'salaries') return 'payroll';
+    if (isOwnerOrAdmin && (tabParam === 'payroll' || tabParam === 'salaries')) return 'payroll';
     if (tabParam === 'history') return 'history';
     return 'today';
   });
 
   useEffect(() => {
     const tabParam = searchParams?.get('tab');
-    if (tabParam === 'payroll' || tabParam === 'salaries') {
+    if (isOwnerOrAdmin && (tabParam === 'payroll' || tabParam === 'salaries')) {
       setAdminTab('payroll');
     } else if (tabParam === 'history') {
       setAdminTab('history');
+    } else if (!isOwnerOrAdmin && adminTab === 'payroll') {
+      setAdminTab('today');
     }
-  }, [searchParams]);
+  }, [searchParams, isOwnerOrAdmin, adminTab]);
   const [adminPayrollMonth, setAdminPayrollMonth] = useState<string>(() => new Date().toISOString().substring(0, 7));
   const [adminPayrollRecords, setAdminPayrollRecords] = useState<NewRelicAttendance[]>([]);
   const [adminAdvances, setAdminAdvances] = useState<NewRelicSalaryAdvance[]>([]);
@@ -251,7 +253,7 @@ function AttendancePageContent() {
 
   /* ── Admin: load payroll records, advances, and payments when month changes ── */
   const loadAdminPayroll = async () => {
-    if (!isAdmin) return;
+    if (!isOwnerOrAdmin) return;
     setIsLoadingPayroll(true);
     try {
       const days = getDaysInMonth(adminPayrollMonth);
@@ -273,10 +275,10 @@ function AttendancePageContent() {
   };
 
   useEffect(() => {
-    if (isAdmin && adminTab === 'payroll') {
+    if (isOwnerOrAdmin && adminTab === 'payroll') {
       loadAdminPayroll();
     }
-  }, [isAdmin, adminTab, adminPayrollMonth]);
+  }, [isOwnerOrAdmin, adminTab, adminPayrollMonth]);
 
   /* ── Submit Salary Advance ── */
   const handleSaveAdvance = async (e: React.FormEvent) => {
@@ -648,7 +650,9 @@ function AttendancePageContent() {
         {/* Date header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-bold text-gray-800">Attendance & Payroll</h1>
+            <h1 className="text-xl font-bold text-gray-800">
+              {isOwnerOrAdmin ? 'Attendance & Payroll' : 'Staff Attendance'}
+            </h1>
             <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5" suppressHydrationWarning>
               <Calendar className="h-3.5 w-3.5" /> {displayDate || 'Loading date…'}
             </p>
@@ -667,22 +671,24 @@ function AttendancePageContent() {
               <Camera className="h-3.5 w-3.5 text-[#3b2fc9]" />
               Mark Attendance
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAdminTab('payroll');
-                const el = document.getElementById('admin-management-panel');
-                el?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                adminTab === 'payroll'
-                  ? 'bg-[#3b2fc9] text-white shadow-xs'
-                  : 'text-gray-700 hover:bg-white hover:shadow-xs'
-              }`}
-            >
-              <Calculator className="h-3.5 w-3.5" />
-              Staff Salaries & Advances
-            </button>
+            {isOwnerOrAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminTab('payroll');
+                  const el = document.getElementById('admin-management-panel');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  adminTab === 'payroll'
+                    ? 'bg-[#3b2fc9] text-white shadow-xs'
+                    : 'text-gray-700 hover:bg-white hover:shadow-xs'
+                }`}
+              >
+                <Calculator className="h-3.5 w-3.5" />
+                Staff Salaries & Advances
+              </button>
+            )}
           </div>
         </div>
 
@@ -859,14 +865,16 @@ function AttendancePageContent() {
 
               {/* Detailed Profile Grid */}
               {showProfileDetails && (
-                <div className="pt-3 border-t border-blue-100/70 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                  <div className="bg-white/80 p-2.5 rounded-lg border border-gray-100">
-                    <span className="text-gray-400 block text-[10px] uppercase font-medium">Monthly Gross</span>
-                    <span className="font-semibold text-gray-900 flex items-center gap-0.5 mt-0.5">
-                      <IndianRupee className="h-3 w-3 text-emerald-600" />
-                      {(selectedEmployee.monthlySalary || 0).toLocaleString('en-IN')}
-                    </span>
-                  </div>
+                <div className={`pt-3 border-t border-blue-100/70 grid grid-cols-2 ${isOwnerOrAdmin ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-3 text-xs`}>
+                  {isOwnerOrAdmin && (
+                    <div className="bg-white/80 p-2.5 rounded-lg border border-gray-100">
+                      <span className="text-gray-400 block text-[10px] uppercase font-medium">Monthly Gross</span>
+                      <span className="font-semibold text-gray-900 flex items-center gap-0.5 mt-0.5">
+                        <IndianRupee className="h-3 w-3 text-emerald-600" />
+                        {(selectedEmployee.monthlySalary || 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="bg-white/80 p-2.5 rounded-lg border border-gray-100">
                     <span className="text-gray-400 block text-[10px] uppercase font-medium">Join Date</span>
@@ -1106,7 +1114,7 @@ function AttendancePageContent() {
                 </div>
 
                 {/* Monthly Aggregates & Payout Card */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-1">
+                <div className={`grid grid-cols-2 ${isOwnerOrAdmin ? 'sm:grid-cols-5' : 'sm:grid-cols-4'} gap-2.5 pt-1`}>
                   <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-2.5">
                     <span className="text-[10px] uppercase font-bold text-blue-700 block">Total Days</span>
                     <span className="text-lg font-bold text-blue-900">{myMonthlySummary.totalDaysInMonth}</span>
@@ -1131,16 +1139,18 @@ function AttendancePageContent() {
                     <span className="text-[10px] text-red-600 block mt-0.5">Unworked days</span>
                   </div>
 
-                  <div className="col-span-2 sm:col-span-1 bg-purple-50/80 border border-purple-100 rounded-xl p-2.5">
-                    <span className="text-[10px] uppercase font-bold text-purple-700 block">Estimated Payout</span>
-                    <span className="text-lg font-bold text-purple-900 flex items-center gap-0.5">
-                      <IndianRupee className="h-4 w-4" />
-                      {myMonthlySummary.payableAmount.toLocaleString('en-IN')}
-                    </span>
-                    <span className="text-[10px] text-purple-600 block mt-0.5">
-                      {myMonthlySummary.effectivePaidDays} paid days
-                    </span>
-                  </div>
+                  {isOwnerOrAdmin && (
+                    <div className="col-span-2 sm:col-span-1 bg-purple-50/80 border border-purple-100 rounded-xl p-2.5">
+                      <span className="text-[10px] uppercase font-bold text-purple-700 block">Estimated Payout</span>
+                      <span className="text-lg font-bold text-purple-900 flex items-center gap-0.5">
+                        <IndianRupee className="h-4 w-4" />
+                        {myMonthlySummary.payableAmount.toLocaleString('en-IN')}
+                      </span>
+                      <span className="text-[10px] text-purple-600 block mt-0.5">
+                        {myMonthlySummary.effectivePaidDays} paid days
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {isLoadingMonthly ? (
@@ -1245,15 +1255,17 @@ function AttendancePageContent() {
               >
                 History Logs
               </button>
-              <button
-                onClick={() => setAdminTab('payroll')}
-                className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
-                  adminTab === 'payroll' ? 'text-[#3b2fc9] border-b-2 border-[#3b2fc9]' : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <Calculator className="h-4 w-4" />
-                Staff Salaries & Advances
-              </button>
+              {isOwnerOrAdmin && (
+                <button
+                  onClick={() => setAdminTab('payroll')}
+                  className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                    adminTab === 'payroll' ? 'text-[#3b2fc9] border-b-2 border-[#3b2fc9]' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Calculator className="h-4 w-4" />
+                  Staff Salaries & Advances
+                </button>
+              )}
             </div>
 
             {adminTab === 'today' && (
@@ -1369,7 +1381,7 @@ function AttendancePageContent() {
             )}
 
             {/* ─── Admin Payroll & Advances Tab ─── */}
-            {adminTab === 'payroll' && (
+            {isOwnerOrAdmin && adminTab === 'payroll' && (
               <div className="p-4 space-y-4">
                 {/* Header controls */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gray-50/80 p-3.5 rounded-xl border border-gray-200">
@@ -1787,7 +1799,7 @@ function AttendancePageContent() {
       </div>
 
       {/* ─── Record Advance Modal ─── */}
-      {advanceModalEmployee && (
+      {isOwnerOrAdmin && advanceModalEmployee && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
@@ -1872,7 +1884,7 @@ function AttendancePageContent() {
       )}
 
       {/* ─── Pay Salary Modal ─── */}
-      {payModalData && (
+      {isOwnerOrAdmin && payModalData && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">

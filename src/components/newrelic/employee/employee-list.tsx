@@ -9,9 +9,10 @@ interface EmployeeListProps {
   employees: NewRelicEmployee[];
   onEdit: (emp: NewRelicEmployee) => void;
   onDelete: (emp: NewRelicEmployee) => void;
+  isAdmin?: boolean;
 }
 
-export function EmployeeList({ employees, onEdit, onDelete }: EmployeeListProps) {
+export function EmployeeList({ employees, onEdit, onDelete, isAdmin }: EmployeeListProps) {
   if (employees.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center text-gray-400">
@@ -78,10 +79,12 @@ export function EmployeeList({ employees, onEdit, onDelete }: EmployeeListProps)
               <MapPin className="h-3 w-3" />
               {emp.location === 'hyderabad' ? 'Hyderabad' : 'Bangalore'}
             </span>
-            <span className="flex items-center gap-1">
-              <IndianRupee className="h-3 w-3" />
-              {emp.monthlySalary.toLocaleString('en-IN')}/mo
-            </span>
+            {isAdmin && (
+              <span className="flex items-center gap-1">
+                <IndianRupee className="h-3 w-3" />
+                {emp.monthlySalary.toLocaleString('en-IN')}/mo
+              </span>
+            )}
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               Joined {new Date(emp.joinDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -89,22 +92,24 @@ export function EmployeeList({ employees, onEdit, onDelete }: EmployeeListProps)
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 shrink-0">
-            <button
-              onClick={() => onEdit(emp)}
-              className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-[#3b2fc9] hover:border-[#3b2fc9]/30 transition-colors"
-              title="Edit"
-            >
-              <Edit2 className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={() => onDelete(emp)}
-              className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
-              title="Delete"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          {isAdmin && (
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={() => onEdit(emp)}
+                className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-[#3b2fc9] hover:border-[#3b2fc9]/30 transition-colors"
+                title="Edit"
+              >
+                <Edit2 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => onDelete(emp)}
+                className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
+                title="Delete"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
         </div>
         );
       })}

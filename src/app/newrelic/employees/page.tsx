@@ -182,6 +182,7 @@ export default function EmployeesPage() {
             employees={displayEmployees}
             onEdit={isAdmin ? handleEdit : () => {}}
             onDelete={isAdmin ? handleDelete : () => {}}
+            isAdmin={isAdmin}
           />
         )}
       </div>

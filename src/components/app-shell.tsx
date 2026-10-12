@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { COMPANY_SITES } from '@/types/site';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 function AppShellContent({ children }: { children: React.ReactNode }) {
@@ -44,21 +45,39 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const navItems = [
-    { href: '/', label: 'New Invoice', icon: FilePlus },
-    { href: '/quotation', label: 'New Quotation', icon: FileText },
-    { href: '/delivery-challan', label: 'Delivery Challan', icon: Truck },
-    { href: '/offer-letter', label: 'Offer Letter', icon: Briefcase },
-    { href: '/payslip', label: 'Payslip', icon: Receipt },
-    { href: '/invoices', label: 'Saved Invoices', icon: ListOrdered },
-    { href: '/quotations', label: 'Saved Quotations', icon: ListOrdered },
-    { href: '/delivery-challans', label: 'Saved Challans', icon: ListOrdered },
-    { href: '/products', label: 'Products', icon: Package },
-    { href: '/clients', label: 'Clients', icon: User },
-    { href: '/settings', label: 'Settings', icon: Settings },
-    { href: '/declarations', label: 'GST Declarations', icon: FileText, divider: true },
-    { href: '/newrelic', label: 'NewRelic DC Portal', icon: ExternalLink },
+  const isNonNewRelic = user?.assignedSite && user.assignedSite !== 'newrelic';
+  const siteConfig = user?.assignedSite ? COMPANY_SITES[user.assignedSite] : null;
+
+  const portalHref = isNonNewRelic ? '/newrelic/tuckshop' : '/newrelic';
+  const portalLabel = siteConfig ? `${siteConfig.name} Portal` : 'NewRelic DC Portal';
+
+  const rawNavItems = [
+    { href: '/', label: 'New Invoice', icon: FilePlus, app: '/invoices' },
+    { href: '/quotation', label: 'New Quotation', icon: FileText, app: '/quotations' },
+    { href: '/delivery-challan', label: 'Delivery Challan', icon: Truck, app: '/delivery-challans', hideIfNonNewRelic: true },
+    { href: '/offer-letter', label: 'Offer Letter', icon: Briefcase, app: '/offer-letter' },
+    { href: '/payslip', label: 'Payslip', icon: Receipt, app: '/payslip' },
+    { href: '/invoices', label: 'Saved Invoices', icon: ListOrdered, app: '/invoices' },
+    { href: '/quotations', label: 'Saved Quotations', icon: ListOrdered, app: '/quotations' },
+    { href: '/delivery-challans', label: 'Saved Challans', icon: ListOrdered, app: '/delivery-challans', hideIfNonNewRelic: true },
+    { href: '/products', label: 'Products', icon: Package, app: '/invoices' },
+    { href: '/clients', label: 'Clients', icon: User, app: '/invoices' },
+    { href: '/settings', label: 'Settings', icon: Settings, app: '/settings' },
+    { href: '/declarations', label: 'GST Declarations', icon: FileText, divider: true, app: '/declarations' },
+    { href: portalHref, label: portalLabel, icon: ExternalLink, app: '/newrelic' },
   ];
+
+  const isAdmin = auth?.role === 'admin' || auth?.role === 'superadmin';
+  const assignedApps = user?.assignedApps || [];
+
+  const navItems = rawNavItems.filter((item) => {
+    if (item.hideIfNonNewRelic && isNonNewRelic) return false;
+    if (isAdmin) return true;
+    if (assignedApps.length > 0 && item.app) {
+      return assignedApps.includes(item.app);
+    }
+    return true;
+  });
 
   return (
     <>

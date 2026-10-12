@@ -6,6 +6,7 @@ import { getTuckshopRecords, NewRelicTuckshopRecord } from '@/services/newrelicT
 import { getEmployees, getAllSalaryPayments } from '@/services/newrelicEmployeeService';
 import { NewRelicChallan } from '@/types/challan';
 import { NewRelicEmployee, NewRelicSalaryPayment } from '@/types/employee';
+import { SiteId, SITE_OPTIONS, resolveSiteId, COMPANY_SITES } from '@/types/site';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Loader2,
@@ -46,7 +47,7 @@ import {
 const COLORS = ['#3b2fc9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#6366f1'];
 
 export default function AnalyticsDashboardPage() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const isAdmin = role === 'admin' || role === 'superadmin' || role === 'manager';
 
   const [challans, setChallans] = useState<NewRelicChallan[]>([]);
@@ -57,6 +58,30 @@ export default function AnalyticsDashboardPage() {
 
   // Active view tab: 'overview' | 'comparison' | 'ledger'
   const [activeTab, setActiveTab] = useState<'comparison' | 'ledger' | 'overview'>('comparison');
+  const [selectedSite, setSelectedSite] = useState<string>(user?.assignedSite || 'all');
+
+  // Filtered data by selected site
+  const filteredChallans = useMemo(() => {
+    // Delivery challans are strictly for NewRelic. If DSM or NTT Data is filtered, challans are 0.
+    if (selectedSite === 'dsm' || selectedSite === 'ntt_data') return [];
+    return challans;
+  }, [challans, selectedSite]);
+
+  const filteredTuckshop = useMemo(() => {
+    if (selectedSite === 'all') return tuckshopRecords;
+    return tuckshopRecords.filter((t) => resolveSiteId(t.siteId) === selectedSite);
+  }, [tuckshopRecords, selectedSite]);
+
+  const filteredEmployees = useMemo(() => {
+    if (selectedSite === 'all') return employees;
+    return employees.filter((e) => resolveSiteId(e.siteId) === selectedSite);
+  }, [employees, selectedSite]);
+
+  const filteredSalaryPayments = useMemo(() => {
+    if (selectedSite === 'all') return salaryPayments;
+    const empDocIds = new Set(filteredEmployees.map((e) => e.id));
+    return salaryPayments.filter((p) => empDocIds.has(p.employeeDocId));
+  }, [salaryPayments, filteredEmployees, selectedSite]);
 
   useEffect(() => {
     async function loadData() {
@@ -120,7 +145,7 @@ export default function AnalyticsDashboardPage() {
     };
 
     // Tally DC Procurement Costs & Units
-    challans.forEach((c) => {
+    filteredChallans.forEach((c) => {
       const loc = c.location === 'bangalore' ? blr : hyd;
       loc.dcCount++;
 
@@ -144,7 +169,7 @@ export default function AnalyticsDashboardPage() {
     });
 
     // Tally Tuckshop Revenue & Daily Expenses
-    tuckshopRecords.forEach((t) => {
+    filteredTuckshop.forEach((t) => {
       const isBlr = (t.location || '').toLowerCase().includes('bangalore') || (t.location || '').toLowerCase().includes('blr');
       const loc = isBlr ? blr : hyd;
       const amt = Number(t.amount) || 0;
@@ -156,7 +181,7 @@ export default function AnalyticsDashboardPage() {
     });
 
     // Tally Employees & Base Salaries
-    employees.forEach((e) => {
+    filteredEmployees.forEach((e) => {
       if (!e.isActive) return;
       if (e.location === 'bangalore') {
         blr.activeEmployees++;
@@ -179,7 +204,7 @@ export default function AnalyticsDashboardPage() {
       .slice(0, 5);
 
     return { hyd, blr, hydTopVendors, blrTopVendors };
-  }, [challans, tuckshopRecords, employees]);
+  }, [filteredChallans, filteredTuckshop, filteredEmployees]);
 
   /* ─────────────────────────────────────────────────────────────
      2. MONTHLY PROCUREMENT VS SALES LEDGER (P&L CALCULATION)
@@ -209,7 +234,7 @@ export default function AnalyticsDashboardPage() {
     };
 
     // 1. Process Challans Procurement Cost
-    challans.forEach((c) => {
+    filteredChallans.forEach((c) => {
       const key = getMonthKey(c.dcDate);
       if (!key) return;
 
@@ -242,7 +267,7 @@ export default function AnalyticsDashboardPage() {
     });
 
     // 2. Process Tuckshop Sales & Expenses
-    tuckshopRecords.forEach((t) => {
+    filteredTuckshop.forEach((t) => {
       const key = getMonthKey(t.date);
       if (!key) return;
 
@@ -271,7 +296,7 @@ export default function AnalyticsDashboardPage() {
     });
 
     // 3. Process Disbursed Payroll (from salary payments)
-    salaryPayments.forEach((p) => {
+    filteredSalaryPayments.forEach((p) => {
       const key = p.month || (p.paymentDate ? getMonthKey(p.paymentDate) : null);
       if (!key) return;
 
@@ -311,7 +336,7 @@ export default function AnalyticsDashboardPage() {
     });
 
     return list.sort((a, b) => a.monthKey.localeCompare(b.monthKey));
-  }, [challans, tuckshopRecords, salaryPayments]);
+  }, [filteredChallans, filteredTuckshop, filteredSalaryPayments]);
 
   // Overall Financial Totals
   const overallFinancials = useMemo(() => {
@@ -383,30 +408,51 @@ export default function AnalyticsDashboardPage() {
             </p>
           </div>
 
-          {/* Navigation Pill Switcher */}
-          <div className="flex items-center gap-1.5 p-1 bg-white border border-gray-200 rounded-xl shadow-xs">
-            <button
-              onClick={() => setActiveTab('comparison')}
-              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                activeTab === 'comparison'
-                  ? 'bg-[#3b2fc9] text-white shadow-xs'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <MapPin className="h-3.5 w-3.5" />
-              HYD vs BLR Comparison
-            </button>
-            <button
-              onClick={() => setActiveTab('ledger')}
-              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                activeTab === 'ledger'
-                  ? 'bg-[#3b2fc9] text-white shadow-xs'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <DollarSign className="h-3.5 w-3.5" />
-              Monthly P&L Ledger
-            </button>
+          {/* Site Filter + Navigation Pill Switcher */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {(role === 'admin' || role === 'superadmin') ? (
+              <select
+                value={selectedSite}
+                onChange={(e) => setSelectedSite(e.target.value)}
+                className="h-9 px-3 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] shadow-xs"
+              >
+                <option value="all">🏢 All Company Sites</option>
+                {SITE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            ) : user?.assignedSite ? (
+              <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-xs">
+                {COMPANY_SITES[user.assignedSite]?.name || user.assignedSite}
+              </span>
+            ) : null}
+
+            <div className="flex items-center gap-1.5 p-1 bg-white border border-gray-200 rounded-xl shadow-xs">
+              <button
+                onClick={() => setActiveTab('comparison')}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  activeTab === 'comparison'
+                    ? 'bg-[#3b2fc9] text-white shadow-xs'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                HYD vs BLR Comparison
+              </button>
+              <button
+                onClick={() => setActiveTab('ledger')}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  activeTab === 'ledger'
+                    ? 'bg-[#3b2fc9] text-white shadow-xs'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <DollarSign className="h-3.5 w-3.5" />
+                Monthly P&L Ledger
+              </button>
+            </div>
           </div>
         </div>
 

@@ -17,9 +17,22 @@ export default withAuth(
       return NextResponse.next();
     }
 
+    const assignedSite = token.assignedSite as string | undefined;
+
     // Protect /admin routes from non-admins
     if (pathname.startsWith('/admin')) {
-      return NextResponse.redirect(new URL('/newrelic', req.url));
+      const fallback = (assignedSite && assignedSite !== 'newrelic') ? '/newrelic/tuckshop' : '/newrelic';
+      return NextResponse.redirect(new URL(fallback, req.url));
+    }
+
+    // Protect delivery challans from non-NewRelic sites (DSM, NTT Data)
+    if (assignedSite && assignedSite !== 'newrelic' && pathname.startsWith('/delivery-challan')) {
+      return NextResponse.redirect(new URL('/newrelic/tuckshop', req.url));
+    }
+
+    // Route non-NewRelic site users directly to their Tuckshop page
+    if (assignedSite && assignedSite !== 'newrelic' && pathname === '/newrelic') {
+      return NextResponse.redirect(new URL('/newrelic/tuckshop', req.url));
     }
 
     const assignedApps = (token.assignedApps as string[]) || [];
@@ -50,7 +63,7 @@ export default withAuth(
     if (requiredAppModule) {
       if (!assignedApps.includes(requiredAppModule)) {
         // Find a safe fallback route
-        let fallback = '/newrelic';
+        let fallback = (assignedSite && assignedSite !== 'newrelic') ? '/newrelic/tuckshop' : '/newrelic';
         if (assignedApps.length > 0) {
           fallback = assignedApps[0];
           // Since '/invoices' in our array actually means they can access '/', we could route to '/'

@@ -24,7 +24,7 @@ export function PdfAutoParser({
   handleParseInvoice,
 }: PdfAutoParserProps) {
   return (
-    <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-blue-50 border border-indigo-100 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
+    <div className="hidden sm:block bg-gradient-to-r from-indigo-50 via-purple-50 to-blue-50 border border-indigo-100 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="p-2 bg-[#3b2fc9]/10 rounded-xl text-[#3b2fc9]">

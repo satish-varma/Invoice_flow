@@ -625,13 +625,15 @@ export function NewRelicChallanForm({
         <p className="whitespace-pre-wrap leading-relaxed text-[11px] sm:text-xs">{locationConfig.address}</p>
       </div>
 
-      {/* ── Local Invoice Auto-Parser Banner ── */}
-      <PdfAutoParser 
-        isParsingInvoice={isParsingInvoice}
-        selectedSample={selectedSample}
-        setSelectedSample={setSelectedSample}
-        handleParseInvoice={handleParseInvoice}
-      />
+      {/* ── Local Invoice Auto-Parser Banner (Hidden on Mobile) ── */}
+      <div className="hidden sm:block">
+        <PdfAutoParser 
+          isParsingInvoice={isParsingInvoice}
+          selectedSample={selectedSample}
+          setSelectedSample={setSelectedSample}
+          handleParseInvoice={handleParseInvoice}
+        />
+      </div>
 
       {/* Line items */}
       <div className="space-y-3">

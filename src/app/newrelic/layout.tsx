@@ -10,6 +10,7 @@ import { usePathname } from 'next/navigation';
 import { getStockRequests } from '@/services/newrelicStockRequestService';
 import { FinancialPasswordModal } from '@/components/newrelic/financial-password-modal';
 import { MobileAppNavigation } from '@/components/newrelic/mobile-app-navigation';
+import { MobileAppBar } from '@/components/newrelic/mobile-app-bar';
 
 function FinancialStatusBadge() {
   const { isUnlocked, remainingMinutes, lockFinancials } = useFinancialAuth();
@@ -76,8 +77,15 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
   return (
     <FinancialAuthProvider>
       <div className="min-h-screen bg-gray-50">
-        {/* Minimal branded top bar */}
-      <header className="border-b border-gray-100 bg-white sticky top-0 z-10 shadow-sm">
+      {/* Mobile Top App Bar (sm:hidden) */}
+      <div className="sm:hidden">
+        <MobileAppBar>
+          {role === 'admin' && <FinancialStatusBadge />}
+        </MobileAppBar>
+      </div>
+
+      {/* Desktop Header (hidden sm:block) */}
+      <header className="hidden sm:block border-b border-gray-100 bg-white sticky top-0 z-10 shadow-sm">
         <div className="max-w-6xl mx-auto px-3 sm:px-8 h-14 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}

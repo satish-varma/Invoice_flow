@@ -22,6 +22,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFinancialAuth } from '@/contexts/FinancialAuthContext';
 import { FinancialPasswordModal } from '@/components/newrelic/financial-password-modal';
 import { Lock, Unlock } from 'lucide-react';
+import { MobileFloatingActions } from '@/components/newrelic/mobile-floating-actions';
 
 export default function NewRelicPage() {
   const { toast } = useToast();
@@ -46,6 +47,7 @@ export default function NewRelicPage() {
   const { isUnlocked, remainingMinutes, lockFinancials } = useFinancialAuth();
   const [showFinancialModal, setShowFinancialModal] = useState(false);
   const [showFinancials, setShowFinancials] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   /* ── Data fetching ── */
@@ -59,7 +61,14 @@ export default function NewRelicPage() {
       toast({ variant: 'destructive', title: 'Failed to load challans' });
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  const handlePullRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchData();
+    toast({ title: '✨ Refreshed with latest data' });
   };
 
   useEffect(() => {
@@ -249,7 +258,21 @@ export default function NewRelicPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-3 sm:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-8 py-3 sm:py-8 space-y-4 sm:space-y-8">
+
+        {/* Mobile Pull-to-Refresh Indicator & Action Bar */}
+        <div className="sm:hidden flex items-center justify-between bg-white/80 backdrop-blur-xs px-3.5 py-2 rounded-xl border border-gray-200/80 shadow-2xs">
+          <span className="text-xs font-bold text-gray-700">Delivery Challans</span>
+          <button
+            type="button"
+            onClick={handlePullRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 text-[11px] font-semibold text-[#3b2fc9] hover:text-[#2c229e] active:scale-95 transition-transform"
+          >
+            <RefreshCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Syncing...' : 'Sync Data'}
+          </button>
+        </div>
 
         {/* Hero stats & Dashboard */}
         {role === 'admin' || role === 'superadmin' ? (
@@ -277,38 +300,46 @@ export default function NewRelicPage() {
           </div>
         )}
 
-        {/* Action Buttons */}
+        {/* Desktop Action Buttons (hidden on mobile, replaced by floating action button) */}
         {!selectedChallan && !isCreatingNew && (
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={() => setIsCreatingNew('hyderabad')}
-              className="flex-1 bg-[#3b2fc9] text-white py-3 px-4 rounded-xl font-medium hover:bg-[#3b2fc9]/90 transition-colors shadow-sm flex items-center justify-center gap-2"
-            >
-              <FileText className="h-5 w-5" />
-              New Challan (Hyderabad)
-            </button>
-            <button
-              onClick={() => setIsCreatingNew('bangalore')}
-              className="flex-1 bg-emerald-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-emerald-700 transition-colors shadow-sm flex items-center justify-center gap-2"
-            >
-              <FileText className="h-5 w-5" />
-              New Challan (Bangalore)
-            </button>
-            <Link
-              href="/newrelic/reconcile"
-              className="flex-1 bg-amber-500 text-white py-3 px-4 rounded-xl font-medium hover:bg-amber-600 transition-colors shadow-sm flex items-center justify-center gap-2"
-            >
-              <RefreshCcw className="h-5 w-5" />
-              Reconcile
-            </Link>
-            <button
-              onClick={handleExportExcel}
-              className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2"
-            >
-              <FileSpreadsheet className="h-5 w-5" />
-              Export Excel
-            </button>
-          </div>
+          <>
+            <div className="hidden sm:flex flex-row gap-3">
+              <button
+                onClick={() => setIsCreatingNew('hyderabad')}
+                className="flex-1 bg-[#3b2fc9] text-white py-3 px-4 rounded-xl font-medium hover:bg-[#3b2fc9]/90 transition-colors shadow-sm flex items-center justify-center gap-2"
+              >
+                <FileText className="h-5 w-5" />
+                New Challan (Hyderabad)
+              </button>
+              <button
+                onClick={() => setIsCreatingNew('bangalore')}
+                className="flex-1 bg-emerald-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-emerald-700 transition-colors shadow-sm flex items-center justify-center gap-2"
+              >
+                <FileText className="h-5 w-5" />
+                New Challan (Bangalore)
+              </button>
+              <Link
+                href="/newrelic/reconcile"
+                className="flex-1 bg-amber-500 text-white py-3 px-4 rounded-xl font-medium hover:bg-amber-600 transition-colors shadow-sm flex items-center justify-center gap-2"
+              >
+                <RefreshCcw className="h-5 w-5" />
+                Reconcile
+              </Link>
+              <button
+                onClick={handleExportExcel}
+                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2"
+              >
+                <FileSpreadsheet className="h-5 w-5" />
+                Export Excel
+              </button>
+            </div>
+
+            {/* Native Mobile Floating Action Button (+) */}
+            <MobileFloatingActions
+              onNewChallan={(loc) => setIsCreatingNew(loc)}
+              onExportExcel={handleExportExcel}
+            />
+          </>
         )}
 
         {/* Form Container */}
@@ -378,59 +409,77 @@ export default function NewRelicPage() {
           )}
         </div>
 
-        {/* Filters Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center gap-2 text-gray-500 mr-2">
-            <Filter className="h-4 w-4" />
-            <span className="text-sm font-medium">Filters:</span>
+        {/* Filters: Native Horizontal Scrollable Pill Chips on Mobile, Standard Flex on Desktop */}
+        <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none no-scrollbar flex-1">
+            <div className="flex items-center gap-1.5 text-gray-500 text-xs font-bold shrink-0 mr-1">
+              <Filter className="h-3.5 w-3.5 text-[#3b2fc9]" />
+              <span>Filter:</span>
+            </div>
+            
+            {/* Location Pill */}
+            <div className="relative shrink-0">
+              <select
+                value={filterLocation}
+                onChange={(e) => setFilterLocation(e.target.value)}
+                className="h-8 pl-3 pr-7 border border-gray-200 rounded-full text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] bg-gray-50/70 hover:bg-gray-100/70 capitalize appearance-none cursor-pointer"
+              >
+                {user?.preferredLocations && user.preferredLocations.length > 0 && (
+                  <option value="preferred">📍 Preferred</option>
+                )}
+                <option value="all">📍 All Locations</option>
+                {Object.entries(NEWRELIC_LOCATIONS).map(([key, loc]) => (
+                  <option key={key} value={key}>📍 {loc.label}</option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-gray-400">▼</span>
+            </div>
+
+            {/* Month Pill */}
+            <div className="relative shrink-0">
+              <select
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(e.target.value)}
+                className="h-8 pl-3 pr-7 border border-gray-200 rounded-full text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] bg-gray-50/70 hover:bg-gray-100/70 appearance-none cursor-pointer"
+              >
+                <option value="all">📅 All Months</option>
+                {Array.from({ length: 12 }, (_, i) => {
+                  const date = new Date(2000, i, 1);
+                  return <option key={i} value={i}>{date.toLocaleString('default', { month: 'short' })}</option>;
+                })}
+              </select>
+              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-gray-400">▼</span>
+            </div>
+
+            {/* Year Pill */}
+            <div className="relative shrink-0">
+              <select
+                value={filterYear}
+                onChange={(e) => setFilterYear(e.target.value)}
+                className="h-8 pl-3 pr-7 border border-gray-200 rounded-full text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] bg-gray-50/70 hover:bg-gray-100/70 appearance-none cursor-pointer"
+              >
+                <option value="all">🗓️ All Years</option>
+                {availableYears.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-gray-400">▼</span>
+            </div>
+
+            {/* Cycle Pill */}
+            <div className="relative shrink-0">
+              <select
+                value={filterCycle}
+                onChange={(e) => setFilterCycle(e.target.value)}
+                className="h-8 pl-3 pr-7 border border-gray-200 rounded-full text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] bg-gray-50/70 hover:bg-gray-100/70 appearance-none cursor-pointer"
+              >
+                <option value="all">🔄 All Cycles</option>
+                <option value="1-15">Cycle 1 (1–15)</option>
+                <option value="16-31">Cycle 2 (16–End)</option>
+              </select>
+              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-gray-400">▼</span>
+            </div>
           </div>
-          
-          <select
-            value={filterLocation}
-            onChange={(e) => setFilterLocation(e.target.value)}
-            className="h-9 w-full sm:w-auto px-3 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white capitalize"
-          >
-            {user?.preferredLocations && user.preferredLocations.length > 0 && (
-              <option value="preferred">My Preferred Locations</option>
-            )}
-            <option value="all">All Locations</option>
-            {Object.entries(NEWRELIC_LOCATIONS).map(([key, loc]) => (
-              <option key={key} value={key}>{loc.label}</option>
-            ))}
-          </select>
-
-          <select
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-            className="h-9 w-full sm:w-auto px-3 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
-          >
-            <option value="all">All Months</option>
-            {Array.from({ length: 12 }, (_, i) => {
-              const date = new Date(2000, i, 1);
-              return <option key={i} value={i}>{date.toLocaleString('default', { month: 'long' })}</option>;
-            })}
-          </select>
-
-          <select
-            value={filterYear}
-            onChange={(e) => setFilterYear(e.target.value)}
-            className="h-9 w-full sm:w-auto px-3 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
-          >
-            <option value="all">All Years</option>
-            {availableYears.map(year => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
-
-          <select
-            value={filterCycle}
-            onChange={(e) => setFilterCycle(e.target.value)}
-            className="h-9 w-full sm:w-auto px-3 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
-          >
-            <option value="all">All Cycles</option>
-            <option value="1-15">Cycle 1 (1st - 15th)</option>
-            <option value="16-31">Cycle 2 (16th - End)</option>
-          </select>
           
           {(role === 'admin' || role === 'superadmin') && (
             <div className="ml-auto flex items-center gap-2">

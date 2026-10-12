@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
-import { CalendarIcon, Plus, Trash2, FileDown, Save, Loader2, Sparkles, UploadCloud, FileText, Paperclip, AlertTriangle, MapPin } from 'lucide-react';
+import { CalendarIcon, Plus, Trash2, FileDown, Save, Loader2, Sparkles, UploadCloud, FileText, Paperclip, AlertTriangle, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -119,6 +119,7 @@ export function NewRelicChallanForm({
   const canSeeMrp = isAdmin || isManager;
   // Procurement cost is strictly hidden unless admin has unlocked financials with password
   const canSeePCost = isAdmin && isUnlocked;
+  const [isDockMinimized, setIsDockMinimized] = useState(false);
 
   const {
     register,
@@ -936,65 +937,89 @@ export function NewRelicChallanForm({
         description="Line item procurement costs and transport expenses are confidential. Enter your admin password to view and edit."
       />
 
-      {/* ── Mobile Sticky Quick Action Bar ── */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200/90 px-3 py-2 pb-[max(0.625rem,env(safe-area-inset-bottom))] shadow-[0_-4px_24px_rgba(0,0,0,0.12)] flex items-center justify-between gap-2">
-        <div className="min-w-0 pr-1">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-gray-900 truncate">
-              {fields.length} {fields.length === 1 ? 'Item' : 'Items'}
-            </span>
-            {canSeeMrp && calculatedTotalMrp > 0 && (
-              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
-                ₹{calculatedTotalMrp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-              </span>
-            )}
-          </div>
-          <p className="text-[10px] text-gray-400 truncate">
-            {locationConfig.label} • {isEditing ? 'Editing' : 'New'}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          {onCancel && (
-            <Button
+      {/* ── Mobile Floating Quick Action Dock ── */}
+      <div className="sm:hidden fixed bottom-3 left-3 right-3 z-50 max-w-md mx-auto">
+        {isDockMinimized ? (
+          <div className="flex justify-end">
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onCancel}
-              disabled={isSaving}
-              className="h-8.5 px-2 text-xs text-gray-500 hover:text-gray-700"
+              onClick={() => setIsDockMinimized(false)}
+              className="bg-gray-900/90 hover:bg-gray-900 text-white shadow-2xl backdrop-blur-xl px-4 py-2.5 rounded-full flex items-center gap-2.5 text-xs font-semibold active:scale-95 transition-all border border-white/15"
             >
-              Cancel
-            </Button>
-          )}
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>{fields.length} {fields.length === 1 ? 'Item' : 'Items'}</span>
+              {canSeeMrp && calculatedTotalMrp > 0 && (
+                <span className="text-emerald-300 font-bold">₹{calculatedTotalMrp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+              )}
+              <ChevronUp className="w-3.5 h-3.5 text-gray-400 ml-0.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white/95 backdrop-blur-xl border border-gray-200/90 rounded-2xl p-2.5 pl-3 shadow-[0_12px_36px_rgba(0,0,0,0.14)] flex items-center justify-between gap-2 transition-all">
+            {/* Left: Summary pill & minimize toggle */}
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                type="button"
+                onClick={() => setIsDockMinimized(true)}
+                className="h-8 w-8 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center shrink-0 transition-colors"
+                title="Minimize toolbar"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-gray-900 truncate leading-tight">
+                  {canSeeMrp && calculatedTotalMrp > 0
+                    ? `₹${calculatedTotalMrp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+                    : `${fields.length} ${fields.length === 1 ? 'Item' : 'Items'}`}
+                </p>
+                <p className="text-[10px] text-gray-400 truncate">
+                  {fields.length} {fields.length === 1 ? 'item' : 'items'} · {locationConfig.label}
+                </p>
+              </div>
+            </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={isSaving}
-            onClick={handleSubmit((v) => onSubmit(v, false), onValidationError)}
-            className="h-8.5 px-2.5 text-xs gap-1 border-gray-300 font-medium active:scale-95 transition-transform"
-            title="Save without downloading"
-          >
-            <Save className="h-3.5 w-3.5" />
-            <span>Save</span>
-          </Button>
+            {/* Right: Actions */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {onCancel && (
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  disabled={isSaving}
+                  className="h-8.5 px-2.5 rounded-xl text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
 
-          <Button
-            type="submit"
-            size="sm"
-            disabled={isSaving}
-            className="h-8.5 px-3 bg-[#3b2fc9] hover:bg-[#2d23a0] text-white text-xs font-semibold gap-1.5 shadow-xs active:scale-95 transition-transform"
-          >
-            {isSaving ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <FileDown className="h-3.5 w-3.5" />
-            )}
-            <span>{isEditing ? 'Update & DL' : 'Save & DL'}</span>
-          </Button>
-        </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isSaving}
+                onClick={handleSubmit((v) => onSubmit(v, false), onValidationError)}
+                className="h-8.5 px-2.5 rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50 text-xs gap-1 active:scale-95 transition-transform"
+                title="Save without downloading"
+              >
+                <Save className="h-3.5 w-3.5" />
+                <span>Save</span>
+              </Button>
+
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSaving}
+                className="h-8.5 px-3 rounded-xl bg-[#3b2fc9] hover:bg-[#2d23a0] text-white text-xs font-semibold gap-1.5 shadow-sm shadow-[#3b2fc9]/25 active:scale-95 transition-transform"
+              >
+                {isSaving ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileDown className="h-3.5 w-3.5" />
+                )}
+                <span>{isEditing ? 'Update' : 'Download'}</span>
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </form>
   );

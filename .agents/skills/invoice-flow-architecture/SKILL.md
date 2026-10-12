@@ -61,5 +61,8 @@ The operations and tuckshop suite supports multiple company stalls in Hyderabad 
 2.  **Location Locking:** When DSM or NTT Data is selected or assigned, the location MUST be locked to `hyderabad`. Bangalore is strictly disabled.
 3.  **Delivery Challans Isolation:** Non-admin managers assigned to DSM or NTT Data are blocked from accessing delivery challans both via navigation bars and layout route redirects. In stock request approvals, "Create Challan" is restricted to NewRelic requests only.
 4.  **Catalog Scoping:** Catalog items have `applicableSites?: ('newrelic' | 'dsm' | 'ntt_data' | 'all')[]`. Items without this field default to `['newrelic']`, preserving the entire 113-item existing catalog for NewRelic.
+5.  **Ledger & Payroll Multi-Site Scoping:**
+    - **Tuckshop Ledger:** Admins can view/filter transactions across all sites or isolate NewRelic, DSM, or NTT Data. Transactions feature color-coded company badges in both mobile cards and desktop table views.
+    - **Attendance & Payroll:** Admins can switch between all sites or isolate DSM / NTT Data for daily check-ins, history logs, and salary advance deductions. Export to Excel automatically scopes staff and filenames to the selected site.
 
 

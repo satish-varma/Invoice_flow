@@ -22,30 +22,36 @@ import { triggerHaptic } from '@/lib/haptics';
 
 export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCount?: number }) {
   const pathname = usePathname();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const isAdmin = role === 'admin' || role === 'superadmin';
+  const site = user?.assignedSite || 'newrelic';
+  const hasChallanAccess = isAdmin || site === 'newrelic';
 
-  // Primary 4 tabs on the bottom bar
+  // Primary tabs on the bottom bar
   const navTabs = [
+    ...(hasChallanAccess
+      ? [
+          {
+            label: 'Challans',
+            href: '/newrelic',
+            icon: FileText,
+            isActive: pathname === '/newrelic',
+          },
+        ]
+      : []),
     {
-      label: 'Challans',
-      href: '/newrelic',
-      icon: FileText,
-      isActive: pathname === '/newrelic',
+      label: 'Tuckshop',
+      href: '/newrelic/tuckshop',
+      icon: Store,
+      isActive: pathname === '/newrelic/tuckshop',
     },
     {
       label: 'Attendance',
       href: '/newrelic/attendance',
       icon: CalendarCheck,
       isActive: pathname === '/newrelic/attendance' && !pathname.includes('payroll'),
-    },
-    {
-      label: 'Tuckshop',
-      href: '/newrelic/tuckshop',
-      icon: Store,
-      isActive: pathname === '/newrelic/tuckshop',
     },
     {
       label: 'Stock Req',

@@ -135,7 +135,9 @@ function AttendancePageContent() {
 
   /* ── Load employees list and auto-bind logged-in user ── */
   useEffect(() => {
-    getActiveEmployees().then((list) => {
+    const assignedSite = user?.assignedSite || 'newrelic';
+    const siteParam = isOwnerOrAdmin ? undefined : assignedSite;
+    getActiveEmployees(undefined, siteParam).then((list) => {
       setEmployees(list);
       if (list.length === 0) return;
 
@@ -219,10 +221,12 @@ function AttendancePageContent() {
   useEffect(() => {
     if (!isAdmin) return;
     setIsLoadingAdmin(true);
-    getTodayAllAttendance(getTodayDate())
+    const assignedSite = user?.assignedSite || 'newrelic';
+    const siteParam = isOwnerOrAdmin ? undefined : assignedSite;
+    getTodayAllAttendance(getTodayDate(), siteParam)
       .then(setTodayAll)
       .finally(() => setIsLoadingAdmin(false));
-  }, [isAdmin]);
+  }, [isAdmin, isOwnerOrAdmin, user?.assignedSite]);
 
   /* ── Admin: load payroll records, advances, and payments when month changes ── */
   const loadAdminPayroll = async () => {
@@ -503,7 +507,13 @@ function AttendancePageContent() {
 
       if (cameraAction === 'check-in') {
         const res = await checkInEmployee(
-          { id: selectedEmployee.id!, employeeId: selectedEmployee.employeeId, name: selectedEmployee.name, location: selectedEmployee.location },
+          {
+            id: selectedEmployee.id!,
+            employeeId: selectedEmployee.employeeId,
+            name: selectedEmployee.name,
+            location: selectedEmployee.location,
+            siteId: selectedEmployee.siteId,
+          },
           selfieUrl,
           coordinates,
           getTodayDate()

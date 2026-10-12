@@ -10,6 +10,52 @@ import { Trash2, Plus, Pencil, Check, X, Search, Database, Download, RefreshCw, 
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
 
+const SITES_OPTIONS = [
+  { id: 'all', label: 'All Sites' },
+  { id: 'newrelic', label: 'NewRelic' },
+  { id: 'dsm', label: 'DSM' },
+  { id: 'ntt_data', label: 'NTT Data' },
+] as const;
+
+function renderItemSiteBadges(applicableSites?: ('newrelic' | 'dsm' | 'ntt_data' | 'all')[]) {
+  const sites = applicableSites && applicableSites.length > 0 ? applicableSites : ['newrelic'];
+  if (sites.includes('all')) {
+    return (
+      <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+        All Sites
+      </span>
+    );
+  }
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {sites.map((s) => {
+        if (s === 'newrelic') {
+          return (
+            <span key={s} className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60">
+              NewRelic
+            </span>
+          );
+        }
+        if (s === 'dsm') {
+          return (
+            <span key={s} className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-purple-50 text-purple-700 border border-purple-200/60">
+              DSM
+            </span>
+          );
+        }
+        if (s === 'ntt_data') {
+          return (
+            <span key={s} className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">
+              NTT Data
+            </span>
+          );
+        }
+        return null;
+      })}
+    </div>
+  );
+}
+
 export default function CatalogPage() {
   const { role } = useAuth();
   const router = useRouter();
@@ -22,6 +68,7 @@ export default function CatalogPage() {
 
   // Missing alerts filter tab: 'all' | 'missing-mrp' | 'missing-case'
   const [filterMode, setFilterMode] = useState<'all' | 'missing-mrp' | 'missing-case'>('all');
+  const [siteFilter, setSiteFilter] = useState<string>('all');
 
   // Inline editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -29,6 +76,7 @@ export default function CatalogPage() {
   const [editItem, setEditItem] = useState('');
   const [editCaseSize, setEditCaseSize] = useState<string>('');
   const [editMrp, setEditMrp] = useState<string>('');
+  const [editSites, setEditSites] = useState<('newrelic' | 'dsm' | 'ntt_data' | 'all')[]>(['newrelic']);
 
   // Single field quick-edit state (Case Size or Ref MRP)
   const [quickEdit, setQuickEdit] = useState<{ id: string; field: 'caseSize' | 'mrp'; value: string } | null>(null);
@@ -39,6 +87,7 @@ export default function CatalogPage() {
   const [newItem, setNewItem] = useState('');
   const [newCaseSize, setNewCaseSize] = useState<string>('');
   const [newMrp, setNewMrp] = useState<string>('');
+  const [newSites, setNewSites] = useState<('newrelic' | 'dsm' | 'ntt_data' | 'all')[]>(['all']);
 
   useEffect(() => {
     if (role && role !== 'admin') {
@@ -74,6 +123,13 @@ export default function CatalogPage() {
       list = list.filter(c => !c.caseSize || c.caseSize <= 0);
     }
 
+    if (siteFilter !== 'all') {
+      list = list.filter((item) => {
+        const sites = item.applicableSites && item.applicableSites.length > 0 ? item.applicableSites : ['newrelic'];
+        return sites.includes('all') || sites.includes(siteFilter as any);
+      });
+    }
+
     if (!search.trim()) return list;
     const s = search.toLowerCase();
     return list.filter(
@@ -81,7 +137,7 @@ export default function CatalogPage() {
         c.brandName.toLowerCase().includes(s) ||
         c.itemName.toLowerCase().includes(s)
     );
-  }, [catalog, search, filterMode]);
+  }, [catalog, search, filterMode, siteFilter]);
 
   async function handleSaveNew() {
     if (!newBrand.trim() || !newItem.trim()) {
@@ -97,6 +153,7 @@ export default function CatalogPage() {
         defaultQuantity: 1,
         caseSize: newCaseSize ? Number(newCaseSize) : undefined,
         mrp: newMrp ? Number(newMrp) : undefined,
+        applicableSites: newSites.length > 0 ? newSites : ['all'],
       });
       const refreshed = await getCatalogItems();
       setCatalog(refreshed);
@@ -104,6 +161,7 @@ export default function CatalogPage() {
       setNewItem('');
       setNewCaseSize('');
       setNewMrp('');
+      setNewSites(['all']);
       setShowAdd(false);
     } catch (e) {
       setError('Failed to add. Please try again.');
@@ -126,6 +184,7 @@ export default function CatalogPage() {
         defaultQuantity: 1,
         caseSize: editCaseSize ? Number(editCaseSize) : undefined,
         mrp: editMrp ? Number(editMrp) : undefined,
+        applicableSites: editSites.length > 0 ? editSites : ['newrelic'],
       }, id);
       const refreshed = await getCatalogItems();
       setCatalog(refreshed);
@@ -153,6 +212,7 @@ export default function CatalogPage() {
           defaultQuantity: item.defaultQuantity || 1,
           caseSize: field === 'caseSize' ? numVal : item.caseSize,
           mrp: field === 'mrp' ? numVal : item.mrp,
+          applicableSites: item.applicableSites,
         },
         item.id!
       );
@@ -224,7 +284,8 @@ export default function CatalogPage() {
               itemName: cat.itemName,
               defaultQuantity: cat.defaultQuantity,
               caseSize: cat.caseSize,
-              mrp: pricingMrp 
+              mrp: pricingMrp,
+              applicableSites: cat.applicableSites,
             }, cat.id);
             updatedCount++;
          }
@@ -319,8 +380,19 @@ export default function CatalogPage() {
           )}
         </div>
 
-        {/* Filter Pills */}
+        {/* Filter Pills & Site Select */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <select
+            value={siteFilter}
+            onChange={(e) => setSiteFilter(e.target.value)}
+            className="h-8 px-2.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] shrink-0"
+          >
+            <option value="all">🏢 All Sites</option>
+            <option value="newrelic">NewRelic</option>
+            <option value="dsm">DSM</option>
+            <option value="ntt_data">NTT Data</option>
+          </select>
+
           <button
             onClick={() => setFilterMode('all')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors shrink-0 ${
@@ -389,6 +461,40 @@ export default function CatalogPage() {
               value={newItem}
               onChange={(e) => setNewItem(e.target.value)}
             />
+          </div>
+          <div>
+            <label className="text-[11px] font-semibold text-gray-500 uppercase block mb-1">Applicable Sites</label>
+            <div className="flex flex-wrap gap-1.5">
+              {SITES_OPTIONS.map((opt) => {
+                const isSelected = newSites.includes(opt.id as any);
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      if (opt.id === 'all') {
+                        setNewSites(['all']);
+                      } else {
+                        const withoutAll = newSites.filter((s) => s !== 'all');
+                        if (isSelected) {
+                          const next = withoutAll.filter((s) => s !== opt.id);
+                          setNewSites(next.length === 0 ? ['all'] : next);
+                        } else {
+                          setNewSites([...withoutAll, opt.id as any]);
+                        }
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                      isSelected
+                        ? 'bg-[#3b2fc9] text-white border-[#3b2fc9]'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -471,6 +577,40 @@ export default function CatalogPage() {
                       onChange={(e) => setEditItem(e.target.value)}
                     />
                   </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-gray-500 uppercase block mb-1">Applicable Sites</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {SITES_OPTIONS.map((opt) => {
+                        const isSelected = editSites.includes(opt.id as any);
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              if (opt.id === 'all') {
+                                setEditSites(['all']);
+                              } else {
+                                const withoutAll = editSites.filter((s) => s !== 'all');
+                                if (isSelected) {
+                                  const next = withoutAll.filter((s) => s !== opt.id);
+                                  setEditSites(next.length === 0 ? ['all'] : next);
+                                } else {
+                                  setEditSites([...withoutAll, opt.id as any]);
+                                }
+                              }
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                              isSelected
+                                ? 'bg-[#3b2fc9] text-white border-[#3b2fc9]'
+                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[11px] font-semibold text-gray-500 uppercase">Case Size</label>
@@ -525,6 +665,7 @@ export default function CatalogPage() {
               setEditItem(item.itemName);
               setEditCaseSize(item.caseSize?.toString() || '');
               setEditMrp(item.mrp?.toString() || '');
+              setEditSites(item.applicableSites && item.applicableSites.length > 0 ? item.applicableSites : ['newrelic']);
               setError('');
             };
 
@@ -539,6 +680,7 @@ export default function CatalogPage() {
                       <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-[#3b2fc9] border border-indigo-100">
                         {item.brandName}
                       </span>
+                      {renderItemSiteBadges(item.applicableSites)}
                       {isMissingCase && (
                         <button
                           type="button"
@@ -719,14 +861,15 @@ export default function CatalogPage() {
       {/* Desktop Table (hidden md:block) */}
       <div className="hidden md:block bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left min-w-[650px]">
+          <table className="w-full text-sm text-left min-w-[700px]">
             <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
               <tr>
-                <th className="px-4 py-3 min-w-[180px]">Brand Name</th>
-                <th className="px-4 py-3 min-w-[200px]">Item Name</th>
-                <th className="px-4 py-3 w-[110px]">Case Size</th>
-                <th className="px-4 py-3 w-[110px]">Ref MRP</th>
-                <th className="px-4 py-3 w-[120px] text-right">Actions</th>
+                <th className="px-4 py-3 min-w-[150px]">Brand Name</th>
+                <th className="px-4 py-3 min-w-[180px]">Item Name</th>
+                <th className="px-4 py-3 w-[150px]">Sites</th>
+                <th className="px-4 py-3 w-[100px]">Case Size</th>
+                <th className="px-4 py-3 w-[100px]">Ref MRP</th>
+                <th className="px-4 py-3 w-[110px] text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -748,6 +891,39 @@ export default function CatalogPage() {
                       value={newItem}
                       onChange={(e) => setNewItem(e.target.value)}
                     />
+                  </td>
+                  <td className="px-4 py-2">
+                    <div className="flex flex-wrap gap-1">
+                      {SITES_OPTIONS.map((opt) => {
+                        const isSelected = newSites.includes(opt.id as any);
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              if (opt.id === 'all') {
+                                setNewSites(['all']);
+                              } else {
+                                const withoutAll = newSites.filter((s) => s !== 'all');
+                                if (isSelected) {
+                                  const next = withoutAll.filter((s) => s !== opt.id);
+                                  setNewSites(next.length === 0 ? ['all'] : next);
+                                } else {
+                                  setNewSites([...withoutAll, opt.id as any]);
+                                }
+                              }
+                            }}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-medium border transition-colors ${
+                              isSelected
+                                ? 'bg-[#3b2fc9] text-white border-[#3b2fc9]'
+                                : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </td>
                   <td className="px-4 py-2">
                     <input
@@ -792,13 +968,13 @@ export default function CatalogPage() {
 
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                     Loading catalog...
                   </td>
                 </tr>
               ) : filteredItems.length === 0 && !showAdd ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                     No catalog items found.
                   </td>
                 </tr>
@@ -836,6 +1012,43 @@ export default function CatalogPage() {
                           />
                         ) : (
                           item.itemName
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {isEditing ? (
+                          <div className="flex flex-wrap gap-1">
+                            {SITES_OPTIONS.map((opt) => {
+                              const isSelected = editSites.includes(opt.id as any);
+                              return (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  onClick={() => {
+                                    if (opt.id === 'all') {
+                                      setEditSites(['all']);
+                                    } else {
+                                      const withoutAll = editSites.filter((s) => s !== 'all');
+                                      if (isSelected) {
+                                        const next = withoutAll.filter((s) => s !== opt.id);
+                                        setEditSites(next.length === 0 ? ['all'] : next);
+                                      } else {
+                                        setEditSites([...withoutAll, opt.id as any]);
+                                      }
+                                    }
+                                  }}
+                                  className={`px-1.5 py-0.5 rounded text-[10px] font-medium border transition-colors ${
+                                    isSelected
+                                      ? 'bg-[#3b2fc9] text-white border-[#3b2fc9]'
+                                      : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {opt.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          renderItemSiteBadges(item.applicableSites)
                         )}
                       </td>
                       <td className="px-4 py-2 text-gray-600">
@@ -894,6 +1107,7 @@ export default function CatalogPage() {
                                   setEditItem(item.itemName);
                                   setEditCaseSize(item.caseSize?.toString() || '');
                                   setEditMrp(item.mrp?.toString() || '');
+                                  setEditSites(item.applicableSites && item.applicableSites.length > 0 ? item.applicableSites : ['newrelic']);
                                   setError('');
                                 }}
                                 className="p-1.5 text-gray-400 hover:text-[#3b2fc9] hover:bg-blue-50 rounded transition-colors"

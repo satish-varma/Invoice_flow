@@ -5,6 +5,7 @@ import { Users, UserPlus, Search, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { NewRelicEmployee } from '@/types/employee';
+import { SiteId, SITE_OPTIONS, resolveSiteId, COMPANY_SITES } from '@/types/site';
 import {
   getEmployees,
   saveEmployee,
@@ -23,6 +24,7 @@ export default function EmployeesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [filterLoc, setFilterLoc] = useState('all');
+  const [filterSite, setFilterSite] = useState<string>(user?.assignedSite || 'all');
 
   const isAdmin = role === 'admin' || role === 'superadmin';
 
@@ -78,13 +80,15 @@ export default function EmployeesPage() {
   };
 
   const displayEmployees = employees.filter((e) => {
+    const site = resolveSiteId(e.siteId);
+    const matchSite = filterSite === 'all' || site === filterSite;
     const matchLoc = filterLoc === 'all' || e.location === filterLoc;
     const matchSearch =
       !search ||
       e.name.toLowerCase().includes(search.toLowerCase()) ||
       e.employeeId.toLowerCase().includes(search.toLowerCase()) ||
       e.designation.toLowerCase().includes(search.toLowerCase());
-    return matchLoc && matchSearch;
+    return matchSite && matchLoc && matchSearch;
   });
 
   const hydCount = employees.filter((e) => e.location === 'hyderabad' && e.isActive).length;
@@ -143,6 +147,20 @@ export default function EmployeesPage() {
               className="w-full h-9 pl-9 pr-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
             />
           </div>
+          {isAdmin && (
+            <select
+              value={filterSite}
+              onChange={(e) => setFilterSite(e.target.value)}
+              className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white font-medium"
+            >
+              <option value="all">All Sites</option>
+              {SITE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          )}
           <select
             value={filterLoc}
             onChange={(e) => setFilterLoc(e.target.value)}

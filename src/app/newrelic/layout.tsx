@@ -13,6 +13,8 @@ import { MobileAppNavigation } from '@/components/newrelic/mobile-app-navigation
 import { MobileAppBar } from '@/components/newrelic/mobile-app-bar';
 import { NetworkStatusIndicator } from '@/components/newrelic/network-status-indicator';
 
+import { COMPANY_SITES } from '@/types/site';
+
 function FinancialStatusBadge() {
   const { isUnlocked, remainingMinutes, lockFinancials } = useFinancialAuth();
   const [showModal, setShowModal] = useState(false);
@@ -56,6 +58,10 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
   const { user, role, signOut } = useAuth();
   const pathname = usePathname();
   const [pendingCount, setPendingCount] = useState(0);
+
+  const site = user?.assignedSite || 'newrelic';
+  const siteConfig = COMPANY_SITES[site] || COMPANY_SITES.newrelic;
+  const hasChallanAccess = role === 'admin' || role === 'superadmin' || site === 'newrelic';
 
   useEffect(() => {
     // Dynamically configure native status bar in Capacitor if running on Android/iOS
@@ -105,9 +111,22 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
               className="h-7 sm:h-8 w-auto object-contain"
             />
             <span className="text-sm text-gray-400 font-medium hidden xs:inline">×</span>
-            <span className="text-xs sm:text-sm font-semibold text-gray-700 hidden xs:inline">
-              NewRelic DC Portal
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs sm:text-sm font-semibold text-gray-700 hidden xs:inline">
+                {role === 'admin' ? 'HungerBox Operations Portal' : `${siteConfig.name} Portal`}
+              </span>
+              {role !== 'admin' && (
+                <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                  site === 'dsm'
+                    ? 'bg-cyan-100 text-cyan-800 border border-cyan-200'
+                    : site === 'ntt_data'
+                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                    : 'bg-indigo-100 text-[#3b2fc9] border border-indigo-200'
+                }`}>
+                  📍 {siteConfig.name} · {siteConfig.allowedLocations.join(' & ')}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {role === 'admin' && (
@@ -119,8 +138,8 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
                 Users
               </Link>
             )}
-            <span className="text-[11px] sm:text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 truncate hidden md:inline">
-              Returnable Items · HYD & BLR
+            <span className="text-[11px] sm:text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 truncate hidden md:inline">
+              {role === 'admin' ? 'Multi-Site · HYD & BLR' : `${siteConfig.name} · ${siteConfig.tagline || 'Tuckshop'}`}
             </span>
             
             {role === 'admin' && <FinancialStatusBadge />}
@@ -144,16 +163,18 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
       {/* Secondary Navigation (Desktop only: hidden on mobile, replaced by bottom nav) */}
       <div className="hidden sm:block bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-8 flex items-center gap-6">
-          <Link 
-            href="/newrelic" 
-            className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-              pathname === '/newrelic' 
-                ? 'border-[#3b2fc9] text-[#3b2fc9]' 
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Delivery Challans
-          </Link>
+          {hasChallanAccess && (
+            <Link 
+              href="/newrelic" 
+              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+                pathname === '/newrelic' 
+                  ? 'border-[#3b2fc9] text-[#3b2fc9]' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Delivery Challans
+            </Link>
+          )}
           <Link 
             href="/newrelic/tuckshop" 
             className={`py-3 text-sm font-medium border-b-2 transition-colors ${

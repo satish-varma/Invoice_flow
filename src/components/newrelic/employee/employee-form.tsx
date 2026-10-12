@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { NewRelicEmployee } from '@/types/employee';
+import { SiteId, SITE_OPTIONS, resolveSiteId, COMPANY_SITES } from '@/types/site';
 import { generateEmployeeId } from '@/services/newrelicEmployeeService';
 import { X, UserCheck, UserPlus, ChevronDown } from 'lucide-react';
 import { collection, getDocs, query, orderBy, doc, setDoc } from 'firebase/firestore';
@@ -13,6 +14,7 @@ interface DbUser {
   id: string;
   email: string;
   role: string;
+  assignedSite?: SiteId;
   preferredLocations?: string[];
 }
 
@@ -37,6 +39,7 @@ export function EmployeeForm({ initialData, onSave, onCancel, isSaving }: Employ
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
     defaultValues: {
+      siteId: resolveSiteId(initialData?.siteId),
       employeeId: initialData?.employeeId || '',
       name: initialData?.name || '',
       email: initialData?.email || '',
@@ -51,7 +54,15 @@ export function EmployeeForm({ initialData, onSave, onCancel, isSaving }: Employ
     },
   });
 
+  const siteId = watch('siteId') as SiteId;
   const location = watch('location') as 'hyderabad' | 'bangalore';
+
+  /* ── Lock DSM & NTT Data to Hyderabad ── */
+  useEffect(() => {
+    if (siteId === 'dsm' || siteId === 'ntt_data') {
+      setValue('location', 'hyderabad');
+    }
+  }, [siteId, setValue]);
 
   /* ── Load system users ── */
   useEffect(() => {
@@ -63,10 +74,12 @@ export function EmployeeForm({ initialData, onSave, onCancel, isSaving }: Employ
       .catch(() => {});
   }, []);
 
-  /* ── Auto-suggest employee ID ── */
+  /* ── Auto-suggest employee ID based on site & location ── */
   useEffect(() => {
-    if (!isEditing) generateEmployeeId(location).then(setSuggestedId);
-  }, [location, isEditing]);
+    if (!isEditing) {
+      generateEmployeeId(location, siteId).then(setSuggestedId);
+    }
+  }, [location, siteId, isEditing]);
 
   useEffect(() => {
     if (!isEditing && suggestedId) setValue('employeeId', suggestedId);
@@ -109,6 +122,7 @@ export function EmployeeForm({ initialData, onSave, onCancel, isSaving }: Employ
           email: newEmail,
           password: hashPassword(newUserPassword),
           role: newUserRole,
+          assignedSite: siteId,
           preferredLocations: [values.location],
           assignedApps: ['/newrelic'],
           createdAt: new Date().toISOString(),
@@ -120,6 +134,7 @@ export function EmployeeForm({ initialData, onSave, onCancel, isSaving }: Employ
 
     await onSave({
       ...values,
+      siteId,
       email: finalEmail,
       userId: linkedUserId,
       monthlySalary: Number(values.monthlySalary),
@@ -243,7 +258,7 @@ export function EmployeeForm({ initialData, onSave, onCancel, isSaving }: Employ
                   </select>
                 </div>
                 <p className="sm:col-span-2 text-[11px] text-gray-400">
-                  A new login account will be created with access to <strong>/newrelic</strong> and the selected location.
+                  A new login account will be created with access to <strong>/newrelic</strong>, assigned to <strong>{COMPANY_SITES[siteId]?.name || siteId}</strong>.
                 </p>
               </div>
             )}
@@ -252,29 +267,47 @@ export function EmployeeForm({ initialData, onSave, onCancel, isSaving }: Employ
 
         {/* ── Employee Details ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Employee ID */}
+          {/* Company Site */}
           <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Company Site</label>
+            <select
+              {...register('siteId')}
+              className={`${inputCls} bg-white font-medium`}
+            >
+              {SITE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label} {opt.value !== 'newrelic' ? '(Hyderabad)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Location */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Location {siteId !== 'newrelic' && <span className="text-gray-400 font-normal">(Locked)</span>}
+            </label>
+            <select
+              {...register('location')}
+              disabled={siteId !== 'newrelic'}
+              className={`${inputCls} ${siteId !== 'newrelic' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+            >
+              <option value="hyderabad">Hyderabad</option>
+              {siteId === 'newrelic' && <option value="bangalore">Bangalore</option>}
+            </select>
+          </div>
+
+          {/* Employee ID */}
+          <div className="sm:col-span-2">
             <label className="block text-xs font-medium text-gray-600 mb-1">Employee ID</label>
             <input
               {...register('employeeId', { required: 'Required' })}
-              className={`${inputCls} bg-gray-50`}
+              className={`${inputCls} bg-gray-50 font-mono`}
               placeholder="Auto-generated"
             />
             {errors.employeeId && (
               <p className="text-red-500 text-xs mt-1">{String(errors.employeeId.message)}</p>
             )}
-          </div>
-
-          {/* Location */}
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Location</label>
-            <select
-              {...register('location')}
-              className={`${inputCls} bg-white`}
-            >
-              <option value="hyderabad">Hyderabad</option>
-              <option value="bangalore">Bangalore</option>
-            </select>
           </div>
 
           {/* Name */}

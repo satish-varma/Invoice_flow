@@ -54,25 +54,29 @@ export default function StockRequestPage() {
   const selectedLocation = watch('location');
   const lineItems = watch('lineItems');
 
+  const activeSite = user?.assignedSite || 'newrelic';
+  const isAdmin = role === 'admin' || role === 'superadmin';
+  const isHydOnlySite = !isAdmin && (activeSite === 'dsm' || activeSite === 'ntt_data');
+
   useEffect(() => {
     if (!role) return;
     Promise.all([
-      getCatalogItems(), 
+      getCatalogItems(isAdmin ? undefined : activeSite), 
       getAllPricingItems(),
-      getStockRequests()
+      getStockRequests(undefined, isAdmin ? undefined : activeSite)
     ]).then(([cat, pri, reqs]) => {
       setCatalog(cat);
       setPricing(pri);
       
       // Filter requests created by this user (or show all for admin)
       const userIdentifier = user?.email || user?.id;
-      if (role === 'admin' || role === 'superadmin') {
+      if (isAdmin) {
         setMyRequests(reqs);
       } else {
         setMyRequests(reqs.filter(r => r.createdBy === userIdentifier || r.createdBy === 'Unknown'));
       }
     });
-  }, [role, user?.email, user?.id, success]);
+  }, [role, user?.email, user?.id, success, activeSite, isAdmin]);
 
   // Derive unique brands for datalist
   const brands = Array.from(new Set(catalog.map(c => c.brandName))).sort();
@@ -142,7 +146,8 @@ export default function StockRequestPage() {
       setIsSubmitting(true);
       
       const payload = JSON.parse(JSON.stringify({
-        location: data.location,
+        siteId: activeSite,
+        location: isHydOnlySite ? 'hyderabad' : data.location,
         requestDate: data.requestDate.toISOString(),
         status: data.status,
         lineItems: data.lineItems,
@@ -155,7 +160,7 @@ export default function StockRequestPage() {
       setSuccess(true);
       reset({
         id: undefined,
-        location: data.location,
+        location: isHydOnlySite ? 'hyderabad' : data.location,
         requestDate: new Date(),
         status: 'PENDING',
         lineItems: [{ brandName: '', itemName: '', orderType: 'cases', caseSize: 1, quantity: 1, totalUnits: 1 }],
@@ -220,11 +225,17 @@ export default function StockRequestPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
             <select
               {...register('location')}
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#3b2fc9] focus:ring-[#3b2fc9] p-2 border"
+              disabled={isHydOnlySite}
+              className={`w-full rounded-md border-gray-300 shadow-sm focus:border-[#3b2fc9] focus:ring-[#3b2fc9] p-2 border ${isHydOnlySite ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
             >
               <option value="hyderabad">Hyderabad</option>
-              <option value="bangalore">Bangalore</option>
+              {!isHydOnlySite && <option value="bangalore">Bangalore</option>}
             </select>
+            {isHydOnlySite && (
+              <span className="text-[10px] text-amber-600 mt-1 block">
+                📍 Locked to Hyderabad for {activeSite === 'dsm' ? 'DSM' : 'NTT Data'}
+              </span>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Additional Notes</label>

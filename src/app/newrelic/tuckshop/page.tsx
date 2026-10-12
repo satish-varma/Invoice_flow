@@ -13,8 +13,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+import { COMPANY_SITES } from '@/types/site';
+
 export default function TuckshopPage() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [records, setRecords] = useState<NewRelicTuckshopRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -22,13 +24,18 @@ export default function TuckshopPage() {
   const [dialogInitialTab, setDialogInitialTab] = useState<'expense' | 'sale'>('expense');
   const [editingRecord, setEditingRecord] = useState<NewRelicTuckshopRecord | null>(null);
 
+  const isAdmin = role === 'admin' || role === 'superadmin';
+  const assignedSite = user?.assignedSite || 'newrelic';
+  const siteConfig = COMPANY_SITES[assignedSite] || COMPANY_SITES.newrelic;
+
   useEffect(() => {
+    const siteFilter = isAdmin ? undefined : assignedSite;
     const unsubscribe = subscribeToTuckshopRecords((data) => {
       setRecords(data);
       setIsLoading(false);
-    });
+    }, siteFilter);
     return () => unsubscribe();
-  }, []);
+  }, [isAdmin, assignedSite]);
 
   const existingCategories = useMemo(() => {
     const standard = ['Dosa Batter', 'Bread', 'Fruits', 'Groceries', 'Cutlery', 'Vegetables', 'Sales'];
@@ -57,9 +64,26 @@ export default function TuckshopPage() {
     <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Tuckshop Tracking</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+              {isAdmin ? 'Tuckshop Tracking' : `${siteConfig.name} Tuckshop Tracking`}
+            </h1>
+            {!isAdmin && (
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                assignedSite === 'dsm'
+                  ? 'bg-cyan-100 text-cyan-800'
+                  : assignedSite === 'ntt_data'
+                  ? 'bg-amber-100 text-amber-800'
+                  : 'bg-indigo-100 text-[#3b2fc9]'
+              }`}>
+                {siteConfig.name}
+              </span>
+            )}
+          </div>
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-            Track daily sales and expenses for Tuckshop items across locations.
+            {isAdmin
+              ? 'Track daily sales and expenses for Tuckshop items across company sites.'
+              : `Track daily sales and expenses for ${siteConfig.name} (${siteConfig.allowedLocations.join(', ')}).`}
           </p>
         </div>
         

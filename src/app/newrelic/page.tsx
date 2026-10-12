@@ -22,10 +22,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFinancialAuth } from '@/contexts/FinancialAuthContext';
 import { FinancialPasswordModal } from '@/components/newrelic/financial-password-modal';
 import { Lock, Unlock } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { MobileFloatingActions } from '@/components/newrelic/mobile-floating-actions';
 import { triggerHaptic } from '@/lib/haptics';
 
 export default function NewRelicPage() {
+  const router = useRouter();
   const { toast } = useToast();
   const [challans, setChallans] = useState<NewRelicChallan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,6 +37,16 @@ export default function NewRelicPage() {
   const [formKey, setFormKey] = useState<string>('new');
   const [activeTab, setActiveTab] = useState<'active' | 'trash' | 'insights' | 'items'>('active');
   const { role, user } = useAuth();
+
+  // Route guard: Non-NewRelic company managers (e.g. DSM, NTT Data) must not access delivery challans
+  useEffect(() => {
+    if (role && role !== 'admin') {
+      const site = user?.assignedSite || 'newrelic';
+      if (site !== 'newrelic') {
+        router.replace('/newrelic/tuckshop');
+      }
+    }
+  }, [role, user, router]);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState<string>('');

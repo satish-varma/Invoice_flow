@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogOut, User, Shield, MapPin, X } from 'lucide-react';
 
+import { COMPANY_SITES } from '@/types/site';
+
 interface MobileAppBarProps {
   children?: React.ReactNode;
 }
@@ -12,6 +14,10 @@ interface MobileAppBarProps {
 export function MobileAppBar({ children }: MobileAppBarProps) {
   const { user, role, signOut } = useAuth();
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
+
+  const site = user?.assignedSite || 'newrelic';
+  const siteConfig = COMPANY_SITES[site] || COMPANY_SITES.newrelic;
+  const hasChallanAccess = role === 'admin' || role === 'superadmin' || site === 'newrelic';
 
   const initials = user?.email
     ? user.email.substring(0, 2).toUpperCase()
@@ -23,7 +29,10 @@ export function MobileAppBar({ children }: MobileAppBarProps) {
       <header className="border-b border-gray-100 bg-white/95 backdrop-blur-md sticky top-0 z-30 shadow-xs safe-top">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
           {/* Brand Logo & Name */}
-          <Link href="/newrelic" className="flex items-center gap-2.5 active:opacity-80 transition-opacity">
+          <Link
+            href={hasChallanAccess ? '/newrelic' : '/newrelic/tuckshop'}
+            className="flex items-center gap-2.5 active:opacity-80 transition-opacity"
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/hungerbox_logo.png"
@@ -32,10 +41,10 @@ export function MobileAppBar({ children }: MobileAppBarProps) {
             />
             <div className="flex flex-col">
               <span className="text-xs font-black tracking-tight text-gray-900 leading-none">
-                InvoiceFlow
+                {role === 'admin' ? 'InvoiceFlow' : siteConfig.name}
               </span>
-              <span className="text-[10px] text-gray-400 font-medium">
-                NewRelic DC Portal
+              <span className="text-[10px] text-gray-400 font-medium truncate max-w-[140px]">
+                {role === 'admin' ? 'Multi-Site DC Portal' : siteConfig.tagline || 'Tuckshop'}
               </span>
             </div>
           </Link>
@@ -86,14 +95,14 @@ export function MobileAppBar({ children }: MobileAppBarProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-gray-900 truncate">{user?.email}</p>
-                <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   <span className="text-[10px] bg-white border border-indigo-200 text-[#3b2fc9] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
                     <Shield className="w-2.5 h-2.5" />
                     {role || 'User'}
                   </span>
-                  <span className="text-[11px] text-gray-500 flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-gray-400" />
-                    HYD & BLR
+                  <span className="text-[11px] text-gray-600 font-medium flex items-center gap-1 capitalize">
+                    <MapPin className="w-3 h-3 text-indigo-500" />
+                    {role === 'admin' ? 'All Locations' : `${siteConfig.name} · ${siteConfig.allowedLocations.join(' & ')}`}
                   </span>
                 </div>
               </div>

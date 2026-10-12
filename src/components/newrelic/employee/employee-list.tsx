@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { NewRelicEmployee } from '@/types/employee';
+import { resolveSiteId, COMPANY_SITES } from '@/types/site';
 import { Edit2, Trash2, MapPin, IndianRupee, Calendar, UserCheck, UserX } from 'lucide-react';
 
 interface EmployeeListProps {
@@ -21,42 +22,55 @@ export function EmployeeList({ employees, onEdit, onDelete }: EmployeeListProps)
 
   return (
     <div className="space-y-3">
-      {employees.map((emp) => (
-        <div
-          key={emp.id}
-          className={`bg-white rounded-xl border p-4 flex flex-col sm:flex-row sm:items-center gap-4 shadow-sm transition-opacity ${
-            emp.isActive ? 'border-gray-200' : 'border-gray-100 opacity-60'
-          }`}
-        >
-          {/* Avatar */}
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div
-              className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0 ${
-                emp.location === 'hyderabad' ? 'bg-[#3b2fc9]' : 'bg-emerald-600'
-              }`}
-            >
-              {emp.name.charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-semibold text-gray-800 text-sm truncate">{emp.name}</p>
-                <span className="text-[10px] font-mono bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{emp.employeeId}</span>
-                {emp.isActive ? (
-                  <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1">
-                    <UserCheck className="h-3 w-3" /> Active
-                  </span>
-                ) : (
-                  <span className="text-[10px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1">
-                    <UserX className="h-3 w-3" /> Inactive
-                  </span>
-                )}
+      {employees.map((emp) => {
+        const siteId = resolveSiteId(emp.siteId);
+        const siteConfig = COMPANY_SITES[siteId];
+        const siteBadgeStyles =
+          siteId === 'dsm'
+            ? 'bg-purple-50 text-purple-700 border-purple-200/60'
+            : siteId === 'ntt_data'
+            ? 'bg-amber-50 text-amber-700 border-amber-200/60'
+            : 'bg-blue-50 text-blue-700 border-blue-200/60';
+
+        return (
+          <div
+            key={emp.id}
+            className={`bg-white rounded-xl border p-4 flex flex-col sm:flex-row sm:items-center gap-4 shadow-sm transition-opacity ${
+              emp.isActive ? 'border-gray-200' : 'border-gray-100 opacity-60'
+            }`}
+          >
+            {/* Avatar */}
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div
+                className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0 ${
+                  emp.location === 'hyderabad' ? 'bg-[#3b2fc9]' : 'bg-emerald-600'
+                }`}
+              >
+                {emp.name.charAt(0).toUpperCase()}
               </div>
-              <p className="text-xs text-gray-500 truncate">
-                {emp.designation}
-                {emp.email && <span className="ml-2 text-gray-400">({emp.email})</span>}
-              </p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-semibold text-gray-800 text-sm truncate">{emp.name}</p>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium border ${siteBadgeStyles}`}>
+                    {siteConfig?.name || siteId}
+                  </span>
+                  <span className="text-[10px] font-mono bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{emp.employeeId}</span>
+                  {emp.isActive ? (
+                    <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <UserCheck className="h-3 w-3" /> Active
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <UserX className="h-3 w-3" /> Inactive
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 truncate">
+                  {emp.designation}
+                  {emp.email && <span className="ml-2 text-gray-400">({emp.email})</span>}
+                </p>
+              </div>
             </div>
-          </div>
 
           {/* Meta */}
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
@@ -92,7 +106,8 @@ export function EmployeeList({ employees, onEdit, onDelete }: EmployeeListProps)
             </button>
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

@@ -8,11 +8,14 @@ import { Check, Download, Trash2, MapPin, Calendar, Clock, CheckCircle, User, Fi
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 
+import { COMPANY_SITES, SiteId } from '@/types/site';
+
 export default function StockRequestsAdminPage() {
   const { role } = useAuth();
   const router = useRouter();
   const [requests, setRequests] = useState<StockRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filterSite, setFilterSite] = useState<'all' | SiteId>('all');
   const [filterLocation, setFilterLocation] = useState<'all' | 'hyderabad' | 'bangalore'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'PENDING' | 'PARTIALLY_FULFILLED' | 'FULFILLED' | 'CANCELLED'>('PENDING');
   const [activeFulfillId, setActiveFulfillId] = useState<string | null>(null);
@@ -175,6 +178,7 @@ export default function StockRequestsAdminPage() {
   if (!role || role !== 'admin') return null;
 
   const filteredRequests = requests.filter(r => {
+    if (filterSite !== 'all' && (r.siteId || 'newrelic') !== filterSite) return false;
     if (filterLocation !== 'all' && r.location !== filterLocation) return false;
     if (filterStatus !== 'all' && r.status !== filterStatus) return false;
     return true;
@@ -228,6 +232,17 @@ export default function StockRequestsAdminPage() {
 
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap gap-4">
         <select
+          value={filterSite}
+          onChange={(e) => setFilterSite(e.target.value as any)}
+          className="rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
+        >
+          <option value="all">All Company Sites</option>
+          <option value="newrelic">NewRelic</option>
+          <option value="dsm">DSM</option>
+          <option value="ntt_data">NTT Data</option>
+        </select>
+
+        <select
           value={filterLocation}
           onChange={(e) => setFilterLocation(e.target.value as any)}
           className="rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
@@ -266,6 +281,15 @@ export default function StockRequestsAdminPage() {
                     <Calendar className="h-4 w-4 shrink-0" />
                     <span className="font-medium text-gray-900">{format(new Date(req.requestDate), 'dd MMM yyyy, hh:mm a')}</span>
                   </div>
+                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                    (req.siteId || 'newrelic') === 'dsm'
+                      ? 'bg-cyan-100 text-cyan-800 border border-cyan-200'
+                      : (req.siteId || 'newrelic') === 'ntt_data'
+                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                      : 'bg-indigo-100 text-[#3b2fc9] border border-indigo-200'
+                  }`}>
+                    📍 {COMPANY_SITES[req.siteId || 'newrelic']?.name || 'NewRelic'}
+                  </span>
                   <div className="flex items-center gap-1.5 text-gray-600">
                     <User className="h-4 w-4 shrink-0" />
                     <span className="truncate max-w-[150px]">{req.createdBy}</span>
@@ -318,7 +342,7 @@ export default function StockRequestsAdminPage() {
                       Undo Fulfill
                     </button>
                   )}
-                  {(req.status === 'FULFILLED' || req.status === 'PARTIALLY_FULFILLED') && (
+                  {(req.status === 'FULFILLED' || req.status === 'PARTIALLY_FULFILLED') && (req.siteId || 'newrelic') === 'newrelic' && (
                     <button
                       onClick={() => handleCreateChallan(req)}
                       className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-200 transition-colors flex items-center gap-1"

@@ -2,7 +2,7 @@
 import { NewRelicChallan, NewRelicLocation } from '@/types/challan';
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Loader2, FileText, MapPin, Filter, FileSpreadsheet, RefreshCcw, Search, X } from 'lucide-react';
+import { Loader2, FileText, MapPin, Filter, FileSpreadsheet, RefreshCcw, Search, X, ArrowUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
@@ -49,7 +49,16 @@ export default function NewRelicPage() {
   const [showFinancialModal, setShowFinancialModal] = useState(false);
   const [showFinancials, setShowFinancials] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 350);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   /* ── Data fetching ── */
   const fetchData = async () => {
@@ -382,6 +391,18 @@ export default function NewRelicPage() {
               onNewChallan={(loc) => handleStartCreateNew(loc)}
               onExportExcel={handleExportExcel}
             />
+
+            {/* Floating Back to Top Button on Mobile */}
+            {showScrollTop && (
+              <button
+                type="button"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="fixed left-4 bottom-20 z-40 w-12 h-12 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-gray-200 text-gray-700 hover:text-[#3b2fc9] flex items-center justify-center sm:hidden active:scale-90 transition-transform animate-in fade-in"
+                aria-label="Scroll to top"
+              >
+                <ArrowUp className="w-5 h-5 stroke-[2.2]" />
+              </button>
+            )}
           </>
         )}
 

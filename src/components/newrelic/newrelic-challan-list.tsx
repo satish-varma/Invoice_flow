@@ -295,7 +295,7 @@ export function NewRelicChallanList({
               })()}
 
               {/* Mobile Actions: Primary View/PDF Button + 3-Dot Overflow Menu */}
-              <div className="flex items-center gap-2 pt-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 pt-1 flex-wrap">
                 {isTrashView ? (
                   <Button
                     variant="outline"

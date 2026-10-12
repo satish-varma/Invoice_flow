@@ -55,6 +55,27 @@ export function ChallanLineItem({
         canSeeMrp ? "sm:grid-cols-[2fr_3fr_1fr_1.5fr_1fr_auto]" : "sm:grid-cols-[2fr_3fr_1fr_1.5fr_auto]"
       )}
     >
+      {/* Mobile Card Header: Item index badge and quick remove button */}
+      <div className="flex sm:hidden items-center justify-between pb-1.5 border-b border-gray-200/60">
+        <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+          <span className="h-4.5 w-4.5 rounded-full bg-[#3b2fc9]/10 text-[#3b2fc9] flex items-center justify-center text-[10px] font-bold">
+            {index + 1}
+          </span>
+          Item #{index + 1}
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-6 px-2 text-red-500 hover:text-red-700 hover:bg-red-50 text-[11px] gap-1 -mr-1"
+          onClick={() => remove(index)}
+          disabled={fieldsLength === 1}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          <span>Remove</span>
+        </Button>
+      </div>
+
       {/* Brand Name */}
       <div className="space-y-1 sm:space-y-0">
         <Label className="text-xs text-gray-500 sm:hidden">Brand Name</Label>
@@ -135,45 +156,53 @@ export function ChallanLineItem({
         </div>
       </div>
 
-      {canSeeMrp && (
-          <div className="space-y-1 sm:space-y-0">
-            <Label className="text-xs text-gray-500 sm:hidden">MRP</Label>
-            <Input
-              {...register(`lineItems.${index}.mrp`)}
-              type="number"
-              step="0.01"
-              min={0}
-              placeholder="MRP"
-              className={cn(errors.lineItems?.[index]?.mrp && 'border-red-400')}
-            />
-          </div>
-      )}
-      {canSeePCost && (
-          <div className="space-y-1 sm:space-y-0">
-            <Label className="text-xs text-gray-500 sm:hidden">P.Cost</Label>
-            <Input
-              {...register(`lineItems.${index}.procurementCost`)}
-              type="number"
-              step="0.01"
-              min={0}
-              placeholder="Cost"
-              className={cn(errors.lineItems?.[index]?.procurementCost && 'border-red-400')}
-            />
-          </div>
+      {/* MRP & P.Cost side-by-side on mobile, direct columns on desktop */}
+      {(canSeeMrp || canSeePCost) && (
+        <div className={cn(
+          "grid gap-2 sm:contents",
+          canSeeMrp && canSeePCost ? "grid-cols-2" : "grid-cols-1"
+        )}>
+          {canSeeMrp && (
+            <div className="space-y-1 sm:space-y-0">
+              <Label className="text-xs text-gray-500 sm:hidden">MRP</Label>
+              <Input
+                {...register(`lineItems.${index}.mrp`)}
+                type="number"
+                step="0.01"
+                min={0}
+                placeholder="MRP"
+                className={cn(errors.lineItems?.[index]?.mrp && 'border-red-400')}
+              />
+            </div>
+          )}
+          {canSeePCost && (
+            <div className="space-y-1 sm:space-y-0">
+              <Label className="text-xs text-gray-500 sm:hidden">P.Cost</Label>
+              <Input
+                {...register(`lineItems.${index}.procurementCost`)}
+                type="number"
+                step="0.01"
+                min={0}
+                placeholder="Cost"
+                className={cn(errors.lineItems?.[index]?.procurementCost && 'border-red-400')}
+              />
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Remove */}
-      <div className="flex justify-end sm:block pt-1 sm:pt-0">
+      {/* Desktop Remove Button (in table column) */}
+      <div className="hidden sm:block">
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="text-red-500 sm:text-red-400 hover:text-red-600 hover:bg-red-50 sm:h-9 sm:w-9 px-3 sm:px-0 text-xs sm:text-sm"
+          className="text-red-400 hover:text-red-600 hover:bg-red-50 h-9 w-9 p-0"
           onClick={() => remove(index)}
           disabled={fieldsLength === 1}
+          title="Remove Item"
         >
-          <Trash2 className="h-4 w-4 mr-1 sm:mr-0" />
-          <span className="sm:hidden">Remove Item</span>
+          <Trash2 className="h-4 w-4" />
         </Button>
       </div>
     </div>

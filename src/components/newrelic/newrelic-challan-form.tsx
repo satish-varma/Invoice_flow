@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
-import { CalendarIcon, Plus, Trash2, FileDown, Save, Loader2, Sparkles, UploadCloud, FileText, Paperclip, AlertTriangle } from 'lucide-react';
+import { CalendarIcon, Plus, Trash2, FileDown, Save, Loader2, Sparkles, UploadCloud, FileText, Paperclip, AlertTriangle, MapPin } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -142,7 +142,9 @@ export function NewRelicChallanForm({
   const watchedDcNumber = watch('dcNumber');
   const watchedDcDate = watch('dcDate');
   const watchedLineItems = watch('lineItems');
-  const calculatedTotalPCost = watchedLineItems?.reduce((acc, item) => acc + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 0)), 0) || 0;
+  const calculatedTotalPCost = watchedLineItems?.reduce((acc: number, item: any) => acc + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 0)), 0) || 0;
+  const calculatedTotalMrp = watchedLineItems?.reduce((acc: number, item: any) => acc + ((Number(item.mrp) || 0) * (Number(item.quantity) || 0)), 0) || 0;
+  const calculatedTotalQty = watchedLineItems?.reduce((acc: number, item: any) => acc + (Number(item.quantity) || 0), 0) || 0;
 
   /* ── Load Catalog for Autocomplete ── */
   useEffect(() => {
@@ -535,7 +537,7 @@ export function NewRelicChallanForm({
     <form
       id={`${formId}-form`}
       onSubmit={handleSubmit((v) => onSubmit(v, true), onValidationError)}
-      className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6 space-y-5 sm:space-y-6"
+      className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6 space-y-5 sm:space-y-6 pb-20 sm:pb-6"
     >
       {/* Autocomplete Datalists */}
       <datalist id="newrelic-brand-list">
@@ -633,11 +635,31 @@ export function NewRelicChallanForm({
         </div>
       </div>
 
-      {/* Location Address Preview */}
-      <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-xs text-gray-500 space-y-1">
+      {/* Location Address Preview - Desktop Full View */}
+      <div className="hidden sm:block bg-gray-50 border border-gray-100 rounded-xl p-3 text-xs text-gray-500 space-y-1">
         <span className="font-semibold text-gray-700">Recipient Address ({locationConfig.label}):</span>
-        <p className="whitespace-pre-wrap leading-relaxed text-[11px] sm:text-xs">{locationConfig.address}</p>
+        <p className="whitespace-pre-wrap leading-relaxed text-xs">{locationConfig.address}</p>
       </div>
+
+      {/* Location Address Preview - Mobile Compact Collapsible */}
+      <details className="sm:hidden group bg-gray-50/90 border border-gray-200/80 rounded-xl p-2.5 text-xs text-gray-500 transition-colors">
+        <summary className="font-medium text-gray-700 cursor-pointer list-none flex items-center justify-between select-none">
+          <span className="flex items-center gap-1.5 truncate">
+            <MapPin className="w-3.5 h-3.5 text-[#3b2fc9] shrink-0" />
+            <span className="font-semibold text-gray-800">Recipient:</span>
+            <span className="truncate">{locationConfig.label}</span>
+          </span>
+          <span className="text-[10px] text-[#3b2fc9] font-medium bg-[#3b2fc9]/10 px-2 py-0.5 rounded-full group-open:hidden shrink-0 ml-1">
+            View Address ▾
+          </span>
+          <span className="text-[10px] text-gray-500 font-medium bg-gray-200/80 px-2 py-0.5 rounded-full hidden group-open:inline shrink-0 ml-1">
+            Hide ▴
+          </span>
+        </summary>
+        <p className="mt-2 pt-2 border-t border-gray-200/60 whitespace-pre-wrap leading-relaxed text-[11px] text-gray-600">
+          {locationConfig.address}
+        </p>
+      </details>
 
       {/* ── Local Invoice Auto-Parser Banner (Hidden on Mobile) ── */}
       <div className="hidden sm:block">
@@ -913,6 +935,67 @@ export function NewRelicChallanForm({
         title="Unlock Procurement Costs"
         description="Line item procurement costs and transport expenses are confidential. Enter your admin password to view and edit."
       />
+
+      {/* ── Mobile Sticky Quick Action Bar ── */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200/90 px-3 py-2 pb-[max(0.625rem,env(safe-area-inset-bottom))] shadow-[0_-4px_24px_rgba(0,0,0,0.12)] flex items-center justify-between gap-2">
+        <div className="min-w-0 pr-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-gray-900 truncate">
+              {fields.length} {fields.length === 1 ? 'Item' : 'Items'}
+            </span>
+            {canSeeMrp && calculatedTotalMrp > 0 && (
+              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                ₹{calculatedTotalMrp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              </span>
+            )}
+          </div>
+          <p className="text-[10px] text-gray-400 truncate">
+            {locationConfig.label} • {isEditing ? 'Editing' : 'New'}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          {onCancel && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onCancel}
+              disabled={isSaving}
+              className="h-8.5 px-2 text-xs text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </Button>
+          )}
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isSaving}
+            onClick={handleSubmit((v) => onSubmit(v, false), onValidationError)}
+            className="h-8.5 px-2.5 text-xs gap-1 border-gray-300 font-medium active:scale-95 transition-transform"
+            title="Save without downloading"
+          >
+            <Save className="h-3.5 w-3.5" />
+            <span>Save</span>
+          </Button>
+
+          <Button
+            type="submit"
+            size="sm"
+            disabled={isSaving}
+            className="h-8.5 px-3 bg-[#3b2fc9] hover:bg-[#2d23a0] text-white text-xs font-semibold gap-1.5 shadow-xs active:scale-95 transition-transform"
+          >
+            {isSaving ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <FileDown className="h-3.5 w-3.5" />
+            )}
+            <span>{isEditing ? 'Update & DL' : 'Save & DL'}</span>
+          </Button>
+        </div>
+      </div>
     </form>
   );
 }

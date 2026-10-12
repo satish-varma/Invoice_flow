@@ -107,65 +107,73 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
       {showDashboard && <TuckshopDashboard records={filteredRecords} />}
       
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
-      <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/50">
-        <h3 className="font-semibold text-gray-800 text-lg">Transaction Ledger</h3>
+      <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col gap-3 bg-gray-50/50">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-gray-800 text-base sm:text-lg">Transaction Ledger</h3>
+          <span className="text-xs text-gray-500 font-medium sm:hidden">
+            {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''}
+          </span>
+        </div>
         
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search items..."
+              placeholder="Search items or notes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 w-40 sm:w-48"
+              className="w-full pl-9 pr-3 py-2 sm:py-1.5 text-xs sm:text-sm border border-gray-200 rounded-xl sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white"
             />
           </div>
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
+            <div className="relative">
+              <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              <select
+                value={filterLocation}
+                onChange={(e) => setFilterLocation(e.target.value as any)}
+                className="w-full pl-8 pr-2 py-2 sm:py-1.5 text-xs sm:text-sm border border-gray-200 rounded-xl sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white"
+              >
+                <option value="all">All Locations</option>
+                <option value="BLR">Bangalore (BLR)</option>
+                <option value="HYD">Hyderabad (HYD)</option>
+              </select>
+            </div>
+            
             <select
-              value={filterLocation}
-              onChange={(e) => setFilterLocation(e.target.value as any)}
-              className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20"
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as any)}
+              className="w-full px-2.5 py-2 sm:py-1.5 text-xs sm:text-sm border border-gray-200 rounded-xl sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white"
             >
-              <option value="all">All Locations</option>
-              <option value="BLR">Bangalore (BLR)</option>
-              <option value="HYD">Hyderabad (HYD)</option>
+              <option value="all">All Types</option>
+              <option value="expense">Expenses Only</option>
+              <option value="sale">Sales Only</option>
+            </select>
+
+            <select
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value)}
+              className="w-full px-2.5 py-2 sm:py-1.5 text-xs sm:text-sm border border-gray-200 rounded-xl sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white"
+            >
+              <option value="all">All Months</option>
+              {Array.from({ length: 12 }, (_, i) => {
+                const d = new Date(2000, i, 1);
+                return <option key={i} value={i}>{d.toLocaleString('default', { month: 'short' })}</option>;
+              })}
+            </select>
+
+            <select
+              value={filterYear}
+              onChange={(e) => setFilterYear(e.target.value)}
+              className="w-full px-2.5 py-2 sm:py-1.5 text-xs sm:text-sm border border-gray-200 rounded-xl sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white"
+            >
+              <option value="all">All Years</option>
+              {availableYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
             </select>
           </div>
-          
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value as any)}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20"
-          >
-            <option value="all">All Types</option>
-            <option value="expense">Expenses Only</option>
-            <option value="sale">Sales Only</option>
-          </select>
-
-          <select
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20"
-          >
-            <option value="all">All Months</option>
-            {Array.from({ length: 12 }, (_, i) => {
-              const d = new Date(2000, i, 1);
-              return <option key={i} value={i}>{d.toLocaleString('default', { month: 'short' })}</option>;
-            })}
-          </select>
-
-          <select
-            value={filterYear}
-            onChange={(e) => setFilterYear(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20"
-          >
-            <option value="all">All Years</option>
-            {availableYears.map(year => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
         </div>
       </div>
 

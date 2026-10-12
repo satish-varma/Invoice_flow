@@ -55,25 +55,25 @@ export default function TuckshopPage() {
   
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tuckshop Tracking</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Tuckshop Tracking</h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
             Track daily sales and expenses for Tuckshop items across locations.
           </p>
         </div>
         
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 sm:flex gap-2">
           <button 
             onClick={() => openDialog('expense')}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2.5 sm:px-4 sm:py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl text-xs sm:text-sm font-semibold hover:bg-red-100 transition-colors shadow-xs active:scale-95"
           >
             <TrendingDown className="h-4 w-4" /> Add Expense
           </button>
           
           <button 
             onClick={() => openDialog('sale')}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-green-50 text-green-700 border border-green-200 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2.5 sm:px-4 sm:py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs sm:text-sm font-semibold hover:bg-emerald-100 transition-colors shadow-xs active:scale-95"
           >
             <IndianRupee className="h-4 w-4" /> Add Sale
           </button>

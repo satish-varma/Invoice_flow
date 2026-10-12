@@ -386,23 +386,26 @@ export default function ReconcilePage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 space-y-6">
         
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => router.push('/newrelic')}
-            className="p-2 bg-white border border-gray-200 text-gray-500 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Reconcile Invoice</h1>
-            <p className="text-sm text-gray-500">Upload an aggregator Excel sheet to compare against our internal system.</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => router.push('/newrelic')}
+              className="p-2 bg-white border border-gray-200 text-gray-500 rounded-xl hover:bg-gray-50 transition-colors shadow-xs shrink-0"
+              aria-label="Back to dashboard"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Reconcile Invoice</h1>
+              <p className="text-xs sm:text-sm text-gray-500">Upload aggregator sheet to compare against our internal system.</p>
+            </div>
           </div>
-          <div className="ml-auto">
+          <div className="flex justify-end">
             <button
               onClick={() => setIsAliasModalOpen(true)}
-              className="px-4 py-2 bg-white border border-gray-200 text-[#3b2fc9] font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+              className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 text-[#3b2fc9] font-semibold text-xs sm:text-sm rounded-xl shadow-xs hover:bg-gray-50 transition-colors text-center"
             >
-              Alias Dictionary
+              SKU Alias Dictionary
             </button>
           </div>
         </div>
@@ -666,27 +669,27 @@ export default function ReconcilePage() {
               <button onClick={() => setIsAliasModalOpen(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
             </div>
             
-            <div className="p-5 border-b border-gray-100 bg-gray-50">
-              <div className="flex gap-3">
+            <div className="p-4 sm:p-5 border-b border-gray-100 bg-gray-50">
+              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
                 <input
                   type="text"
-                  placeholder="Internal Name (e.g., Storia Banana Milkshake)"
+                  placeholder="Internal Name (e.g. Storia Banana Milkshake)"
                   value={aliasForm.internalName}
                   onChange={(e) => setAliasForm({...aliasForm, internalName: e.target.value})}
-                  className="flex-1 h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
+                  className="flex-1 h-10 px-3 border border-gray-200 rounded-xl sm:rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
                 />
                 <input
                   type="text"
-                  placeholder="Aggregator Name (e.g., Storia Bnana shake)"
+                  placeholder="Aggregator Name (e.g. Storia Bnana shake)"
                   value={aliasForm.aggregatorName}
                   onChange={(e) => setAliasForm({...aliasForm, aggregatorName: e.target.value})}
-                  className="flex-1 h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
+                  className="flex-1 h-10 px-3 border border-gray-200 rounded-xl sm:rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
                 />
                 <button
                   onClick={handleSaveAlias}
-                  className="h-10 px-4 bg-[#3b2fc9] text-white rounded-lg font-medium text-sm hover:bg-[#3228ab] transition-colors"
+                  className="h-10 px-5 bg-[#3b2fc9] text-white rounded-xl sm:rounded-lg font-semibold text-xs sm:text-sm hover:bg-[#3228ab] transition-colors shrink-0 shadow-xs"
                 >
-                  Add
+                  Add Alias
                 </button>
               </div>
             </div>

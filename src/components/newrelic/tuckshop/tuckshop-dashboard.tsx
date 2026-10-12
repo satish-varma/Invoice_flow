@@ -43,39 +43,39 @@ export function TuckshopDashboard({ records }: Props) {
   }, [records]);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+    <div className="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-6 mb-6 sm:mb-8">
       {/* Total Sales */}
-      <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm flex items-center gap-4">
-        <div className="bg-green-100 text-green-600 p-3 rounded-xl shrink-0">
-          <TrendingUp className="h-6 w-6" />
+      <div className="bg-white rounded-xl sm:rounded-2xl p-2.5 sm:p-5 border border-gray-200 shadow-xs sm:shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-1.5 sm:gap-4">
+        <div className="bg-green-100 text-green-600 p-1.5 sm:p-3 rounded-lg sm:rounded-xl shrink-0">
+          <TrendingUp className="h-4 w-4 sm:h-6 sm:w-6" />
         </div>
-        <div>
-          <p className="text-2xl font-bold text-gray-900">₹{totalSales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
-          <p className="text-sm font-medium text-gray-500 mt-0.5">Total Sales</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm sm:text-2xl font-bold text-gray-900 truncate">₹{totalSales.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+          <p className="text-[10px] sm:text-sm font-medium text-gray-500 mt-0.5 truncate">Total Sales</p>
         </div>
       </div>
 
       {/* Total Expenses */}
-      <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm flex items-center gap-4">
-        <div className="bg-red-100 text-red-600 p-3 rounded-xl shrink-0">
-          <TrendingDown className="h-6 w-6" />
+      <div className="bg-white rounded-xl sm:rounded-2xl p-2.5 sm:p-5 border border-gray-200 shadow-xs sm:shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-1.5 sm:gap-4">
+        <div className="bg-red-100 text-red-600 p-1.5 sm:p-3 rounded-lg sm:rounded-xl shrink-0">
+          <TrendingDown className="h-4 w-4 sm:h-6 sm:w-6" />
         </div>
-        <div>
-          <p className="text-2xl font-bold text-gray-900">₹{totalExpenses.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
-          <p className="text-sm font-medium text-gray-500 mt-0.5">Total Expenses</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm sm:text-2xl font-bold text-gray-900 truncate">₹{totalExpenses.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+          <p className="text-[10px] sm:text-sm font-medium text-gray-500 mt-0.5 truncate">Total Expenses</p>
         </div>
       </div>
 
       {/* Net Profit */}
-      <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm flex items-center gap-4">
-        <div className={`p-3 rounded-xl shrink-0 ${netProfit >= 0 ? 'bg-blue-100 text-[#3b2fc9]' : 'bg-orange-100 text-orange-600'}`}>
-          <Wallet className="h-6 w-6" />
+      <div className="bg-white rounded-xl sm:rounded-2xl p-2.5 sm:p-5 border border-gray-200 shadow-xs sm:shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-1.5 sm:gap-4">
+        <div className={`p-1.5 sm:p-3 rounded-lg sm:rounded-xl shrink-0 ${netProfit >= 0 ? 'bg-blue-100 text-[#3b2fc9]' : 'bg-orange-100 text-orange-600'}`}>
+          <Wallet className="h-4 w-4 sm:h-6 sm:w-6" />
         </div>
-        <div>
-          <p className="text-2xl font-bold text-gray-900">
-            {netProfit >= 0 ? '+' : ''}₹{netProfit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+        <div className="min-w-0 flex-1">
+          <p className={`text-sm sm:text-2xl font-bold truncate ${netProfit >= 0 ? 'text-gray-900' : 'text-orange-600'}`}>
+            {netProfit >= 0 ? '+' : ''}₹{netProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
           </p>
-          <p className="text-sm font-medium text-gray-500 mt-0.5">Net Profit</p>
+          <p className="text-[10px] sm:text-sm font-medium text-gray-500 mt-0.5 truncate">Net Profit</p>
         </div>
       </div>
 

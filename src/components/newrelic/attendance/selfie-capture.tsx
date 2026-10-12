@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { Camera, X, RotateCcw, Check, MapPin, AlertCircle } from 'lucide-react';
+import { Camera, X, RotateCcw, Check, MapPin, AlertCircle, SwitchCamera } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 
 interface Coordinates {
@@ -22,6 +22,7 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
   const streamRef = useRef<MediaStream | null>(null);
 
   const [phase, setPhase] = useState<'camera' | 'preview'>('camera');
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [geoStatus, setGeoStatus] = useState<'loading' | 'ok' | 'denied' | 'error'>('loading');
@@ -50,8 +51,14 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
   }, []);
 
   /* ── Camera ── */
-  const startCamera = useCallback(async () => {
+  const startCamera = useCallback(async (mode: 'user' | 'environment' = facingMode) => {
     setCamError(null);
+
+    // Stop any existing tracks first
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
 
     // Cross-browser & legacy compatibility helper
     const getMediaDevices = () => {
@@ -90,7 +97,7 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
 
     try {
       const stream = await mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        video: { facingMode: mode, width: { ideal: 640 }, height: { ideal: 480 } },
         audio: false,
       });
       streamRef.current = stream;
@@ -105,14 +112,19 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
         setCamError(e.message || 'Could not access live camera. You can use the Take Photo button below.');
       }
     }
-  }, []);
+  }, [facingMode]);
 
   useEffect(() => {
-    startCamera();
+    startCamera(facingMode);
     return () => {
       streamRef.current?.getTracks().forEach((t) => t.stop());
     };
-  }, [startCamera]);
+  }, [facingMode]);
+
+  const toggleCameraFacing = () => {
+    triggerHaptic('light');
+    setFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'));
+  };
 
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -147,11 +159,15 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
     canvas.height = video.videoHeight || 480;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    // Mirror the image (selfie style)
-    ctx.save();
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-    ctx.restore();
+    if (facingMode === 'user') {
+      // Mirror the image (selfie style)
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+      ctx.restore();
+    } else {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    }
     const dataUri = canvas.toDataURL('image/jpeg', 0.85);
     triggerHaptic('medium');
     setCapturedUri(dataUri);
@@ -163,7 +179,7 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
     triggerHaptic('light');
     setCapturedUri(null);
     setPhase('camera');
-    startCamera();
+    startCamera(facingMode);
   };
 
   const handleConfirm = () => {
@@ -186,9 +202,21 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
             <Camera className="h-5 w-5 text-[#3b2fc9]" />
             <span className="font-semibold text-gray-800 text-sm">{title}</span>
           </div>
-          <button onClick={handleCancel} className="p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {phase === 'camera' && !camError && (
+              <button
+                type="button"
+                onClick={toggleCameraFacing}
+                className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-[#3b2fc9] transition-colors"
+                title="Switch Camera (Front/Rear)"
+              >
+                <SwitchCamera className="h-4 w-4" />
+              </button>
+            )}
+            <button onClick={handleCancel} className="p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Hidden native camera/file input */}
@@ -196,7 +224,7 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          capture="user"
+          capture={facingMode === 'user' ? 'user' : 'environment'}
           className="hidden"
           onChange={handleNativePhotoUpload}
         />
@@ -220,7 +248,7 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
                     </button>
                     <button
                       type="button"
-                      onClick={startCamera}
+                      onClick={() => startCamera(facingMode)}
                       className="text-xs bg-white/20 hover:bg-white/30 text-white px-3 py-2.5 rounded-xl font-medium"
                     >
                       Retry Live Camera
@@ -228,14 +256,25 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
                   </div>
                 </div>
               ) : (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover"
-                  style={{ transform: 'scaleX(-1)' }} /* mirror preview */
-                />
+                <div className="relative w-full h-full">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                    style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
+                  />
+                  {/* Floating Flip Button in Viewfinder */}
+                  <button
+                    type="button"
+                    onClick={toggleCameraFacing}
+                    className="absolute bottom-3 right-3 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-xs transition-all shadow-md active:scale-90"
+                    title="Flip camera"
+                  >
+                    <SwitchCamera className="h-4 w-4" />
+                  </button>
+                </div>
               )}
             </>
           )}

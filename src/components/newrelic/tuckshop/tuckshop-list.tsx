@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Trash2, Filter, FileText, Search, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, IndianRupee, Pencil } from 'lucide-react';
+import { Trash2, Filter, FileText, Search, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, IndianRupee, Pencil, FileSpreadsheet } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { NewRelicTuckshopRecord, deleteTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { TuckshopDashboard } from './tuckshop-dashboard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -108,6 +109,33 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
 
 
 
+  const exportToExcel = () => {
+    try {
+      const rows = filteredRecords.map((r) => {
+        const sId = resolveSiteId(r.siteId);
+        const siteName = sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic';
+        return {
+          'Date': new Date(r.date).toLocaleDateString('en-IN'),
+          'Company Site': siteName,
+          'Location': r.location,
+          'Type': r.type.toUpperCase(),
+          'Category': r.category.replace('_', ' ').toUpperCase(),
+          'Amount (₹)': r.amount,
+          'Description': r.description || '',
+          'Created By': r.createdBy || '',
+        };
+      });
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Tuckshop Ledger');
+      const filename = `Tuckshop_Ledger_${new Date().toISOString().substring(0, 10)}.xlsx`;
+      XLSX.writeFile(wb, filename);
+    } catch (err) {
+      console.error('Failed to export tuckshop Excel:', err);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 h-full w-full">
       {showDashboard && <TuckshopDashboard records={filteredRecords} />}
@@ -115,10 +143,27 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
       <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col gap-3 bg-gray-50/50">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-gray-800 text-base sm:text-lg">Transaction Ledger</h3>
-          <span className="text-xs text-gray-500 font-medium sm:hidden">
-            {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''}
-          </span>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-gray-800 text-base sm:text-lg">Transaction Ledger</h3>
+            <span className="text-xs text-gray-500 font-medium hidden sm:inline">
+              ({filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''})
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 font-medium sm:hidden">
+              {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''}
+            </span>
+            <button
+              type="button"
+              onClick={exportToExcel}
+              disabled={filteredRecords.length === 0}
+              className="h-8 px-2.5 sm:px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors"
+              title="Download Excel report"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              <span>Export Excel</span>
+            </button>
+          </div>
         </div>
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3">

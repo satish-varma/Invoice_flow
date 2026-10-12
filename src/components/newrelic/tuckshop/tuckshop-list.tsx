@@ -53,6 +53,22 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
     }
   };
 
+  const canEditRecord = (record: NewRelicTuckshopRecord) => {
+    if (isOwnerOrAdmin) return true;
+    if (!user) return false;
+    // User or Manager who created this record can edit it
+    const userEmailLower = user.email?.toLowerCase().trim();
+    const createdByLower = record.createdBy?.toLowerCase().trim();
+    if (userEmailLower && createdByLower && userEmailLower === createdByLower) return true;
+    if (user.id && record.createdBy === user.id) return true;
+    return false;
+  };
+
+  const canDeleteRecord = (record: NewRelicTuckshopRecord) => {
+    // Only Admin or Superadmin can delete
+    return isOwnerOrAdmin;
+  };
+
   const availableYears = React.useMemo(() => {
     return Array.from(new Set(records.map(r => new Date(r.date).getFullYear()))).sort((a, b) => b - a);
   }, [records]);
@@ -212,9 +228,9 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
 
               <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-gray-50">
                 <span className="truncate max-w-[200px]">By: {record.createdBy || 'Unknown'}</span>
-                {isOwnerOrAdmin && (
+                {(canEditRecord(record) || canDeleteRecord(record)) && (
                   <div className="flex items-center gap-2">
-                    {onEdit && (
+                    {onEdit && canEditRecord(record) && (
                       <button
                         onClick={() => onEdit(record)}
                         className="text-[#3b2fc9] hover:text-[#2a2296] p-1 flex items-center gap-1 font-medium"
@@ -223,13 +239,15 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                         <span>Edit</span>
                       </button>
                     )}
-                    <button
-                      onClick={() => handleDelete(record.id!)}
-                      className="text-red-500 hover:text-red-700 p-1 flex items-center gap-1 font-medium"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      <span>Delete</span>
-                    </button>
+                    {canDeleteRecord(record) && (
+                      <button
+                        onClick={() => handleDelete(record.id!)}
+                        className="text-red-500 hover:text-red-700 p-1 flex items-center gap-1 font-medium"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -250,9 +268,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Description</th>
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Bill</th>
               <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Amount</th>
-              {isOwnerOrAdmin && (
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Actions</th>
-              )}
+              <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -292,18 +308,18 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                   <td className={`px-5 py-3 text-sm font-semibold text-right ${record.type === 'expense' ? 'text-red-600' : 'text-green-600'}`}>
                     {record.type === 'expense' ? '-' : '+'}₹{record.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </td>
-                  {isOwnerOrAdmin && (
-                    <td className="px-5 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {onEdit && (
-                          <button
-                            onClick={() => onEdit(record)}
-                            className="text-gray-400 hover:text-[#3b2fc9] p-1.5 rounded hover:bg-gray-100 transition-colors"
-                            title="Edit Record"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                        )}
+                  <td className="px-5 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {onEdit && canEditRecord(record) && (
+                        <button
+                          onClick={() => onEdit(record)}
+                          className="text-gray-400 hover:text-[#3b2fc9] p-1.5 rounded hover:bg-gray-100 transition-colors"
+                          title="Edit Record"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                      )}
+                      {canDeleteRecord(record) && (
                         <button
                           onClick={() => handleDelete(record.id!)}
                           className="text-gray-400 hover:text-red-500 p-1.5 rounded hover:bg-red-50 transition-colors"
@@ -311,9 +327,9 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
-                      </div>
-                    </td>
-                  )}
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))
             )}

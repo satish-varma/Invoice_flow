@@ -18,10 +18,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // If already logged in, redirect
+  // If already logged in, redirect to site-specific portal
   useEffect(() => {
     if (user) {
-      router.push('/newrelic');
+      const site = user.assignedSite;
+      if (site === 'dsm' || site === 'ntt_data') {
+        router.replace('/newrelic/tuckshop');
+      } else {
+        router.replace('/newrelic');
+      }
     }
   }, [user, router]);
 
@@ -40,7 +45,13 @@ export default function LoginPage() {
       }
 
       toast({ title: 'Welcome back!' });
-      router.push('/newrelic');
+      const searchParams = new URLSearchParams(window.location.search);
+      const callback = searchParams.get('callbackUrl');
+      if (callback && callback !== '/' && !callback.includes('/login')) {
+        router.push(callback);
+      } else {
+        router.push('/newrelic');
+      }
     } catch (err: any) {
       toast({
         variant: 'destructive',
@@ -63,15 +74,18 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 bg-[#3b2fc9]/10 rounded-full flex items-center justify-center">
-            <Lock className="h-6 w-6 text-[#3b2fc9]" />
-          </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Sign in to your account
+        <div className="text-center space-y-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/hungerbox_logo.png"
+            alt="HungerBox"
+            className="h-10 mx-auto object-contain mb-3"
+          />
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
+            Operations Portal
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            New Relic Internal System
+          <p className="text-xs sm:text-sm text-gray-500">
+            HungerBox Cafeteria Stalls · NewRelic, DSM & NTT Data
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

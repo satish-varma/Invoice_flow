@@ -14,9 +14,9 @@ const config: CapacitorConfig = {
   appName: 'InvoiceFlow',
   webDir: 'public',
   server: {
-    // When testing on device/emulator, this allows loading your live dev server
-    // Change this to your deployed domain in production (e.g. 'https://invoice-flow.vercel.app')
-    url: process.env.CAPACITOR_SERVER_URL || 'http://192.168.29.101:9002',
+    // When testing on device/emulator, this allows loading your live dev server directly into the operations portal
+    // Change this to your deployed domain in production (e.g. 'https://invoice-flow.vercel.app/newrelic')
+    url: process.env.CAPACITOR_SERVER_URL || 'http://192.168.29.101:9002/newrelic',
     cleartext: true, // Allows http:// in local dev / private network
   },
   android: {

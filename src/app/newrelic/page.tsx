@@ -2,7 +2,7 @@
 import { NewRelicChallan, NewRelicLocation } from '@/types/challan';
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Loader2, FileText, MapPin, Filter, FileSpreadsheet, RefreshCcw } from 'lucide-react';
+import { Loader2, FileText, MapPin, Filter, FileSpreadsheet, RefreshCcw, Search, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
@@ -36,6 +36,7 @@ export default function NewRelicPage() {
   const { role, user } = useAuth();
   
   // Filters
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [filterLocation, setFilterLocation] = useState<string>('all');
   const [filterMonth, setFilterMonth] = useState<string>('all');
   const [filterYear, setFilterYear] = useState<string>('all');
@@ -246,8 +247,21 @@ export default function NewRelicPage() {
         return true;
       });
     }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter((c) => {
+        if (c.dcNumber?.toLowerCase().includes(q)) return true;
+        if (c.note?.toLowerCase().includes(q)) return true;
+        if (NEWRELIC_LOCATIONS[c.location]?.label?.toLowerCase().includes(q)) return true;
+        if (c.lineItems?.some(item => 
+          item.itemName?.toLowerCase().includes(q) ||
+          item.brandName?.toLowerCase().includes(q)
+        )) return true;
+        return false;
+      });
+    }
     return list;
-  }, [activeTab, activeChallans, trashChallans, filterLocation, filterMonth, filterYear, filterCycle]);
+  }, [activeTab, activeChallans, trashChallans, filterLocation, filterMonth, filterYear, filterCycle, searchQuery]);
 
   const availableYears = useMemo(() => {
     return Array.from(new Set(challans.map(c => new Date(c.dcDate).getFullYear()))).sort((a, b) => b - a);
@@ -409,13 +423,37 @@ export default function NewRelicPage() {
           )}
         </div>
 
-        {/* Filters: Native Horizontal Scrollable Pill Chips on Mobile, Standard Flex on Desktop */}
-        <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none no-scrollbar flex-1">
-            <div className="flex items-center gap-1.5 text-gray-500 text-xs font-bold shrink-0 mr-1">
-              <Filter className="h-3.5 w-3.5 text-[#3b2fc9]" />
-              <span>Filter:</span>
-            </div>
+        {/* Instant Search Bar & Filter Controls */}
+        <div className="space-y-2.5">
+          {/* Instant Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search challans by DC#, brand, or item name..."
+              className="w-full h-11 sm:h-10 pl-10 pr-9 bg-white border border-gray-200/90 rounded-2xl text-xs sm:text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] shadow-2xs transition-all"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                aria-label="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Filters: Native Horizontal Scrollable Pill Chips on Mobile, Standard Flex on Desktop */}
+          <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none no-scrollbar flex-1">
+              <div className="flex items-center gap-1.5 text-gray-500 text-xs font-bold shrink-0 mr-1">
+                <Filter className="h-3.5 w-3.5 text-[#3b2fc9]" />
+                <span>Filter:</span>
+              </div>
             
             {/* Location Pill */}
             <div className="relative shrink-0">
@@ -516,6 +554,20 @@ export default function NewRelicPage() {
                   Unlock Financials
                 </button>
               )}
+            </div>
+          )}
+        </div>
+
+          {searchQuery && (
+            <div className="flex items-center justify-between text-xs px-2 text-gray-500">
+              <span>Showing {displayChallans.length} challan{displayChallans.length !== 1 ? 's' : ''} for &ldquo;<strong className="text-gray-800">{searchQuery}</strong>&rdquo;</span>
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="text-[#3b2fc9] hover:underline font-semibold"
+              >
+                Clear
+              </button>
             </div>
           )}
         </div>

@@ -57,6 +57,15 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
+    // Dynamically configure native status bar in Capacitor if running on Android/iOS
+    import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+      StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
+      StatusBar.setStyle({ style: Style.Light }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: '#FFFFFF' }).catch(() => {});
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (role === 'admin') {
       const fetchPending = async () => {
         try {
@@ -68,9 +77,6 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
         }
       };
       fetchPending();
-      
-      // We could also set an interval here if we want it to auto-refresh,
-      // but for now, just on mount/layout render is fine.
     }
   }, [role, pathname]);
 

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, updateDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -15,8 +15,6 @@ const db = getFirestore(app);
 
 async function test() {
   const dcNumber = 'HYD580';
-  // I will just get the doc ID directly for HYD580
-  import { collection, query, where, getDocs } from 'firebase/firestore';
   const q = query(collection(db, 'newrelic-challans'), where('dcNumber', '==', dcNumber));
   const snap = await getDocs(q);
   if (snap.empty) { console.log('Not found'); return; }

@@ -149,6 +149,16 @@ export default function AttendancePage() {
   const [isLoadingMonthly, setIsLoadingMonthly] = useState(false);
   const [showProfileDetails, setShowProfileDetails] = useState(true);
   const [missedCheckouts, setMissedCheckouts] = useState<NewRelicAttendance[]>([]);
+  const [currentTime, setCurrentTime] = useState<string>('');
+
+  useEffect(() => {
+    const updateTime = () => {
+      setCurrentTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }));
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   /* ── Load today's record and monthly log when employee selected ── */
   useEffect(() => {
@@ -581,6 +591,125 @@ export default function AttendancePage() {
               Staff Salaries & Advances
             </button>
           </div>
+        </div>
+
+        {/* ── Native Mobile Camera / Selfie Quick-Action Hero Card ── */}
+        <div className="sm:hidden">
+          {selectedEmployee ? (
+            <div className={`rounded-3xl p-6 text-white shadow-xl relative overflow-hidden flex flex-col items-center text-center transition-all ${
+              !todayRecord 
+                ? 'bg-gradient-to-br from-[#1e1b4b] via-[#312e81] to-[#4338ca]'
+                : !todayRecord.checkOut
+                ? 'bg-gradient-to-br from-[#064e3b] via-[#047857] to-[#0f766e]'
+                : 'bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900'
+            }`}>
+              {/* Decorative Blur Orbs */}
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
+              <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
+
+              {/* Status Pill Badge */}
+              <div className="flex items-center gap-2 mb-2 z-10">
+                {!todayRecord ? (
+                  <span className="bg-white/15 backdrop-blur-md text-indigo-100 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 border border-white/20">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    Ready to Check In
+                  </span>
+                ) : !todayRecord.checkOut ? (
+                  <span className="bg-white/15 backdrop-blur-md text-emerald-100 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 border border-white/20">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                    </span>
+                    On Duty Active
+                  </span>
+                ) : (
+                  <span className="bg-white/15 backdrop-blur-md text-gray-200 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 border border-white/20">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                    Shift Completed
+                  </span>
+                )}
+              </div>
+
+              {/* Live Digital Clock */}
+              <h2 className="text-3xl font-extrabold tracking-tight font-mono text-white mb-1 z-10">
+                {currentTime || '00:00:00'}
+              </h2>
+              <p className="text-xs text-white/80 font-medium mb-6 z-10">
+                {selectedEmployee.name} ({selectedEmployee.employeeId}) · {selectedEmployee.location.toUpperCase()}
+              </p>
+
+              {/* Large Native Camera Shutter Button */}
+              {!todayRecord && (
+                <div className="flex flex-col items-center z-10">
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => handleOpenCamera('check-in')}
+                    className="w-24 h-24 rounded-full border-4 border-white/60 bg-white/20 hover:bg-white/30 backdrop-blur-md flex items-center justify-center p-2.5 shadow-2xl active:scale-95 transition-all group"
+                    aria-label="Capture check-in selfie"
+                  >
+                    <div className="w-full h-full rounded-full bg-white flex flex-col items-center justify-center text-[#3b2fc9] shadow-md group-hover:scale-105 transition-transform">
+                      {isSubmitting ? (
+                        <Loader2 className="w-8 h-8 animate-spin text-[#3b2fc9]" />
+                      ) : (
+                        <Camera className="w-8 h-8 text-[#3b2fc9]" />
+                      )}
+                    </div>
+                  </button>
+                  <span className="mt-3 text-xs font-bold text-white tracking-wide">
+                    Tap Shutter to Check In
+                  </span>
+                  <span className="text-[10px] text-white/60 mt-0.5">
+                    Shift deadline: {LOCATION_SHIFT_RULES[selectedEmployee.location.toLowerCase()]?.cutoff || '06:30'} AM
+                  </span>
+                </div>
+              )}
+
+              {todayRecord && !todayRecord.checkOut && (
+                <div className="flex flex-col items-center z-10">
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => handleOpenCamera('check-out')}
+                    className="w-24 h-24 rounded-full border-4 border-white/60 bg-white/20 hover:bg-white/30 backdrop-blur-md flex items-center justify-center p-2.5 shadow-2xl active:scale-95 transition-all group"
+                    aria-label="Capture check-out selfie"
+                  >
+                    <div className="w-full h-full rounded-full bg-amber-400 flex flex-col items-center justify-center text-amber-950 shadow-md group-hover:scale-105 transition-transform">
+                      {isSubmitting ? (
+                        <Loader2 className="w-8 h-8 animate-spin text-amber-950" />
+                      ) : (
+                        <Camera className="w-8 h-8 text-amber-950" />
+                      )}
+                    </div>
+                  </button>
+                  <span className="mt-3 text-xs font-bold text-white tracking-wide">
+                    Tap Shutter to Check Out
+                  </span>
+                  <span className="text-[10px] text-white/60 mt-0.5">
+                    Checked in at {formatTime(todayRecord.checkIn!.time)}
+                  </span>
+                </div>
+              )}
+
+              {todayRecord?.checkOut && (
+                <div className="flex flex-col items-center z-10">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center mb-2">
+                    <CheckCircle className="w-8 h-8 text-emerald-400" />
+                  </div>
+                  <p className="text-sm font-bold text-white">Shift Finished for Today</p>
+                  <p className="text-xs text-white/70 mt-0.5">
+                    Duration: {formatDuration(todayRecord.durationMinutes || 0)} ({todayRecord.status === 'present' ? 'Full Day' : 'Half Day'})
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-gradient-to-br from-indigo-900 to-indigo-950 rounded-3xl p-6 text-white text-center shadow-lg">
+              <Camera className="w-10 h-10 mx-auto text-indigo-300 mb-2 opacity-80" />
+              <h3 className="font-bold text-base">Select Your Profile Below</h3>
+              <p className="text-xs text-indigo-200 mt-1">Choose your name to unlock the 1-tap selfie check-in shutter</p>
+            </div>
+          )}
         </div>
 
         {/* ─── Self-service check-in panel ─── */}

@@ -1,4 +1,5 @@
 import withPWAInit from "@ducanh2912/next-pwa";
+import type { NextConfig } from "next";
 
 const withPWA = withPWAInit({
   dest: "public",
@@ -8,8 +9,7 @@ const withPWA = withPWAInit({
   // reloadOnOnline: true,
 });
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
     /* config options here */
     output: 'standalone',
     experimental: {
@@ -22,7 +22,7 @@ const nextConfig = {
             '192.168.29.101:9002',
             '10.0.2.2:9002',
         ],
-    },
+    } as any,
     typescript: {
         ignoreBuildErrors: true,
     },
@@ -32,7 +32,7 @@ const nextConfig = {
     images: {
         remotePatterns: [
             {
-                protocol: 'https',
+                protocol: 'https' as const,
                 hostname: 'placehold.co',
                 port: '',
                 pathname: '/**',

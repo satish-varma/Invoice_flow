@@ -3,7 +3,7 @@ import { NewRelicChallan } from '@/types/challan';
 
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt } from 'lucide-react';
+import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -14,6 +14,13 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -172,198 +179,249 @@ export function NewRelicChallanList({
         </div>
       )}
 
-      {/* Mobile Card List (< sm) */}
-      <div className="block sm:hidden divide-y divide-gray-100">
-        {challans.map((challan) => (
-          <div key={challan.id} className="p-4 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="rounded border-gray-300 text-[#3b2fc9] focus:ring-[#3b2fc9] w-4 h-4"
-                  checked={!!challan.id && selectedIds.has(challan.id)}
-                  onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
-                />
-                <span className="font-mono font-bold text-[#3b2fc9] text-base">
-                  {challan.dcNumber}
-                </span>
+      {/* Mobile Feed Style Card List (< sm) */}
+      <div className="block sm:hidden divide-y divide-gray-100 bg-gray-50/50 p-2.5 space-y-3">
+        {challans.map((challan) => {
+          const mrpTotal = (challan.lineItems || []).reduce((acc, item) => acc + ((item.mrp || 0) * (item.quantity || 1)), 0);
+          const topItems = (challan.lineItems || []).slice(0, 2);
+          const extraItemsCount = (challan.lineItems?.length || 0) - 2;
+
+          return (
+            <div
+              key={challan.id}
+              className="bg-white rounded-2xl border border-gray-200/90 p-4 shadow-2xs space-y-3"
+            >
+              {/* Card Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-[#3b2fc9] focus:ring-[#3b2fc9] w-4 h-4"
+                    checked={!!challan.id && selectedIds.has(challan.id)}
+                    onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
+                  />
+                  <div>
+                    <span className="font-mono font-bold text-[#3b2fc9] text-base leading-tight block">
+                      {challan.dcNumber}
+                    </span>
+                    <span className="text-[11px] text-gray-400">
+                      {challan.dcDate ? format(new Date(challan.dcDate), 'dd MMM yyyy') : '—'}
+                    </span>
+                  </div>
+                </div>
+
+                <Badge
+                  variant="outline"
+                  className={
+                    challan.location === 'hyderabad'
+                      ? 'border-blue-200 text-blue-700 bg-blue-50 text-xs px-2.5 py-0.5 rounded-full'
+                      : 'border-emerald-200 text-emerald-700 bg-emerald-50 text-xs px-2.5 py-0.5 rounded-full'
+                  }
+                >
+                  {NEWRELIC_LOCATIONS[challan.location]?.label ?? challan.location}
+                </Badge>
               </div>
-              <Badge
-                variant="outline"
-                className={
-                  challan.location === 'hyderabad'
-                    ? 'border-blue-200 text-blue-700 bg-blue-50 text-xs'
-                    : 'border-emerald-200 text-emerald-700 bg-emerald-50 text-xs'
-                }
-              >
-                {NEWRELIC_LOCATIONS[challan.location]?.label ?? challan.location}
-              </Badge>
-            </div>
 
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>
-                Date:{' '}
-                <strong className="text-gray-700">
-                  {challan.dcDate ? format(new Date(challan.dcDate), 'dd-MM-yyyy') : '—'}
-                </strong>
-              </span>
-              <span>
-                Items:{' '}
-                <strong className="text-gray-700">{challan.lineItems?.length ?? 0}</strong>
-              </span>
-            </div>
-
-            {role === 'admin' && (
-              <div className="flex items-center justify-between text-[11px] text-gray-500 border-t border-gray-50 pt-2 mt-1">
-                <span>{isTrashView ? 'Deleted By:' : 'Created By:'}</span>
-                <span className="font-medium text-gray-700 truncate max-w-[150px]" title={(isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)) || 'System'}>
-                  {formatAuthorName((isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)))}
-                  {isTrashView && challan.deletedAt && (
-                    <span className="text-gray-400 ml-1">
-                      ({format(new Date(challan.deletedAt), 'dd-MMM-yy')})
+              {/* Items Preview Snippet */}
+              <div className="bg-gray-50 rounded-xl p-2.5 text-xs text-gray-600 space-y-1">
+                <div className="flex items-center justify-between font-medium text-gray-700">
+                  <span className="flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-gray-400" />
+                    <span>{challan.lineItems?.length || 0} line item{challan.lineItems?.length !== 1 ? 's' : ''}</span>
+                  </span>
+                  {mrpTotal > 0 && (
+                    <span className="font-semibold text-gray-900">
+                      ₹{mrpTotal.toLocaleString('en-IN')}
                     </span>
                   )}
-                </span>
+                </div>
+                {topItems.length > 0 && (
+                  <p className="text-[11px] text-gray-500 truncate pt-0.5">
+                    {topItems.map(i => `${i.quantity}x ${i.itemName}`).join(', ')}
+                    {extraItemsCount > 0 ? ` +${extraItemsCount} more` : ''}
+                  </p>
+                )}
               </div>
-            )}
 
-            {role === 'admin' && showFinancials && (
-              <div className="flex flex-col gap-1 text-xs text-gray-500 border-t border-gray-50 pt-2">
-                  {(() => {
-                    const mrpTotal = (challan.lineItems || []).reduce((acc, item) => acc + ((item.mrp || 0) * (item.quantity || 1)), 0);
-                    const commission = mrpTotal * 0.055;
-                    const revenue = mrpTotal - commission;
-                    
-                    let pCost = 0;
-                    if (challan.procurementCost !== undefined && challan.procurementCost !== null) {
-                      pCost = Number(challan.procurementCost);
-                    } else {
-                      pCost = (challan.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
-                    }
-                    
-                    const tCost = challan.transportCost || 0;
-                    const oCost = challan.otherCharges || 0;
-                    const totalCost = pCost + tCost + oCost;
-                    
-                    const profit = revenue - totalCost;
-
-                    return (
-                      <>
-                        <div className="flex justify-between">
-                          <span>Revenue (After 5.5%):</span>
-                          <span>₹{revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Total Cost:</span>
-                          <span>₹{totalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="flex justify-between pt-1 border-t border-gray-100 font-medium">
-                          <span className={profit >= 0 ? "text-emerald-600" : "text-red-600"}>Profit:</span>
-                          <strong className={profit >= 0 ? "text-emerald-700" : "text-red-700"}>
-                            ₹{profit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </strong>
-                        </div>
-                      </>
-                    );
-                  })()}
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 pt-1">
-              {isTrashView ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 h-9 text-xs gap-1 border-gray-200 text-emerald-600 hover:text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50"
-                  onClick={() => onRestoreChallan && challan.id && onRestoreChallan(challan.id)}
-                >
-                  <RefreshCcw className="h-3.5 w-3.5" /> Restore
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 h-9 text-xs gap-1 border-gray-200 text-gray-700 hover:text-[#3b2fc9] hover:border-[#3b2fc9]"
-                    onClick={() => onSelectChallan(challan)}
-                  >
-                    <Edit2 className="h-3.5 w-3.5" /> Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 h-9 text-xs gap-1 border-gray-200 text-gray-700 hover:text-amber-600 hover:border-amber-400"
-                    onClick={() => onDuplicateChallan(challan)}
-                    title="Duplicate challan with next DC number"
-                  >
-                    <Copy className="h-3.5 w-3.5" /> Dupe
-                  </Button>
-                  {onPreviewChallan && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 h-9 text-xs gap-1 border-gray-200 text-gray-700 hover:text-[#3b2fc9] hover:border-[#3b2fc9]"
-                      onClick={() => onPreviewChallan(challan)}
-                    >
-                      <Eye className="h-3.5 w-3.5" /> View
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 h-9 text-xs gap-1 border-gray-200 text-gray-700 hover:text-[#3b2fc9] hover:border-[#3b2fc9]"
-                    onClick={() => onDownloadChallan(challan)}
-                  >
-                    <Download className="h-3.5 w-3.5" /> PDF
-                  </Button>
-                  {onViewHistory && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 h-9 text-xs gap-1 border-gray-200 text-gray-700 hover:text-[#3b2fc9] hover:border-[#3b2fc9]"
-                      onClick={() => onViewHistory(challan)}
-                      title="View Edit History"
-                    >
-                      <History className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </>
+              {/* Author & Audit Info (if admin or trash) */}
+              {role === 'admin' && (
+                <div className="flex items-center justify-between text-[11px] text-gray-400 pt-0.5">
+                  <span>{isTrashView ? 'Deleted by' : 'Created by'}</span>
+                  <span className="font-medium text-gray-600 truncate max-w-[170px]">
+                    {formatAuthorName((isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)))}
+                    {(isTrashView ? challan.deletedAt : challan.createdAt) && (
+                      <span className="text-gray-400 ml-1">
+                        · {format(new Date(isTrashView ? challan.deletedAt! : challan.createdAt!), 'dd MMM')}
+                      </span>
+                    )}
+                  </span>
+                </div>
               )}
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
+
+              {/* Admin Financials Snapshot */}
+              {role === 'admin' && showFinancials && (() => {
+                const commission = mrpTotal * 0.055;
+                const revenue = mrpTotal - commission;
+                let pCost = 0;
+                if (challan.procurementCost !== undefined && challan.procurementCost !== null) {
+                  pCost = Number(challan.procurementCost);
+                } else {
+                  pCost = (challan.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+                }
+                const tCost = challan.transportCost || 0;
+                const oCost = challan.otherCharges || 0;
+                const totalCost = pCost + tCost + oCost;
+                const profit = revenue - totalCost;
+
+                return (
+                  <div className="bg-indigo-50/50 border border-indigo-100/70 rounded-xl p-2.5 text-xs space-y-1">
+                    <div className="flex justify-between text-gray-600">
+                      <span>Net Revenue:</span>
+                      <span className="font-medium">₹{revenue.toLocaleString('en-IN', { maximumFractionDigits: 1 })}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Total Cost:</span>
+                      <span className="font-medium">₹{totalCost.toLocaleString('en-IN', { maximumFractionDigits: 1 })}</span>
+                    </div>
+                    <div className="flex justify-between pt-1 border-t border-indigo-100/80 font-bold">
+                      <span className={profit >= 0 ? 'text-emerald-700' : 'text-red-700'}>Est. Profit:</span>
+                      <span className={profit >= 0 ? 'text-emerald-700' : 'text-red-700'}>
+                        ₹{profit.toLocaleString('en-IN', { maximumFractionDigits: 1 })}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Mobile Actions: Primary View/PDF Button + 3-Dot Overflow Menu */}
+              <div className="flex items-center gap-2 pt-1">
+                {isTrashView ? (
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-9 px-3 text-xs border-gray-200 text-red-500 hover:bg-red-50 hover:border-red-200"
+                    className="flex-1 h-10 text-xs gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-xl font-semibold"
+                    onClick={() => onRestoreChallan && challan.id && onRestoreChallan(challan.id)}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <RefreshCcw className="h-4 w-4" /> Restore Challan
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="w-[90vw] max-w-lg rounded-2xl">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{isTrashView ? 'Permanently Delete?' : 'Delete Challan?'}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {isTrashView ? (
-                        <>This will <strong>permanently destroy</strong> challan <strong>{challan.dcNumber}</strong>. This action cannot be undone.</>
-                      ) : (
-                        <>This will move challan <strong>{challan.dcNumber}</strong> to the Trash view.</>
-                      )}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      className="bg-red-500 hover:bg-red-600"
-                      onClick={() => challan.id && onDeleteChallan(challan.id)}
+                ) : (
+                  <>
+                    {/* Primary Button: View & Preview Challan */}
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="flex-1 h-10 bg-[#3b2fc9] hover:bg-[#2f25a8] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-xs active:scale-[0.98] transition-transform"
+                      onClick={() => onPreviewChallan ? onPreviewChallan(challan) : onDownloadChallan(challan)}
                     >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                      <Eye className="h-4 w-4" />
+                      View Document
+                    </Button>
+
+                    {/* Secondary Quick PDF Download Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-10 px-3 border-gray-200 text-gray-700 hover:text-[#3b2fc9] hover:border-[#3b2fc9]/40 rounded-xl"
+                      onClick={() => onDownloadChallan(challan)}
+                      title="Download PDF"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+
+                    {/* Three-Dot Overflow Menu for Secondary Actions */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-10 w-10 p-0 border-gray-200 text-gray-600 hover:text-gray-900 rounded-xl"
+                          aria-label="More actions"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-lg">
+                        {role !== 'user' && (
+                          <DropdownMenuItem
+                            onClick={() => onSelectChallan(challan)}
+                            className="cursor-pointer gap-2 py-2"
+                          >
+                            <Edit2 className="h-4 w-4 text-gray-500" />
+                            <span>Edit Challan</span>
+                          </DropdownMenuItem>
+                        )}
+                        {role !== 'user' && (
+                          <DropdownMenuItem
+                            onClick={() => onDuplicateChallan(challan)}
+                            className="cursor-pointer gap-2 py-2"
+                          >
+                            <Copy className="h-4 w-4 text-amber-500" />
+                            <span>Duplicate Challan</span>
+                          </DropdownMenuItem>
+                        )}
+                        {role === 'admin' && onAdminPreviewChallan && (
+                          <DropdownMenuItem
+                            onClick={() => onAdminPreviewChallan(challan)}
+                            className="cursor-pointer gap-2 py-2"
+                          >
+                            <Receipt className="h-4 w-4 text-[#3b2fc9]" />
+                            <span>Admin Quick View</span>
+                          </DropdownMenuItem>
+                        )}
+                        {role === 'admin' && onViewHistory && (
+                          <DropdownMenuItem
+                            onClick={() => onViewHistory(challan)}
+                            className="cursor-pointer gap-2 py-2"
+                          >
+                            <History className="h-4 w-4 text-blue-500" />
+                            <span>Edit History</span>
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                )}
+
+                {/* Delete / Permanent Delete with Alert Dialog */}
+                {role === 'admin' && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-10 w-10 p-0 border-red-100 text-red-500 hover:bg-red-50 rounded-xl"
+                        title={isTrashView ? 'Delete permanently' : 'Move to trash'}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="w-[90vw] max-w-lg rounded-2xl">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{isTrashView ? 'Permanently Delete?' : 'Delete Challan?'}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {isTrashView ? (
+                            <>This will <strong>permanently destroy</strong> challan <strong>{challan.dcNumber}</strong>. This action cannot be undone.</>
+                          ) : (
+                            <>This will move challan <strong>{challan.dcNumber}</strong> to the Trash view.</>
+                          )}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-red-500 hover:bg-red-600 rounded-xl"
+                          onClick={() => challan.id && onDeleteChallan(challan.id)}
+                        >
+                          {isTrashView ? 'Delete Permanently' : 'Move to Trash'}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Desktop Table View (>= sm) */}

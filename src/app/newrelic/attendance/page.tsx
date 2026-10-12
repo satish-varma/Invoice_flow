@@ -848,6 +848,7 @@ function AttendancePageContent() {
               <select
                 value={selectedEmployeeId}
                 onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                suppressHydrationWarning
                 className="w-full h-10 px-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
               >
                 <option value="">-- Choose your name --</option>
@@ -1682,6 +1683,7 @@ function AttendancePageContent() {
                 <select
                   value={advancePaymentMode}
                   onChange={(e) => setAdvancePaymentMode(e.target.value as any)}
+                  suppressHydrationWarning
                   className="w-full h-9 px-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
                 >
                   <option value="upi">UPI / GPay</option>
@@ -1776,6 +1778,7 @@ function AttendancePageContent() {
                 <select
                   value={payPaymentMode}
                   onChange={(e) => setPayPaymentMode(e.target.value as any)}
+                  suppressHydrationWarning
                   className="w-full h-9 px-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
                 >
                   <option value="bank_transfer">Bank Transfer / NEFT</option>

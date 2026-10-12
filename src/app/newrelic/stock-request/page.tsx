@@ -14,6 +14,7 @@ import { StockRequest } from '@/types/stockRequest';
 import { Plus, Minus, Trash2, CheckCircle, PackageSearch, List, Copy, Pencil, Clock, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { triggerHaptic } from '@/lib/haptics';
 
 export default function StockRequestPage() {
   const { role, user } = useAuth();
@@ -150,6 +151,7 @@ export default function StockRequestPage() {
       }));
       
       await saveStockRequest(payload, data.id);
+      triggerHaptic('success');
       setSuccess(true);
       reset({
         id: undefined,
@@ -389,6 +391,7 @@ export default function StockRequestPage() {
                           onClick={() => {
                             const cur = Number(lineItems[index]?.quantity) || 1;
                             const next = Math.max(1, cur - 1);
+                            triggerHaptic('light');
                             setValue(`lineItems.${index}.quantity`, next, { shouldValidate: true });
                             setValue(`lineItems.${index}.totalUnits`, orderType === 'cases' ? next * caseSize : next);
                           }}
@@ -414,6 +417,7 @@ export default function StockRequestPage() {
                           onClick={() => {
                             const cur = Number(lineItems[index]?.quantity) || 1;
                             const next = cur + 1;
+                            triggerHaptic('light');
                             setValue(`lineItems.${index}.quantity`, next, { shouldValidate: true });
                             setValue(`lineItems.${index}.totalUnits`, orderType === 'cases' ? next * caseSize : next);
                           }}

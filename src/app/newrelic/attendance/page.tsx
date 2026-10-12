@@ -27,6 +27,7 @@ import {
   LOCATION_SHIFT_RULES,
 } from '@/services/newrelicAttendanceService';
 import { SelfieCapture } from '@/components/newrelic/attendance/selfie-capture';
+import { triggerHaptic } from '@/lib/haptics';
 
 type AttendanceAction = 'check-in' | 'check-out';
 
@@ -484,6 +485,7 @@ function AttendancePageContent() {
   );
 
   const handleOpenCamera = (action: AttendanceAction) => {
+    triggerHaptic('medium');
     setCameraAction(action);
     setShowCamera(true);
   };
@@ -506,6 +508,7 @@ function AttendancePageContent() {
           coordinates,
           getTodayDate()
         );
+        triggerHaptic('success');
         if (res.isLate) {
           toast({
             variant: 'destructive',
@@ -517,6 +520,7 @@ function AttendancePageContent() {
         }
       } else {
         if (!todayRecord?.id || !todayRecord.checkIn) {
+          triggerHaptic('warning');
           toast({ variant: 'destructive', title: 'No check-in record found' });
           return;
         }
@@ -527,6 +531,7 @@ function AttendancePageContent() {
           todayRecord.checkIn.time,
           selectedEmployee.location
         );
+        triggerHaptic('success');
         if (outRes.overtimeMinutes > 0) {
           toast({
             title: `✅ Checked out — ${formatTime(new Date().toISOString())}`,
@@ -546,6 +551,7 @@ function AttendancePageContent() {
         setTodayAll(all);
       }
     } catch (err: any) {
+      triggerHaptic('warning');
       toast({ variant: 'destructive', title: err.message || 'Failed to record attendance' });
     } finally {
       setIsSubmitting(false);

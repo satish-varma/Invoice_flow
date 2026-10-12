@@ -2,6 +2,7 @@
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Camera, X, RotateCcw, Check, MapPin, AlertCircle } from 'lucide-react';
+import { triggerHaptic } from '@/lib/haptics';
 
 interface Coordinates {
   lat: number;
@@ -152,22 +153,26 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
     ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
     ctx.restore();
     const dataUri = canvas.toDataURL('image/jpeg', 0.85);
+    triggerHaptic('medium');
     setCapturedUri(dataUri);
     stopCamera();
     setPhase('preview');
   };
 
   const handleRetake = () => {
+    triggerHaptic('light');
     setCapturedUri(null);
     setPhase('camera');
     startCamera();
   };
 
   const handleConfirm = () => {
+    triggerHaptic('success');
     if (capturedUri) onCapture(capturedUri, coordinates);
   };
 
   const handleCancel = () => {
+    triggerHaptic('light');
     stopCamera();
     onCancel();
   };

@@ -18,6 +18,7 @@ import {
   Send,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { triggerHaptic } from '@/lib/haptics';
 
 export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCount?: number }) {
   const pathname = usePathname();
@@ -126,6 +127,7 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
               <Link
                 key={tab.href}
                 href={tab.href}
+                onClick={() => triggerHaptic('light')}
                 className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-95 group"
               >
                 <div className="relative">
@@ -155,7 +157,10 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
 
           {/* "More" Sheet Trigger */}
           <button
-            onClick={() => setShowMoreMenu(true)}
+            onClick={() => {
+              triggerHaptic('light');
+              setShowMoreMenu(true);
+            }}
             className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-95 group"
           >
             <div
@@ -211,7 +216,10 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setShowMoreMenu(false)}
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setShowMoreMenu(false);
+                    }}
                     className={`flex items-center gap-3.5 p-3 rounded-2xl border transition-all active:scale-98 ${
                       isSelected
                         ? 'border-[#3b2fc9]/40 bg-[#3b2fc9]/5 text-[#3b2fc9] shadow-2xs'

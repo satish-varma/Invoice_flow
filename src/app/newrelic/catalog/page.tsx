@@ -8,6 +8,7 @@ import { getCatalogItems, saveCatalogItem, deleteCatalogItem } from '@/services/
 import { getAllPricingItems } from '@/services/newrelicPricingService';
 import { Trash2, Plus, Pencil, Check, X, Search, Database, Download, RefreshCw, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { triggerHaptic } from '@/lib/haptics';
 
 export default function CatalogPage() {
   const { role } = useAuth();
@@ -158,6 +159,7 @@ export default function CatalogPage() {
       const refreshed = await getCatalogItems();
       setCatalog(refreshed);
       setQuickEdit(null);
+      triggerHaptic('success');
     } catch (e) {
       setError('Failed to update value.');
     } finally {
@@ -540,7 +542,10 @@ export default function CatalogPage() {
                       {isMissingCase && (
                         <button
                           type="button"
-                          onClick={() => setQuickEdit({ id: item.id!, field: 'caseSize', value: '' })}
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setQuickEdit({ id: item.id!, field: 'caseSize', value: '' });
+                          }}
                           className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 active:scale-95"
                           title="Click to set case size"
                         >
@@ -550,7 +555,10 @@ export default function CatalogPage() {
                       {isMissingMrp && (
                         <button
                           type="button"
-                          onClick={() => setQuickEdit({ id: item.id!, field: 'mrp', value: '' })}
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setQuickEdit({ id: item.id!, field: 'mrp', value: '' });
+                          }}
                           className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 active:scale-95"
                           title="Click to set MRP"
                         >
@@ -623,7 +631,10 @@ export default function CatalogPage() {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => setQuickEdit({ id: item.id!, field: 'caseSize', value: item.caseSize?.toString() || '' })}
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setQuickEdit({ id: item.id!, field: 'caseSize', value: item.caseSize?.toString() || '' });
+                        }}
                         className="text-left w-full group py-0.5"
                       >
                         {item.caseSize ? (
@@ -679,7 +690,10 @@ export default function CatalogPage() {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => setQuickEdit({ id: item.id!, field: 'mrp', value: item.mrp?.toString() || '' })}
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setQuickEdit({ id: item.id!, field: 'mrp', value: item.mrp?.toString() || '' });
+                        }}
                         className="text-right w-full group py-0.5 flex flex-col items-end"
                       >
                         {item.mrp ? (

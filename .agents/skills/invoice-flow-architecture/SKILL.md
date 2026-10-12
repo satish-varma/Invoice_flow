@@ -64,5 +64,12 @@ The operations and tuckshop suite supports multiple company stalls in Hyderabad 
 5.  **Ledger & Payroll Multi-Site Scoping:**
     - **Tuckshop Ledger:** Admins can view/filter transactions across all sites or isolate NewRelic, DSM, or NTT Data. Transactions feature color-coded company badges in both mobile cards and desktop table views.
     - **Attendance & Payroll:** Admins can switch between all sites or isolate DSM / NTT Data for daily check-ins, history logs, and salary advance deductions. Export to Excel automatically scopes staff and filenames to the selected site.
+6.  **Stock Requests & Fulfillment Scoping:**
+    - Admins can submit stock requests for any stall via a Company Site switcher on `/newrelic/stock-request`, which dynamically re-filters catalog brands and items applicable to that stall.
+    - On `/newrelic/stock-requests-admin`, pending budget (MRP) and pending procurement cost metric cards strictly adapt to the chosen `filterSite` and `filterLocation`.
+    - CSV export includes a dedicated `Company Site` column, respects active site filters, and automatically names files with site identifiers (e.g. `stock_requests_dsm_hyderabad_PENDING.csv`).
+7.  **Staff Directory & Metrics Scoping:**
+    - The top metric cards in `/newrelic/employees` (Total Employees, Hyderabad, Bangalore, Monthly Payroll) adapt to the active site filter rather than showing company-wide totals.
+    - Excel exports for monthly staff attendance (`exportMyMonthlyExcel`) enforce server-side `isOwnerOrAdmin` permission guards and append Company Site metadata.
 
 

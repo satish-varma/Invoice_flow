@@ -42,6 +42,7 @@ const authOptions: NextAuthOptions = {
           role: userData.role || "user",
           preferredLocations: userData.preferredLocations || [],
           assignedApps: userData.assignedApps || [],
+          assignedSite: userData.assignedSite || (userData.role === "admin" ? undefined : "newrelic"),
         };
       },
     }),
@@ -54,6 +55,7 @@ const authOptions: NextAuthOptions = {
         token.role = (user as any).role;
         token.preferredLocations = (user as any).preferredLocations;
         token.assignedApps = (user as any).assignedApps;
+        token.assignedSite = (user as any).assignedSite;
       }
       return token;
     },
@@ -66,6 +68,7 @@ const authOptions: NextAuthOptions = {
           role: token.role as string,
           preferredLocations: token.preferredLocations as string[],
           assignedApps: token.assignedApps as string[],
+          assignedSite: token.assignedSite as string | undefined,
         } as any;
       }
       return session;

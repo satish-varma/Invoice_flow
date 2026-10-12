@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { SessionProvider, useSession, signOut as nextAuthSignOut } from 'next-auth/react';
 
+import { SiteId } from '@/types/site';
+
 export type UserRole = 'admin' | 'superadmin' | 'manager' | 'user';
 
 export interface AppUser {
@@ -11,6 +13,7 @@ export interface AppUser {
   role: UserRole;
   preferredLocations?: string[];
   assignedApps?: string[];
+  assignedSite?: SiteId;
 }
 
 interface AuthContextType {

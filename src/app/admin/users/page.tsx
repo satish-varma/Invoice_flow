@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Plus, Trash2, Edit2, ShieldAlert } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { SiteId, COMPANY_SITES, resolveSiteId } from '@/types/site';
 
 interface DbUser {
   id: string;
@@ -22,6 +23,7 @@ interface DbUser {
   password?: string;
   role: UserRole;
   createdAt?: string;
+  assignedSite?: SiteId;
   preferredLocations?: string[];
   assignedApps?: string[];
 }
@@ -40,6 +42,7 @@ export default function AdminUsersPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [userRole, setUserRole] = useState<UserRole>('user');
+  const [assignedSite, setAssignedSite] = useState<SiteId>('newrelic');
   const [preferredLocations, setPreferredLocations] = useState<string[]>([]);
   const [assignedApps, setAssignedApps] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,10 +69,14 @@ export default function AdminUsersPage() {
     try {
       const q = query(collection(db, 'users'));
       const snapshot = await getDocs(q);
-      const fetchedUsers: DbUser[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as DbUser[];
+      const fetchedUsers: DbUser[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          assignedSite: resolveSiteId(data.assignedSite),
+        };
+      }) as DbUser[];
       setUsers(fetchedUsers);
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Failed to load users', description: err.message });
@@ -84,21 +91,32 @@ export default function AdminUsersPage() {
     }
   }, [role]);
 
+  const handleSiteChange = (newSite: SiteId) => {
+    setAssignedSite(newSite);
+    if (newSite === 'dsm' || newSite === 'ntt_data') {
+      setPreferredLocations(['hyderabad']);
+      setAssignedApps(prev => prev.filter(app => app !== '/delivery-challans'));
+    }
+  };
+
   const handleOpenModal = (userToEdit?: DbUser) => {
     if (userToEdit) {
       setEditingUser(userToEdit);
       setEmail(userToEdit.email);
       setPassword(''); // keep blank for editing
       setUserRole(userToEdit.role);
-      setPreferredLocations(userToEdit.preferredLocations || []);
+      const site = userToEdit.assignedSite || 'newrelic';
+      setAssignedSite(site);
+      setPreferredLocations(userToEdit.preferredLocations || (site !== 'newrelic' ? ['hyderabad'] : []));
       setAssignedApps(userToEdit.assignedApps || []);
     } else {
       setEditingUser(null);
       setEmail('');
       setPassword('');
-      setUserRole('user');
-      setPreferredLocations([]);
-      setAssignedApps([]);
+      setUserRole('manager');
+      setAssignedSite('newrelic');
+      setPreferredLocations(['hyderabad']);
+      setAssignedApps(['/newrelic']);
     }
     setIsModalOpen(true);
   };
@@ -107,9 +125,22 @@ export default function AdminUsersPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      const effectiveSite = userRole === 'admin' ? 'newrelic' : assignedSite;
+      const effectiveLocations = (effectiveSite !== 'newrelic' && userRole !== 'admin')
+        ? ['hyderabad']
+        : preferredLocations;
+      const effectiveApps = (effectiveSite !== 'newrelic' && userRole !== 'admin')
+        ? assignedApps.filter(a => a !== '/delivery-challans')
+        : assignedApps;
+
       if (editingUser) {
         // Edit existing
-        const updateData: any = { role: userRole, preferredLocations, assignedApps };
+        const updateData: any = {
+          role: userRole,
+          assignedSite: effectiveSite,
+          preferredLocations: effectiveLocations,
+          assignedApps: effectiveApps,
+        };
         if (password.trim() !== '') {
           updateData.password = hashPassword(password); // Only update password if provided
         }
@@ -130,8 +161,9 @@ export default function AdminUsersPage() {
           email: newEmail,
           password: hashPassword(password),
           role: userRole,
-          preferredLocations,
-          assignedApps,
+          assignedSite: effectiveSite,
+          preferredLocations: effectiveLocations,
+          assignedApps: effectiveApps,
           createdAt: new Date().toISOString()
         });
         toast({ title: 'User created successfully' });
@@ -205,6 +237,14 @@ export default function AdminUsersPage() {
                     }`}>
                       {u.role.toUpperCase()}
                     </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                      u.role === 'admin' ? 'bg-gray-100 text-gray-600' :
+                      u.assignedSite === 'dsm' ? 'bg-cyan-100 text-cyan-800' :
+                      u.assignedSite === 'ntt_data' ? 'bg-amber-100 text-amber-800' :
+                      'bg-indigo-100 text-[#3b2fc9]'
+                    }`}>
+                      {u.role === 'admin' ? 'All Sites' : (COMPANY_SITES[u.assignedSite || 'newrelic']?.name || 'NewRelic')}
+                    </span>
                     <span className="text-[11px] text-gray-400">
                       {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : ''}
                     </span>
@@ -255,11 +295,12 @@ export default function AdminUsersPage() {
       {/* Desktop Table (hidden md:block) */}
       <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <Table className="min-w-[700px]">
+          <Table className="min-w-[760px]">
             <TableHeader>
               <TableRow className="bg-gray-50">
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Company Site</TableHead>
                 <TableHead>Assigned Apps</TableHead>
                 <TableHead>Preferred Locations</TableHead>
                 <TableHead>Created</TableHead>
@@ -269,13 +310,13 @@ export default function AdminUsersPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-gray-500">
+                  <TableCell colSpan={7} className="h-24 text-center text-gray-500">
                     <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-gray-500">
+                  <TableCell colSpan={7} className="h-24 text-center text-gray-500">
                     No users found
                   </TableCell>
                 </TableRow>
@@ -291,6 +332,21 @@ export default function AdminUsersPage() {
                       }`}>
                         {u.role.toUpperCase()}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      {u.role === 'admin' ? (
+                        <span className="text-xs text-gray-500 font-medium">All Sites</span>
+                      ) : (
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                          u.assignedSite === 'dsm'
+                            ? 'bg-cyan-50 text-cyan-700 border border-cyan-200'
+                            : u.assignedSite === 'ntt_data'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-indigo-50 text-[#3b2fc9] border border-indigo-100'
+                        }`}>
+                          {COMPANY_SITES[u.assignedSite || 'newrelic']?.name || 'NewRelic'}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {u.role === 'admin' ? (
@@ -334,7 +390,7 @@ export default function AdminUsersPage() {
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
           </DialogHeader>
@@ -372,6 +428,28 @@ export default function AdminUsersPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Assigned Site */}
+            {userRole !== 'admin' && (
+              <div className="space-y-2">
+                <Label>Assigned Company Site</Label>
+                <Select value={assignedSite} onValueChange={(v) => handleSiteChange(v as SiteId)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newrelic">NewRelic (HYD & BLR · Challans Enabled)</SelectItem>
+                    <SelectItem value="dsm">DSM (Hyderabad Only · Tuckshop & Attendance)</SelectItem>
+                    <SelectItem value="ntt_data">NTT Data (Hyderabad Only · Tuckshop & Attendance)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {assignedSite !== 'newrelic' && (
+                  <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-md border border-amber-200">
+                    📍 <strong>{COMPANY_SITES[assignedSite]?.name}</strong> is strictly restricted to <strong>Hyderabad</strong>. Delivery Challans are hidden and disabled.
+                  </p>
+                )}
+              </div>
+            )}
             
             <div className="space-y-3 pt-2">
               <Label>Preferred Locations</Label>
@@ -380,22 +458,26 @@ export default function AdminUsersPage() {
                   <Checkbox 
                     id="loc-hyd" 
                     checked={preferredLocations.includes('hyderabad')}
+                    disabled={assignedSite !== 'newrelic' && userRole !== 'admin'}
                     onCheckedChange={(checked) => {
                       if (checked) {
                         setPreferredLocations(prev => [...prev, 'hyderabad']);
                       } else {
-                        setPreferredLocations(prev => prev.filter(l => l !== 'hyderabad'));
+                        if (assignedSite === 'newrelic' || userRole === 'admin') {
+                          setPreferredLocations(prev => prev.filter(l => l !== 'hyderabad'));
+                        }
                       }
                     }}
                   />
-                  <label htmlFor="loc-hyd" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    Hyderabad
+                  <label htmlFor="loc-hyd" className="text-sm font-medium leading-none">
+                    Hyderabad {assignedSite !== 'newrelic' && userRole !== 'admin' && <span className="text-xs text-emerald-600 font-normal">(Locked)</span>}
                   </label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="loc-blr" 
                     checked={preferredLocations.includes('bangalore')}
+                    disabled={assignedSite !== 'newrelic' && userRole !== 'admin'}
                     onCheckedChange={(checked) => {
                       if (checked) {
                         setPreferredLocations(prev => [...prev, 'bangalore']);
@@ -404,8 +486,8 @@ export default function AdminUsersPage() {
                       }
                     }}
                   />
-                  <label htmlFor="loc-blr" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    Bangalore
+                  <label htmlFor="loc-blr" className={`text-sm font-medium leading-none ${assignedSite !== 'newrelic' && userRole !== 'admin' ? 'text-gray-400' : ''}`}>
+                    Bangalore {assignedSite !== 'newrelic' && userRole !== 'admin' && <span className="text-xs text-gray-400 font-normal">(Not available)</span>}
                   </label>
                 </div>
               </div>
@@ -415,7 +497,9 @@ export default function AdminUsersPage() {
               <div className="space-y-3 pt-2">
                 <Label>Assigned Apps (Endpoints)</Label>
                 <div className="grid grid-cols-2 gap-3">
-                  {ALL_APPS.map(app => (
+                  {ALL_APPS
+                    .filter(app => !(assignedSite !== 'newrelic' && app.id === '/delivery-challans'))
+                    .map(app => (
                     <div key={app.id} className="flex items-center space-x-2">
                       <Checkbox 
                         id={`app-${app.id}`}
@@ -429,7 +513,9 @@ export default function AdminUsersPage() {
                         }}
                       />
                       <label htmlFor={`app-${app.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        {app.label}
+                        {app.id === '/newrelic' && assignedSite !== 'newrelic'
+                          ? `${COMPANY_SITES[assignedSite]?.name} Operations`
+                          : app.label}
                       </label>
                     </div>
                   ))}

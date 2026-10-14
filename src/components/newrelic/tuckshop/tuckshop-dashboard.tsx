@@ -12,33 +12,32 @@ export function TuckshopDashboard({ records }: Props) {
   const { totalSales, totalExpenses, netProfit, expensesByCategory } = useMemo(() => {
     let sales = 0;
     let expenses = 0;
-    const byCategory: Record<string, number> = {
-      dosa_batter: 0,
-      bread: 0,
-      fruits: 0,
-      groceries: 0,
-      cutlery: 0,
-      other: 0,
-    };
+    const byCategory: Record<string, number> = {};
 
     records.forEach(r => {
       if (r.type === 'sale') {
-        sales += r.amount;
+        sales += (r.amount || 0);
       } else {
-        expenses += r.amount;
-        if (byCategory[r.category] !== undefined) {
-          byCategory[r.category] += r.amount;
-        } else {
-          byCategory['other'] += r.amount;
-        }
+        expenses += (r.amount || 0);
+        // Normalize category name (e.g. "Dosa Batter", "dosa_batter", "Vegetables")
+        const rawCat = (r.category || 'Other').trim();
+        const normalized = rawCat.replace(/_/g, ' ');
+        // Title case display
+        const formattedCat = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+        byCategory[formattedCat] = (byCategory[formattedCat] || 0) + (r.amount || 0);
       }
     });
+
+    // Sort categories by highest expense first
+    const sorted = Object.entries(byCategory)
+      .filter(([_, amount]) => amount > 0)
+      .sort((a, b) => b[1] - a[1]);
 
     return {
       totalSales: sales,
       totalExpenses: expenses,
       netProfit: sales - expenses,
-      expensesByCategory: byCategory,
+      expensesByCategory: sorted,
     };
   }, [records]);
 
@@ -79,20 +78,36 @@ export function TuckshopDashboard({ records }: Props) {
         </div>
       </div>
 
-      {/* Categories Breakdown (Spans across bottom) */}
-      <div className="sm:col-span-3 bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <PieChart className="h-4 w-4 text-gray-400" />
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Expense Breakdown</h3>
+      {/* Categories Breakdown (Spans across all columns on mobile and desktop) */}
+      <div className="col-span-3 bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border border-gray-200 shadow-xs sm:shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <PieChart className="h-4 w-4 text-[#3b2fc9]" />
+            <h3 className="text-xs sm:text-sm font-semibold text-gray-800 uppercase tracking-wider">Expense Breakdown</h3>
+          </div>
+          <span className="text-[11px] text-gray-400 font-medium">
+            {expensesByCategory.length} {expensesByCategory.length === 1 ? 'category' : 'categories'}
+          </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {Object.entries(expensesByCategory).map(([cat, amount]) => (
-            <div key={cat} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-              <p className="text-xs text-gray-500 capitalize mb-1">{cat.replace('_', ' ')}</p>
-              <p className="font-semibold text-gray-900 text-sm">₹{amount.toLocaleString('en-IN')}</p>
-            </div>
-          ))}
-        </div>
+
+        {expensesByCategory.length === 0 ? (
+          <p className="text-xs text-gray-400 py-2">No expenses recorded for the selected period.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+            {expensesByCategory.map(([cat, amount]) => {
+              const pct = totalExpenses > 0 ? Math.round((amount / totalExpenses) * 100) : 0;
+              return (
+                <div key={cat} className="bg-gray-50/80 rounded-xl p-2.5 border border-gray-100 flex flex-col justify-between">
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <p className="text-xs text-gray-600 font-medium truncate" title={cat}>{cat}</p>
+                    <span className="text-[10px] font-bold text-gray-400">{pct}%</span>
+                  </div>
+                  <p className="font-bold text-gray-900 text-sm">₹{amount.toLocaleString('en-IN')}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

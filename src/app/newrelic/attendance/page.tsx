@@ -70,7 +70,7 @@ function AttendancePageContent() {
   const { user, role } = useAuth();
   const searchParams = useSearchParams();
   const isOwnerOrAdmin = role === 'admin' || role === 'superadmin';
-  const isAdmin = isOwnerOrAdmin || role === 'manager';
+  const isAdmin = isOwnerOrAdmin; // Strictly restricted to admin and superadmin only
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -161,13 +161,26 @@ function AttendancePageContent() {
   useEffect(() => {
     const siteParam = isOwnerOrAdmin ? undefined : assignedSite;
     getActiveEmployees(undefined, siteParam).then((list) => {
-      setEmployees(list);
-      if (list.length === 0) return;
+      // For non-admins (user/manager), strictly scope employee list to only their own record
+      let scopedList = list;
+      if (!isOwnerOrAdmin && user?.email) {
+        const userEmailLower = user.email.toLowerCase().trim();
+        const matched = list.filter(
+          (e) => (e.userId && e.userId === user.id) ||
+                 (e.email && e.email.toLowerCase().trim() === userEmailLower)
+        );
+        if (matched.length > 0) {
+          scopedList = matched;
+        }
+      }
+
+      setEmployees(scopedList);
+      if (scopedList.length === 0) return;
 
       // 1. Try matching by userId or email
       if (user?.email) {
         const userEmailLower = user.email.toLowerCase().trim();
-        const matched = list.find(
+        const matched = scopedList.find(
           (e) => (e.userId && e.userId === user.id) ||
                  (e.email && e.email.toLowerCase().trim() === userEmailLower)
         );
@@ -179,17 +192,17 @@ function AttendancePageContent() {
 
       // 2. Check localStorage for previously selected employee ID
       const savedId = typeof window !== 'undefined' ? localStorage.getItem('nr_attendance_emp_id') : null;
-      if (savedId && list.some(e => e.id === savedId)) {
+      if (savedId && scopedList.some(e => e.id === savedId)) {
         setSelectedEmployeeId(savedId);
         return;
       }
 
-      // 3. For non-admin users or default fallback, select the first employee if not set
-      if (!selectedEmployeeId && list[0]?.id) {
-        setSelectedEmployeeId(list[0].id);
+      // 3. Select the first available employee in scoped list
+      if (!selectedEmployeeId && scopedList[0]?.id) {
+        setSelectedEmployeeId(scopedList[0].id);
       }
     });
-  }, [user]);
+  }, [user, isOwnerOrAdmin]);
 
   // Persist selected employee ID in localStorage
   useEffect(() => {
@@ -600,6 +613,7 @@ function AttendancePageContent() {
   };
 
   const handleLoadHistory = async () => {
+    if (!isOwnerOrAdmin) return;
     setIsLoadingHistory(true);
     try {
       const siteParam = adminSiteFilter === 'all' ? (isOwnerOrAdmin ? undefined : assignedSite) : adminSiteFilter;

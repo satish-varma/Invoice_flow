@@ -2,7 +2,7 @@
 import { NewRelicChallan, NewRelicLocation } from '@/types/challan';
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Loader2, FileText, MapPin, Filter, FileSpreadsheet, RefreshCcw, Search, X, ArrowUp } from 'lucide-react';
+import { Loader2, FileText, MapPin, Filter, FileSpreadsheet, RefreshCcw, Search, X, ArrowUp, Calculator } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
@@ -26,6 +26,7 @@ import { useRouter } from 'next/navigation';
 import { MobileFloatingActions } from '@/components/newrelic/mobile-floating-actions';
 import { triggerHaptic } from '@/lib/haptics';
 import { ChallanSkeletonLoader } from '@/components/newrelic/challan-skeleton-loader';
+import { MrpCalculatorModal } from '@/components/newrelic/mrp-calculator-modal';
 
 export default function NewRelicPage() {
   const router = useRouter();
@@ -64,6 +65,7 @@ export default function NewRelicPage() {
   const [showFinancials, setShowFinancials] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
   const [mounted, setMounted] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -511,6 +513,18 @@ export default function NewRelicPage() {
                   Export Excel
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowCalculator(true);
+                }}
+                className="bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#3b2fc9]/40 text-gray-800 py-3.5 px-4 rounded-xl font-bold transition-all shadow-xs active:scale-[0.98] flex items-center justify-center gap-2 group shrink-0"
+                title="Calculate MRP percentage and purchase cost"
+              >
+                <Calculator className="h-5 w-5 text-[#3b2fc9] group-hover:scale-110 transition-transform" />
+                <span>% Calculator</span>
+              </button>
             </div>
 
             {/* Native Mobile Floating Action Button (+) */}
@@ -518,7 +532,22 @@ export default function NewRelicPage() {
               onNewChallan={(loc) => handleStartCreateNew(loc)}
               onExportExcel={(role === 'admin' || role === 'superadmin') ? handleExportExcel : undefined}
               canReconcile={role === 'admin' || role === 'superadmin'}
+              onOpenCalculator={() => setShowCalculator(true)}
             />
+
+            {/* Floating Mobile Calculator Button */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setShowCalculator(true);
+              }}
+              className={`fixed ${showScrollTop ? 'left-4 bottom-34' : 'left-4 bottom-20'} z-30 w-12 h-12 rounded-full bg-gradient-to-tr from-[#181156] via-[#2a1d8f] to-[#3b2fc9] shadow-xl shadow-indigo-500/30 text-amber-300 border border-white/20 flex items-center justify-center sm:hidden active:scale-90 transition-all`}
+              aria-label="MRP Calculator"
+              title="MRP % Calculator"
+            >
+              <Calculator className="w-5 h-5 stroke-[2.2]" />
+            </button>
 
             {/* Floating Back to Top Button on Mobile */}
             {showScrollTop && (
@@ -734,6 +763,20 @@ export default function NewRelicPage() {
                   )}
                 </div>
               )}
+
+              {/* MRP % Calculator Trigger */}
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowCalculator(true);
+                }}
+                className="flex items-center gap-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 text-[#3b2fc9] text-xs font-bold px-3 py-1.5 rounded-lg border border-purple-200/80 shadow-2xs transition-colors shrink-0 ml-auto sm:ml-0"
+                title="MRP % Calculator"
+              >
+                <Calculator className="h-3.5 w-3.5" />
+                <span>MRP % Calc</span>
+              </button>
             </div>
 
             {/* Bottom Row: Date Presets & Filter Reset (Cycle only shown for admin/superadmin) */}
@@ -957,6 +1000,12 @@ export default function NewRelicPage() {
         isOpen={showFinancialModal}
         onClose={() => setShowFinancialModal(false)}
         onSuccess={() => setShowFinancials(true)}
+      />
+
+      {/* MRP Percentage & Value Calculator Modal */}
+      <MrpCalculatorModal
+        isOpen={showCalculator}
+        onClose={() => setShowCalculator(false)}
       />
 
       {challanToDownload && (

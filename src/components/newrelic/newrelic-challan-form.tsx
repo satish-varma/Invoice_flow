@@ -5,8 +5,8 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { useAuth } from '@/contexts/AuthContext';
-import { CalendarIcon, Plus, Trash2, FileDown, Save, Loader2, Sparkles, UploadCloud, FileText, Paperclip, AlertTriangle, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import { CalendarIcon, Plus, Trash2, FileDown, Save, Loader2, Sparkles, UploadCloud, FileText, Paperclip, AlertTriangle, MapPin, ChevronDown, ChevronUp, Calculator } from 'lucide-react';
+import { MrpCalculatorModal } from '@/components/newrelic/mrp-calculator-modal';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -115,6 +115,7 @@ export function NewRelicChallanForm({
   // P.Cost is visible to admins without financial password unlock, but strictly forbidden for user/manager
   const canSeePCost = isAdmin;
   const [isDockMinimized, setIsDockMinimized] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
 
   const {
     register,
@@ -674,6 +675,18 @@ export function NewRelicChallanForm({
             <Label className="text-sm sm:text-base font-semibold">Items</Label>
             <p className="text-[11px] sm:text-xs text-gray-400">Type to search saved brands &amp; catalog</p>
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              setShowCalculator(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 border border-purple-200/80 text-[#3b2fc9] text-xs font-bold shadow-2xs transition-all active:scale-95 cursor-pointer"
+            title="Open MRP % Calculator"
+          >
+            <Calculator className="w-3.5 h-3.5" />
+            <span>MRP % Calculator</span>
+          </button>
         </div>
 
         {isEditing && isAdmin && (initialData?.procurementCost || 0) > 0 && calculatedTotalPCost === 0 && (
@@ -949,6 +962,18 @@ export function NewRelicChallanForm({
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setShowCalculator(true);
+                  }}
+                  className="h-8 px-2.5 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 flex items-center gap-1 shrink-0 transition-colors border border-amber-300/30 text-xs font-bold"
+                  title="MRP % Calculator"
+                >
+                  <Calculator className="w-3.5 h-3.5" />
+                  <span>Calc</span>
+                </button>
                 {onCancel && (
                   <button
                     type="button"
@@ -1000,6 +1025,12 @@ export function NewRelicChallanForm({
           </div>
         )}
       </div>
+
+      {/* MRP Percentage & Value Calculator Modal */}
+      <MrpCalculatorModal
+        isOpen={showCalculator}
+        onClose={() => setShowCalculator(false)}
+      />
     </form>
   );
 }

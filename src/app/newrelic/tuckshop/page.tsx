@@ -62,46 +62,58 @@ export default function TuckshopPage() {
   
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-              {isAdmin ? 'Tuckshop Tracking' : `${siteConfig.name} Tuckshop Tracking`}
-            </h1>
-            {!isAdmin && (
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                assignedSite === 'dsm'
-                  ? 'bg-cyan-100 text-cyan-800'
-                  : assignedSite === 'ntt_data'
-                  ? 'bg-amber-100 text-amber-800'
-                  : 'bg-indigo-100 text-[#3b2fc9]'
-              }`}>
-                {siteConfig.name}
-              </span>
-            )}
+      {/* The Gut Guru Tracker - Tuckshop Operations Hero Banner */}
+      <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#2c1d24] via-[#43232f] to-[#1e1b4b] p-4 sm:p-6 text-white shadow-lg relative overflow-hidden">
+        <div className="absolute -right-10 -top-10 w-44 h-44 bg-purple-500/20 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute right-32 -bottom-10 w-36 h-36 bg-amber-500/15 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/gut_guru_logo.png"
+              alt="The Gut Guru"
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-amber-300/40 shadow-md object-contain bg-black/20 shrink-0"
+            />
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-base sm:text-xl font-black tracking-tight text-white">
+                  {isAdmin ? 'Tuckshop Ledger & Live Sales' : `${siteConfig.name} Tuckshop`}
+                </h1>
+                <span className="text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Live Counter
+                </span>
+                {!isAdmin && (
+                  <span className="text-[10px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    {siteConfig.name}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-rose-100/70 font-medium mt-0.5">
+                {isAdmin
+                  ? 'Real-time sales, raw materials, vendor expenses & daily net profit.'
+                  : `Track daily tuckshop operations for ${siteConfig.name} (${siteConfig.allowedLocations.join(', ')}).`}
+              </p>
+            </div>
           </div>
-          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-            {isAdmin
-              ? 'Track daily sales and expenses for Tuckshop items across company sites.'
-              : `Track daily sales and expenses for ${siteConfig.name} (${siteConfig.allowedLocations.join(', ')}).`}
-          </p>
+
+          <div className="grid grid-cols-2 sm:flex gap-2.5">
+            <button 
+              onClick={() => openDialog('expense')}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-rose-600 to-red-600 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-rose-950/30 hover:from-rose-700 hover:to-red-700 transition-all active:scale-95"
+            >
+              <TrendingDown className="h-4 w-4" /> Add Expense
+            </button>
+            
+            <button 
+              onClick={() => openDialog('sale')}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-emerald-950/30 hover:from-emerald-700 hover:to-teal-700 transition-all active:scale-95"
+            >
+              <IndianRupee className="h-4 w-4" /> Log Sale
+            </button>
+          </div>
         </div>
-        
-        <div className="grid grid-cols-2 sm:flex gap-2">
-          <button 
-            onClick={() => openDialog('expense')}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2.5 sm:px-4 sm:py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl text-xs sm:text-sm font-semibold hover:bg-red-100 transition-colors shadow-xs active:scale-95"
-          >
-            <TrendingDown className="h-4 w-4" /> Add Expense
-          </button>
-          
-          <button 
-            onClick={() => openDialog('sale')}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2.5 sm:px-4 sm:py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs sm:text-sm font-semibold hover:bg-emerald-100 transition-colors shadow-xs active:scale-95"
-          >
-            <IndianRupee className="h-4 w-4" /> Add Sale
-          </button>
-        </div>
+      </div>
         
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
@@ -123,7 +135,6 @@ export default function TuckshopPage() {
             />
           </DialogContent>
         </Dialog>
-      </div>
 
       {isLoading ? (
         <div className="flex flex-col items-center justify-center h-64 gap-4">

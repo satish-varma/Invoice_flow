@@ -665,48 +665,65 @@ function AttendancePageContent() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-3 sm:px-8 py-4 sm:py-8 space-y-6">
 
-        {/* Date header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-bold text-gray-800">
-              {isOwnerOrAdmin ? 'Attendance & Payroll' : 'Staff Attendance'}
-            </h1>
-            <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5" suppressHydrationWarning>
-              <Calendar className="h-3.5 w-3.5" /> {displayDate || 'Loading date…'}
-            </p>
-          </div>
+        {/* Brand Hero Banner */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#2c1d24] via-[#43232f] to-[#1e1b4b] p-5 sm:p-7 text-white shadow-xl border border-white/10">
+          <div className="absolute -top-24 -right-24 w-60 h-60 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -left-24 w-60 h-60 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Quick tab switcher between Mark Attendance and Salaries/Admin tabs */}
-          <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-xl border border-gray-200">
-            <button
-              type="button"
-              onClick={() => {
-                const el = document.getElementById('self-service-section');
-                el?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-700 hover:bg-white hover:shadow-xs transition-all flex items-center gap-1.5"
-            >
-              <Camera className="h-3.5 w-3.5 text-[#3b2fc9]" />
-              Mark Attendance
-            </button>
-            {isOwnerOrAdmin && (
+          <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span className="text-[10px] font-extrabold tracking-widest uppercase bg-gradient-to-r from-amber-300 via-rose-300 to-amber-200 text-transparent bg-clip-text">
+                  The Gut Guru Tracker
+                </span>
+                <span className="text-[10px] bg-white/15 px-2.5 py-0.5 rounded-full font-bold border border-white/20 text-white/90">
+                  Staff & Roster
+                </span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-semibold border border-emerald-400/30 flex items-center gap-1" suppressHydrationWarning>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  {currentTime || 'Live Clock'}
+                </span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                {isOwnerOrAdmin ? 'Attendance & Staff Payroll' : 'Biometric Attendance'}
+              </h1>
+              <p className="text-xs text-gray-300 mt-1 flex items-center gap-1.5" suppressHydrationWarning>
+                <Calendar className="h-3.5 w-3.5 text-amber-300" /> {displayDate || 'Loading date…'}
+              </p>
+            </div>
+
+            {/* Quick tab switcher between Mark Attendance and Salaries/Admin tabs */}
+            <div className="flex items-center gap-1.5 p-1.5 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15">
               <button
                 type="button"
                 onClick={() => {
-                  setAdminTab('payroll');
-                  const el = document.getElementById('admin-management-panel');
+                  const el = document.getElementById('self-service-section');
                   el?.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  adminTab === 'payroll'
-                    ? 'bg-[#3b2fc9] text-white shadow-xs'
-                    : 'text-gray-700 hover:bg-white hover:shadow-xs'
-                }`}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold text-white hover:bg-white/20 transition-all flex items-center gap-1.5"
               >
-                <Calculator className="h-3.5 w-3.5" />
-                Staff Salaries & Advances
+                <Camera className="h-3.5 w-3.5 text-amber-300" />
+                Mark Attendance
               </button>
-            )}
+              {isOwnerOrAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminTab('payroll');
+                    const el = document.getElementById('admin-management-panel');
+                    el?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    adminTab === 'payroll'
+                      ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
+                      : 'text-white/80 hover:bg-white/20'
+                  }`}
+                >
+                  <Calculator className="h-3.5 w-3.5 text-amber-200" />
+                  Salaries & Advances
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1054,26 +1071,26 @@ function AttendancePageContent() {
                   <button
                     onClick={() => handleOpenCamera('check-in')}
                     disabled={isSubmitting}
-                    className="flex-1 py-3 bg-[#3b2fc9] text-white rounded-xl text-sm font-medium hover:bg-[#3b2fc9]/90 disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
+                    className="flex-1 py-3.5 bg-gradient-to-r from-[#2c1d24] via-[#43232f] to-[#3b2fc9] hover:from-[#3a2630] hover:to-[#4f42e2] text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/20 active:scale-98 transition-all"
                   >
-                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-                    Check In
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin text-amber-300" /> : <LogIn className="h-4 w-4 text-amber-300" />}
+                    <span>Check In Now</span>
                   </button>
                 )}
                 {todayRecord && !todayRecord.checkOut && (
                   <button
                     onClick={() => handleOpenCamera('check-out')}
                     disabled={isSubmitting}
-                    className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
+                    className="flex-1 py-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/20 active:scale-98 transition-all"
                   >
-                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
-                    Check Out
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin text-emerald-200" /> : <LogOut className="h-4 w-4 text-emerald-200" />}
+                    <span>Check Out Shift</span>
                   </button>
                 )}
                 {todayRecord?.checkOut && (
-                  <div className="flex-1 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-500 flex items-center justify-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-emerald-500" />
-                    Shift complete for today
+                  <div className="flex-1 py-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl text-sm font-bold text-emerald-800 flex items-center justify-center gap-2 shadow-xs">
+                    <CheckCircle className="h-4 w-4 text-emerald-600" />
+                    <span>Shift Complete for Today</span>
                   </div>
                 )}
               </div>

@@ -1,11 +1,11 @@
 {
-  "name": "InvoiceFlow",
-  "short_name": "InvoiceFlow",
-  "description": "Generate, manage, and download professional-looking invoices.",
-  "start_url": "/",
+  "name": "The Gut Guru Tracker",
+  "short_name": "Gut Guru",
+  "description": "Operations, Attendance & Delivery Challan Management Platform.",
+  "start_url": "/newrelic",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#3949ab",
+  "theme_color": "#2c1d24",
   "icons": [
     {
       "src": "/icon-192x192.png",

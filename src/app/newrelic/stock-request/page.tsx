@@ -572,7 +572,11 @@ export default function StockRequestPage() {
                         </span>
                       )}
                       {req.status === 'FULFILLED' && (
-                        <span className="bg-gradient-to-r from-emerald-500/15 via-emerald-400/20 to-teal-500/15 text-emerald-950 border border-emerald-400/60 px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1 shadow-2xs">
+                        <span className="bg-gradient-to-r from-emerald-500/15 via-emerald-400/20 to-teal-500/15 text-emerald-950 border border-emerald-400/60 px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1.5 shadow-2xs">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                          </span>
                           <CheckCircle className="h-3 w-3 text-emerald-600"/> FULFILLED
                         </span>
                       )}
@@ -627,13 +631,13 @@ export default function StockRequestPage() {
                       <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50 p-2 rounded-lg">
                         <div>
                           <span className="text-[10px] text-gray-400 uppercase block font-semibold">Requested</span>
-                          <span className="font-medium text-gray-800">
+                          <span className="font-bold text-gray-800 tabular-nums">
                             {item.quantity} {item.orderType === 'cases' && `(${item.totalUnits} pcs)`}
                           </span>
                         </div>
                         <div className="text-right">
                           <span className="text-[10px] text-gray-400 uppercase block font-semibold">Fulfilled</span>
-                          <span className="font-bold text-[#3b2fc9]">
+                          <span className="font-black text-[#3b2fc9] tabular-nums">
                             {item.fulfilledQuantity !== undefined ? `${item.fulfilledQuantity} (${item.fulfilledTotalUnits ?? 0} pcs)` : '-'}
                           </span>
                         </div>

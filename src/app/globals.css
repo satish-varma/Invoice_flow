@@ -112,3 +112,8 @@ button, a, nav, header {
   user-select: none;
 }
 
+/* ── Shimmer animation for skeleton loaders ── */
+@keyframes shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: -100% 50%; }
+}

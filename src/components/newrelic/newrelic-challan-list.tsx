@@ -1,7 +1,7 @@
 'use client';
 import { NewRelicChallan } from '@/types/challan';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { format } from 'date-fns';
 import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
@@ -74,6 +74,29 @@ export function NewRelicChallanList({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteConfirmChallan, setDeleteConfirmChallan] = useState<NewRelicChallan | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+
+  // Swipe-to-action state on mobile cards
+  const [swipedId, setSwipedId] = useState<string | null>(null);
+  const swipeStartX = useRef<number>(0);
+  const swipeStartY = useRef<number>(0);
+  const SWIPE_THRESHOLD = 50;
+
+  const handleCardTouchStart = (e: React.TouchEvent) => {
+    swipeStartX.current = e.touches[0].clientX;
+    swipeStartY.current = e.touches[0].clientY;
+  };
+
+  const handleCardTouchEnd = (e: React.TouchEvent, challan: NewRelicChallan) => {
+    const dx = swipeStartX.current - e.changedTouches[0].clientX;
+    const dy = Math.abs(swipeStartY.current - e.changedTouches[0].clientY);
+    // Only trigger swipe on predominantly horizontal motion
+    if (dx > SWIPE_THRESHOLD && dy < 40) {
+      triggerHaptic('light');
+      setSwipedId(prev => (prev === challan.id ? null : (challan.id ?? null)));
+    } else if (dx < -20) {
+      setSwipedId(null);
+    }
+  };
 
   const toggleCardExpand = (id: string) => {
     triggerHaptic('light');
@@ -207,42 +230,85 @@ export function NewRelicChallanList({
           return (
             <div
               key={challan.id}
-              className={`bg-white rounded-2xl border p-4 shadow-2xs space-y-3 transition-all hover:shadow-md ${
-                challan.location === 'hyderabad'
-                  ? 'border-l-4 border-l-blue-500 border-gray-200/90'
-                  : 'border-l-4 border-l-emerald-500 border-gray-200/90'
-              }`}
+              className="relative overflow-hidden rounded-2xl group"
             >
-              {/* Card Header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <input
-                    type="checkbox"
-                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
-                    checked={!!challan.id && selectedIds.has(challan.id)}
-                    onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
-                  />
-                  <div>
-                    <span className="font-mono font-black text-indigo-950 text-base leading-tight block">
-                      {challan.dcNumber}
-                    </span>
-                    <span className="text-[11px] text-gray-500 font-medium">
-                      📅 {challan.dcDate ? format(new Date(challan.dcDate), 'dd MMM yyyy') : '—'}
-                    </span>
-                  </div>
-                </div>
-
-                <Badge
-                  variant="outline"
-                  className={
-                    challan.location === 'hyderabad'
-                      ? 'border-blue-300 text-blue-800 bg-gradient-to-r from-blue-50 to-indigo-50 text-xs px-2.5 py-1 rounded-full font-bold shadow-2xs'
-                      : 'border-emerald-300 text-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 text-xs px-2.5 py-1 rounded-full font-bold shadow-2xs'
-                  }
+              {/* Swipe Action Reveal Rail (revealed behind card when swiped left) */}
+              <div className="absolute inset-y-0 right-0 flex items-stretch z-0">
+                <button
+                  type="button"
+                  className="w-20 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white flex flex-col items-center justify-center gap-1 transition-colors px-1 shadow-inner"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    onDuplicateChallan(challan);
+                    setSwipedId(null);
+                  }}
+                  title="Duplicate Challan"
                 >
-                  📍 {NEWRELIC_LOCATIONS[challan.location]?.label ?? challan.location}
-                </Badge>
+                  <Copy className="h-5 w-5 stroke-[2.2]" />
+                  <span className="text-[10px] font-bold">Duplicate</span>
+                </button>
+                <button
+                  type="button"
+                  className="w-16 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white flex flex-col items-center justify-center gap-1 transition-colors px-1 shadow-inner"
+                  onClick={() => {
+                    triggerHaptic('medium');
+                    onDownloadChallan(challan);
+                    setSwipedId(null);
+                  }}
+                  title="Download PDF"
+                >
+                  <Download className="h-5 w-5 stroke-[2.2]" />
+                  <span className="text-[10px] font-bold">PDF</span>
+                </button>
               </div>
+
+              {/* The swipeable card surface */}
+              <div
+                className={`relative z-10 bg-white rounded-2xl border p-4 shadow-2xs space-y-3 transition-transform duration-200 ease-out ${
+                  challan.location === 'hyderabad'
+                    ? 'border-l-4 border-l-sky-500 border-gray-200/90'
+                    : 'border-l-4 border-l-emerald-500 border-gray-200/90'
+                } ${swipedId === challan.id ? '-translate-x-36 shadow-md' : 'translate-x-0'}`}
+                onTouchStart={handleCardTouchStart}
+                onTouchEnd={(e) => handleCardTouchEnd(e, challan)}
+                onClick={() => {
+                  if (swipedId === challan.id) setSwipedId(null);
+                }}
+              >
+                {/* Card Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                      checked={!!challan.id && selectedIds.has(challan.id)}
+                      onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
+                    />
+                    <div>
+                      <span className="font-mono font-black tabular-nums text-indigo-950 text-base leading-tight block">
+                        {challan.dcNumber}
+                      </span>
+                      <span className="text-[11px] text-gray-500 font-medium tabular-nums">
+                        📅 {challan.dcDate ? format(new Date(challan.dcDate), 'dd MMM yyyy') : '—'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Contextual Location Pill Badge: Sky Blue for HYD, Emerald for BLR */}
+                  <Badge
+                    variant="outline"
+                    className={
+                      challan.location === 'hyderabad'
+                        ? 'border-sky-300 text-sky-800 bg-gradient-to-r from-sky-50 to-blue-50 text-xs px-2.5 py-1 rounded-full font-bold shadow-2xs flex items-center gap-1.5'
+                        : 'border-emerald-300 text-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 text-xs px-2.5 py-1 rounded-full font-bold shadow-2xs flex items-center gap-1.5'
+                    }
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      challan.location === 'hyderabad' ? 'bg-sky-500' : 'bg-emerald-500'
+                    }`} />
+                    <span>{NEWRELIC_LOCATIONS[challan.location]?.label ?? challan.location}</span>
+                  </Badge>
+                </div>
 
               {/* Items Preview Snippet with Tap-to-Expand */}
               {(() => {
@@ -257,7 +323,7 @@ export function NewRelicChallanList({
                         <span>{items.length} line item{items.length !== 1 ? 's' : ''}</span>
                       </span>
                       {mrpTotal > 0 && (
-                        <span className="font-semibold text-gray-900">
+                        <span className="font-black text-gray-900 tabular-nums tracking-tight">
                           ₹{mrpTotal.toLocaleString('en-IN')}
                         </span>
                       )}
@@ -288,9 +354,9 @@ export function NewRelicChallanList({
                           {items.map((item, idx) => (
                             <div key={idx} className="flex items-center justify-between text-[11px] py-0.5 border-b border-gray-100 last:border-0">
                               <span className="text-gray-700 truncate pr-2">
-                                <span className="font-semibold text-gray-900">{item.quantity}x</span> {item.itemName}
+                                <span className="font-black text-gray-900 tabular-nums">{item.quantity}×</span> {item.itemName}
                               </span>
-                              <span className="text-gray-500 font-medium shrink-0">
+                              <span className="text-gray-600 font-bold tabular-nums shrink-0">
                                 ₹{((item.mrp || 0) * (item.quantity || 1)).toLocaleString('en-IN')}
                               </span>
                             </div>
@@ -510,7 +576,8 @@ export function NewRelicChallanList({
                 )}
               </div>
             </div>
-          );
+          </div>
+        );
         })}
       </div>
 
@@ -557,10 +624,10 @@ export function NewRelicChallanList({
                     onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
                   />
                 </TableCell>
-                <TableCell className="font-mono font-bold text-indigo-950">
+                <TableCell className="font-mono font-bold tabular-nums text-indigo-950">
                   {challan.dcNumber}
                 </TableCell>
-                <TableCell className="text-gray-600 font-medium text-xs">
+                <TableCell className="text-gray-600 font-medium text-xs tabular-nums">
                   {challan.dcDate
                     ? format(new Date(challan.dcDate), 'dd-MM-yyyy')
                     : '—'}
@@ -570,14 +637,17 @@ export function NewRelicChallanList({
                     variant="outline"
                     className={
                       challan.location === 'hyderabad'
-                        ? 'border-blue-300 text-blue-800 bg-gradient-to-r from-blue-50 to-indigo-50 font-bold px-2.5 py-0.5 rounded-full shadow-2xs'
-                        : 'border-emerald-300 text-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 font-bold px-2.5 py-0.5 rounded-full shadow-2xs'
+                        ? 'border-sky-300 text-sky-800 bg-gradient-to-r from-sky-50 to-blue-50 font-bold px-2.5 py-0.5 rounded-full shadow-2xs inline-flex items-center gap-1.5'
+                        : 'border-emerald-300 text-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 font-bold px-2.5 py-0.5 rounded-full shadow-2xs inline-flex items-center gap-1.5'
                     }
                   >
-                    📍 {NEWRELIC_LOCATIONS[challan.location]?.label ?? challan.location}
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      challan.location === 'hyderabad' ? 'bg-sky-500' : 'bg-emerald-500'
+                    }`} />
+                    <span>{NEWRELIC_LOCATIONS[challan.location]?.label ?? challan.location}</span>
                   </Badge>
                 </TableCell>
-                <TableCell className="text-center text-gray-600">
+                <TableCell className="text-center text-gray-700 font-bold tabular-nums">
                   {challan.lineItems?.length ?? 0}
                 </TableCell>
                 {role === 'admin' && (
@@ -615,26 +685,26 @@ export function NewRelicChallanList({
                         return (
                           <>
                             <TableCell className="text-right whitespace-nowrap align-top pt-3">
-                              <div className="flex flex-col text-[11px] items-end leading-tight">
+                              <div className="flex flex-col text-[11px] items-end leading-tight tabular-nums">
                                 <span className="text-gray-600" title="Total MRP">₹{mrpTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 <span className="text-gray-400" title="5.5% Commission">- ₹{commission.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                <span className="font-medium text-[13px] text-gray-900 border-t border-gray-200 mt-1 pt-1 w-full text-right">
-                                  ₹{revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                <span className="font-bold text-[13px] text-gray-900 border-t border-gray-200 mt-1 pt-1 w-full text-right">
+                                   ₹{revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                               </div>
                             </TableCell>
                             <TableCell className="text-right whitespace-nowrap align-top pt-3">
-                              <div className="flex flex-col text-[11px] items-end leading-tight text-gray-500">
+                              <div className="flex flex-col text-[11px] items-end leading-tight text-gray-500 tabular-nums">
                                 <span>Goods: ₹{pCost.toLocaleString('en-IN')}</span>
                                 <span>Trans: ₹{tCost.toLocaleString('en-IN')}</span>
                                 <span>Other: ₹{oCost.toLocaleString('en-IN')}</span>
-                                <span className="font-medium text-[13px] text-gray-900 border-t border-gray-200 mt-1 pt-1 w-full text-right">
-                                  ₹{totalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                <span className="font-bold text-[13px] text-gray-900 border-t border-gray-200 mt-1 pt-1 w-full text-right">
+                                   ₹{totalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                               </div>
                             </TableCell>
                             <TableCell className="text-right font-medium whitespace-nowrap align-top pt-3">
-                              <div className="flex flex-col items-end w-full h-full justify-end pb-[2px]">
+                              <div className="flex flex-col items-end w-full h-full justify-end pb-[2px] tabular-nums font-bold">
                                 <span className={profit >= 0 ? "text-emerald-700" : "text-red-700"}>
                                   ₹{profit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>

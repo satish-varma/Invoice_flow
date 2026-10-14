@@ -25,6 +25,7 @@ import { Lock, Unlock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { MobileFloatingActions } from '@/components/newrelic/mobile-floating-actions';
 import { triggerHaptic } from '@/lib/haptics';
+import { ChallanSkeletonLoader } from '@/components/newrelic/challan-skeleton-loader';
 
 export default function NewRelicPage() {
   const router = useRouter();
@@ -65,6 +66,36 @@ export default function NewRelicPage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [mounted, setMounted] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
+
+  // Pull-to-refresh gesture state
+  const [pullState, setPullState] = useState<'idle' | 'pulling' | 'triggered'>('idle');
+  const [pullDelta, setPullDelta] = useState(0);
+  const touchStartY = useRef<number>(0);
+  const PTR_THRESHOLD = 72; // px to trigger refresh
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.scrollY === 0) {
+      touchStartY.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (window.scrollY > 0 || pullState === 'triggered') return;
+    const delta = e.touches[0].clientY - touchStartY.current;
+    if (delta > 0) {
+      setPullDelta(Math.min(delta * 0.45, PTR_THRESHOLD + 24));
+      setPullState(delta >= PTR_THRESHOLD ? 'triggered' : 'pulling');
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (pullState === 'triggered') {
+      triggerHaptic('medium');
+      await handlePullRefresh();
+    }
+    setPullDelta(0);
+    setPullState('idle');
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -342,7 +373,31 @@ export default function NewRelicPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50" suppressHydrationWarning>
+    <div
+      className="min-h-screen bg-gray-50"
+      suppressHydrationWarning
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull-to-refresh mobile gesture indicator */}
+      {pullDelta > 4 && (
+        <div
+          className="sm:hidden fixed top-0 left-0 right-0 z-50 flex items-end justify-center overflow-hidden transition-all bg-white/70 backdrop-blur-md shadow-xs border-b border-indigo-100"
+          style={{ height: `${pullDelta}px` }}
+        >
+          <div className={`flex items-center gap-2 pb-2 text-xs font-bold transition-all ${
+            pullState === 'triggered' ? 'text-[#3b2fc9]' : 'text-gray-500'
+          }`}>
+            <RefreshCcw className={`w-4 h-4 transition-transform ${
+              pullState === 'triggered' ? 'animate-spin text-[#3b2fc9]' : 'rotate-180 text-gray-400'
+            }`} />
+            <span>
+              {pullState === 'triggered' ? 'Release to refresh' : 'Pull to refresh'}
+            </span>
+          </div>
+        </div>
+      )}
       <div className="max-w-6xl mx-auto px-3 sm:px-8 py-3 sm:py-8 space-y-4 sm:space-y-8">
 
         {/* The Gut Guru Tracker - DC Hub Hero Banner */}
@@ -825,9 +880,7 @@ export default function NewRelicPage() {
 
         {/* Main Content Area */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-          </div>
+          <ChallanSkeletonLoader count={4} />
         ) : activeTab === 'items' ? (
           <NewRelicItemDashboard challans={displayChallans} />
         ) : activeTab === 'trash' ? (

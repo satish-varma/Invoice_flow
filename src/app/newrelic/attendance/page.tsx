@@ -1344,14 +1344,14 @@ function AttendancePageContent() {
                             />
                           )}
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-2xs ${
                               r.status === 'present'
-                                ? 'bg-emerald-100 text-emerald-700'
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                                 : r.status === 'half-day'
-                                ? 'bg-amber-100 text-amber-700'
+                                ? 'bg-amber-100 text-amber-900 border border-amber-300'
                                 : r.status === 'missed-checkout'
-                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                : 'bg-red-100 text-red-600'
+                                ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                : 'bg-red-100 text-red-700 border border-red-300'
                             }`}
                           >
                             {r.status === 'present'
@@ -2137,12 +2137,12 @@ function AdminAttendanceCard({
 }) {
   const statusColor =
     record.status === 'present'
-      ? 'bg-emerald-100 text-emerald-700'
+      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold'
       : record.status === 'half-day'
-      ? 'bg-amber-100 text-amber-700'
+      ? 'bg-amber-100 text-amber-900 border border-amber-300 font-bold'
       : record.status === 'missed-checkout'
-      ? 'bg-amber-100 text-amber-800 border border-amber-200'
-      : 'bg-red-100 text-red-600';
+      ? 'bg-amber-100 text-amber-900 border border-amber-300 font-bold'
+      : 'bg-red-100 text-red-700 border border-red-300 font-bold';
 
   return (
     <div className="border border-gray-100 rounded-xl overflow-hidden">

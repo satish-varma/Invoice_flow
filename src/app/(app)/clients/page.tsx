@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader, PlusCircle } from "lucide-react";
 import Link from 'next/link';
 import { useToast } from "@/hooks/use-toast";
+import { AppShell } from "@/components/app-shell";
 import {
     Dialog,
     DialogContent,
@@ -139,7 +140,8 @@ export default function ClientsPage() {
     }
 
     return (
-        <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
+        <AppShell>
+            <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
             <div className="w-full max-w-7xl mx-auto">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between mb-8 gap-4">
                     <div>
@@ -275,7 +277,8 @@ export default function ClientsPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </main>
+            </main>
+        </AppShell>
     );
 }
 

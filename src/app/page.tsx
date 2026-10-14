@@ -15,7 +15,8 @@ export default function App() {
     const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
     const isMobileScreen = typeof window !== 'undefined' && (window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
 
-    if (isCapacitor || isMobileScreen) {
+    // Only redirect native Capacitor app (installed APK/AAB) or dedicated tuckshop sites
+    if (isCapacitor) {
       setIsMobileDevice(true);
       const site = user?.assignedSite;
       if (site === 'dsm' || site === 'ntt_data') {
@@ -23,6 +24,9 @@ export default function App() {
       } else {
         router.replace('/newrelic');
       }
+    } else if (user?.assignedSite === 'dsm' || user?.assignedSite === 'ntt_data') {
+      setIsMobileDevice(true);
+      router.replace('/newrelic/tuckshop');
     } else {
       setIsMobileDevice(false);
     }

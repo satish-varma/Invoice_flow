@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Challan } from '@/services/challanService';
-import { format } from 'date-fns';
+import { format, isAfter, subDays, startOfMonth } from 'date-fns';
 import {
   Download,
   FileSpreadsheet,
@@ -21,7 +21,6 @@ import {
   Check,
   Building2,
   Calendar,
-  ChevronRight,
   Truck,
   Package,
   Eye,
@@ -30,8 +29,12 @@ import {
   CheckSquare,
   Square,
   X,
-  Layers,
   Edit,
+  TrendingUp,
+  Percent,
+  DollarSign,
+  ArrowUpDown,
+  Filter,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { exportToCSV } from '@/lib/export';
@@ -58,6 +61,7 @@ interface ChallanListProps {
   onBulkDuplicate: (selectedChallans: Challan[]) => void;
   onBulkDelete: (selectedIds: string[]) => void;
   isBulkDownloading?: boolean;
+  showFinancials?: boolean;
 }
 
 export function ChallanList({
@@ -71,10 +75,14 @@ export function ChallanList({
   onBulkDuplicate,
   onBulkDelete,
   isBulkDownloading = false,
+  showFinancials = true,
 }: ChallanListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [creatorFilter, setCreatorFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | 'this_month' | 'last_30'>('all');
+  const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'value_desc' | 'value_asc'>('date_desc');
 
   // Confirm delete dialog state
   const [deleteDialogChallan, setDeleteDialogChallan] = useState<Challan | null>(null);
@@ -97,17 +105,57 @@ export function ChallanList({
       const name = raw.includes('@') ? raw.split('@')[0] : raw;
       return name.charAt(0).toUpperCase() + name.slice(1);
     }
-    return 'Admin';
+    return 'Satya';
   };
 
-  const filteredChallans = challans.filter((c) => {
-    const q = searchTerm.toLowerCase();
-    const dcMatch = (c.dcNumber || '').toLowerCase().includes(q);
-    const shipMatch = (c.shipToName || '').toLowerCase().includes(q);
-    const billMatch = (c.billToName || '').toLowerCase().includes(q);
-    const creatorMatch = getCreator(c).toLowerCase().includes(q);
-    return dcMatch || shipMatch || billMatch || creatorMatch;
-  });
+  // Distinct creator list for filtering
+  const allCreators = useMemo(() => {
+    const set = new Set<string>();
+    challans.forEach((c) => set.add(getCreator(c)));
+    return Array.from(set).sort();
+  }, [challans]);
+
+  const filteredChallans = useMemo(() => {
+    return challans
+      .filter((c) => {
+        const q = searchTerm.toLowerCase();
+        const dcMatch = (c.dcNumber || '').toLowerCase().includes(q);
+        const shipMatch = (c.shipToName || '').toLowerCase().includes(q);
+        const billMatch = (c.billToName || '').toLowerCase().includes(q);
+        const creator = getCreator(c);
+        const creatorMatch = creator.toLowerCase().includes(q);
+        const searchOk = !q || dcMatch || shipMatch || billMatch || creatorMatch;
+
+        // Creator filter
+        const creatorOk = creatorFilter === 'all' || creator.toLowerCase() === creatorFilter.toLowerCase();
+
+        // Date filter
+        let dateOk = true;
+        if (dateFilter !== 'all' && c.dcDate) {
+          const dcD = new Date(c.dcDate);
+          if (dateFilter === 'this_month') {
+            dateOk = isAfter(dcD, startOfMonth(new Date()));
+          } else if (dateFilter === 'last_30') {
+            dateOk = isAfter(dcD, subDays(new Date(), 30));
+          }
+        }
+
+        return searchOk && creatorOk && dateOk;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'date_asc') {
+          return new Date(a.dcDate || 0).getTime() - new Date(b.dcDate || 0).getTime();
+        }
+        if (sortBy === 'value_desc') {
+          return (Number(b.total) || 0) - (Number(a.total) || 0);
+        }
+        if (sortBy === 'value_asc') {
+          return (Number(a.total) || 0) - (Number(b.total) || 0);
+        }
+        // Default: date_desc
+        return new Date(b.dcDate || 0).getTime() - new Date(a.dcDate || 0).getTime();
+      });
+  }, [challans, searchTerm, creatorFilter, dateFilter, sortBy]);
 
   const validFilteredWithId = filteredChallans.filter((c) => !!c.id);
   const isAllSelected =
@@ -149,6 +197,14 @@ export function ChallanList({
     (acc, c) => acc + (Number(c.total) || 0),
     0
   );
+  const selectedTotalPCost = selectedChallansList.reduce(
+    (acc, c) => acc + (Number(c.procurementCost) || 0),
+    0
+  );
+  const selectedTotalProfit = selectedChallansList.reduce(
+    (acc, c) => acc + (Number(c.grossProfit) || 0),
+    0
+  );
 
   const confirmDelete = () => {
     if (deleteDialogChallan) {
@@ -173,29 +229,34 @@ export function ChallanList({
 
   return (
     <>
-      <Card className="rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden bg-white mb-20 sm:mb-12">
-        <CardHeader className="p-4 sm:p-5 border-b border-gray-100 bg-gray-50/50">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <Card className="rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden bg-white mb-24 sm:mb-12">
+        <CardHeader className="p-4 sm:p-5 border-b border-gray-100 bg-gray-50/50 space-y-3">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <CardTitle className="text-base sm:text-lg font-black text-gray-900 tracking-tight">
-                  Recent Delivery Challans
+                  Delivery Challans
                 </CardTitle>
                 <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60 font-mono">
-                  {filteredChallans.length}
+                  {filteredChallans.length} of {challans.length}
                 </span>
                 {selectedIds.size > 0 && (
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-600 text-white font-mono animate-in fade-in">
                     {selectedIds.size} selected
                   </span>
                 )}
+                {showFinancials && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3" /> P.Cost &amp; Margins Active
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-500 mt-0.5">
-                Consignee destination, creator logs, preview &amp; bulk operations
+                Consignee destination, creator logs, procurement cost, commission &amp; bulk exports
               </p>
             </div>
 
-            <div className="flex w-full sm:w-auto items-center gap-2">
+            <div className="flex w-full lg:w-auto items-center gap-2 flex-wrap sm:flex-nowrap">
               <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
                 <Input
@@ -219,16 +280,90 @@ export function ChallanList({
                     'Bill To': c.billToName || '',
                     'Created By': getCreator(c),
                     'Total Items': c.lineItems?.length || 0,
-                    'Total Amount (₹)': c.total || 0,
+                    'Total Value (₹)': c.total || 0,
+                    'P.Cost (₹)': c.procurementCost || 0,
+                    'Commission Rate (%)': c.commissionRate || 5.5,
+                    'Commission (₹)': c.commissionAmount || 0,
+                    'Net Revenue (₹)': c.revenue || 0,
+                    'Gross Profit (₹)': c.grossProfit || 0,
+                    'Margin (%)': (c.marginPercent || 0).toFixed(1),
                   }));
-                  exportToCSV(exportData, 'delivery-challans-export.csv');
+                  exportToCSV(exportData, 'delivery-challans-advanced-export.csv');
                 }}
-                title="Export filtered challans to CSV"
+                title="Export with complete financials to CSV"
               >
                 <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5 text-emerald-600" />
                 CSV
               </Button>
             </div>
+          </div>
+
+          {/* Quick Filter Bar (Dates, Creators, Sort) */}
+          <div className="flex items-center gap-2 flex-wrap pt-1 text-xs">
+            {/* Date Filters */}
+            <div className="flex items-center bg-white p-0.5 rounded-xl border border-gray-200">
+              <button
+                type="button"
+                onClick={() => setDateFilter('all')}
+                className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all ${
+                  dateFilter === 'all'
+                    ? 'bg-indigo-600 text-white shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                All Time
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateFilter('this_month')}
+                className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all ${
+                  dateFilter === 'this_month'
+                    ? 'bg-indigo-600 text-white shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                This Month
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateFilter('last_30')}
+                className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all ${
+                  dateFilter === 'last_30'
+                    ? 'bg-indigo-600 text-white shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Last 30 Days
+              </button>
+            </div>
+
+            {/* Creator Filter */}
+            {allCreators.length > 1 && (
+              <select
+                value={creatorFilter}
+                onChange={(e) => setCreatorFilter(e.target.value)}
+                className="h-7 text-[11px] font-bold rounded-xl border-gray-200 bg-white px-2 py-0.5 text-gray-700 shadow-2xs"
+              >
+                <option value="all">All Creators ({allCreators.length})</option>
+                {allCreators.map((cr) => (
+                  <option key={cr} value={cr}>
+                    Created by {cr}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Sort Dropdown */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="h-7 text-[11px] font-bold rounded-xl border-gray-200 bg-white px-2 py-0.5 text-gray-700 shadow-2xs ml-auto"
+            >
+              <option value="date_desc">Date: Newest First</option>
+              <option value="date_asc">Date: Oldest First</option>
+              <option value="value_desc">Value: High &rarr; Low</option>
+              <option value="value_asc">Value: Low &rarr; High</option>
+            </select>
           </div>
         </CardHeader>
 
@@ -238,16 +373,15 @@ export function ChallanList({
               <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
                 <Truck className="w-6 h-6" />
               </div>
-              <p className="text-sm font-bold text-gray-800">No delivery challans found</p>
+              <p className="text-sm font-bold text-gray-800">No delivery challans match filters</p>
               <p className="text-xs text-gray-400 mt-1">
-                {searchTerm ? 'Try matching another search keyword.' : 'Create your first dispatch challan using the form above.'}
+                Try resetting your search query, date filter, or creator filter.
               </p>
             </div>
           ) : (
             <>
               {/* ── MOBILE CARD VIEW (md:hidden) ── */}
               <div className="md:hidden">
-                {/* Mobile Select All row */}
                 <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50/80 border-b border-gray-100 text-xs font-semibold text-gray-600">
                   <button
                     type="button"
@@ -276,6 +410,10 @@ export function ChallanList({
                       challan.shipToName &&
                       challan.shipToName.trim().toLowerCase() !== challan.billToName.trim().toLowerCase();
                     const creator = getCreator(challan);
+                    const pCost = Number(challan.procurementCost) || 0;
+                    const comm = Number(challan.commissionAmount) || 0;
+                    const profit = Number(challan.grossProfit) || 0;
+                    const margin = Number(challan.marginPercent) || 0;
 
                     return (
                       <div
@@ -284,7 +422,7 @@ export function ChallanList({
                           isSelected ? 'bg-indigo-50/40' : 'bg-white active:bg-gray-50'
                         }`}
                       >
-                        {/* Top: Selection Checkbox + DC # + Date + Creator Pill */}
+                        {/* Top: Checkbox + DC # + Date + Creator Pill */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2.5 min-w-0">
                             {challan.id && (
@@ -326,14 +464,13 @@ export function ChallanList({
                             </div>
                           </div>
 
-                          {/* Creator pill */}
                           <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200/80 text-[10px] font-bold text-slate-700 shrink-0">
                             <User className="w-3 h-3 text-slate-500" />
                             <span className="truncate max-w-[90px]">{creator}</span>
                           </div>
                         </div>
 
-                        {/* Middle: Consignee (Ship To) + Bill To */}
+                        {/* Middle: Consignee (Ship To) */}
                         <div className="bg-gray-50/90 rounded-xl p-2.5 space-y-1">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
@@ -365,24 +502,50 @@ export function ChallanList({
                               </div>
                             </div>
                           </div>
+
+                          {/* Mobile Financials Breakdown Pill */}
+                          {showFinancials && (
+                            <div className="mt-2 pt-1.5 border-t border-gray-200/60 grid grid-cols-3 gap-1 text-[10px] font-mono">
+                              <div className="bg-white p-1 rounded-lg border border-gray-100">
+                                <span className="text-gray-400 block text-[9px]">P.COST</span>
+                                <span className="font-bold text-amber-700">₹{pCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                              </div>
+                              <div className="bg-white p-1 rounded-lg border border-gray-100">
+                                <span className="text-gray-400 block text-[9px]">COMM (5.5%)</span>
+                                <span className="font-bold text-red-600">-₹{comm.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                              </div>
+                              <div className="bg-white p-1 rounded-lg border border-gray-100">
+                                <span className="text-gray-400 block text-[9px]">EST. PROFIT</span>
+                                <span className="font-bold text-emerald-700">₹{profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
-                        {/* Bottom Row: Amount + Action Buttons */}
+                        {/* Bottom Row: Amount + Actions */}
                         <div className="flex items-center justify-between pt-1 border-t border-gray-100 gap-2">
                           <div>
                             <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">
                               Total Value
                             </span>
-                            <p className="text-sm font-black text-gray-900 font-mono tabular-nums leading-tight">
-                              ₹{(Number(challan.total) || 0).toLocaleString('en-IN', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
-                            </p>
+                            <div className="flex items-baseline gap-1.5">
+                              <p className="text-sm font-black text-gray-900 font-mono tabular-nums leading-tight">
+                                ₹{(Number(challan.total) || 0).toLocaleString('en-IN', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </p>
+                              {showFinancials && margin !== 0 && (
+                                <span className={`text-[10px] font-bold px-1.5 rounded-full ${
+                                  margin >= 15 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                                }`}>
+                                  {margin.toFixed(0)}% mgn
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex items-center gap-1 shrink-0">
-                            {/* View */}
                             <Button
                               variant="outline"
                               size="sm"
@@ -397,7 +560,6 @@ export function ChallanList({
                               <span>View</span>
                             </Button>
 
-                            {/* Download */}
                             <Button
                               variant="outline"
                               size="sm"
@@ -412,7 +574,6 @@ export function ChallanList({
                               <span>PDF</span>
                             </Button>
 
-                            {/* Duplicate */}
                             <Button
                               variant="outline"
                               size="sm"
@@ -426,7 +587,6 @@ export function ChallanList({
                               <Copy className="w-3.5 h-3.5" />
                             </Button>
 
-                            {/* Edit */}
                             <Button
                               variant="outline"
                               size="sm"
@@ -440,7 +600,6 @@ export function ChallanList({
                               <Edit className="w-3.5 h-3.5" />
                             </Button>
 
-                            {/* Delete */}
                             <Button
                               variant="outline"
                               size="sm"
@@ -462,10 +621,10 @@ export function ChallanList({
               </div>
 
               {/* ── DESKTOP DATA TABLE (hidden md:block) ── */}
-              <div className="hidden md:block">
+              <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="hover:bg-transparent bg-gray-50/70 border-b border-gray-100">
+                    <TableRow className="hover:bg-transparent bg-gray-50/70 border-b border-gray-100 text-xs font-bold text-gray-700">
                       <TableHead className="w-[44px] px-3">
                         <button
                           type="button"
@@ -480,27 +639,20 @@ export function ChallanList({
                           )}
                         </button>
                       </TableHead>
-                      <TableHead className="w-[140px] text-xs font-bold text-gray-700">
-                        DC #
-                      </TableHead>
-                      <TableHead className="text-xs font-bold text-gray-700">
-                        Consignee (Ship To)
-                      </TableHead>
-                      <TableHead className="w-[110px] text-xs font-bold text-gray-700">
-                        Date
-                      </TableHead>
-                      <TableHead className="w-[130px] text-xs font-bold text-gray-700">
-                        Created By
-                      </TableHead>
-                      <TableHead className="w-[85px] text-xs font-bold text-gray-700">
-                        Items
-                      </TableHead>
-                      <TableHead className="text-right text-xs font-bold text-gray-700 w-[120px]">
-                        Total Value
-                      </TableHead>
-                      <TableHead className="text-right w-[170px] text-xs font-bold text-gray-700">
-                        Actions
-                      </TableHead>
+                      <TableHead className="w-[130px]">DC #</TableHead>
+                      <TableHead>Consignee (Ship To)</TableHead>
+                      <TableHead className="w-[105px]">Date</TableHead>
+                      <TableHead className="w-[110px]">Created By</TableHead>
+                      <TableHead className="w-[75px]">Items</TableHead>
+                      <TableHead className="text-right w-[110px]">Total Value</TableHead>
+                      {showFinancials && (
+                        <>
+                          <TableHead className="text-right w-[95px] text-amber-700">P.Cost</TableHead>
+                          <TableHead className="text-right w-[95px] text-red-600">Comm (5.5%)</TableHead>
+                          <TableHead className="text-right w-[100px] text-emerald-700">Est. Profit</TableHead>
+                        </>
+                      )}
+                      <TableHead className="text-right w-[165px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -513,11 +665,15 @@ export function ChallanList({
                         challan.shipToName &&
                         challan.shipToName.trim().toLowerCase() !== challan.billToName.trim().toLowerCase();
                       const creator = getCreator(challan);
+                      const pCost = Number(challan.procurementCost) || 0;
+                      const comm = Number(challan.commissionAmount) || 0;
+                      const profit = Number(challan.grossProfit) || 0;
+                      const margin = Number(challan.marginPercent) || 0;
 
                       return (
                         <TableRow
                           key={challan.id}
-                          className={`transition-colors group border-b border-gray-100 ${
+                          className={`transition-colors group border-b border-gray-100 text-xs ${
                             isSelected ? 'bg-indigo-50/50 hover:bg-indigo-50/70' : 'hover:bg-slate-50/80'
                           }`}
                         >
@@ -563,8 +719,8 @@ export function ChallanList({
                             </div>
                           </TableCell>
 
-                          <TableCell className="py-3 max-w-[260px]">
-                            <div className="font-semibold text-gray-900 text-sm truncate">
+                          <TableCell className="py-3 max-w-[240px]">
+                            <div className="font-semibold text-gray-900 truncate">
                               {consigneeName}
                             </div>
                             {hasDifferentBillTo && (
@@ -574,37 +730,59 @@ export function ChallanList({
                             )}
                           </TableCell>
 
-                          <TableCell className="py-3 text-xs text-gray-500 font-medium whitespace-nowrap">
+                          <TableCell className="py-3 text-gray-500 font-medium whitespace-nowrap">
                             {challan.dcDate
                               ? format(new Date(challan.dcDate), 'dd MMM yyyy')
                               : '—'}
                           </TableCell>
 
                           <TableCell className="py-3">
-                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 max-w-[125px]">
-                              <span className="w-4 h-4 rounded-full bg-indigo-200/80 text-indigo-800 font-bold text-[9px] flex items-center justify-center shrink-0">
+                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 max-w-[110px]">
+                              <span className="w-3.5 h-3.5 rounded-full bg-indigo-200 text-indigo-800 font-bold text-[8px] flex items-center justify-center shrink-0">
                                 {creator.charAt(0).toUpperCase()}
                               </span>
-                              <span className="truncate">{creator}</span>
+                              <span className="truncate font-semibold">{creator}</span>
                             </div>
                           </TableCell>
 
                           <TableCell className="py-3">
                             <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80">
-                              {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                              {itemCount}
                             </span>
                           </TableCell>
 
-                          <TableCell className="py-3 text-right font-mono font-black text-sm text-gray-900 tabular-nums">
+                          <TableCell className="py-3 text-right font-mono font-black text-gray-900 tabular-nums">
                             ₹{(Number(challan.total) || 0).toLocaleString('en-IN', {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
                             })}
                           </TableCell>
 
+                          {showFinancials && (
+                            <>
+                              <TableCell className="py-3 text-right font-mono font-bold text-amber-800 tabular-nums">
+                                ₹{pCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                              </TableCell>
+                              <TableCell className="py-3 text-right font-mono font-semibold text-red-600 tabular-nums">
+                                -₹{comm.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                              </TableCell>
+                              <TableCell className="py-3 text-right">
+                                <div className="space-y-0.5">
+                                  <span className="font-mono font-black text-emerald-700 block tabular-nums">
+                                    ₹{profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                                  </span>
+                                  {margin !== 0 && (
+                                    <span className="text-[10px] text-gray-400 font-mono font-semibold block">
+                                      {margin.toFixed(0)}%
+                                    </span>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </>
+                          )}
+
                           <TableCell className="py-3 text-right">
                             <div className="flex items-center justify-end gap-1">
-                              {/* View */}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -612,13 +790,12 @@ export function ChallanList({
                                   triggerHaptic('light');
                                   onViewChallan(challan);
                                 }}
-                                className="h-8 w-8 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                                className="h-7 w-7 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"
                                 title="View Document"
                               >
-                                <Eye className="h-4 w-4" />
+                                <Eye className="h-3.5 w-3.5" />
                               </Button>
 
-                              {/* Download */}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -626,13 +803,12 @@ export function ChallanList({
                                   triggerHaptic('medium');
                                   onDownloadChallan(challan);
                                 }}
-                                className="h-8 w-8 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                className="h-7 w-7 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50"
                                 title="Download PDF"
                               >
-                                <Download className="h-4 w-4" />
+                                <Download className="h-3.5 w-3.5" />
                               </Button>
 
-                              {/* Duplicate */}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -640,13 +816,12 @@ export function ChallanList({
                                   triggerHaptic('light');
                                   onDuplicateChallan(challan);
                                 }}
-                                className="h-8 w-8 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-colors"
+                                className="h-7 w-7 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50"
                                 title="Duplicate Challan"
                               >
-                                <Copy className="h-4 w-4" />
+                                <Copy className="h-3.5 w-3.5" />
                               </Button>
 
-                              {/* Edit */}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -654,13 +829,12 @@ export function ChallanList({
                                   triggerHaptic('light');
                                   onSelectChallan(challan);
                                 }}
-                                className="h-8 w-8 rounded-lg text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                className="h-7 w-7 rounded-lg text-gray-500 hover:text-emerald-600 hover:bg-emerald-50"
                                 title="Edit in Form"
                               >
-                                <Edit className="h-4 w-4" />
+                                <Edit className="h-3.5 w-3.5" />
                               </Button>
 
-                              {/* Delete */}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -668,10 +842,10 @@ export function ChallanList({
                                   triggerHaptic('medium');
                                   setDeleteDialogChallan(challan);
                                 }}
-                                className="h-8 w-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                className="h-7 w-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"
                                 title="Delete Challan"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
                           </TableCell>
@@ -688,22 +862,29 @@ export function ChallanList({
 
       {/* ── FLOATING BULK ACTIONS TOOLBAR ── */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[94vw] max-w-2xl bg-gray-950 text-white p-3 sm:px-5 sm:py-3.5 rounded-2xl shadow-2xl border border-gray-800 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-5 duration-200">
-          <div className="flex items-center gap-2.5">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[94vw] max-w-3xl bg-gray-950 text-white p-3 sm:px-5 sm:py-3.5 rounded-2xl shadow-2xl border border-gray-800 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-5 duration-200">
+          <div className="flex items-center gap-3">
             <span className="bg-[#3b2fc9] text-white text-xs font-black px-2.5 py-0.5 rounded-full font-mono">
               {selectedIds.size}
             </span>
-            <div className="text-xs">
-              <span className="font-bold text-gray-200">Selected</span>
-              <span className="text-gray-400 mx-1.5">•</span>
-              <span className="font-mono font-bold text-amber-300">
-                ₹{selectedTotalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-              </span>
+            <div className="text-xs space-y-0.5">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-gray-200">Selected</span>
+                <span className="text-gray-500">•</span>
+                <span className="font-mono font-black text-amber-300">
+                  ₹{selectedTotalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                </span>
+              </div>
+              {showFinancials && selectedTotalPCost > 0 && (
+                <div className="text-[10px] text-gray-400 font-mono flex items-center gap-2">
+                  <span>P.Cost: ₹{selectedTotalPCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  <span className="text-emerald-400 font-bold">Profit: ₹{selectedTotalProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Bulk Download */}
             <Button
               size="sm"
               variant="secondary"
@@ -716,10 +897,9 @@ export function ChallanList({
               title="Download selected as PDFs"
             >
               <Download className="w-3.5 h-3.5 text-blue-400" />
-              <span>{isBulkDownloading ? 'Downloading...' : 'Download'}</span>
+              <span>{isBulkDownloading ? 'Downloading...' : 'PDFs'}</span>
             </Button>
 
-            {/* Bulk Duplicate */}
             <Button
               size="sm"
               variant="secondary"
@@ -734,7 +914,6 @@ export function ChallanList({
               <span>Duplicate</span>
             </Button>
 
-            {/* Bulk Delete */}
             <Button
               size="sm"
               variant="destructive"
@@ -749,7 +928,6 @@ export function ChallanList({
               <span>Delete</span>
             </Button>
 
-            {/* Clear Selection */}
             <button
               type="button"
               onClick={handleClearSelection}

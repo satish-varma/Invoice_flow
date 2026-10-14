@@ -10,6 +10,9 @@ export interface ChallanLineItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  mrp?: number;
+  procurementCost?: number;
+  marginPercent?: number;
 }
 
 export interface Challan {
@@ -24,6 +27,7 @@ export interface Challan {
   total: number;
   note?: string;
   createdAt?: any;
+  updatedAt?: any;
 
   companyProfileId?: string;
 
@@ -35,6 +39,15 @@ export interface Challan {
   createdBy?: string;
   creatorEmail?: string;
   creatorName?: string;
+  updatedBy?: string;
+
+  // Modern Financials (like NewRelic)
+  procurementCost?: number;
+  commissionRate?: number;
+  commissionAmount?: number;
+  revenue?: number;
+  grossProfit?: number;
+  marginPercent?: number;
 }
 
 const CHALLANS_COLLECTION = 'challans';
@@ -80,12 +93,12 @@ export async function saveChallan(challan: Omit<Challan, 'dcNumber' | 'createdAt
       const { id, ...challanData } = challan;
       await updateDoc(docRef, {
         ...challanData,
+        updatedAt: serverTimestamp(),
       });
       const updatedDocSnap = await getDoc(docRef);
       finalChallanData = { id: challan.id, ...updatedDocSnap.data() };
     } else {
       // Create new challan
-      // Assuming a prefix for challan numbers. This could be stored in settings.
       const prefix = "TGG/SL/";
       const newChallanNumber = await getNextChallanNumber(prefix);
       const { id, ...challanData } = challan;
@@ -93,7 +106,10 @@ export async function saveChallan(challan: Omit<Challan, 'dcNumber' | 'createdAt
         ...challanData,
         dcNumber: newChallanNumber,
         createdAt: serverTimestamp(),
-      }
+        createdBy: challanData.createdBy || 'Satya',
+        creatorEmail: challanData.creatorEmail || 'satya@tgg.in',
+        creatorName: challanData.creatorName || 'Satya',
+      };
       docRef = await addDoc(collection(db, CHALLANS_COLLECTION), completeChallanData);
 
       const newDocSnap = await getDoc(docRef);
@@ -104,7 +120,8 @@ export async function saveChallan(challan: Omit<Challan, 'dcNumber' | 'createdAt
       ...finalChallanData,
       dcNumber: finalChallanData.dcNumber,
       dcDate: finalChallanData.dcDate instanceof Timestamp ? finalChallanData.dcDate.toDate().toISOString() : new Date(finalChallanData.dcDate).toISOString(),
-      createdAt: finalChallanData.createdAt instanceof Timestamp ? finalChallanData.createdAt.toDate().toISOString() : new Date().toISOString(),
+      createdAt: finalChallanData.createdAt instanceof Timestamp ? finalChallanData.createdAt.toDate().toISOString() : (finalChallanData.createdAt ? new Date(finalChallanData.createdAt).toISOString() : new Date().toISOString()),
+      updatedAt: finalChallanData.updatedAt instanceof Timestamp ? finalChallanData.updatedAt.toDate().toISOString() : undefined,
     };
 
     return serializableChallan;
@@ -149,11 +166,69 @@ export async function getChallans(): Promise<Challan[]> {
         }
       } catch (e) { }
 
+      let uAt: string | undefined;
+      try {
+        if (data.updatedAt instanceof Timestamp) {
+          uAt = data.updatedAt.toDate().toISOString();
+        } else if (data.updatedAt) {
+          uAt = new Date(data.updatedAt).toISOString();
+        }
+      } catch (e) { }
+
+      // Line items with P.Cost & margin
+      const lineItems: ChallanLineItem[] = (data.lineItems || []).map((item: any, idx: number) => {
+        const qty = Number(item.quantity) || 0;
+        const uPrice = Number(item.unitPrice) || 0;
+        const pCost = item.procurementCost !== undefined && item.procurementCost !== null ? Number(item.procurementCost) : 0;
+        const marginPct = uPrice > 0 ? ((uPrice - pCost) / uPrice) * 100 : 0;
+        return {
+          id: item.id || Date.now() + idx,
+          name: item.name || '',
+          hsnCode: item.hsnCode || '',
+          unit: item.unit || '',
+          quantity: qty,
+          unitPrice: uPrice,
+          total: Number(item.total) || qty * uPrice,
+          mrp: item.mrp ? Number(item.mrp) : uPrice,
+          procurementCost: pCost,
+          marginPercent: marginPct,
+        };
+      });
+
+      const subtotal = Number(data.subtotal) || lineItems.reduce((acc, i) => acc + i.total, 0);
+      const computedPCost = lineItems.reduce((acc, i) => acc + ((i.procurementCost || 0) * i.quantity), 0);
+      const procurementCost = data.procurementCost !== undefined && data.procurementCost !== null
+        ? Number(data.procurementCost)
+        : computedPCost;
+
+      const commRate = data.commissionRate !== undefined && data.commissionRate !== null ? Number(data.commissionRate) : 5.5;
+      const commissionAmount = data.commissionAmount !== undefined && data.commissionAmount !== null
+        ? Number(data.commissionAmount)
+        : (subtotal * commRate) / 100;
+
+      const revenue = subtotal - commissionAmount;
+      const grossProfit = data.grossProfit !== undefined && data.grossProfit !== null
+        ? Number(data.grossProfit)
+        : (revenue - procurementCost - (Number(data.shipping) || 0) - (Number(data.other) || 0));
+      const marginPercent = subtotal > 0 ? (grossProfit / subtotal) * 100 : 0;
+
       challans.push({
         id: doc.id,
         ...data,
+        lineItems,
+        subtotal,
+        procurementCost,
+        commissionRate: commRate,
+        commissionAmount,
+        revenue,
+        grossProfit,
+        marginPercent,
         dcDate: dDate,
         createdAt: cAt,
+        updatedAt: uAt,
+        createdBy: data.createdBy || data.creatorEmail || 'Satya',
+        creatorEmail: data.creatorEmail || (data.createdBy?.includes('@') ? data.createdBy : 'satya@tgg.in'),
+        creatorName: data.creatorName || (data.createdBy?.includes('@') ? data.createdBy.split('@')[0] : (data.createdBy || 'Satya')),
       } as Challan);
     });
 
@@ -161,7 +236,6 @@ export async function getChallans(): Promise<Challan[]> {
     return JSON.parse(JSON.stringify(challans));
   } catch (error) {
     console.error("Error in getChallans:", error);
-    // Return an empty array on error to prevent crashing the client
     return [];
   }
 }

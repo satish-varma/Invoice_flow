@@ -26,7 +26,7 @@ export function FinancialPasswordModal({
   onClose,
   onSuccess,
   title = 'Re-Enter Admin Password',
-  description = 'Financial reports, procurement costs, and margins are confidential. Please authenticate to view.',
+  description = 'Financial reports, sales analytics, and profit margins are confidential. Please authenticate to view.',
 }: FinancialPasswordModalProps) {
   const { unlockWithPassword } = useFinancialAuth();
   const [password, setPassword] = useState('');

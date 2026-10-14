@@ -20,7 +20,7 @@ interface FinancialGateProps {
 export function FinancialGate({
   children,
   title = 'Confidential Financial Data Locked',
-  description = 'Executive Insights, P&L Ledgers, Procurement Costs, and Gross Profit Margins are password protected.',
+  description = 'Executive Insights, P&L Ledgers, Revenues, and Gross Profit Margins are password protected.',
   fallbackMode = 'block',
 }: FinancialGateProps) {
   const { isUnlocked, remainingMinutes, lockFinancials } = useFinancialAuth();

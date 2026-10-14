@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">InvoiceFlow</string>
-    <string name="title_activity_main">InvoiceFlow</string>
+    <string name="app_name">The Gut Guru Tracker</string>
+    <string name="title_activity_main">The Gut Guru Tracker</string>
     <string name="package_name">com.hungerbox.invoiceflow</string>
     <string name="custom_url_scheme">com.hungerbox.invoiceflow</string>
 </resources>

@@ -11,7 +11,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  */
 const config: CapacitorConfig = {
   appId: 'com.hungerbox.invoiceflow',
-  appName: 'InvoiceFlow',
+  appName: 'The Gut Guru Tracker',
   webDir: 'public',
   server: {
     // When testing on device/emulator, this allows loading your live dev server directly into the operations portal

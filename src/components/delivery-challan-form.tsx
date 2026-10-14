@@ -22,6 +22,7 @@ import { getClients, saveClient, Client } from '@/services/clientService';
 import { Checkbox } from './ui/checkbox';
 import { getProducts, Product } from '@/services/productService';
 import * as XLSX from 'xlsx';
+import { triggerHaptic } from '@/lib/haptics';
 
 interface DeliveryChallanFormProps {
     initialData?: Challan | null;
@@ -780,41 +781,50 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 </CardFooter>
             </Card>
 
-            {/* ── Mobile sticky action bar ───────────────────────── */}
-            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-t shadow-2xl px-4 py-3 flex items-center gap-2 no-print">
+            {/* ── Mobile floating action dock (positioned safely above bottom nav) ── */}
+            <div className="sm:hidden fixed bottom-20 left-3 right-3 z-40 bg-slate-950/95 text-white backdrop-blur-xl border border-indigo-500/30 shadow-2xl rounded-2xl p-2.5 flex items-center gap-2 no-print ring-1 ring-white/10">
                 <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 h-11 text-sm"
-                    onClick={() => excelInputRef.current?.click()}
+                    className="flex-1 h-10 text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl"
+                    onClick={() => {
+                        triggerHaptic('light');
+                        excelInputRef.current?.click();
+                    }}
                     disabled={isImportingExcel}
                 >
-                    {isImportingExcel ? <Loader className="animate-spin mr-1 h-4 w-4" /> : <Sheet className="mr-1 h-4 w-4" />}
+                    {isImportingExcel ? <Loader className="animate-spin mr-1 h-3.5 w-3.5" /> : <Sheet className="mr-1 h-3.5 w-3.5 text-emerald-400" />}
                     Import
                 </Button>
                 <Button
                     variant="secondary"
                     size="sm"
-                    className="flex-1 h-11 text-sm"
-                    onClick={() => handleSaveChallan(false)}
+                    className="flex-1 h-10 text-xs bg-white/20 text-white hover:bg-white/30 rounded-xl font-bold"
+                    onClick={() => {
+                        triggerHaptic('light');
+                        handleSaveChallan(false);
+                    }}
                     disabled={isSaving}
                 >
-                    {isSaving ? <Loader className="animate-spin mr-1 h-4 w-4" /> : <Save className="mr-1 h-4 w-4" />}
+                    {isSaving ? <Loader className="animate-spin mr-1 h-3.5 w-3.5" /> : <Save className="mr-1 h-3.5 w-3.5 text-amber-300" />}
                     {initialData ? 'Update' : 'Save'}
                 </Button>
                 <Button
                     size="sm"
-                    className="flex-1 h-11 text-sm bg-accent text-accent-foreground hover:bg-accent/90"
-                    onClick={() => handleSaveChallan(true)}
+                    className="flex-1 h-10 text-xs bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black rounded-xl shadow-md shadow-emerald-500/30"
+                    onClick={() => {
+                        triggerHaptic('medium');
+                        handleSaveChallan(true);
+                    }}
                     disabled={isSaving}
                 >
-                    {isSaving ? <Loader className="animate-spin mr-1 h-4 w-4" /> : <Save className="mr-1 h-4 w-4" />}
+                    {isSaving ? <Loader className="animate-spin mr-1 h-3.5 w-3.5" /> : <Save className="mr-1 h-3.5 w-3.5" />}
                     Save+PDF
                 </Button>
             </div>
 
             {/* Bottom spacer so sticky bar doesn't cover content */}
-            <div className="sm:hidden h-20" />
+            <div className="sm:hidden h-28" />
         </>
     );
 }

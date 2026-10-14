@@ -391,67 +391,80 @@ export default function AnalyticsDashboardPage() {
     <div className="min-h-screen bg-gray-50/50 pb-20">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
 
-        {/* ── Header ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <Link href="/newrelic" className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500">
+        {/* ── Brand Hero Banner ── */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#2c1d24] via-[#43232f] to-[#1e1b4b] p-5 sm:p-7 text-white shadow-xl border border-white/10">
+          <div className="absolute -top-24 -right-24 w-60 h-60 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -left-24 w-60 h-60 bg-rose-500/15 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+            <div className="flex items-start gap-3.5">
+              <Link href="/newrelic" className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white shrink-0 mt-0.5" title="Back to DC Hub">
                 <ArrowLeft className="h-5 w-5" />
               </Link>
-              <h1 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-                <BarChart2 className="h-6 w-6 text-[#3b2fc9]" />
-                Executive Insights & P&L Reporting
-              </h1>
+              <div>
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <span className="text-[10px] font-extrabold tracking-widest uppercase bg-gradient-to-r from-amber-300 via-rose-300 to-amber-200 text-transparent bg-clip-text">
+                    The Gut Guru Tracker
+                  </span>
+                  <span className="text-[10px] bg-white/15 px-2.5 py-0.5 rounded-full font-bold border border-white/20 text-white/90">
+                    Executive Analytics
+                  </span>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                  <BarChart2 className="h-6 w-6 text-amber-300" />
+                  Executive Insights & P&L Reporting
+                </h1>
+                <p className="text-xs text-gray-300 mt-1 max-w-2xl leading-relaxed">
+                  Cross-location performance (HYD vs BLR), monthly procurement spend vs tuckshop revenue, and cafeteria net profit margins.
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-gray-500 ml-10">
-              Cross-location comparison (HYD vs BLR), monthly procurement vs tuckshop revenue, and cafeteria P&L ledger.
-            </p>
-          </div>
 
-          {/* Site Filter + Navigation Pill Switcher */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {(role === 'admin' || role === 'superadmin') ? (
-              <select
-                value={selectedSite}
-                onChange={(e) => setSelectedSite(e.target.value)}
-                className="h-9 px-3 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] shadow-xs"
-              >
-                <option value="all">🏢 All Company Sites</option>
-                {SITE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            ) : user?.assignedSite ? (
-              <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-xs">
-                {COMPANY_SITES[user.assignedSite]?.name || user.assignedSite}
-              </span>
-            ) : null}
+            {/* Site Filter + Navigation Pill Switcher */}
+            <div className="flex items-center gap-2 flex-wrap self-start lg:self-auto">
+              {(role === 'admin' || role === 'superadmin') ? (
+                <select
+                  value={selectedSite}
+                  onChange={(e) => setSelectedSite(e.target.value)}
+                  className="h-10 px-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-amber-300/40 shadow-xs"
+                >
+                  <option value="all" className="text-gray-900">🏢 All Company Sites</option>
+                  {SITE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value} className="text-gray-900">
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              ) : user?.assignedSite ? (
+                <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white/15 text-white border border-white/20 shadow-xs">
+                  {COMPANY_SITES[user.assignedSite]?.name || user.assignedSite}
+                </span>
+              ) : null}
 
-            <div className="flex items-center gap-1.5 p-1 bg-white border border-gray-200 rounded-xl shadow-xs">
-              <button
-                onClick={() => setActiveTab('comparison')}
-                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  activeTab === 'comparison'
-                    ? 'bg-[#3b2fc9] text-white shadow-xs'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <MapPin className="h-3.5 w-3.5" />
-                HYD vs BLR Comparison
-              </button>
-              <button
-                onClick={() => setActiveTab('ledger')}
-                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  activeTab === 'ledger'
-                    ? 'bg-[#3b2fc9] text-white shadow-xs'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <DollarSign className="h-3.5 w-3.5" />
-                Monthly P&L Ledger
-              </button>
+              <div className="flex items-center gap-1.5 p-1 bg-white/10 backdrop-blur-md border border-white/15 rounded-xl shadow-xs">
+                <button
+                  onClick={() => setActiveTab('comparison')}
+                  className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    activeTab === 'comparison'
+                      ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
+                      : 'text-white/80 hover:bg-white/20'
+                  }`}
+                >
+                  <MapPin className="h-3.5 w-3.5" />
+                  HYD vs BLR
+                </button>
+                <button
+                  onClick={() => setActiveTab('ledger')}
+                  className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    activeTab === 'ledger'
+                      ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
+                      : 'text-white/80 hover:bg-white/20'
+                  }`}
+                >
+                  <DollarSign className="h-3.5 w-3.5" />
+                  Monthly P&L Ledger
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -461,55 +474,103 @@ export default function AnalyticsDashboardPage() {
           title="Executive Financials & P&L Locked"
           description="Cafeteria P&L, monthly procurement spend, tuckshop revenue, and vendor margins are protected. Authenticate to view."
         >
-          {/* ── Executive KPI Metric Cards ── */}
+          {/* ── Executive KPI Metric Cards with Rich Gradients ── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-xs">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">Tuckshop Revenue</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-xl font-black text-emerald-600">{formatCurrency(overallFinancials.totalRev)}</span>
+            {/* Total Revenue */}
+            <div className="bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/50 p-4 sm:p-5 rounded-2xl border border-emerald-200/80 shadow-xs flex flex-col justify-between transition-all hover:shadow-md">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">Tuckshop Revenue</span>
+                <div className="p-2 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white shadow-xs">
+                  <Store className="h-4 w-4" />
+                </div>
+              </div>
+              <div>
+                <span className="text-xl sm:text-2xl font-black text-emerald-950 tracking-tight block">
+                  {formatCurrency(overallFinancials.totalRev)}
+                </span>
+                <span className="text-[11px] font-bold text-emerald-700/80 mt-1 block">
+                  Total Registered Sales
+                </span>
+              </div>
             </div>
-            <span className="text-[11px] text-gray-500 mt-1 flex items-center gap-1">
-              <Store className="h-3 w-3 text-emerald-500" /> Total registered sales
-            </span>
-          </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-xs">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">DC Procurement Cost</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-xl font-black text-blue-600">{formatCurrency(overallFinancials.totalProcurement)}</span>
+            {/* DC Procurement Cost */}
+            <div className="bg-gradient-to-br from-blue-50/90 via-white to-sky-50/50 p-4 sm:p-5 rounded-2xl border border-blue-200/80 shadow-xs flex flex-col justify-between transition-all hover:shadow-md">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-blue-800">DC Procurement Cost</span>
+                <div className="p-2 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-600 text-white shadow-xs">
+                  <Truck className="h-4 w-4" />
+                </div>
+              </div>
+              <div>
+                <span className="text-xl sm:text-2xl font-black text-blue-950 tracking-tight block">
+                  {formatCurrency(overallFinancials.totalProcurement)}
+                </span>
+                <span className="text-[11px] font-bold text-blue-700/80 mt-1 block">
+                  Goods & Transport (DCs)
+                </span>
+              </div>
             </div>
-            <span className="text-[11px] text-gray-500 mt-1 flex items-center gap-1">
-              <Truck className="h-3 w-3 text-blue-500" /> Goods & Transport (DCs)
-            </span>
-          </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-xs">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">Staff Payroll Disbursed</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-xl font-black text-amber-600">{formatCurrency(overallFinancials.totalPayroll)}</span>
+            {/* Staff Payroll */}
+            <div className="bg-gradient-to-br from-amber-50/90 via-white to-orange-50/50 p-4 sm:p-5 rounded-2xl border border-amber-200/80 shadow-xs flex flex-col justify-between transition-all hover:shadow-md">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-800">Staff Payroll Disbursed</span>
+                <div className="p-2 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white shadow-xs">
+                  <Users className="h-4 w-4" />
+                </div>
+              </div>
+              <div>
+                <span className="text-xl sm:text-2xl font-black text-amber-950 tracking-tight block">
+                  {formatCurrency(overallFinancials.totalPayroll)}
+                </span>
+                <span className="text-[11px] font-bold text-amber-700/80 mt-1 block">
+                  Attendance-Based Pay
+                </span>
+              </div>
             </div>
-            <span className="text-[11px] text-gray-500 mt-1 flex items-center gap-1">
-              <Users className="h-3 w-3 text-amber-500" /> Attendance-based pay
-            </span>
-          </div>
 
-          <div className={`p-4 rounded-2xl border shadow-xs ${
-            overallFinancials.netProfit >= 0 ? 'bg-emerald-50/50 border-emerald-200' : 'bg-red-50/50 border-red-200'
-          }`}>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 block">Net Cafeteria P&L</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className={`text-xl font-black ${overallFinancials.netProfit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                {formatCurrency(overallFinancials.netProfit)}
-              </span>
-              <span className={`text-xs font-bold ${overallFinancials.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                {overallFinancials.netMargin.toFixed(1)}%
-              </span>
+            {/* Net Cafeteria P&L */}
+            <div className={`p-4 sm:p-5 rounded-2xl border shadow-xs flex flex-col justify-between transition-all hover:shadow-md ${
+              overallFinancials.netProfit >= 0
+                ? 'bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/50 border-indigo-200/80'
+                : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/50 border-rose-200/80'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className={`text-[10px] font-black uppercase tracking-wider ${
+                  overallFinancials.netProfit >= 0 ? 'text-indigo-800' : 'text-rose-800'
+                }`}>
+                  Net Cafeteria P&L
+                </span>
+                <div className={`p-2 rounded-xl text-white shadow-xs ${
+                  overallFinancials.netProfit >= 0
+                    ? 'bg-gradient-to-tr from-indigo-600 to-purple-600'
+                    : 'bg-gradient-to-tr from-rose-600 to-red-600'
+                }`}>
+                  <DollarSign className="h-4 w-4" />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-baseline gap-2">
+                  <span className={`text-xl sm:text-2xl font-black tracking-tight ${
+                    overallFinancials.netProfit >= 0 ? 'text-indigo-950' : 'text-rose-950'
+                  }`}>
+                    {formatCurrency(overallFinancials.netProfit)}
+                  </span>
+                  <span className={`text-xs font-extrabold px-1.5 py-0.5 rounded-md ${
+                    overallFinancials.netProfit >= 0 ? 'bg-indigo-100 text-indigo-700' : 'bg-rose-100 text-rose-700'
+                  }`}>
+                    {overallFinancials.netMargin.toFixed(1)}%
+                  </span>
+                </div>
+                <span className={`text-[11px] font-bold mt-1 block ${
+                  overallFinancials.netProfit >= 0 ? 'text-indigo-700/80' : 'text-rose-700/80'
+                }`}>
+                  {overallFinancials.netProfit >= 0 ? 'Operating Surplus' : 'Operating Deficit'}
+                </span>
+              </div>
             </div>
-            <span className="text-[11px] text-gray-500 mt-1 block">
-              {overallFinancials.netProfit >= 0 ? 'Net Operating Surplus' : 'Operating Deficit'}
-            </span>
           </div>
-        </div>
 
         {/* ─────────────────────────────────────────────────────────────
             TAB 1: HYDERABAD VS BANGALORE LOCATION COMPARISON

@@ -557,10 +557,30 @@ export default function StockRequestPage() {
                     <span className="font-medium text-gray-900">{format(new Date(req.requestDate), 'dd MMM yyyy, hh:mm a')}</span>
                     <span className="capitalize text-gray-600 font-medium">{req.location}</span>
                     <div className="flex items-center gap-1.5">
-                      {req.status === 'PENDING' && <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><Clock className="h-3 w-3"/> PENDING</span>}
-                      {req.status === 'PARTIALLY_FULFILLED' && <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3"/> PARTIAL</span>}
-                      {req.status === 'FULFILLED' && <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><CheckCircle className="h-3 w-3"/> FULFILLED</span>}
-                      {req.status === 'CANCELLED' && <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1"><Trash2 className="h-3 w-3"/> CANCELLED</span>}
+                      {req.status === 'PENDING' && (
+                        <span className="bg-gradient-to-r from-amber-500/15 via-amber-400/20 to-orange-500/15 text-amber-900 border border-amber-400/60 px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1.5 shadow-2xs">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                          </span>
+                          PENDING
+                        </span>
+                      )}
+                      {req.status === 'PARTIALLY_FULFILLED' && (
+                        <span className="bg-gradient-to-r from-sky-500/15 to-blue-500/15 text-sky-950 border border-sky-400/60 px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1 shadow-2xs">
+                          <CheckCircle className="h-3 w-3 text-sky-600"/> PARTIAL
+                        </span>
+                      )}
+                      {req.status === 'FULFILLED' && (
+                        <span className="bg-gradient-to-r from-emerald-500/15 via-emerald-400/20 to-teal-500/15 text-emerald-950 border border-emerald-400/60 px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1 shadow-2xs">
+                          <CheckCircle className="h-3 w-3 text-emerald-600"/> FULFILLED
+                        </span>
+                      )}
+                      {req.status === 'CANCELLED' && (
+                        <span className="bg-gradient-to-r from-rose-500/15 to-red-500/15 text-rose-950 border border-rose-400/60 px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1 shadow-2xs">
+                          <Trash2 className="h-3 w-3 text-rose-600"/> CANCELLED
+                        </span>
+                      )}
                     </div>
                   </div>
                   

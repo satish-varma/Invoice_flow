@@ -9,12 +9,48 @@ interface Props {
 }
 
 export const CATEGORY_STYLES: Record<string, { emoji: string; bg: string; text: string; border: string; bar: string }> = {
-  'Dosa Batter': { emoji: '🥞', bg: 'bg-amber-50/90', text: 'text-amber-950', border: 'border-amber-200', bar: 'bg-amber-500' },
-  'Bread': { emoji: '🍞', bg: 'bg-orange-50/90', text: 'text-orange-950', border: 'border-orange-200', bar: 'bg-orange-500' },
-  'Fruits': { emoji: '🍎', bg: 'bg-rose-50/90', text: 'text-rose-950', border: 'border-rose-200', bar: 'bg-rose-500' },
-  'Vegetables': { emoji: '🥦', bg: 'bg-emerald-50/90', text: 'text-emerald-950', border: 'border-emerald-200', bar: 'bg-emerald-500' },
-  'Groceries': { emoji: '🛒', bg: 'bg-indigo-50/90', text: 'text-indigo-950', border: 'border-indigo-200', bar: 'bg-indigo-500' },
-  'Cutlery': { emoji: '🍴', bg: 'bg-cyan-50/90', text: 'text-cyan-950', border: 'border-cyan-200', bar: 'bg-cyan-500' },
+  'Dosa Batter': { 
+    emoji: '🥞', 
+    bg: 'bg-gradient-to-br from-[#fff7ed] via-[#fed7aa]/60 to-[#fdba74]/40', 
+    text: 'text-[#9a3412]', 
+    border: 'border-[#ea580c]/30', 
+    bar: 'bg-gradient-to-r from-[#ea580c] to-[#c2410c]' 
+  },
+  'Bread': { 
+    emoji: '🍞', 
+    bg: 'bg-gradient-to-br from-[#fffbeb] via-[#fde68a]/60 to-[#fcd34d]/40', 
+    text: 'text-[#92400e]', 
+    border: 'border-[#f59e0b]/30', 
+    bar: 'bg-gradient-to-r from-[#f59e0b] to-[#b45309]' 
+  },
+  'Fruits': { 
+    emoji: '🍎', 
+    bg: 'bg-gradient-to-br from-[#ecfdf5] via-[#a7f3d0]/60 to-[#6ee7b7]/40', 
+    text: 'text-[#065f46]', 
+    border: 'border-[#10b981]/30', 
+    bar: 'bg-gradient-to-r from-[#10b981] to-[#047857]' 
+  },
+  'Vegetables': { 
+    emoji: '🥦', 
+    bg: 'bg-gradient-to-br from-[#f0fdf4] via-[#bbf7d0]/60 to-[#86efac]/40', 
+    text: 'text-[#166534]', 
+    border: 'border-[#22c55e]/30', 
+    bar: 'bg-gradient-to-r from-[#22c55e] to-[#15803d]' 
+  },
+  'Groceries': { 
+    emoji: '🛒', 
+    bg: 'bg-gradient-to-br from-[#f5f3ff] via-[#ddd6fe]/60 to-[#c4b5fd]/40', 
+    text: 'text-[#5b21b6]', 
+    border: 'border-[#8b5cf6]/30', 
+    bar: 'bg-gradient-to-r from-[#8b5cf6] to-[#6d28d9]' 
+  },
+  'Cutlery': { 
+    emoji: '🍴', 
+    bg: 'bg-gradient-to-br from-[#ecfeff] via-[#a5f3fc]/60 to-[#67e8f9]/40', 
+    text: 'text-[#155e75]', 
+    border: 'border-[#06b6d4]/30', 
+    bar: 'bg-gradient-to-r from-[#06b6d4] to-[#0e7490]' 
+  },
 };
 
 export function getCategoryBadge(category: string, type: 'expense' | 'sale') {
@@ -22,32 +58,38 @@ export function getCategoryBadge(category: string, type: 'expense' | 'sale') {
     return {
       emoji: '💰',
       label: category ? category.replace(/_/g, ' ') : 'Sale',
-      color: 'text-emerald-800 bg-emerald-50 border-emerald-200',
+      color: 'text-emerald-900 bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-300',
     };
   }
   const lower = (category || '').toLowerCase().replace(/_/g, ' ');
   if (lower.includes('dosa') || lower.includes('batter')) {
-    return { emoji: '🥞', label: 'Dosa Batter', color: 'text-amber-800 bg-amber-50 border-amber-200' };
+    // Warm terracotta
+    return { emoji: '🥞', label: 'Dosa Batter', color: 'text-[#9a3412] bg-gradient-to-r from-[#fff7ed] to-[#fed7aa] border-[#fb923c]' };
   }
   if (lower.includes('bread') || lower.includes('bakery')) {
-    return { emoji: '🍞', label: 'Bakery / Bread', color: 'text-orange-800 bg-orange-50 border-orange-200' };
+    // Amber
+    return { emoji: '🍞', label: 'Bakery / Bread', color: 'text-[#92400e] bg-gradient-to-r from-[#fffbeb] to-[#fde68a] border-[#fcd34d]' };
   }
   if (lower.includes('fruit')) {
-    return { emoji: '🍎', label: 'Fruits', color: 'text-rose-800 bg-rose-50 border-rose-200' };
+    // Fresh emerald
+    return { emoji: '🍎', label: 'Fruits', color: 'text-[#065f46] bg-gradient-to-r from-[#ecfdf5] to-[#a7f3d0] border-[#6ee7b7]' };
   }
   if (lower.includes('veg')) {
-    return { emoji: '🥦', label: 'Vegetables', color: 'text-emerald-800 bg-emerald-50 border-emerald-200' };
+    // Fresh green
+    return { emoji: '🥦', label: 'Vegetables', color: 'text-[#166534] bg-gradient-to-r from-[#f0fdf4] to-[#bbf7d0] border-[#86efac]' };
   }
   if (lower.includes('grocer') || lower.includes('provision')) {
-    return { emoji: '🛒', label: 'Groceries', color: 'text-indigo-800 bg-indigo-50 border-indigo-200' };
+    // Violet
+    return { emoji: '🛒', label: 'Groceries', color: 'text-[#5b21b6] bg-gradient-to-r from-[#f5f3ff] to-[#ddd6fe] border-[#c4b5fd]' };
   }
   if (lower.includes('cutlery') || lower.includes('crockery') || lower.includes('supplies')) {
-    return { emoji: '🍴', label: 'Cutlery', color: 'text-cyan-800 bg-cyan-50 border-cyan-200' };
+    // Cyan
+    return { emoji: '🍴', label: 'Cutlery', color: 'text-[#155e75] bg-gradient-to-r from-[#ecfeff] to-[#a5f3fc] border-[#67e8f9]' };
   }
   if (lower.includes('milk') || lower.includes('dairy')) {
-    return { emoji: '🥛', label: 'Dairy', color: 'text-sky-800 bg-sky-50 border-sky-200' };
+    return { emoji: '🥛', label: 'Dairy', color: 'text-sky-900 bg-gradient-to-r from-sky-50 to-blue-100 border-sky-300' };
   }
-  return { emoji: '📦', label: category ? category.replace(/_/g, ' ') : 'Expense', color: 'text-slate-700 bg-slate-50 border-slate-200' };
+  return { emoji: '📦', label: category ? category.replace(/_/g, ' ') : 'Expense', color: 'text-slate-800 bg-gradient-to-r from-slate-50 to-gray-100 border-slate-300' };
 }
 
 export function TuckshopDashboard({ records }: Props) {
@@ -150,10 +192,20 @@ export function TuckshopDashboard({ records }: Props) {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
             {expensesByCategory.map(([cat, amount]) => {
               const pct = totalExpenses > 0 ? Math.round((amount / totalExpenses) * 100) : 0;
-              const style = CATEGORY_STYLES[cat] || { emoji: '📦', bg: 'bg-slate-50/90', text: 'text-slate-900', border: 'border-slate-200', bar: 'bg-slate-500' };
+              const normalizedCat = cat.toLowerCase();
+              let style = CATEGORY_STYLES[cat];
+              if (!style) {
+                if (normalizedCat.includes('dosa') || normalizedCat.includes('batter')) style = CATEGORY_STYLES['Dosa Batter'];
+                else if (normalizedCat.includes('bread') || normalizedCat.includes('bakery')) style = CATEGORY_STYLES['Bread'];
+                else if (normalizedCat.includes('fruit')) style = CATEGORY_STYLES['Fruits'];
+                else if (normalizedCat.includes('veg')) style = CATEGORY_STYLES['Vegetables'];
+                else if (normalizedCat.includes('grocer') || normalizedCat.includes('provision')) style = CATEGORY_STYLES['Groceries'];
+                else if (normalizedCat.includes('cutlery') || normalizedCat.includes('crockery') || normalizedCat.includes('supplies')) style = CATEGORY_STYLES['Cutlery'];
+                else style = { emoji: '📦', bg: 'bg-gradient-to-br from-slate-50 via-gray-100 to-slate-100', text: 'text-slate-900', border: 'border-slate-300', bar: 'bg-slate-500' };
+              }
 
               return (
-                <div key={cat} className={`${style.bg} rounded-xl p-3 border ${style.border} flex flex-col justify-between transition-all hover:scale-[1.02] shadow-2xs`}>
+                <div key={cat} className={`${style.bg} rounded-2xl p-3.5 border ${style.border} flex flex-col justify-between transition-all hover:scale-[1.03] shadow-xs`}>
                   <div className="flex items-center justify-between gap-1 mb-1.5">
                     <span className="text-xs font-bold truncate flex items-center gap-1" title={cat}>
                       <span>{style.emoji}</span>

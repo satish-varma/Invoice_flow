@@ -256,7 +256,7 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
                   </div>
                 </div>
               ) : (
-                <div className="relative w-full h-full">
+                <div className="relative w-full h-full overflow-hidden">
                   <video
                     ref={videoRef}
                     autoPlay
@@ -265,11 +265,25 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
                     className="w-full h-full object-cover"
                     style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
                   />
+
+                  {/* Biometric Face Guide Overlay */}
+                  <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-6">
+                    <div className="w-44 h-56 rounded-full border-2 border-dashed border-white/50 relative flex items-center justify-center">
+                      <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-amber-300" />
+                      <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-amber-300" />
+                      <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-amber-300" />
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-amber-300" />
+                      <span className="text-[10px] font-bold text-white/80 bg-black/40 backdrop-blur-xs px-2.5 py-0.5 rounded-full">
+                        Position Face Here
+                      </span>
+                    </div>
+                  </div>
+
                   {/* Floating Flip Button in Viewfinder */}
                   <button
                     type="button"
                     onClick={toggleCameraFacing}
-                    className="absolute bottom-3 right-3 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-xs transition-all shadow-md active:scale-90"
+                    className="absolute bottom-3 right-3 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-md transition-all shadow-md active:scale-90 border border-white/20"
                     title="Flip camera"
                   >
                     <SwitchCamera className="h-4 w-4" />
@@ -279,32 +293,39 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
             </>
           )}
           {phase === 'preview' && capturedUri && (
-            <img src={capturedUri} alt="Selfie preview" className="w-full h-full object-cover" />
+            <div className="relative w-full h-full">
+              <img src={capturedUri} alt="Selfie preview" className="w-full h-full object-cover" />
+              <div className="absolute top-2 left-2 right-2 flex justify-center pointer-events-none">
+                <span className="bg-emerald-950/80 backdrop-blur-md text-emerald-300 border border-emerald-400/40 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-md">
+                  <Check className="h-3 w-3 text-emerald-400" /> Verified Photo
+                </span>
+              </div>
+            </div>
           )}
           <canvas ref={canvasRef} className="hidden" />
         </div>
 
         {/* Geo badge */}
-        <div className="px-4 py-2 flex items-center gap-1.5 text-xs">
+        <div className="px-4 py-2 flex items-center gap-1.5 text-xs bg-gray-50/70 border-b border-gray-100">
           <MapPin className="h-3.5 w-3.5 shrink-0" />
           {geoStatus === 'loading' && <span className="text-gray-400">Fetching location…</span>}
           {geoStatus === 'ok' && coordinates && (
-            <span className="text-emerald-600 font-medium">
-              {coordinates.lat.toFixed(5)}, {coordinates.lng.toFixed(5)}
+            <span className="text-emerald-700 font-semibold truncate">
+              📍 GPS: {coordinates.lat.toFixed(5)}, {coordinates.lng.toFixed(5)}
               {coordinates.accuracy !== undefined && ` (±${coordinates.accuracy}m)`}
             </span>
           )}
-          {geoStatus === 'denied' && <span className="text-amber-600">Location permission denied — attendance will be recorded without GPS</span>}
+          {geoStatus === 'denied' && <span className="text-amber-700 font-medium">Location permission denied — recorded without GPS</span>}
           {geoStatus === 'error' && <span className="text-gray-400">Location unavailable</span>}
         </div>
 
         {/* Action buttons */}
-        <div className="px-4 pb-4 flex gap-3">
+        <div className="p-4 flex gap-3 bg-white">
           {phase === 'camera' && (
             <>
               <button
                 onClick={handleCancel}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50"
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
@@ -312,18 +333,18 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex-1 py-2.5 rounded-xl bg-[#3b2fc9] text-white text-sm font-medium hover:bg-[#3b2fc9]/90 flex items-center justify-center gap-2 shadow-sm"
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#2c1d24] via-[#43232f] to-[#3b2fc9] text-white text-sm font-bold hover:opacity-95 flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
                 >
-                  <Camera className="h-4 w-4" />
+                  <Camera className="h-4 w-4 text-amber-300" />
                   Take Photo
                 </button>
               ) : (
                 <button
                   onClick={handleCapture}
-                  className="flex-1 py-2.5 rounded-xl bg-[#3b2fc9] text-white text-sm font-medium hover:bg-[#3b2fc9]/90 flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#2c1d24] via-[#43232f] to-[#3b2fc9] text-white text-sm font-bold hover:opacity-95 flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
                 >
-                  <Camera className="h-4 w-4" />
-                  Capture
+                  <Camera className="h-4 w-4 text-amber-300" />
+                  Capture Photo
                 </button>
               )}
             </>
@@ -332,17 +353,17 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
             <>
               <button
                 onClick={handleRetake}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 rounded-xl border-2 border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100 text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-2xs"
               >
-                <RotateCcw className="h-4 w-4" />
-                Retake
+                <RotateCcw className="h-4 w-4 text-rose-600" />
+                Retake Photo
               </button>
               <button
                 onClick={handleConfirm}
-                className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md shadow-emerald-950/20 active:scale-95 transition-all"
               >
                 <Check className="h-4 w-4" />
-                Use Photo
+                Confirm & Submit
               </button>
             </>
           )}

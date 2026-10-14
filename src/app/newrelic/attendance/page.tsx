@@ -218,6 +218,13 @@ function AttendancePageContent() {
   const [showProfileDetails, setShowProfileDetails] = useState(true);
   const [missedCheckouts, setMissedCheckouts] = useState<NewRelicAttendance[]>([]);
   const [currentTime, setCurrentTime] = useState<string>('');
+  const [shiftElapsed, setShiftElapsed] = useState<{
+    hours: number;
+    minutes: number;
+    seconds: number;
+    formatted: string;
+    totalSeconds: number;
+  }>({ hours: 0, minutes: 0, seconds: 0, formatted: '0m', totalSeconds: 0 });
 
   useEffect(() => {
     const updateTime = () => {
@@ -227,6 +234,29 @@ function AttendancePageContent() {
     const timer = setInterval(updateTime, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Real-time live shift stopwatch when checked in and on duty
+  useEffect(() => {
+    if (!todayRecord?.checkIn?.time || todayRecord.checkOut) {
+      setShiftElapsed({ hours: 0, minutes: 0, seconds: 0, formatted: '0m', totalSeconds: 0 });
+      return;
+    }
+    const updateStopwatch = () => {
+      const inTimeMs = new Date(todayRecord.checkIn!.time).getTime();
+      const nowMs = Date.now();
+      const diffSec = Math.max(0, Math.floor((nowMs - inTimeMs) / 1000));
+      const hours = Math.floor(diffSec / 3600);
+      const minutes = Math.floor((diffSec % 3600) / 60);
+      const seconds = diffSec % 60;
+      const formatted = hours > 0
+        ? `${hours}h ${minutes}m ${seconds}s`
+        : `${minutes}m ${seconds}s`;
+      setShiftElapsed({ hours, minutes, seconds, formatted, totalSeconds: diffSec });
+    };
+    updateStopwatch();
+    const interval = setInterval(updateStopwatch, 1000);
+    return () => clearInterval(interval);
+  }, [todayRecord?.checkIn?.time, todayRecord?.checkOut]);
 
   /* ── Load today's record and monthly log when employee selected ── */
   useEffect(() => {
@@ -800,7 +830,27 @@ function AttendancePageContent() {
               )}
 
               {todayRecord && !todayRecord.checkOut && (
-                <div className="flex flex-col items-center z-10">
+                <div className="flex flex-col items-center z-10 w-full max-w-xs">
+                  {/* Real-time live shift stopwatch card */}
+                  <div className="bg-white/15 backdrop-blur-md border border-white/25 rounded-2xl p-3 mb-4 w-full flex items-center justify-between shadow-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-300"></span>
+                      </div>
+                      <div className="text-left">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-200 block">Shift Elapsed</span>
+                        <span className="text-xs text-white/90 font-medium">In at {formatTime(todayRecord.checkIn!.time)}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-lg font-black font-mono tracking-tight text-white block">
+                        {shiftElapsed.formatted}
+                      </span>
+                      <span className="text-[10px] text-emerald-200 font-semibold">Active Stopwatch</span>
+                    </div>
+                  </div>
+
                   <button
                     type="button"
                     disabled={isSubmitting}
@@ -819,8 +869,8 @@ function AttendancePageContent() {
                   <span className="mt-3 text-xs font-bold text-white tracking-wide">
                     Tap Shutter to Check Out
                   </span>
-                  <span className="text-[10px] text-white/60 mt-0.5">
-                    Checked in at {formatTime(todayRecord.checkIn!.time)}
+                  <span className="text-[10px] text-white/80 mt-0.5">
+                    Checked in {shiftElapsed.formatted} ago
                   </span>
                 </div>
               )}
@@ -982,16 +1032,34 @@ function AttendancePageContent() {
                 </div>
               )}
 
-              {/* Today's summary */}
-              <div className={`rounded-xl p-4 border ${
-                !todayRecord ? 'bg-gray-50 border-gray-200'
-                  : todayRecord.checkOut ? 'bg-emerald-50 border-emerald-200'
-                  : 'bg-blue-50 border-blue-200'
-              }`}>
+              {/* Animated Biometric Punch Card */}
+              <div className="relative bg-gradient-to-br from-white via-indigo-50/15 to-white rounded-3xl border-2 border-indigo-200/80 shadow-md p-5 sm:p-6 overflow-hidden transition-all">
+                {/* Visual punched notches on edges */}
+                <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-50 border-r-2 border-indigo-200" />
+                <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-50 border-l-2 border-indigo-200" />
+
+                {/* Punch card top header */}
+                <div className="flex items-center justify-between border-b border-dashed border-indigo-200/90 pb-3 mb-4 flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#3b2fc9] shadow-xs" />
+                    <span className="text-[11px] font-black uppercase tracking-widest text-[#3b2fc9]">
+                      Biometric Shift Punch Card
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-bold border border-indigo-200">
+                      ID: {selectedEmployee.employeeId}
+                    </span>
+                    <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-bold uppercase">
+                      {selectedEmployee.location}
+                    </span>
+                  </div>
+                </div>
+
                 {!todayRecord ? (
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-2">
                     <div>
-                      <p className="text-sm font-semibold text-gray-700">Not checked in yet today.</p>
+                      <p className="text-sm font-bold text-gray-800">Not Checked In Yet Today</p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         Shift starts at {LOCATION_SHIFT_RULES[selectedEmployee.location.toLowerCase()]?.expectedStart || '06:00'} AM ·
                         <span className="font-semibold text-amber-700 ml-1">
@@ -999,16 +1067,49 @@ function AttendancePageContent() {
                         </span>
                       </p>
                     </div>
+                    <span className="text-xs font-semibold px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full w-fit">
+                      Awaiting Check-In
+                    </span>
                   </div>
-                ) : (
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <LogIn className="h-4 w-4 text-blue-500" />
-                        <span className="text-gray-600">Checked in:</span>
-                        <span className="font-semibold text-gray-800">{formatTime(todayRecord.checkIn!.time)}</span>
+                ) : !todayRecord.checkOut ? (
+                  /* Active Shift with Live Stopwatch */
+                  <div className="space-y-4">
+                    {/* Stopwatch Hero Banner inside Punch Card */}
+                    <div className="bg-gradient-to-r from-[#1e1b4b] via-[#312e81] to-[#3b2fc9] text-white p-4 rounded-2xl shadow-md relative overflow-hidden">
+                      <div className="absolute -top-10 -right-10 w-28 h-28 bg-emerald-400/20 rounded-full blur-xl pointer-events-none" />
+                      
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
+                          </span>
+                          <span className="text-[10px] font-black tracking-widest uppercase text-emerald-300">
+                            Live Shift Stopwatch
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full">
+                          On Duty
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+                        <div className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white drop-shadow-sm">
+                          {shiftElapsed.formatted}
+                        </div>
+                        <p className="text-xs text-indigo-200 font-medium">
+                          Checked in at {formatTime(todayRecord.checkIn!.time)} ({shiftElapsed.formatted} ago)
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Check-In Details Row */}
+                    <div className="flex items-center justify-between flex-wrap gap-2 text-xs text-gray-600 bg-white/80 p-3 rounded-xl border border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <LogIn className="h-4 w-4 text-blue-600" />
+                        <span className="font-semibold text-gray-800">Checked in at {formatTime(todayRecord.checkIn!.time)}</span>
                         {todayRecord.checkIn?.coordinates && (
-                          <span className="text-xs text-gray-400 flex items-center gap-0.5">
+                          <span className="text-[11px] text-gray-400 flex items-center gap-0.5">
                             <MapPin className="h-3 w-3" />
                             {todayRecord.checkIn.coordinates.lat.toFixed(4)}, {todayRecord.checkIn.coordinates.lng.toFixed(4)}
                           </span>
@@ -1017,50 +1118,52 @@ function AttendancePageContent() {
 
                       {/* Late Tag */}
                       {todayRecord.isLate ? (
-                        <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-md text-xs font-bold flex items-center gap-1">
+                        <span className="px-2.5 py-0.5 bg-red-100 text-red-700 rounded-md text-xs font-bold flex items-center gap-1">
                           <Clock className="h-3 w-3" /> Late ({todayRecord.lateMinutes || 0}m after {LOCATION_SHIFT_RULES[selectedEmployee.location.toLowerCase()]?.cutoff || '06:30'})
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-md text-xs font-semibold flex items-center gap-1">
+                        <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-md text-xs font-bold flex items-center gap-1">
                           <CheckCircle className="h-3 w-3" /> On-Time Check-In
                         </span>
                       )}
                     </div>
+                  </div>
+                ) : (
+                  /* Completed Shift Punch Card */
+                  <div className="space-y-3">
+                    <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/5 p-4 rounded-2xl border border-emerald-200">
+                      <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                        <span className="text-xs font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+                          <CheckCircle className="h-4 w-4 text-emerald-600" />
+                          Shift Completed & Logged
+                        </span>
+                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                          todayRecord.status === 'present' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-800 border border-amber-300'
+                        }`}>
+                          {todayRecord.status === 'present' ? 'Full Day Shift' : 'Half Day Shift'}
+                        </span>
+                      </div>
 
-                    {todayRecord.checkOut && (
-                      <>
-                        <div className="flex items-center gap-2 text-sm">
-                          <LogOut className="h-4 w-4 text-emerald-500" />
-                          <span className="text-gray-600">Checked out:</span>
-                          <span className="font-semibold text-gray-800">{formatTime(todayRecord.checkOut.time)}</span>
-                          {todayRecord.checkOut?.coordinates && (
-                            <span className="text-xs text-gray-400 flex items-center gap-0.5">
-                              <MapPin className="h-3 w-3" />
-                              {todayRecord.checkOut.coordinates.lat.toFixed(4)}, {todayRecord.checkOut.coordinates.lng.toFixed(4)}
-                            </span>
-                          )}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-emerald-200/60 text-xs">
+                        <div>
+                          <span className="text-[10px] text-gray-400 uppercase font-medium block">Checked In</span>
+                          <span className="font-bold text-gray-800">{formatTime(todayRecord.checkIn!.time)}</span>
                         </div>
-                        <div className="flex items-center justify-between flex-wrap gap-2 text-sm pt-1 border-t border-emerald-200/50">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-amber-500" />
-                            <span className="text-gray-600">Duration:</span>
-                            <span className="font-semibold text-gray-800">{formatDuration(todayRecord.durationMinutes || 0)}</span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                              todayRecord.status === 'present' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                            }`}>
-                              {todayRecord.status === 'present' ? 'Full Day' : 'Half Day'}
-                            </span>
-                          </div>
-
-                          {/* Overtime Tag */}
+                        <div>
+                          <span className="text-[10px] text-gray-400 uppercase font-medium block">Checked Out</span>
+                          <span className="font-bold text-gray-800">{formatTime(todayRecord.checkOut.time)}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-gray-400 uppercase font-medium block">Total Duration</span>
+                          <span className="font-extrabold text-emerald-700">{formatDuration(todayRecord.durationMinutes || 0)}</span>
                           {todayRecord.overtimeMinutes && todayRecord.overtimeMinutes > 0 ? (
-                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 font-semibold rounded-md text-xs">
-                              +{formatDuration(todayRecord.overtimeMinutes)} Overtime
+                            <span className="ml-1 text-[10px] font-bold text-purple-700 bg-purple-100 px-1.5 py-0.2 rounded">
+                              +{formatDuration(todayRecord.overtimeMinutes)} OT
                             </span>
                           ) : null}
                         </div>
-                      </>
-                    )}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

@@ -70,10 +70,11 @@ export default function ReconcilePage() {
   }, []);
 
   useEffect(() => {
-    if (user?.assignedSite && user.assignedSite !== 'newrelic' && role !== 'admin' && role !== 'superadmin') {
-      router.push('/newrelic/tuckshop');
+    // Strictly restrict Reconcile to admin and superadmin only
+    if (role && role !== 'admin' && role !== 'superadmin') {
+      router.push('/newrelic');
     }
-  }, [user, role, router]);
+  }, [role, router]);
 
   useEffect(() => {
     if (user?.preferredLocations && user.preferredLocations.length > 0) {

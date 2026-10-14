@@ -8,11 +8,13 @@ import { NewRelicLocation } from '@/types/challan';
 interface MobileFloatingActionsProps {
   onNewChallan: (loc: NewRelicLocation) => void;
   onExportExcel?: () => void;
+  canReconcile?: boolean;
 }
 
 export function MobileFloatingActions({
   onNewChallan,
   onExportExcel,
+  canReconcile = false,
 }: MobileFloatingActionsProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -87,31 +89,35 @@ export function MobileFloatingActions({
               </div>
             </button>
 
-            <div className={`grid ${onExportExcel ? 'grid-cols-2' : 'grid-cols-1'} gap-2 pt-1`}>
-              {/* Reconcile */}
-              <Link
-                href="/newrelic/reconcile"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center justify-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-100 text-amber-900 font-bold text-xs"
-              >
-                <RefreshCcw className="w-4 h-4 text-amber-600" />
-                Reconcile
-              </Link>
+            {(canReconcile || onExportExcel) && (
+              <div className={`grid ${canReconcile && onExportExcel ? 'grid-cols-2' : 'grid-cols-1'} gap-2 pt-1`}>
+                {/* Reconcile (Admin / Superadmin only) */}
+                {canReconcile && (
+                  <Link
+                    href="/newrelic/reconcile"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center justify-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-100 text-amber-900 font-bold text-xs"
+                  >
+                    <RefreshCcw className="w-4 h-4 text-amber-600" />
+                    Reconcile
+                  </Link>
+                )}
 
-              {/* Export Excel (Admin / Superadmin only) */}
-              {onExportExcel && (
-                <button
-                  onClick={() => {
-                    setIsOpen(false);
-                    onExportExcel();
-                  }}
-                  className="flex items-center justify-center gap-2 p-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 font-bold text-xs"
-                >
-                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                  Export Excel
-                </button>
-              )}
-            </div>
+                {/* Export Excel (Admin / Superadmin only) */}
+                {onExportExcel && (
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      onExportExcel();
+                    }}
+                    className="flex items-center justify-center gap-2 p-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 font-bold text-xs"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                    Export Excel
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

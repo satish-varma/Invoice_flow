@@ -403,13 +403,15 @@ export default function NewRelicPage() {
                 <FileText className="h-5 w-5" />
                 New Challan (Bangalore)
               </button>
-              <Link
-                href="/newrelic/reconcile"
-                className="flex-1 bg-amber-500 text-white py-3 px-4 rounded-xl font-medium hover:bg-amber-600 transition-colors shadow-sm flex items-center justify-center gap-2"
-              >
-                <RefreshCcw className="h-5 w-5" />
-                Reconcile
-              </Link>
+              {(role === 'admin' || role === 'superadmin') && (
+                <Link
+                  href="/newrelic/reconcile"
+                  className="flex-1 bg-amber-500 text-white py-3 px-4 rounded-xl font-medium hover:bg-amber-600 transition-colors shadow-sm flex items-center justify-center gap-2"
+                >
+                  <RefreshCcw className="h-5 w-5" />
+                  Reconcile
+                </Link>
+              )}
               {(role === 'admin' || role === 'superadmin') && (
                 <button
                   onClick={handleExportExcel}
@@ -425,6 +427,7 @@ export default function NewRelicPage() {
             <MobileFloatingActions
               onNewChallan={(loc) => handleStartCreateNew(loc)}
               onExportExcel={(role === 'admin' || role === 'superadmin') ? handleExportExcel : undefined}
+              canReconcile={role === 'admin' || role === 'superadmin'}
             />
 
             {/* Floating Back to Top Button on Mobile */}

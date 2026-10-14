@@ -3,7 +3,7 @@ import { NewRelicChallan } from '@/types/challan';
 
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, Share2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -86,33 +86,6 @@ export function NewRelicChallanList({
       }
       return next;
     });
-  };
-
-  const handleShareChallan = async (challan: NewRelicChallan) => {
-    triggerHaptic('medium');
-    const locLabel = NEWRELIC_LOCATIONS[challan.location]?.label || challan.location;
-    const dateFormatted = challan.dcDate ? format(new Date(challan.dcDate), 'dd MMM yyyy') : '';
-    const itemsCount = challan.lineItems?.length || 0;
-    const totalQty = (challan.lineItems || []).reduce((sum, item) => sum + (item.quantity || 1), 0);
-    const mrpTotal = (challan.lineItems || []).reduce((sum, item) => sum + ((item.mrp || 0) * (item.quantity || 1)), 0);
-
-    const shareText = `📦 Delivery Challan: ${challan.dcNumber}\n📍 Location: ${locLabel}\n📅 Date: ${dateFormatted}\n📋 Items: ${itemsCount} items (${totalQty} units)\n💰 Total MRP: ₹${mrpTotal.toLocaleString('en-IN')}`;
-
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({
-          title: `Challan ${challan.dcNumber}`,
-          text: shareText,
-        });
-        return;
-      } catch (err: any) {
-        if (err.name === 'AbortError') return;
-      }
-    }
-
-    // Fallback: copy to clipboard or WhatsApp
-    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-    window.open(waUrl, '_blank');
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -466,15 +439,19 @@ export function NewRelicChallanList({
                       <Download className="h-3.5 w-3.5 text-blue-600" />
                     </Button>
 
-                    {/* Native Share / WhatsApp Dispatch Button */}
+                    {/* Duplicate Action Button */}
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-9 w-9 p-0 border-emerald-200 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-700 rounded-xl active:scale-95 transition-transform shadow-2xs"
-                      onClick={() => handleShareChallan(challan)}
-                      title="Share Summary"
+                      className="h-9 px-2.5 border-purple-200 bg-purple-50/90 hover:bg-purple-100 text-purple-800 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform shadow-2xs"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        onDuplicateChallan(challan);
+                      }}
+                      title="Duplicate Challan"
                     >
-                      <Share2 className="h-3.5 w-3.5 text-emerald-600" />
+                      <Copy className="h-3.5 w-3.5 text-purple-600" />
+                      <span>Duplicate</span>
                     </Button>
 
                     {/* Three-Dot Overflow Menu (Contains Duplicate, History, and Delete) */}
@@ -490,18 +467,16 @@ export function NewRelicChallanList({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-lg">
-                        {role !== 'user' && (
-                          <DropdownMenuItem
-                            onClick={() => {
-                              triggerHaptic('light');
-                              onDuplicateChallan(challan);
-                            }}
-                            className="cursor-pointer gap-2 py-2"
-                          >
-                            <Copy className="h-4 w-4 text-amber-500" />
-                            <span>Duplicate Challan</span>
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem
+                          onClick={() => {
+                            triggerHaptic('light');
+                            onDuplicateChallan(challan);
+                          }}
+                          className="cursor-pointer gap-2 py-2"
+                        >
+                          <Copy className="h-4 w-4 text-purple-600" />
+                          <span>Duplicate Challan</span>
+                        </DropdownMenuItem>
                         {role === 'admin' && onViewHistory && (
                           <DropdownMenuItem
                             onClick={() => {
@@ -687,27 +662,28 @@ export function NewRelicChallanList({
                     ) : (
                       <>
                         {role !== 'user' && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-gray-500 hover:text-[#3b2fc9]"
-                              onClick={() => onSelectChallan(challan)}
-                              title="Edit"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-gray-500 hover:text-amber-500"
-                              onClick={() => onDuplicateChallan(challan)}
-                              title="Duplicate with next DC number"
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-500 hover:text-[#3b2fc9]"
+                            onClick={() => onSelectChallan(challan)}
+                            title="Edit"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-500 hover:text-purple-600"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            onDuplicateChallan(challan);
+                          }}
+                          title="Duplicate with next DC number"
+                        >
+                          <Copy className="h-4 w-4 text-purple-600" />
+                        </Button>
                         {onPreviewChallan && (
                           <Button
                             variant="ghost"

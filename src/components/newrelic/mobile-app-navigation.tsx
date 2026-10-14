@@ -123,69 +123,71 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
 
   return (
     <>
-      {/* ── Fixed Native Bottom Navigation Bar ── */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200/80 z-40 safe-bottom shadow-lg">
-        <div className="flex items-center justify-around h-16 px-1">
-          {navTabs.map((tab) => {
-            const Icon = tab.icon;
-            const active = tab.isActive;
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                onClick={() => triggerHaptic('light')}
-                className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-95 group"
-              >
-                <div className="relative">
-                  <div
-                    className={`px-3.5 py-1 rounded-full transition-all flex items-center justify-center ${
-                      active
-                        ? 'bg-indigo-100/80 text-[#3b2fc9]'
-                        : 'text-gray-400 group-hover:text-gray-600'
-                    }`}
-                  >
-                    <Icon className={`w-5 h-5 transition-transform ${active ? 'scale-105 stroke-[2.3]' : 'stroke-[1.8]'}`} />
+      {/* ── Modern Floating Glassmorphic Bottom Navigation Bar ── */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none">
+        <nav className="pointer-events-auto bg-white/90 backdrop-blur-xl border border-gray-250/60 shadow-[0_12px_36px_-6px_rgba(15,23,42,0.18)] rounded-2xl overflow-hidden ring-1 ring-black/5">
+          <div className="flex items-center justify-around h-16 px-1.5 py-1">
+            {navTabs.map((tab) => {
+              const Icon = tab.icon;
+              const active = tab.isActive;
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  onClick={() => triggerHaptic('light')}
+                  className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-90 group"
+                >
+                  <div className="relative">
+                    <div
+                      className={`px-4 py-1.5 rounded-full transition-all flex items-center justify-center ${
+                        active
+                          ? 'bg-gradient-to-r from-indigo-500/15 via-[#3b2fc9]/15 to-purple-500/15 text-[#3b2fc9] shadow-2xs border border-[#3b2fc9]/20'
+                          : 'text-gray-400 group-hover:text-gray-600'
+                      }`}
+                    >
+                      <Icon className={`w-5 h-5 transition-transform ${active ? 'scale-110 stroke-[2.4] text-[#3b2fc9]' : 'stroke-[1.8]'}`} />
+                    </div>
+                    {tab.badge !== undefined && (
+                      <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-xs ring-2 ring-white animate-pulse">
+                        {tab.badge}
+                      </span>
+                    )}
                   </div>
-                  {tab.badge !== undefined && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center shadow-xs">
-                      {tab.badge}
-                    </span>
-                  )}
-                </div>
-                <span className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
-                  active ? 'font-bold text-[#3b2fc9]' : 'font-medium text-gray-500'
-                }`}>
-                  {tab.label}
-                </span>
-              </Link>
-            );
-          })}
+                  <span className={`text-[10px] mt-0.5 tracking-tight transition-all ${
+                    active ? 'font-black text-[#3b2fc9] scale-105' : 'font-semibold text-gray-500'
+                  }`}>
+                    {tab.label}
+                  </span>
+                </Link>
+              );
+            })}
 
-          {/* "More" Sheet Trigger */}
-          <button
-            onClick={() => {
-              triggerHaptic('light');
-              setShowMoreMenu(true);
-            }}
-            className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-95 group"
-          >
-            <div
-              className={`px-3.5 py-1 rounded-full transition-all flex items-center justify-center ${
-                showMoreMenu || isMoreActive
-                  ? 'bg-indigo-100/80 text-[#3b2fc9]'
-                  : 'text-gray-400 group-hover:text-gray-600'
-              }`}
+            {/* "More" Sheet Trigger */}
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setShowMoreMenu(true);
+              }}
+              className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-90 group"
             >
-              <MoreHorizontal className={`w-5 h-5 transition-transform ${showMoreMenu || isMoreActive ? 'scale-105 stroke-[2.3]' : 'stroke-[1.8]'}`} />
-            </div>
-            <span className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
-              showMoreMenu || isMoreActive ? 'font-bold text-[#3b2fc9]' : 'font-medium text-gray-500'
-            }`}>
-              More
-            </span>
-          </button>
-        </div>
-      </nav>
+              <div
+                className={`px-4 py-1.5 rounded-full transition-all flex items-center justify-center ${
+                  showMoreMenu || isMoreActive
+                    ? 'bg-gradient-to-r from-indigo-500/15 via-[#3b2fc9]/15 to-purple-500/15 text-[#3b2fc9] shadow-2xs border border-[#3b2fc9]/20'
+                    : 'text-gray-400 group-hover:text-gray-600'
+                }`}
+              >
+                <MoreHorizontal className={`w-5 h-5 transition-transform ${showMoreMenu || isMoreActive ? 'scale-110 stroke-[2.4] text-[#3b2fc9]' : 'stroke-[1.8]'}`} />
+              </div>
+              <span className={`text-[10px] mt-0.5 tracking-tight transition-all ${
+                showMoreMenu || isMoreActive ? 'font-black text-[#3b2fc9] scale-105' : 'font-semibold text-gray-500'
+              }`}>
+                More
+              </span>
+            </button>
+          </div>
+        </nav>
+      </div>
 
       {/* ── Native Mobile Action Sheet / Drawer for "More" ── */}
       {showMoreMenu && (

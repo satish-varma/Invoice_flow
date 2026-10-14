@@ -283,7 +283,7 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
         </div>
       </div>
 
-        <main className="pb-20 sm:pb-0">{children}</main>
+        <main className="pb-24 sm:pb-0">{children}</main>
 
         {/* Native Mobile Bottom Navigation Bar */}
         <MobileAppNavigation pendingStockCount={pendingCount} />

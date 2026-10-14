@@ -77,15 +77,15 @@ export default function LoginPage() {
         <div className="text-center space-y-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/hungerbox_logo.png"
-            alt="HungerBox"
-            className="h-10 mx-auto object-contain mb-3"
+            src="/gut_guru_logo.png"
+            alt="The Gut Guru Tracker"
+            className="h-16 w-16 mx-auto rounded-full object-contain shadow-md mb-3 border border-amber-900/10"
           />
           <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
-            Operations Portal
+            The Gut Guru Tracker
           </h2>
           <p className="text-xs sm:text-sm text-gray-500">
-            HungerBox Cafeteria Stalls · NewRelic, DSM & NTT Data
+            Hospitality Services · Multi-Site Operations Portal
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

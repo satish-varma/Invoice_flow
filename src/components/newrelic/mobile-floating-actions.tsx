@@ -25,7 +25,9 @@ export function MobileFloatingActions({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`fixed right-5 bottom-20 z-40 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-white transition-all transform active:scale-90 ${
-          isOpen ? 'bg-gray-800 rotate-45' : 'bg-[#3b2fc9] hover:bg-[#2e24a8]'
+          isOpen
+            ? 'bg-gray-800 rotate-45'
+            : 'bg-gradient-to-tr from-indigo-600 via-[#3b2fc9] to-violet-600 shadow-indigo-500/40'
         }`}
         aria-label="Create Action"
       >
@@ -61,14 +63,14 @@ export function MobileFloatingActions({
                 setIsOpen(false);
                 onNewChallan('hyderabad');
               }}
-              className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-blue-50/80 border border-blue-100 text-left active:scale-[0.99] transition-transform"
+              className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/90 to-indigo-50/70 border border-blue-200/80 text-left active:scale-[0.99] transition-transform shadow-xs"
             >
-              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
                 <FileText className="w-5 h-5" />
               </div>
               <div>
                 <p className="text-sm font-bold text-blue-950">New Challan · Hyderabad</p>
-                <p className="text-xs text-blue-600/80">Mindspace, Hitec City cafeteria DC</p>
+                <p className="text-xs text-blue-700 font-medium">Mindspace, Hitec City cafeteria DC</p>
               </div>
             </button>
 
@@ -78,14 +80,14 @@ export function MobileFloatingActions({
                 setIsOpen(false);
                 onNewChallan('bangalore');
               }}
-              className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-100 text-left active:scale-[0.99] transition-transform"
+              className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50/90 to-teal-50/70 border border-emerald-200/80 text-left active:scale-[0.99] transition-transform shadow-xs"
             >
-              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-xs shrink-0">
                 <FileText className="w-5 h-5" />
               </div>
               <div>
                 <p className="text-sm font-bold text-emerald-950">New Challan · Bangalore</p>
-                <p className="text-xs text-emerald-600/80">Bagmane Tech Park cafeteria DC</p>
+                <p className="text-xs text-emerald-700 font-medium">Bagmane Tech Park cafeteria DC</p>
               </div>
             </button>
 

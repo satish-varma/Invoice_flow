@@ -35,16 +35,16 @@ export function MobileAppBar({ children }: MobileAppBarProps) {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/hungerbox_logo.png"
-              alt="HungerBox"
-              className="h-7 w-auto object-contain"
+              src="/gut_guru_logo.png"
+              alt="The Gut Guru Tracker"
+              className="h-8 w-8 rounded-full object-contain shadow-xs border border-amber-900/10"
             />
             <div className="flex flex-col">
               <span className="text-xs font-black tracking-tight text-gray-900 leading-none">
-                {role === 'admin' ? 'InvoiceFlow' : siteConfig.name}
+                The Gut Guru Tracker
               </span>
-              <span className="text-[10px] text-gray-400 font-medium truncate max-w-[140px]">
-                {role === 'admin' ? 'Multi-Site DC Portal' : siteConfig.tagline || 'Tuckshop'}
+              <span className="text-[10px] text-gray-400 font-medium truncate max-w-[150px]">
+                {role === 'admin' ? 'Multi-Site DC Portal' : `${siteConfig.name} Portal`}
               </span>
             </div>
           </Link>

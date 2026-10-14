@@ -106,14 +106,16 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/hungerbox_logo.png"
-              alt="HungerBox"
-              className="h-7 sm:h-8 w-auto object-contain"
+              src="/gut_guru_logo.png"
+              alt="The Gut Guru Tracker"
+              className="h-8 sm:h-9 w-8 sm:w-9 rounded-full object-contain shadow-xs border border-amber-900/10"
             />
-            <span className="text-sm text-gray-400 font-medium hidden xs:inline">×</span>
             <div className="flex items-center gap-2">
-              <span className="text-xs sm:text-sm font-semibold text-gray-700 hidden xs:inline">
-                {role === 'admin' ? 'HungerBox Operations Portal' : `${siteConfig.name} Portal`}
+              <span className="text-sm sm:text-base font-black tracking-tight text-gray-900 hidden xs:inline">
+                The Gut Guru Tracker
+              </span>
+              <span className="text-[11px] font-semibold text-gray-400 hidden md:inline">
+                · {role === 'admin' ? 'Operations & DC Portal' : `${siteConfig.name} Portal`}
               </span>
               {role !== 'admin' && (
                 <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
@@ -123,7 +125,7 @@ export default function NewRelicLayout({ children }: { children: React.ReactNode
                     ? 'bg-amber-100 text-amber-800 border border-amber-200'
                     : 'bg-indigo-100 text-[#3b2fc9] border border-indigo-200'
                 }`}>
-                  📍 {siteConfig.name} · {siteConfig.allowedLocations.join(' & ')}
+                  📍 {siteConfig.name}
                 </span>
               )}
             </div>

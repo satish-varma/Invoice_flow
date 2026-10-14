@@ -234,23 +234,27 @@ export function NewRelicChallanList({
           return (
             <div
               key={challan.id}
-              className="bg-white rounded-2xl border border-gray-200/90 p-4 shadow-2xs space-y-3"
+              className={`bg-white rounded-2xl border p-4 shadow-2xs space-y-3 transition-all hover:shadow-md ${
+                challan.location === 'hyderabad'
+                  ? 'border-l-4 border-l-blue-500 border-gray-200/90'
+                  : 'border-l-4 border-l-emerald-500 border-gray-200/90'
+              }`}
             >
               {/* Card Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <input
                     type="checkbox"
-                    className="rounded border-gray-300 text-[#3b2fc9] focus:ring-[#3b2fc9] w-4 h-4"
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
                     checked={!!challan.id && selectedIds.has(challan.id)}
                     onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
                   />
                   <div>
-                    <span className="font-mono font-bold text-[#3b2fc9] text-base leading-tight block">
+                    <span className="font-mono font-black text-indigo-950 text-base leading-tight block">
                       {challan.dcNumber}
                     </span>
-                    <span className="text-[11px] text-gray-400">
-                      {challan.dcDate ? format(new Date(challan.dcDate), 'dd MMM yyyy') : '—'}
+                    <span className="text-[11px] text-gray-500 font-medium">
+                      📅 {challan.dcDate ? format(new Date(challan.dcDate), 'dd MMM yyyy') : '—'}
                     </span>
                   </div>
                 </div>
@@ -259,11 +263,11 @@ export function NewRelicChallanList({
                   variant="outline"
                   className={
                     challan.location === 'hyderabad'
-                      ? 'border-blue-200 text-blue-700 bg-blue-50 text-xs px-2.5 py-0.5 rounded-full'
-                      : 'border-emerald-200 text-emerald-700 bg-emerald-50 text-xs px-2.5 py-0.5 rounded-full'
+                      ? 'border-blue-300 text-blue-800 bg-gradient-to-r from-blue-50 to-indigo-50 text-xs px-2.5 py-1 rounded-full font-bold shadow-2xs'
+                      : 'border-emerald-300 text-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 text-xs px-2.5 py-1 rounded-full font-bold shadow-2xs'
                   }
                 >
-                  {NEWRELIC_LOCATIONS[challan.location]?.label ?? challan.location}
+                  📍 {NEWRELIC_LOCATIONS[challan.location]?.label ?? challan.location}
                 </Badge>
               </div>
 
@@ -403,7 +407,7 @@ export function NewRelicChallanList({
                     <Button
                       variant="default"
                       size="sm"
-                      className="h-9 px-3 bg-[#3b2fc9] hover:bg-[#2f25a8] text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs active:scale-95 transition-transform"
+                      className="h-9 px-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs active:scale-95 transition-transform"
                       onClick={() => {
                         triggerHaptic('light');
                         onPreviewChallan ? onPreviewChallan(challan) : onDownloadChallan(challan);
@@ -419,7 +423,7 @@ export function NewRelicChallanList({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-9 px-2.5 border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-[#3b2fc9] rounded-xl text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-transform"
+                        className="h-9 px-2.5 border-indigo-200 bg-indigo-50/90 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform shadow-2xs"
                         onClick={() => {
                           triggerHaptic('light');
                           onAdminPreviewChallan(challan);
@@ -436,14 +440,14 @@ export function NewRelicChallanList({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-9 px-2.5 border-gray-200 text-gray-700 hover:text-[#3b2fc9] hover:border-[#3b2fc9]/40 rounded-xl text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-transform"
+                        className="h-9 px-2.5 border-amber-200 bg-amber-50/90 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform shadow-2xs"
                         onClick={() => {
                           triggerHaptic('light');
                           onSelectChallan(challan);
                         }}
                         title="Edit Challan"
                       >
-                        <Edit2 className="h-3.5 w-3.5" />
+                        <Edit2 className="h-3.5 w-3.5 text-amber-600" />
                         <span>Edit</span>
                       </Button>
                     )}
@@ -452,25 +456,25 @@ export function NewRelicChallanList({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-9 w-9 p-0 border-gray-200 text-gray-700 hover:text-[#3b2fc9] hover:border-[#3b2fc9]/40 rounded-xl active:scale-95 transition-transform"
+                      className="h-9 w-9 p-0 border-blue-200 bg-blue-50/80 hover:bg-blue-100 text-blue-700 rounded-xl active:scale-95 transition-transform shadow-2xs"
                       onClick={() => {
                         triggerHaptic('medium');
                         onDownloadChallan(challan);
                       }}
                       title="Download PDF"
                     >
-                      <Download className="h-3.5 w-3.5" />
+                      <Download className="h-3.5 w-3.5 text-blue-600" />
                     </Button>
 
                     {/* Native Share / WhatsApp Dispatch Button */}
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-9 w-9 p-0 border-gray-200 text-gray-700 hover:text-[#3b2fc9] hover:border-[#3b2fc9]/40 rounded-xl active:scale-95 transition-transform"
+                      className="h-9 w-9 p-0 border-emerald-200 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-700 rounded-xl active:scale-95 transition-transform shadow-2xs"
                       onClick={() => handleShareChallan(challan)}
                       title="Share Summary"
                     >
-                      <Share2 className="h-3.5 w-3.5 text-gray-600" />
+                      <Share2 className="h-3.5 w-3.5 text-emerald-600" />
                     </Button>
 
                     {/* Three-Dot Overflow Menu (Contains Duplicate, History, and Delete) */}
@@ -539,49 +543,49 @@ export function NewRelicChallanList({
       <div className="hidden sm:block overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow className="bg-gray-50 hover:bg-gray-50">
+            <TableRow className="bg-gradient-to-r from-slate-50 via-indigo-50/40 to-slate-50 border-b border-indigo-100/70 hover:bg-slate-50">
               <TableHead className="w-[40px] pl-4">
                 <input 
                   type="checkbox"
-                  className="rounded border-gray-300 text-[#3b2fc9] focus:ring-[#3b2fc9] w-4 h-4"
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
                   checked={challans.length > 0 && selectedIds.size === challans.filter(c => c.id).length}
                   onChange={(e) => handleSelectAll(e.target.checked)}
                 />
               </TableHead>
-              <TableHead className="font-semibold text-gray-600">DC No</TableHead>
-              <TableHead className="font-semibold text-gray-600">Date</TableHead>
-              <TableHead className="font-semibold text-gray-600">Location</TableHead>
-              <TableHead className="font-semibold text-gray-600 text-center">Items</TableHead>
+              <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider">DC No</TableHead>
+              <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider">Date</TableHead>
+              <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider">Location</TableHead>
+              <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider text-center">Items</TableHead>
               {role === 'admin' && (
                 <>
-                  <TableHead className="font-semibold text-gray-600">{isTrashView ? 'Deleted By' : 'Author'}</TableHead>
+                  <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider">{isTrashView ? 'Deleted By' : 'Author'}</TableHead>
                   {showFinancials && (
                     <>
-                      <TableHead className="font-semibold text-gray-600 text-right">Rev</TableHead>
-                      <TableHead className="font-semibold text-gray-600 text-right">Cost</TableHead>
-                      <TableHead className="font-semibold text-gray-600 text-right">Profit</TableHead>
+                      <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider text-right">Rev</TableHead>
+                      <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider text-right">Cost</TableHead>
+                      <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider text-right">Profit</TableHead>
                     </>
                   )}
                 </>
               )}
-              <TableHead className="font-semibold text-gray-600 text-right">Actions</TableHead>
+              <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {challans.map((challan) => (
-              <TableRow key={challan.id} className="hover:bg-gray-50/50">
+              <TableRow key={challan.id} className="hover:bg-indigo-50/30 transition-colors">
                 <TableCell className="pl-4">
                   <input
                     type="checkbox"
-                    className="rounded border-gray-300 text-[#3b2fc9] focus:ring-[#3b2fc9] w-4 h-4"
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
                     checked={!!challan.id && selectedIds.has(challan.id)}
                     onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
                   />
                 </TableCell>
-                <TableCell className="font-mono font-medium text-[#3b2fc9]">
+                <TableCell className="font-mono font-bold text-indigo-950">
                   {challan.dcNumber}
                 </TableCell>
-                <TableCell className="text-gray-600">
+                <TableCell className="text-gray-600 font-medium text-xs">
                   {challan.dcDate
                     ? format(new Date(challan.dcDate), 'dd-MM-yyyy')
                     : '—'}
@@ -591,11 +595,11 @@ export function NewRelicChallanList({
                     variant="outline"
                     className={
                       challan.location === 'hyderabad'
-                        ? 'border-blue-200 text-blue-700 bg-blue-50'
-                        : 'border-emerald-200 text-emerald-700 bg-emerald-50'
+                        ? 'border-blue-300 text-blue-800 bg-gradient-to-r from-blue-50 to-indigo-50 font-bold px-2.5 py-0.5 rounded-full shadow-2xs'
+                        : 'border-emerald-300 text-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 font-bold px-2.5 py-0.5 rounded-full shadow-2xs'
                     }
                   >
-                    {NEWRELIC_LOCATIONS[challan.location]?.label ?? challan.location}
+                    📍 {NEWRELIC_LOCATIONS[challan.location]?.label ?? challan.location}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-center text-gray-600">

@@ -13,12 +13,12 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'InvoiceFlow',
-  description: 'Generate, manage, and download professional-looking invoices.',
+  title: 'The Gut Guru Tracker',
+  description: 'Operations, Attendance & Delivery Challan Management Platform.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    title: "InvoiceFlow",
+    title: "The Gut Guru Tracker",
     statusBarStyle: "default",
   },
   icons: {

@@ -345,42 +345,77 @@ export default function NewRelicPage() {
     <div className="min-h-screen bg-gray-50" suppressHydrationWarning>
       <div className="max-w-6xl mx-auto px-3 sm:px-8 py-3 sm:py-8 space-y-4 sm:space-y-8">
 
-        {/* Mobile Pull-to-Refresh Indicator & Action Bar */}
-        <div className="sm:hidden flex items-center justify-between bg-white/80 backdrop-blur-xs px-3.5 py-2 rounded-xl border border-gray-200/80 shadow-2xs">
-          <span className="text-xs font-bold text-gray-700">Delivery Challans</span>
-          <button
-            type="button"
-            onClick={handlePullRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-1.5 text-[11px] font-semibold text-[#3b2fc9] hover:text-[#2c229e] active:scale-95 transition-transform"
-          >
-            <RefreshCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Syncing...' : 'Sync Data'}
-          </button>
+        {/* The Gut Guru Tracker - DC Hub Hero Banner */}
+        <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#2c1d24] via-[#43232f] to-[#1e1b4b] p-4 sm:p-6 text-white shadow-lg relative overflow-hidden">
+          {/* Subtle decorative glow circles */}
+          <div className="absolute -right-10 -top-10 w-44 h-44 bg-purple-500/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute right-32 -bottom-10 w-36 h-36 bg-amber-500/15 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/gut_guru_logo.png"
+                alt="The Gut Guru"
+                className="w-11 h-11 sm:w-14 sm:h-14 rounded-full border-2 border-amber-300/40 shadow-md object-contain bg-black/20 shrink-0"
+              />
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-base sm:text-xl font-black tracking-tight text-white">
+                    The Gut Guru Tracker
+                  </h1>
+                  <span className="text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    DC Hub
+                  </span>
+                </div>
+                <p className="text-xs text-rose-100/70 font-medium mt-0.5">
+                  Delivery Challans, Cafeteria Stock & Item Dispatch Management
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-end sm:self-center">
+              <button
+                type="button"
+                onClick={handlePullRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-semibold text-white transition-all backdrop-blur-xs border border-white/15"
+              >
+                <RefreshCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>{isRefreshing ? 'Syncing...' : 'Sync Data'}</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Hero stats & Dashboard */}
         {role === 'admin' || role === 'superadmin' ? (
           <NewRelicDashboard challans={displayChallans} showFinancials={isUnlocked && showFinancials} />
         ) : (
-          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
             <StatCard
-              icon={<FileText className="h-4 sm:h-5 w-4 sm:w-5 text-[#3b2fc9]" />}
+              icon={<FileText className="h-4 sm:h-5 w-4 sm:w-5 text-white" />}
               label="Total Challans"
               value={challans.length}
-              bg="bg-[#3b2fc9]/5"
+              bg="bg-gradient-to-tr from-indigo-600 to-violet-600 shadow-indigo-300/40"
+              cardBg="bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/40 border-indigo-200/80"
+              subtext="All active documents"
             />
             <StatCard
-              icon={<MapPin className="h-4 sm:h-5 w-4 sm:w-5 text-blue-500" />}
+              icon={<MapPin className="h-4 sm:h-5 w-4 sm:w-5 text-white" />}
               label="Hyderabad"
               value={hydCount}
-              bg="bg-blue-50"
+              bg="bg-gradient-to-tr from-blue-600 to-cyan-600 shadow-blue-300/40"
+              cardBg="bg-gradient-to-br from-blue-50/90 via-white to-sky-50/40 border-blue-200/80"
+              subtext="Mindspace · Hitec City"
             />
             <StatCard
-              icon={<MapPin className="h-4 sm:h-5 w-4 sm:w-5 text-emerald-500" />}
+              icon={<MapPin className="h-4 sm:h-5 w-4 sm:w-5 text-white" />}
               label="Bangalore"
               value={blrCount}
-              bg="bg-emerald-50"
+              bg="bg-gradient-to-tr from-emerald-600 to-teal-600 shadow-emerald-300/40"
+              cardBg="bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/40 border-emerald-200/80"
+              subtext="Bagmane Tech Park"
             />
           </div>
         )}
@@ -391,14 +426,14 @@ export default function NewRelicPage() {
             <div className="hidden sm:flex flex-row gap-3">
               <button
                 onClick={() => handleStartCreateNew('hyderabad')}
-                className="flex-1 bg-[#3b2fc9] text-white py-3 px-4 rounded-xl font-medium hover:bg-[#3b2fc9]/90 transition-colors shadow-sm flex items-center justify-center gap-2"
+                className="flex-1 bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 hover:from-indigo-700 hover:to-violet-800 text-white py-3.5 px-4 rounded-xl font-bold transition-all shadow-md shadow-indigo-200/60 active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 <FileText className="h-5 w-5" />
                 New Challan (Hyderabad)
               </button>
               <button
                 onClick={() => handleStartCreateNew('bangalore')}
-                className="flex-1 bg-emerald-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-emerald-700 transition-colors shadow-sm flex items-center justify-center gap-2"
+                className="flex-1 bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white py-3.5 px-4 rounded-xl font-bold transition-all shadow-md shadow-emerald-200/60 active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 <FileText className="h-5 w-5" />
                 New Challan (Bangalore)
@@ -406,7 +441,7 @@ export default function NewRelicPage() {
               {(role === 'admin' || role === 'superadmin') && (
                 <Link
                   href="/newrelic/reconcile"
-                  className="flex-1 bg-amber-500 text-white py-3 px-4 rounded-xl font-medium hover:bg-amber-600 transition-colors shadow-sm flex items-center justify-center gap-2"
+                  className="flex-1 bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white py-3.5 px-4 rounded-xl font-bold transition-all shadow-md shadow-amber-200/60 active:scale-[0.98] flex items-center justify-center gap-2"
                 >
                   <RefreshCcw className="h-5 w-5" />
                   Reconcile
@@ -415,7 +450,7 @@ export default function NewRelicPage() {
               {(role === 'admin' || role === 'superadmin') && (
                 <button
                   onClick={handleExportExcel}
-                  className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2"
+                  className="flex-1 bg-gradient-to-r from-blue-600 via-blue-700 to-cyan-700 hover:from-blue-700 hover:to-cyan-800 text-white py-3.5 px-4 rounded-xl font-bold transition-all shadow-md shadow-blue-200/60 active:scale-[0.98] flex items-center justify-center gap-2"
                 >
                   <FileSpreadsheet className="h-5 w-5" />
                   Export Excel
@@ -465,51 +500,59 @@ export default function NewRelicPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex items-center gap-4 border-b border-gray-200">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none no-scrollbar">
           <button
             onClick={() => setActiveTab('active')}
-            className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
               activeTab === 'active'
-                ? 'border-[#3b2fc9] text-[#3b2fc9]'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm shadow-indigo-200'
+                : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
             }`}
           >
-            Active Invoices ({activeChallans.length})
+            <span>Active Invoices</span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+              activeTab === 'active' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
+            }`}>
+              {activeChallans.length}
+            </span>
           </button>
 
           {role === 'admin' && (
             <>
               <Link
                 href="/newrelic/analytics"
-                className="pb-3 text-sm font-medium transition-colors border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+                className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 shrink-0 bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/40"
               >
-                Analytics Dashboard
+                <span>📊 Analytics</span>
               </Link>
 
               <button
                 onClick={() => setActiveTab('items')}
-                className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
+                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 shrink-0 ${
                   activeTab === 'items'
-                    ? 'border-[#3b2fc9] text-[#3b2fc9]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm shadow-indigo-200'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
                 }`}
               >
-                Item Ledger
+                <span>📋 Item Ledger</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('trash')}
+                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
+                  activeTab === 'trash'
+                    ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-sm shadow-rose-200'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                }`}
+              >
+                <span>Trash / Audit</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                  activeTab === 'trash' ? 'bg-white/20 text-white' : 'bg-rose-50 text-rose-600'
+                }`}>
+                  {trashChallans.length}
+                </span>
               </button>
             </>
-          )}
-          
-          {role === 'admin' && (
-            <button
-              onClick={() => setActiveTab('trash')}
-              className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
-                activeTab === 'trash'
-                  ? 'border-[#3b2fc9] text-[#3b2fc9]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Trash / Audit ({trashChallans.length})
-            </button>
           )}
         </div>
 
@@ -517,13 +560,13 @@ export default function NewRelicPage() {
         <div className="space-y-2.5">
           {/* Instant Search Input */}
           <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-500 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search challans by DC#, brand, or item name..."
-              className="w-full h-11 sm:h-10 pl-10 pr-9 bg-white border border-gray-200/90 rounded-2xl text-xs sm:text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] shadow-2xs transition-all"
+              className="w-full h-11 sm:h-10 pl-10 pr-9 bg-white border border-indigo-100 rounded-2xl text-xs sm:text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 shadow-2xs transition-all"
             />
             {searchQuery && (
               <button
@@ -538,10 +581,10 @@ export default function NewRelicPage() {
           </div>
 
           {/* Filters Section: Segmented Location Switcher + Quick Presets + More Filters */}
-          <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200/80 shadow-xs space-y-2.5">
+          <div className="bg-white p-3 sm:p-4 rounded-2xl border border-indigo-100/70 shadow-xs space-y-2.5">
             {/* Top Row: Segmented Location Switcher (Mobile & Desktop) */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="inline-flex p-1 bg-gray-100/80 rounded-xl max-w-full overflow-x-auto scrollbar-none no-scrollbar">
+              <div className="inline-flex p-1 bg-gray-100/90 rounded-xl max-w-full overflow-x-auto scrollbar-none no-scrollbar gap-1">
                 {user?.preferredLocations && user.preferredLocations.length > 0 && (
                   <button
                     type="button"
@@ -549,9 +592,9 @@ export default function NewRelicPage() {
                       triggerHaptic('light');
                       setFilterLocation('preferred');
                     }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
                       filterLocation === 'preferred'
-                        ? 'bg-white text-[#3b2fc9] shadow-xs'
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -564,17 +607,22 @@ export default function NewRelicPage() {
                     triggerHaptic('light');
                     setFilterLocation('all');
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
                     filterLocation === 'all'
-                      ? 'bg-white text-[#3b2fc9] shadow-xs'
+                      ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-xs'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
-                  All ({activeChallans.length})
+                  All Hubs ({activeChallans.length})
                 </button>
                 {Object.entries(NEWRELIC_LOCATIONS).map(([key, loc]) => {
                   const count = activeChallans.filter(c => c.location === key).length;
                   const isSelected = filterLocation === key;
+                  const activeColor =
+                    key === 'hyderabad'
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs'
+                      : 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs';
+
                   return (
                     <button
                       key={key}
@@ -583,13 +631,11 @@ export default function NewRelicPage() {
                         triggerHaptic('light');
                         setFilterLocation(key);
                       }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-                        isSelected
-                          ? 'bg-white text-[#3b2fc9] shadow-xs'
-                          : 'text-gray-600 hover:text-gray-900'
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                        isSelected ? activeColor : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      {loc.label} <span className="text-[10px] opacity-70">({count})</span>
+                      {loc.label} <span className="text-[10px] opacity-80">({count})</span>
                     </button>
                   );
                 })}
@@ -886,18 +932,23 @@ function StatCard({
   label,
   value,
   bg,
+  cardBg,
+  subtext,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
   bg: string;
+  cardBg?: string;
+  subtext?: string;
 }) {
   return (
-    <div className={`rounded-xl sm:rounded-2xl border border-gray-200 bg-white shadow-2xs sm:shadow-sm p-2.5 sm:p-5 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4`}>
-      <div className={`${bg} p-2 sm:p-3 rounded-lg sm:rounded-xl shrink-0`}>{icon}</div>
+    <div className={`rounded-xl sm:rounded-2xl border ${cardBg || 'border-gray-200 bg-white'} shadow-2xs sm:shadow-sm p-3 sm:p-5 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-2 sm:gap-4 transition-all hover:shadow-md`}>
+      <div className={`${bg} p-2.5 sm:p-3 rounded-xl sm:rounded-2xl shrink-0 shadow-xs`}>{icon}</div>
       <div className="min-w-0">
-        <p className="text-base sm:text-2xl font-bold text-gray-900 leading-tight">{value}</p>
-        <p className="text-[10px] sm:text-sm text-gray-500 font-medium truncate">{label}</p>
+        <p className="text-lg sm:text-2xl font-black text-gray-900 leading-tight">{value}</p>
+        <p className="text-[11px] sm:text-xs text-gray-600 font-bold truncate">{label}</p>
+        {subtext && <p className="text-[10px] text-gray-400 font-medium hidden sm:block truncate">{subtext}</p>}
       </div>
     </div>
   );

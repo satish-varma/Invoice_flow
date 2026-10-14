@@ -91,7 +91,13 @@ export function ChallanList({
   };
 
   const getCreator = (c: Challan) => {
-    return c.creatorName || c.createdBy || (c.creatorEmail ? c.creatorEmail.split('@')[0] : 'Admin');
+    if (c.creatorName) return c.creatorName;
+    const raw = c.createdBy || c.creatorEmail;
+    if (raw) {
+      const name = raw.includes('@') ? raw.split('@')[0] : raw;
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+    return 'Admin';
   };
 
   const filteredChallans = challans.filter((c) => {

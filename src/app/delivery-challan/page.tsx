@@ -22,10 +22,18 @@ import { getSettings, Settings } from '@/services/settingsService';
 import { generateAndSavePdf } from '@/lib/pdf';
 import { DeliveryChallanForm } from '@/components/delivery-challan-form';
 import { ChallanList } from '@/components/challan-list';
-import { Challan, getChallans } from '@/services/challanService';
+import {
+  Challan,
+  getChallans,
+  deleteChallan,
+  deleteChallans,
+  saveChallan,
+} from '@/services/challanService';
 import { DeliveryChallanPreview } from '@/components/delivery-challan-preview';
+import { DeliveryChallanViewModal } from '@/components/delivery-challan-view-modal';
 import { AppShell } from '@/components/app-shell';
 import { triggerHaptic } from '@/lib/haptics';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function DeliveryChallanPage() {
   const [challans, setChallans] = useState<Challan[]>([]);
@@ -33,10 +41,17 @@ export default function DeliveryChallanPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedChallan, setSelectedChallan] = useState<Challan | null>(null);
   const [mobileTab, setMobileTab] = useState<'list' | 'form'>('list');
-  const { toast } = useToast();
-  const challanPreviewRef = useRef<HTMLDivElement>(null);
+  const [viewModalChallan, setViewModalChallan] = useState<Challan | null>(null);
+
+  // Bulk / Download states
   const [challanToDownload, setChallanToDownload] = useState<Challan | null>(null);
+  const [downloadQueue, setDownloadQueue] = useState<Challan[]>([]);
+  const [isBulkDownloading, setIsBulkDownloading] = useState(false);
   const [settings, setSettings] = useState<Settings | null>(null);
+
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const challanPreviewRef = useRef<HTMLDivElement>(null);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -94,10 +109,150 @@ export default function DeliveryChallanPage() {
     setMobileTab('form');
   };
 
+  const handleViewChallan = (challan: Challan) => {
+    setViewModalChallan(challan);
+  };
+
+  const handleDuplicateChallan = (challan: Challan) => {
+    triggerHaptic('light');
+    const duplicated: Challan = {
+      ...challan,
+      id: undefined,
+      dcNumber: '',
+      dcDate: new Date().toISOString(),
+      createdAt: undefined,
+    };
+    setSelectedChallan(duplicated);
+    setMobileTab('form');
+    if (typeof window !== 'undefined') {
+      const el = document.getElementById('challan-form-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+    toast({
+      title: 'Challan Cloned to Editor',
+      description: 'Pre-filled line items and addresses. Save when ready to assign next DC #.',
+    });
+  };
+
+  const handleDeleteChallan = async (challan: Challan) => {
+    if (!challan.id) return;
+    try {
+      await deleteChallan(challan.id);
+      toast({
+        title: 'Challan Deleted',
+        description: `Delivery challan ${challan.dcNumber} has been deleted.`,
+      });
+      fetchData();
+    } catch (err) {
+      console.error('Delete error:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: 'Could not delete the delivery challan.',
+      });
+    }
+  };
+
+  const handleBulkDelete = async (selectedIds: string[]) => {
+    if (selectedIds.length === 0) return;
+    try {
+      await deleteChallans(selectedIds);
+      toast({
+        title: 'Challans Deleted',
+        description: `Successfully deleted ${selectedIds.length} delivery challan(s).`,
+      });
+      fetchData();
+    } catch (err) {
+      console.error('Bulk delete error:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Bulk Delete Failed',
+        description: 'An error occurred while deleting selected challans.',
+      });
+    }
+  };
+
+  const handleBulkDuplicate = async (selectedChallans: Challan[]) => {
+    if (selectedChallans.length === 0) return;
+    triggerHaptic('medium');
+    const creatorDisplayName = (user as any)?.name || (user?.email ? user.email.split('@')[0] : 'Admin');
+
+    try {
+      toast({
+        title: 'Duplicating Challans...',
+        description: `Processing ${selectedChallans.length} delivery challans.`,
+      });
+
+      for (const c of selectedChallans) {
+        await saveChallan({
+          dcDate: new Date().toISOString(),
+          companyProfileId: c.companyProfileId,
+          billToName: c.billToName,
+          billToAddress: c.billToAddress,
+          shipToName: c.shipToName || c.billToName,
+          shipToAddress: c.shipToAddress || c.billToAddress,
+          lineItems: (c.lineItems || []).map((item, idx) => ({
+            ...item,
+            id: Date.now() + idx,
+          })),
+          subtotal: Number(c.subtotal) || 0,
+          gstAmount: Number(c.gstAmount) || 0,
+          shipping: Number(c.shipping) || 0,
+          other: Number(c.other) || 0,
+          total: Number(c.total) || 0,
+          note: c.note || 'The above goods sent on returnable basis not for sale',
+          createdBy: creatorDisplayName,
+          creatorEmail: user?.email || '',
+          creatorName: creatorDisplayName,
+        });
+      }
+
+      toast({
+        title: 'Bulk Duplication Complete',
+        description: `Successfully duplicated ${selectedChallans.length} delivery challan(s) with new DC numbers!`,
+      });
+      fetchData();
+    } catch (err) {
+      console.error('Bulk duplicate error:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Bulk Duplicate Failed',
+        description: 'Could not duplicate selected challans. Please try again.',
+      });
+    }
+  };
+
   const handleDownload = (challan: Challan) => {
     setChallanToDownload(challan);
   };
 
+  const handleBulkDownload = (selectedChallans: Challan[]) => {
+    if (selectedChallans.length === 0) return;
+    triggerHaptic('medium');
+    setIsBulkDownloading(true);
+    setDownloadQueue([...selectedChallans]);
+    toast({
+      title: 'Starting Bulk Download',
+      description: `Preparing ${selectedChallans.length} PDF documents...`,
+    });
+  };
+
+  // Queue pump for Bulk Download
+  useEffect(() => {
+    if (downloadQueue.length > 0 && !challanToDownload && settings) {
+      const nextItem = downloadQueue[0];
+      setChallanToDownload(nextItem);
+      setDownloadQueue((prev) => prev.slice(1));
+    } else if (downloadQueue.length === 0 && isBulkDownloading && !challanToDownload) {
+      setIsBulkDownloading(false);
+      toast({
+        title: 'Bulk Download Complete',
+        description: 'All selected delivery challan PDFs have been downloaded.',
+      });
+    }
+  }, [downloadQueue, challanToDownload, settings, isBulkDownloading, toast]);
+
+  // Actual PDF generation worker
   useEffect(() => {
     if (challanToDownload && settings) {
       const timer = setTimeout(async () => {
@@ -114,14 +269,15 @@ export default function DeliveryChallanPage() {
             toast({
               variant: 'destructive',
               title: 'Download Failed',
-              description:
-                'There was an error generating the PDF for download.',
+              description: `Error generating PDF for ${challanToDownload.dcNumber || 'document'}.`,
             });
           } finally {
             setChallanToDownload(null);
           }
+        } else {
+          setChallanToDownload(null);
         }
-      }, 1000);
+      }, 700);
 
       return () => clearTimeout(timer);
     }
@@ -130,7 +286,9 @@ export default function DeliveryChallanPage() {
   // Derived metrics
   const totalValue = challans.reduce((acc, c) => acc + (Number(c.total) || 0), 0);
   const totalItems = challans.reduce((acc, c) => acc + (c.lineItems?.length || 0), 0);
-  const uniqueClients = new Set(challans.map((c) => c.billToName).filter(Boolean)).size;
+  const uniqueClients = new Set(
+    challans.map((c) => c.shipToName || c.billToName).filter(Boolean)
+  ).size;
   const now = new Date();
 
   return (
@@ -163,7 +321,7 @@ export default function DeliveryChallanPage() {
                   Material Dispatch &amp; Delivery Challans
                 </h1>
                 <p className="text-xs sm:text-sm text-indigo-200/80 max-w-2xl font-normal leading-relaxed">
-                  Generate returnable and non-returnable delivery challans, track dispatched consignments, and export instant PDF receipts.
+                  Generate returnable and non-returnable delivery challans, track dispatched consignments, view documents, and bulk manage PDFs.
                 </p>
               </div>
 
@@ -252,7 +410,7 @@ export default function DeliveryChallanPage() {
             <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-50/90 via-white to-fuchsia-50/40 border border-purple-200/80 shadow-xs">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200 uppercase tracking-wider">
-                  Clients
+                  Consignees
                 </span>
                 <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs">
                   <Building2 className="w-4 h-4" />
@@ -263,7 +421,7 @@ export default function DeliveryChallanPage() {
                 {uniqueClients}
               </p>
               <p className="text-[11px] text-gray-400 font-medium truncate mt-1">
-                Unique consignees
+                Unique ship-to locations
               </p>
             </div>
           </div>
@@ -324,10 +482,26 @@ export default function DeliveryChallanPage() {
                   challans={challans}
                   onSelectChallan={handleSelectChallan}
                   onDownloadChallan={handleDownload}
+                  onViewChallan={handleViewChallan}
+                  onDuplicateChallan={handleDuplicateChallan}
+                  onDeleteChallan={handleDeleteChallan}
+                  onBulkDownload={handleBulkDownload}
+                  onBulkDuplicate={handleBulkDuplicate}
+                  onBulkDelete={handleBulkDelete}
+                  isBulkDownloading={isBulkDownloading}
                 />
               )}
             </div>
           </div>
+
+          {/* Document View Modal */}
+          <DeliveryChallanViewModal
+            isOpen={!!viewModalChallan}
+            onClose={() => setViewModalChallan(null)}
+            challan={viewModalChallan}
+            settings={settings}
+            onDownload={handleDownload}
+          />
 
           {/* Off-screen PDF generation target */}
           {challanToDownload && settings && (

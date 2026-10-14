@@ -31,6 +31,10 @@ export interface Challan {
   billToAddress?: string;
   shipToName?: string;
   shipToAddress?: string;
+
+  createdBy?: string;
+  creatorEmail?: string;
+  creatorName?: string;
 }
 
 const CHALLANS_COLLECTION = 'challans';

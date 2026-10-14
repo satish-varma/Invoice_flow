@@ -23,6 +23,7 @@ import { Checkbox } from './ui/checkbox';
 import { getProducts, Product } from '@/services/productService';
 import * as XLSX from 'xlsx';
 import { triggerHaptic } from '@/lib/haptics';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DeliveryChallanFormProps {
     initialData?: Challan | null;
@@ -64,6 +65,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     const [activeCompanyProfile, setActiveCompanyProfile] = useState<CompanyProfile | null>(null);
 
     const { toast } = useToast();
+    const { user } = useAuth();
 
     const subtotal = useMemo(() => {
         return lineItems.reduce((acc, item) => acc + item.total, 0);
@@ -226,6 +228,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
 
         setIsSaving(true);
         try {
+            const creatorDisplayName = (user as any)?.name || (user?.email ? user.email.split('@')[0] : 'Admin');
             const challanData: Omit<Challan, 'dcNumber' | 'createdAt'> & { id?: string } = {
                 dcDate: dcDate?.toISOString() || new Date().toISOString(),
                 companyProfileId: activeCompanyProfile.id,
@@ -240,6 +243,9 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 other: Number(other),
                 total,
                 note,
+                createdBy: initialData?.createdBy || creatorDisplayName,
+                creatorEmail: initialData?.creatorEmail || user?.email || '',
+                creatorName: initialData?.creatorName || creatorDisplayName,
             };
 
             if (initialData?.id) {

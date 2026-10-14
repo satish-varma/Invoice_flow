@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, Sheet, Calculator, DollarSign, TrendingUp, Percent, Sparkles, Eye, EyeOff } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, Sheet, Calculator, DollarSign, TrendingUp, Percent, Sparkles, Eye, EyeOff, X } from 'lucide-react';
 import { format } from "date-fns"
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
@@ -42,7 +42,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     const [lineItems, setLineItems] = useState<ChallanLineItem[]>([
         { id: 1, name: '', hsnCode: '', unit: '', quantity: 0, unitPrice: 0, total: 0, procurementCost: 0 },
     ]);
-    const [note, setNote] = useState('The above goods sent on returnable basis not for sale');
+    const [note, setNote] = useState('The above goods sent on non returnable basis');
     const [clients, setClients] = useState<Client[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [saveAsClient, setSaveAsClient] = useState(false);
@@ -176,7 +176,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
             if (initialData.commissionRate !== undefined && initialData.commissionRate !== null) {
                 setCommissionRate(initialData.commissionRate);
             }
-            setNote(initialData.note || 'The above goods sent on returnable basis not for sale');
+            setNote(initialData.note || 'The above goods sent on non returnable basis');
         } else {
             handleClearForm(false);
         }
@@ -239,10 +239,19 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         setShipping(0);
         setOther(0);
         setCommissionRate(5.5);
-        setNote('The above goods sent on returnable basis not for sale');
+        setNote('The above goods sent on non returnable basis');
         if (shouldCallback) {
             onAddNew();
         }
+    };
+
+    const handleCancelEdit = () => {
+        triggerHaptic('light');
+        handleClearForm(true);
+        toast({
+            title: 'Edit Cancelled',
+            description: 'Cleared editor and returned to blank delivery challan.',
+        });
     };
 
     const handleSaveChallan = async (andDownload = false) => {
@@ -546,6 +555,16 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 <><Sheet className="h-3.5 w-3.5 mr-1 text-emerald-600" /> Import Excel</>
                             )}
                         </Button>
+                        {initialData && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleCancelEdit}
+                                className="h-8 text-xs font-bold rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            >
+                                <X className="w-3.5 h-3.5 mr-1" /> Cancel Edit
+                            </Button>
+                        )}
                         <Button
                             onClick={() => handleSaveChallan(false)}
                             disabled={isSaving}
@@ -1198,6 +1217,21 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
 
             {/* ── Mobile floating action dock ── */}
             <div className="sm:hidden fixed bottom-20 left-3 right-3 z-40 bg-slate-950/95 text-white backdrop-blur-xl border border-indigo-500/30 shadow-2xl rounded-2xl p-2.5 flex items-center gap-2 no-print ring-1 ring-white/10">
+                {initialData && (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-10 px-2.5 text-xs text-rose-300 hover:text-white hover:bg-rose-500/30 rounded-xl font-bold shrink-0"
+                        onClick={() => {
+                            triggerHaptic('light');
+                            handleCancelEdit();
+                        }}
+                    >
+                        <X className="mr-1 h-3.5 w-3.5" />
+                        Cancel
+                    </Button>
+                )}
                 <Button
                     variant="outline"
                     size="sm"

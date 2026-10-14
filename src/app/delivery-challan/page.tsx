@@ -48,7 +48,7 @@ export default function DeliveryChallanPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedChallan, setSelectedChallan] = useState<Challan | null>(null);
-  const [currentTab, setCurrentTab] = useState<'list' | 'form' | 'analytics'>('list');
+  const [showAnalytics, setShowAnalytics] = useState<boolean>(false);
   const [showFinancials, setShowFinancials] = useState<boolean>(true);
   const [viewModalChallan, setViewModalChallan] = useState<Challan | null>(null);
 
@@ -98,7 +98,6 @@ export default function DeliveryChallanPage() {
   const handleChallanSave = (savedChallan?: Challan) => {
     fetchData();
     setSelectedChallan(null);
-    setCurrentTab('list');
     if (savedChallan) {
       handleDownload(savedChallan);
     }
@@ -106,7 +105,6 @@ export default function DeliveryChallanPage() {
 
   const handleSelectChallan = (challan: Challan) => {
     setSelectedChallan(challan);
-    setCurrentTab('form');
     if (typeof window !== 'undefined') {
       const el = document.getElementById('challan-form-section');
       if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -115,7 +113,10 @@ export default function DeliveryChallanPage() {
 
   const handleAddNew = () => {
     setSelectedChallan(null);
-    setCurrentTab('form');
+    if (typeof window !== 'undefined') {
+      const el = document.getElementById('challan-form-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const handleViewChallan = (challan: Challan) => {
@@ -132,7 +133,6 @@ export default function DeliveryChallanPage() {
       createdAt: undefined,
     };
     setSelectedChallan(duplicated);
-    setCurrentTab('form');
     if (typeof window !== 'undefined') {
       const el = document.getElementById('challan-form-section');
       if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -220,7 +220,7 @@ export default function DeliveryChallanPage() {
           revenue: Number(c.revenue) || 0,
           grossProfit: Number(c.grossProfit) || 0,
           marginPercent: Number(c.marginPercent) || 0,
-          note: c.note || 'The above goods sent on returnable basis not for sale',
+          note: c.note || 'The above goods sent on non returnable basis',
           createdBy: creatorDisplayName,
           creatorEmail,
           creatorName: creatorDisplayName,
@@ -492,60 +492,153 @@ export default function DeliveryChallanPage() {
             </div>
           </div>
 
-          {/* ── NAVIGATION SWITCHER TABS (Desktop + Mobile) ── */}
-          <div className="flex items-center p-1 rounded-2xl bg-gray-200/70 border border-gray-300/60 shadow-inner max-w-xl mx-auto sm:mx-0">
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setCurrentTab('list');
-              }}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                currentTab === 'list'
-                  ? 'bg-white text-[#3b2fc9] shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <ListOrdered className="w-3.5 h-3.5" />
-              <span>Challans ({challans.length})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setCurrentTab('form');
-              }}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                currentTab === 'form'
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <FilePlus className="w-3.5 h-3.5" />
-              <span>{selectedChallan ? 'Edit Challan' : '+ New Challan'}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setCurrentTab('analytics');
-              }}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                currentTab === 'analytics'
-                  ? 'bg-white text-emerald-700 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span>Analytics</span>
-            </button>
+          {/* ── Action Toolbar: Jump to Saved Challans & Analytics Toggle ── */}
+          <div className="flex items-center justify-between gap-3 flex-wrap bg-white/70 backdrop-blur-md p-3 rounded-2xl border border-gray-200/80 shadow-2xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  const el = document.getElementById('saved-challans-section');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200/80 transition-all shadow-2xs active:scale-95"
+              >
+                <ListOrdered className="w-3.5 h-3.5" />
+                <span>Jump to Saved Challans ({challans.length}) &darr;</span>
+              </button>
+
+              {selectedChallan && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    handleAddNew();
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200 transition-all shadow-2xs active:scale-95"
+                  title="Cancel editing and create a new delivery challan"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Exit Edit &amp; Create New</span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowAnalytics(!showAnalytics);
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all shadow-2xs active:scale-95 ${
+                  showAnalytics
+                    ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
+                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span>{showAnalytics ? 'Hide Financial Analytics' : 'View Financial Analytics'}</span>
+              </button>
+            </div>
           </div>
 
-          {/* ── TAB 1: FORM SECTION ── */}
-          <div
-            id="challan-form-section"
-            className={`w-full ${currentTab === 'form' ? 'block' : 'hidden'}`}
-          >
+          {/* ── OPTIONAL FINANCIAL & CONSIGNEE ANALYTICS SECTION ── */}
+          {showAnalytics && (
+            <div className="w-full space-y-6 animate-in fade-in duration-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Top Consignees Card */}
+                <Card className="rounded-2xl border border-gray-200 shadow-sm bg-white overflow-hidden">
+                  <CardHeader className="bg-gray-50/70 p-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                        <Building2 className="w-4 h-4 text-indigo-600" />
+                        Top 5 Consignee Destinations by Volume
+                      </CardTitle>
+                      <span className="text-[11px] text-gray-400 font-medium">Ranked by Value</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4 divide-y divide-gray-100">
+                    {topConsignees.map((c, i) => {
+                      const pctOfTotal = totalValue > 0 ? (c.total / totalValue) * 100 : 0;
+                      return (
+                        <div key={c.name} className="py-3 first:pt-0 last:pb-0 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-gray-900 truncate max-w-[200px] sm:max-w-[260px]">
+                              #{i + 1} {c.name}
+                            </span>
+                            <span className="font-mono font-black text-gray-900">
+                              ₹{c.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-gray-400">
+                            <span>{c.count} challan(s)</span>
+                            <span className="font-semibold text-emerald-600">
+                              Profit: ₹{c.profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className="bg-indigo-600 h-full rounded-full transition-all"
+                              style={{ width: `${Math.min(100, Math.max(5, pctOfTotal))}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+
+                {/* P.Cost vs Margin Breakdown Card */}
+                <Card className="rounded-2xl border border-gray-200 shadow-sm bg-white overflow-hidden">
+                  <CardHeader className="bg-gray-50/70 p-4 border-b border-gray-100">
+                    <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4 text-emerald-600" />
+                      Dispatch Financial Breakdown &amp; Commission
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-5 space-y-4">
+                    <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-3">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600 font-medium">Total MRP / Dispatch Value:</span>
+                        <span className="font-mono font-bold text-gray-900">₹{totalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600 font-medium">Procurement Cost (P.Cost):</span>
+                        <span className="font-mono font-bold text-amber-700">₹{totalPCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600 font-medium">Commission Deductions (~5.5%):</span>
+                        <span className="font-mono font-bold text-red-600">-₹{totalCommission.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                      </div>
+                      <div className="pt-2 border-t border-indigo-200 flex justify-between items-baseline text-sm">
+                        <span className="font-bold text-indigo-950">Aggregate Net Profit:</span>
+                        <span className="font-mono font-black text-emerald-700 text-base">₹{totalGrossProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-center">
+                      <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                        <span className="text-[11px] text-gray-400 font-semibold block">Avg. DC Value</span>
+                        <span className="font-mono font-black text-gray-900 text-base">
+                          ₹{challans.length > 0 ? Math.round(totalValue / challans.length).toLocaleString('en-IN') : 0}
+                        </span>
+                      </div>
+                      <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                        <span className="text-[11px] text-emerald-700 font-semibold block">Overall Margin</span>
+                        <span className="font-mono font-black text-emerald-800 text-base">
+                          {overallMargin.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {/* ── 1. NEW / EDIT CHALLAN FORM ── */}
+          <div id="challan-form-section" className="w-full">
             <DeliveryChallanForm
               key={selectedChallan?.id || 'new'}
               initialData={selectedChallan}
@@ -554,8 +647,30 @@ export default function DeliveryChallanPage() {
             />
           </div>
 
-          {/* ── TAB 2: LIST SECTION ── */}
-          <div className={`w-full ${currentTab === 'list' ? 'block' : 'hidden'}`}>
+          {/* ── 2. SAVED CHALLANS LIST (Directly below new challan) ── */}
+          <div id="saved-challans-section" className="w-full pt-4 space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse" />
+                <h2 className="text-base sm:text-lg font-black text-gray-900 tracking-tight">
+                  Saved Delivery Challans
+                </h2>
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 font-mono">
+                  {challans.length} Total
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1"
+              >
+                &uarr; Back to Top Form
+              </button>
+            </div>
+
             {isLoading ? (
               <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-gray-200/80 gap-3">
                 <Loader className="h-8 w-8 text-[#3b2fc9] animate-spin" />
@@ -572,102 +687,11 @@ export default function DeliveryChallanPage() {
                 onBulkDownload={handleBulkDownload}
                 onBulkDuplicate={handleBulkDuplicate}
                 onBulkDelete={handleBulkDelete}
+                onRefresh={fetchData}
                 isBulkDownloading={isBulkDownloading}
                 showFinancials={showFinancials}
               />
             )}
-          </div>
-
-          {/* ── TAB 3: FINANCIAL & CONSIGNEE ANALYTICS ── */}
-          <div className={`w-full ${currentTab === 'analytics' ? 'block' : 'hidden'} space-y-6`}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Top Consignees Card */}
-              <Card className="rounded-2xl border border-gray-200 shadow-sm bg-white overflow-hidden">
-                <CardHeader className="bg-gray-50/70 p-4 border-b border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                      <Building2 className="w-4 h-4 text-indigo-600" />
-                      Top 5 Consignee Destinations by Volume
-                    </CardTitle>
-                    <span className="text-[11px] text-gray-400 font-medium">Ranked by Value</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 divide-y divide-gray-100">
-                  {topConsignees.map((c, i) => {
-                    const pctOfTotal = totalValue > 0 ? (c.total / totalValue) * 100 : 0;
-                    return (
-                      <div key={c.name} className="py-3 first:pt-0 last:pb-0 space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-gray-900 truncate max-w-[200px] sm:max-w-[260px]">
-                            #{i + 1} {c.name}
-                          </span>
-                          <span className="font-mono font-black text-gray-900">
-                            ₹{c.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-[11px] text-gray-400">
-                          <span>{c.count} challan(s)</span>
-                          <span className="font-semibold text-emerald-600">
-                            Profit: ₹{c.profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-                          <div
-                            className="bg-indigo-600 h-full rounded-full transition-all"
-                            style={{ width: `${Math.min(100, Math.max(5, pctOfTotal))}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-
-              {/* P.Cost vs Margin Breakdown Card */}
-              <Card className="rounded-2xl border border-gray-200 shadow-sm bg-white overflow-hidden">
-                <CardHeader className="bg-gray-50/70 p-4 border-b border-gray-100">
-                  <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                    <TrendingUp className="w-4 h-4 text-emerald-600" />
-                    Dispatch Financial Breakdown &amp; Commission
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-5 space-y-4">
-                  <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-3">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-600 font-medium">Total MRP / Dispatch Value:</span>
-                      <span className="font-mono font-bold text-gray-900">₹{totalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-600 font-medium">Procurement Cost (P.Cost):</span>
-                      <span className="font-mono font-bold text-amber-700">₹{totalPCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-600 font-medium">Commission Deductions (~5.5%):</span>
-                      <span className="font-mono font-bold text-red-600">-₹{totalCommission.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                    </div>
-                    <div className="pt-2 border-t border-indigo-200 flex justify-between items-baseline text-sm">
-                      <span className="font-bold text-indigo-950">Aggregate Net Profit:</span>
-                      <span className="font-mono font-black text-emerald-700 text-base">₹{totalGrossProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-center">
-                    <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-                      <span className="text-[11px] text-gray-400 font-semibold block">Avg. DC Value</span>
-                      <span className="font-mono font-black text-gray-900 text-base">
-                        ₹{challans.length > 0 ? Math.round(totalValue / challans.length).toLocaleString('en-IN') : 0}
-                      </span>
-                    </div>
-                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
-                      <span className="text-[11px] text-emerald-700 font-semibold block">Overall Margin</span>
-                      <span className="font-mono font-black text-emerald-800 text-base">
-                        {overallMargin.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </div>
 
           {/* Document View Modal */}

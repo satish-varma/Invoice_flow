@@ -35,10 +35,13 @@ import {
   DollarSign,
   ArrowUpDown,
   Filter,
+  FileCheck,
+  Receipt,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { exportToCSV } from '@/lib/export';
 import { triggerHaptic } from '@/lib/haptics';
+import { DeliveryChallanAttachmentModal } from './delivery-challan-attachment-modal';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +53,22 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+const MONTH_OPTIONS = [
+  { value: 'all', label: 'All Months' },
+  { value: '0', label: 'January' },
+  { value: '1', label: 'February' },
+  { value: '2', label: 'March' },
+  { value: '3', label: 'April' },
+  { value: '4', label: 'May' },
+  { value: '5', label: 'June' },
+  { value: '6', label: 'July' },
+  { value: '7', label: 'August' },
+  { value: '8', label: 'September' },
+  { value: '9', label: 'October' },
+  { value: '10', label: 'November' },
+  { value: '11', label: 'December' },
+];
+
 interface ChallanListProps {
   challans: Challan[];
   onSelectChallan: (challan: Challan) => void;
@@ -60,6 +79,7 @@ interface ChallanListProps {
   onBulkDownload: (selectedChallans: Challan[]) => void;
   onBulkDuplicate: (selectedChallans: Challan[]) => void;
   onBulkDelete: (selectedIds: string[]) => void;
+  onRefresh?: () => void;
   isBulkDownloading?: boolean;
   showFinancials?: boolean;
 }
@@ -74,6 +94,7 @@ export function ChallanList({
   onBulkDownload,
   onBulkDuplicate,
   onBulkDelete,
+  onRefresh,
   isBulkDownloading = false,
   showFinancials = true,
 }: ChallanListProps) {
@@ -82,7 +103,15 @@ export function ChallanList({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [creatorFilter, setCreatorFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'this_month' | 'last_30'>('all');
+  const [monthFilter, setMonthFilter] = useState<string>('all');
+  const [yearFilter, setYearFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'value_desc' | 'value_asc'>('date_desc');
+
+  // Attachment Modal state
+  const [attachmentModal, setAttachmentModal] = useState<{
+    challan: Challan;
+    type: 'signed_copy' | 'invoice';
+  } | null>(null);
 
   // Confirm delete dialog state
   const [deleteDialogChallan, setDeleteDialogChallan] = useState<Challan | null>(null);
@@ -115,6 +144,20 @@ export function ChallanList({
     return Array.from(set).sort();
   }, [challans]);
 
+  // Distinct year list for filtering
+  const availableYears = useMemo(() => {
+    const set = new Set<string>();
+    challans.forEach((c) => {
+      if (c.dcDate) {
+        try {
+          const yr = new Date(c.dcDate).getFullYear();
+          if (!isNaN(yr)) set.add(yr.toString());
+        } catch {}
+      }
+    });
+    return Array.from(set).sort((a, b) => Number(b) - Number(a));
+  }, [challans]);
+
   const filteredChallans = useMemo(() => {
     return challans
       .filter((c) => {
@@ -129,7 +172,7 @@ export function ChallanList({
         // Creator filter
         const creatorOk = creatorFilter === 'all' || creator.toLowerCase() === creatorFilter.toLowerCase();
 
-        // Date filter
+        // Preset Date filter
         let dateOk = true;
         if (dateFilter !== 'all' && c.dcDate) {
           const dcD = new Date(c.dcDate);
@@ -140,7 +183,35 @@ export function ChallanList({
           }
         }
 
-        return searchOk && creatorOk && dateOk;
+        // Specific Year & Month Filter
+        let yearOk = true;
+        let monthOk = true;
+        if (c.dcDate) {
+          try {
+            const dcD = new Date(c.dcDate);
+            if (!isNaN(dcD.getTime())) {
+              if (yearFilter !== 'all') {
+                yearOk = dcD.getFullYear().toString() === yearFilter;
+              }
+              if (monthFilter !== 'all') {
+                monthOk = dcD.getMonth().toString() === monthFilter;
+              }
+            } else if (yearFilter !== 'all' || monthFilter !== 'all') {
+              yearOk = false;
+              monthOk = false;
+            }
+          } catch {
+            if (yearFilter !== 'all' || monthFilter !== 'all') {
+              yearOk = false;
+              monthOk = false;
+            }
+          }
+        } else if (yearFilter !== 'all' || monthFilter !== 'all') {
+          yearOk = false;
+          monthOk = false;
+        }
+
+        return searchOk && creatorOk && dateOk && yearOk && monthOk;
       })
       .sort((a, b) => {
         if (sortBy === 'date_asc') {
@@ -155,7 +226,7 @@ export function ChallanList({
         // Default: date_desc
         return new Date(b.dcDate || 0).getTime() - new Date(a.dcDate || 0).getTime();
       });
-  }, [challans, searchTerm, creatorFilter, dateFilter, sortBy]);
+  }, [challans, searchTerm, creatorFilter, dateFilter, monthFilter, yearFilter, sortBy]);
 
   const validFilteredWithId = filteredChallans.filter((c) => !!c.id);
   const isAllSelected =
@@ -337,12 +408,64 @@ export function ChallanList({
               </button>
             </div>
 
+            {/* Year Filter */}
+            {availableYears.length > 0 && (
+              <select
+                value={yearFilter}
+                onChange={(e) => {
+                  triggerHaptic('light');
+                  setYearFilter(e.target.value);
+                }}
+                className={`h-7 text-[11px] font-bold rounded-xl border px-2 py-0.5 shadow-2xs transition-all ${
+                  yearFilter !== 'all'
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                    : 'border-gray-200 bg-white text-gray-700'
+                }`}
+                title="Filter by Year"
+              >
+                <option value="all">All Years</option>
+                {availableYears.map((yr) => (
+                  <option key={yr} value={yr}>
+                    Year {yr}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Month Filter */}
+            <select
+              value={monthFilter}
+              onChange={(e) => {
+                triggerHaptic('light');
+                setMonthFilter(e.target.value);
+              }}
+              className={`h-7 text-[11px] font-bold rounded-xl border px-2 py-0.5 shadow-2xs transition-all ${
+                monthFilter !== 'all'
+                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                  : 'border-gray-200 bg-white text-gray-700'
+              }`}
+              title="Filter by Month"
+            >
+              {MONTH_OPTIONS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+
             {/* Creator Filter */}
             {allCreators.length > 1 && (
               <select
                 value={creatorFilter}
-                onChange={(e) => setCreatorFilter(e.target.value)}
-                className="h-7 text-[11px] font-bold rounded-xl border-gray-200 bg-white px-2 py-0.5 text-gray-700 shadow-2xs"
+                onChange={(e) => {
+                  triggerHaptic('light');
+                  setCreatorFilter(e.target.value);
+                }}
+                className={`h-7 text-[11px] font-bold rounded-xl border px-2 py-0.5 shadow-2xs transition-all ${
+                  creatorFilter !== 'all'
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                    : 'border-gray-200 bg-white text-gray-700'
+                }`}
               >
                 <option value="all">All Creators ({allCreators.length})</option>
                 {allCreators.map((cr) => (
@@ -351,6 +474,26 @@ export function ChallanList({
                   </option>
                 ))}
               </select>
+            )}
+
+            {/* Reset Filters Button if any custom filter is active */}
+            {(monthFilter !== 'all' || yearFilter !== 'all' || creatorFilter !== 'all' || dateFilter !== 'all' || searchTerm) && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setMonthFilter('all');
+                  setYearFilter('all');
+                  setCreatorFilter('all');
+                  setDateFilter('all');
+                  setSearchTerm('');
+                }}
+                className="h-7 px-2 text-[10px] font-bold rounded-xl text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 flex items-center gap-1 transition-all"
+                title="Reset all active filters"
+              >
+                <X className="w-3 h-3" />
+                <span>Reset</span>
+              </button>
             )}
 
             {/* Sort Dropdown */}
@@ -520,6 +663,59 @@ export function ChallanList({
                               </div>
                             </div>
                           )}
+
+                          {/* Mobile Attachment Buttons: Signed DC & Invoice */}
+                          <div className="flex items-center gap-2 pt-2 border-t border-gray-200/60">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                triggerHaptic('light');
+                                setAttachmentModal({ challan, type: 'signed_copy' });
+                              }}
+                              className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 border transition-all ${
+                                (challan.signedCopyUrls?.length ?? 0) > 0
+                                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-2xs'
+                                  : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                              }`}
+                              title="Upload or view Signed Delivery Challan copy"
+                            >
+                              <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Signed DC</span>
+                              {(challan.signedCopyUrls?.length ?? 0) > 0 ? (
+                                <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[9px] font-black">
+                                  {challan.signedCopyUrls!.length}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                triggerHaptic('light');
+                                setAttachmentModal({ challan, type: 'invoice' });
+                              }}
+                              className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 border transition-all ${
+                                (challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0
+                                  ? 'bg-blue-50 border-blue-300 text-blue-800 shadow-2xs'
+                                  : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                              }`}
+                              title="Upload or view Goods Received / Purchase Invoice"
+                            >
+                              <Receipt className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Invoice</span>
+                              {(challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0 ? (
+                                <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[9px] font-black">
+                                  {challan.goodsReceivedInvoiceUrls!.length}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
+                              )}
+                            </button>
+                          </div>
                         </div>
 
                         {/* Bottom Row: Amount + Actions */}
@@ -652,7 +848,7 @@ export function ChallanList({
                           <TableHead className="text-right w-[100px] text-emerald-700">Est. Profit</TableHead>
                         </>
                       )}
-                      <TableHead className="text-right w-[165px]">Actions</TableHead>
+                      <TableHead className="text-right w-[270px]">Files &amp; Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -783,6 +979,54 @@ export function ChallanList({
 
                           <TableCell className="py-3 text-right">
                             <div className="flex items-center justify-end gap-1">
+                              {/* Attachment: Signed DC */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  triggerHaptic('light');
+                                  setAttachmentModal({ challan, type: 'signed_copy' });
+                                }}
+                                className={`h-7 px-2 rounded-lg text-[11px] font-bold flex items-center gap-1 ${
+                                  (challan.signedCopyUrls?.length ?? 0) > 0
+                                    ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 shadow-2xs'
+                                    : 'text-gray-500 hover:text-emerald-700 hover:bg-emerald-50'
+                                }`}
+                                title="Upload or view Signed Delivery Challan"
+                              >
+                                <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                <span className="hidden xl:inline">Signed DC</span>
+                                {(challan.signedCopyUrls?.length ?? 0) > 0 && (
+                                  <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[9px] font-black">
+                                    {challan.signedCopyUrls!.length}
+                                  </span>
+                                )}
+                              </Button>
+
+                              {/* Attachment: Invoice */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  triggerHaptic('light');
+                                  setAttachmentModal({ challan, type: 'invoice' });
+                                }}
+                                className={`h-7 px-2 rounded-lg text-[11px] font-bold flex items-center gap-1 ${
+                                  (challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0
+                                    ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/80 shadow-2xs'
+                                    : 'text-gray-500 hover:text-blue-700 hover:bg-blue-50'
+                                }`}
+                                title="Upload or view Goods Received / Purchase Invoice"
+                              >
+                                <Receipt className="w-3.5 h-3.5 text-blue-600" />
+                                <span className="hidden xl:inline">Invoice</span>
+                                {(challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0 && (
+                                  <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[9px] font-black">
+                                    {challan.goodsReceivedInvoiceUrls!.length}
+                                  </span>
+                                )}
+                              </Button>
+
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -1007,6 +1251,19 @@ export function ChallanList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Attachment Modal (Signed DC / Invoice) ── */}
+      {attachmentModal && (
+        <DeliveryChallanAttachmentModal
+          isOpen={!!attachmentModal}
+          onClose={() => setAttachmentModal(null)}
+          challan={attachmentModal.challan}
+          type={attachmentModal.type}
+          onUpdate={() => {
+            onRefresh?.();
+          }}
+        />
+      )}
     </>
   );
 }

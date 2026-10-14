@@ -48,6 +48,10 @@ export interface Challan {
   revenue?: number;
   grossProfit?: number;
   marginPercent?: number;
+
+  // Document Attachments
+  signedCopyUrls?: string[];
+  goodsReceivedInvoiceUrls?: string[];
 }
 
 const CHALLANS_COLLECTION = 'challans';
@@ -229,6 +233,8 @@ export async function getChallans(): Promise<Challan[]> {
         createdBy: data.createdBy || data.creatorEmail || 'Satya',
         creatorEmail: data.creatorEmail || (data.createdBy?.includes('@') ? data.createdBy : 'satya@tgg.in'),
         creatorName: data.creatorName || (data.createdBy?.includes('@') ? data.createdBy.split('@')[0] : (data.createdBy || 'Satya')),
+        signedCopyUrls: data.signedCopyUrls || [],
+        goodsReceivedInvoiceUrls: data.goodsReceivedInvoiceUrls || [],
       } as Challan);
     });
 
@@ -238,6 +244,48 @@ export async function getChallans(): Promise<Challan[]> {
     console.error("Error in getChallans:", error);
     return [];
   }
+}
+
+export async function addChallanAttachment(
+  challanId: string,
+  url: string,
+  type: 'signed_copy' | 'invoice',
+  userEmail?: string | null
+): Promise<void> {
+  const docRef = doc(db, CHALLANS_COLLECTION, challanId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) throw new Error('Challan not found');
+
+  const data = docSnap.data();
+  const fieldName = type === 'signed_copy' ? 'signedCopyUrls' : 'goodsReceivedInvoiceUrls';
+  const currentUrls: string[] = data[fieldName] || [];
+
+  await updateDoc(docRef, {
+    [fieldName]: [...currentUrls, url],
+    updatedAt: serverTimestamp(),
+    updatedBy: userEmail || 'Admin',
+  });
+}
+
+export async function removeChallanAttachment(
+  challanId: string,
+  urlToRemove: string,
+  type: 'signed_copy' | 'invoice',
+  userEmail?: string | null
+): Promise<void> {
+  const docRef = doc(db, CHALLANS_COLLECTION, challanId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) throw new Error('Challan not found');
+
+  const data = docSnap.data();
+  const fieldName = type === 'signed_copy' ? 'signedCopyUrls' : 'goodsReceivedInvoiceUrls';
+  const currentUrls: string[] = data[fieldName] || [];
+
+  await updateDoc(docRef, {
+    [fieldName]: currentUrls.filter(u => u !== urlToRemove),
+    updatedAt: serverTimestamp(),
+    updatedBy: userEmail || 'Admin',
+  });
 }
 
 export async function deleteChallan(id: string): Promise<void> {

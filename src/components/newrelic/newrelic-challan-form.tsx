@@ -7,6 +7,8 @@ import { z } from 'zod';
 import { format } from 'date-fns';
 import { CalendarIcon, Plus, Trash2, FileDown, Save, Loader2, Sparkles, UploadCloud, FileText, Paperclip, AlertTriangle, MapPin, ChevronDown, ChevronUp, Calculator } from 'lucide-react';
 import { MrpCalculatorModal } from '@/components/newrelic/mrp-calculator-modal';
+import { useAuth } from '@/contexts/AuthContext';
+import { triggerHaptic } from '@/lib/haptics';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -544,7 +546,7 @@ export function NewRelicChallanForm({
       </datalist>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+      <div className="flex items-center justify-between gap-2 sm:gap-4">
         <div>
           <h2 className="text-lg sm:text-xl font-bold text-gray-900">
             {isEditing
@@ -557,6 +559,18 @@ export function NewRelicChallanForm({
             NewRelic · Returnable Items DC
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic('light');
+            setShowCalculator(true);
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 border border-purple-200/80 text-[#3b2fc9] text-xs font-bold shadow-2xs transition-all active:scale-95 shrink-0"
+          title="Open MRP % Calculator"
+        >
+          <Calculator className="w-3.5 h-3.5" />
+          <span>% Calc</span>
+        </button>
       </div>
 
       {/* DC Number + Location + Date row */}
@@ -916,7 +930,19 @@ export function NewRelicChallanForm({
       {/* ── Mobile Floating Quick Action Dock (2-Tier Non-Overlapping Layout) ── */}
       <div className="sm:hidden fixed bottom-4 left-3 right-3 z-50 max-w-lg mx-auto">
         {isDockMinimized ? (
-          <div className="flex justify-end">
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setShowCalculator(true);
+              }}
+              className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#181156] via-[#2a1d8f] to-[#3b2fc9] text-amber-300 border-2 border-indigo-400/40 shadow-lg flex items-center justify-center active:scale-95 transition-all"
+              title="MRP % Calculator"
+              aria-label="MRP % Calculator"
+            >
+              <Calculator className="w-5 h-5 stroke-[2.2]" />
+            </button>
             <button
               type="button"
               onClick={() => setIsDockMinimized(false)}

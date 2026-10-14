@@ -434,6 +434,18 @@ export default function NewRelicPage() {
             <div className="flex items-center gap-2 self-end sm:self-center">
               <button
                 type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowCalculator(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 active:scale-95 text-xs font-bold transition-all border border-amber-300/40"
+                title="Open MRP % Calculator"
+              >
+                <Calculator className="w-3.5 h-3.5" />
+                <span>% Calc</span>
+              </button>
+              <button
+                type="button"
                 onClick={handlePullRefresh}
                 disabled={isRefreshing}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-semibold text-white transition-all backdrop-blur-xs border border-white/15"
@@ -542,7 +554,7 @@ export default function NewRelicPage() {
                 triggerHaptic('light');
                 setShowCalculator(true);
               }}
-              className={`fixed ${showScrollTop ? 'left-4 bottom-34' : 'left-4 bottom-20'} z-30 w-12 h-12 rounded-full bg-gradient-to-tr from-[#181156] via-[#2a1d8f] to-[#3b2fc9] shadow-xl shadow-indigo-500/30 text-amber-300 border border-white/20 flex items-center justify-center sm:hidden active:scale-90 transition-all`}
+              className={`fixed ${showScrollTop ? 'left-4 bottom-38' : 'left-4 bottom-24'} z-50 w-12 h-12 rounded-full bg-gradient-to-tr from-[#181156] via-[#2a1d8f] to-[#3b2fc9] shadow-2xl shadow-indigo-950/70 text-amber-300 border-2 border-white/30 flex items-center justify-center sm:hidden active:scale-90 transition-all`}
               aria-label="MRP Calculator"
               title="MRP % Calculator"
             >
@@ -554,7 +566,7 @@ export default function NewRelicPage() {
               <button
                 type="button"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="fixed left-4 bottom-20 z-40 w-12 h-12 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-gray-200 text-gray-700 hover:text-[#3b2fc9] flex items-center justify-center sm:hidden active:scale-90 transition-transform animate-in fade-in"
+                className="fixed left-4 bottom-24 z-50 w-12 h-12 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-gray-200 text-gray-700 hover:text-[#3b2fc9] flex items-center justify-center sm:hidden active:scale-90 transition-transform animate-in fade-in"
                 aria-label="Scroll to top"
               >
                 <ArrowUp className="w-5 h-5 stroke-[2.2]" />

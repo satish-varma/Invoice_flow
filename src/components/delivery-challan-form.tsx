@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, Sheet, Calculator, DollarSign, TrendingUp, Percent, Sparkles, Eye, EyeOff, X, FileCheck, Receipt } from 'lucide-react';
-import { format } from "date-fns"
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, Sheet, Calculator, DollarSign, TrendingUp, Percent, Sparkles, Eye, EyeOff, X, FileCheck, Receipt, Paperclip, Download } from 'lucide-react';
+import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
 import { Challan, saveChallan, ChallanLineItem } from '@/services/challanService';
@@ -277,10 +277,17 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         setActiveAttachmentModal(type);
     };
 
-    const handleAttachmentUpdate = () => {
+    const handleAttachmentUpdate = (updatedUrls?: string[]) => {
+        if (activeAttachmentModal === 'signed_copy') {
+            const urls = updatedUrls || initialData?.signedCopyUrls || [];
+            setSignedCopyUrls([...urls]);
+            if (initialData) initialData.signedCopyUrls = [...urls];
+        } else if (activeAttachmentModal === 'invoice') {
+            const urls = updatedUrls || initialData?.goodsReceivedInvoiceUrls || [];
+            setGoodsReceivedInvoiceUrls([...urls]);
+            if (initialData) initialData.goodsReceivedInvoiceUrls = [...urls];
+        }
         if (initialData) {
-            setSignedCopyUrls([...(initialData.signedCopyUrls || [])]);
-            setGoodsReceivedInvoiceUrls([...(initialData.goodsReceivedInvoiceUrls || [])]);
             onChallanSave(initialData);
         }
     };
@@ -594,42 +601,42 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleOpenAttachmentModal('invoice')}
-                                    className={`h-8 text-xs font-bold rounded-xl ${
-                                        goodsReceivedInvoiceUrls.length > 0
-                                            ? 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100'
-                                            : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                                    }`}
-                                    title="Upload or view Goods Received / Purchase Invoice"
-                                >
-                                    <Receipt className="w-3.5 h-3.5 mr-1 text-blue-600" />
-                                    Invoice
-                                    {goodsReceivedInvoiceUrls.length > 0 && ` (${goodsReceivedInvoiceUrls.length})`}
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
                                     onClick={() => handleOpenAttachmentModal('signed_copy')}
                                     className={`h-8 text-xs font-bold rounded-xl ${
                                         signedCopyUrls.length > 0
-                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                                            ? 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100'
                                             : 'border-gray-200 text-gray-700 hover:bg-gray-50'
                                     }`}
-                                    title="Upload or view Signed Delivery Challan Copy"
+                                    title="Manage Signed Copies"
                                 >
-                                    <FileCheck className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-                                    Signed DC
+                                    <Paperclip className="w-3.5 h-3.5 mr-1 text-[#3b2fc9]" />
+                                    Signed Copies
                                     {signedCopyUrls.length > 0 && ` (${signedCopyUrls.length})`}
                                 </Button>
                                 <Button
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    onClick={handleCancelEdit}
-                                    className="h-8 text-xs font-bold rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                    onClick={() => handleOpenAttachmentModal('invoice')}
+                                    className={`h-8 text-xs font-bold rounded-xl ${
+                                        goodsReceivedInvoiceUrls.length > 0
+                                            ? 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100'
+                                            : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                                    }`}
+                                    title="Goods Received Invoice"
                                 >
-                                    <X className="w-3.5 h-3.5 mr-1" /> Cancel Edit
+                                    <FileText className="w-3.5 h-3.5 mr-1 text-[#3b2fc9]" />
+                                    Goods Invoice
+                                    {goodsReceivedInvoiceUrls.length > 0 && ` (${goodsReceivedInvoiceUrls.length})`}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleCancelEdit}
+                                    className="h-8 text-xs font-bold rounded-xl border-gray-300 text-gray-600 hover:bg-gray-100"
+                                >
+                                    <X className="w-3.5 h-3.5 mr-1" /> Cancel
                                 </Button>
                             </>
                         )}
@@ -1179,30 +1186,6 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 <PlusCircle className="mr-1.5 h-4 w-4" /> Add Item
                             </Button>
 
-                            {/* Upload Invoice Button */}
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleOpenAttachmentModal('invoice')}
-                                className={`h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs ${
-                                    goodsReceivedInvoiceUrls.length > 0
-                                        ? 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 ring-1 ring-blue-300'
-                                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-blue-700'
-                                }`}
-                                title={initialData ? "Upload or view Goods Received / Purchase Invoice" : "Save challan first to upload invoice"}
-                            >
-                                <Receipt className="w-4 h-4 text-blue-600" />
-                                <span>Upload Invoice</span>
-                                {goodsReceivedInvoiceUrls.length > 0 ? (
-                                    <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[10px] font-black">
-                                        {goodsReceivedInvoiceUrls.length}
-                                    </span>
-                                ) : (
-                                    <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
-                                )}
-                            </Button>
-
                             {/* Upload Signed DC Copy Button */}
                             <Button
                                 type="button"
@@ -1211,16 +1194,40 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 onClick={() => handleOpenAttachmentModal('signed_copy')}
                                 className={`h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs ${
                                     signedCopyUrls.length > 0
-                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 ring-1 ring-emerald-300'
-                                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-emerald-700'
+                                        ? 'bg-blue-50 text-[#3b2fc9] border-blue-300 hover:bg-blue-100 ring-1 ring-blue-300'
+                                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-[#3b2fc9]'
                                 }`}
-                                title={initialData ? "Upload or view Signed Delivery Challan Copy" : "Save challan first to upload signed copy"}
+                                title={initialData ? "Manage Signed Copies" : "Save challan first to upload signed copy"}
                             >
-                                <FileCheck className="w-4 h-4 text-emerald-600" />
-                                <span>Upload Signed DC Copy</span>
+                                <Paperclip className="w-4 h-4 text-[#3b2fc9]" />
+                                <span>Manage Signed Copies</span>
                                 {signedCopyUrls.length > 0 ? (
-                                    <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[10px] font-black">
+                                    <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
                                         {signedCopyUrls.length}
+                                    </span>
+                                ) : (
+                                    <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
+                                )}
+                            </Button>
+
+                            {/* Goods Received Invoice Button */}
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenAttachmentModal('invoice')}
+                                className={`h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs ${
+                                    goodsReceivedInvoiceUrls.length > 0
+                                        ? 'bg-blue-50 text-[#3b2fc9] border-blue-300 hover:bg-blue-100 ring-1 ring-blue-300'
+                                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-[#3b2fc9]'
+                                }`}
+                                title={initialData ? "Goods Received Invoice" : "Save challan first to upload invoice"}
+                            >
+                                <FileText className="w-4 h-4 text-[#3b2fc9]" />
+                                <span>Goods Received Invoice</span>
+                                {goodsReceivedInvoiceUrls.length > 0 ? (
+                                    <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
+                                        {goodsReceivedInvoiceUrls.length}
                                     </span>
                                 ) : (
                                     <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
@@ -1382,46 +1389,72 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                             <span>Total Challan Value</span>
                             <span className="font-mono text-lg text-indigo-700">₹{total.toFixed(2)}</span>
                         </div>
-
-                        {/* Footer Action Buttons */}
-                        <div className="pt-3 border-t border-gray-200 space-y-2">
-                            <div className="flex items-center gap-2">
-                                {initialData && (
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleCancelEdit}
-                                        className="h-9 px-3 rounded-xl border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold"
-                                    >
-                                        <X className="w-3.5 h-3.5 mr-1 text-red-500" /> Cancel Edit
-                                    </Button>
-                                )}
-                                <Button
-                                    type="button"
-                                    onClick={() => handleSaveChallan(false)}
-                                    disabled={isSaving}
-                                    size="sm"
-                                    className="flex-1 h-9 text-xs font-bold rounded-xl bg-gray-900 hover:bg-gray-800 text-white shadow-xs"
-                                >
-                                    {isSaving ? <Loader className="animate-spin w-3.5 h-3.5 mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
-                                    {initialData ? 'Update Only' : 'Save Only'}
-                                </Button>
-                            </div>
-                            <Button
-                                type="button"
-                                onClick={() => handleSaveChallan(true)}
-                                disabled={isSaving}
-                                size="sm"
-                                className="w-full h-9 text-xs font-black rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm"
-                            >
-                                {isSaving ? <Loader className="animate-spin w-3.5 h-3.5 mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
-                                {initialData ? 'Update & Download PDF' : 'Save & Download PDF'}
-                            </Button>
-                        </div>
                     </div>
                 </CardFooter>
             </Card>
+
+            {/* Signed Copies & Invoice Management (only when editing) */}
+            {initialData?.id && (
+                <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full sm:flex-1 h-11 sm:h-10 gap-2 border-gray-300 text-gray-700 bg-white hover:bg-gray-50 shadow-xs font-semibold"
+                        onClick={() => handleOpenAttachmentModal('signed_copy')}
+                    >
+                        <Paperclip className="h-4 w-4 text-[#3b2fc9]" />
+                        Manage Signed Copies {(signedCopyUrls || []).length > 0 && `(${signedCopyUrls.length})`}
+                    </Button>
+                    
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full sm:flex-1 h-11 sm:h-10 gap-2 border-gray-300 text-gray-700 bg-white hover:bg-gray-50 shadow-xs font-semibold"
+                        onClick={() => handleOpenAttachmentModal('invoice')}
+                    >
+                        <FileText className="h-4 w-4 text-[#3b2fc9]" />
+                        Goods Received Invoice {(goodsReceivedInvoiceUrls || []).length > 0 && `(${goodsReceivedInvoiceUrls.length})`}
+                    </Button>
+                </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-2">
+                {initialData && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full sm:flex-1 h-11 sm:h-10 text-gray-500 border-gray-300 hover:bg-gray-100 font-medium"
+                        disabled={isSaving}
+                        onClick={handleCancelEdit}
+                    >
+                        Cancel
+                    </Button>
+                )}
+                <Button
+                    type="button"
+                    className="w-full sm:flex-1 h-11 sm:h-10 bg-[#3b2fc9] hover:bg-[#2d23a0] text-white gap-2 font-bold shadow-sm"
+                    disabled={isSaving}
+                    onClick={() => handleSaveChallan(true)}
+                >
+                    {isSaving ? (
+                        <Loader className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <Download className="h-4 w-4" />
+                    )}
+                    {initialData ? 'Update & Download' : 'Save & Download PDF'}
+                </Button>
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full sm:flex-1 h-11 sm:h-10 gap-2 border-gray-300 text-gray-800 hover:bg-gray-50 font-bold shadow-xs"
+                    disabled={isSaving}
+                    onClick={() => handleSaveChallan(false)}
+                >
+                    <Save className="h-4 w-4 text-gray-600" />
+                    {initialData ? 'Update Only' : 'Save Only'}
+                </Button>
+            </div>
 
             {/* ── Mobile floating action dock ── */}
             <div className="sm:hidden fixed bottom-20 left-3 right-3 z-40 bg-slate-950/95 text-white backdrop-blur-xl border border-indigo-500/30 shadow-2xl rounded-2xl p-2.5 flex items-center gap-2 no-print ring-1 ring-white/10">

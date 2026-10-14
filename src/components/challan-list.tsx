@@ -37,6 +37,8 @@ import {
   Filter,
   FileCheck,
   Receipt,
+  Paperclip,
+  FileText,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { exportToCSV } from '@/lib/export';
@@ -52,6 +54,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+
+export function formatShortDcNumber(dcNumber: string): string {
+  if (!dcNumber) return '';
+  if (/^TGG-\d{4}$/.test(dcNumber)) return dcNumber;
+  const match = dcNumber.match(/(\d+)$/);
+  if (match) {
+    return `TGG-${match[1].padStart(4, '0')}`;
+  }
+  return dcNumber;
+}
+
+export function getFirstWord(name?: string | null): string {
+  if (!name) return '—';
+  const trimmed = name.trim();
+  if (!trimmed) return '—';
+  return trimmed.split(/[\s,]+/)[0];
+}
 
 const MONTH_OPTIONS = [
   { value: 'all', label: 'All Months' },
@@ -589,14 +608,15 @@ export function ChallanList({
                                   onSelectChallan(challan);
                                 }}
                                 className="font-mono font-bold text-sm text-[#3b2fc9] hover:underline cursor-pointer truncate"
+                                title={challan.dcNumber}
                               >
-                                {challan.dcNumber}
+                                {formatShortDcNumber(challan.dcNumber)}
                               </span>
                               <button
                                 type="button"
                                 onClick={(e) => handleCopyDcNumber(e, challan.dcNumber)}
                                 className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-                                title="Copy DC #"
+                                title={`Copy ${challan.dcNumber}`}
                               >
                                 {copiedId === challan.dcNumber ? (
                                   <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -620,8 +640,11 @@ export function ChallanList({
                               <span className="text-[10px] uppercase font-bold text-indigo-600 tracking-wider block">
                                 Consignee (Ship To)
                               </span>
-                              <p className="font-bold text-xs text-gray-900 truncate">
-                                {consigneeName}
+                              <p className="font-bold text-xs text-gray-900 truncate" title={consigneeName}>
+                                {getFirstWord(consigneeName)}
+                                <span className="font-normal text-gray-400 ml-1.5 text-[11px] truncate">
+                                  ({consigneeName})
+                                </span>
                               </p>
                               {hasDifferentBillTo && (
                                 <p className="text-[11px] text-gray-500 truncate mt-0.5">
@@ -821,7 +844,7 @@ export function ChallanList({
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent bg-gray-50/70 border-b border-gray-100 text-xs font-bold text-gray-700">
-                      <TableHead className="w-[44px] px-3">
+                      <TableHead className="w-[36px] px-2.5">
                         <button
                           type="button"
                           onClick={handleToggleSelectAll}
@@ -835,20 +858,16 @@ export function ChallanList({
                           )}
                         </button>
                       </TableHead>
-                      <TableHead className="w-[130px]">DC #</TableHead>
-                      <TableHead>Consignee (Ship To)</TableHead>
-                      <TableHead className="w-[105px]">Date</TableHead>
-                      <TableHead className="w-[110px]">Created By</TableHead>
-                      <TableHead className="w-[75px]">Items</TableHead>
-                      <TableHead className="text-right w-[110px]">Total Value</TableHead>
+                      <TableHead className="w-[100px]">DC #</TableHead>
+                      <TableHead className="w-[85px]">Consignee</TableHead>
+                      <TableHead className="w-[90px]">Date</TableHead>
+                      <TableHead className="w-[85px]">Created By</TableHead>
+                      <TableHead className="w-[45px] text-center">Items</TableHead>
+                      <TableHead className="text-right w-[140px]">Total &amp; Profit</TableHead>
                       {showFinancials && (
-                        <>
-                          <TableHead className="text-right w-[95px] text-amber-700">P.Cost</TableHead>
-                          <TableHead className="text-right w-[95px] text-red-600">Comm (5.5%)</TableHead>
-                          <TableHead className="text-right w-[100px] text-emerald-700">Est. Profit</TableHead>
-                        </>
+                        <TableHead className="text-right w-[80px] text-amber-700">P.Cost</TableHead>
                       )}
-                      <TableHead className="text-right w-[270px]">Files &amp; Actions</TableHead>
+                      <TableHead className="text-right w-[205px]">Files &amp; Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -856,10 +875,6 @@ export function ChallanList({
                       const itemCount = challan.lineItems?.length || 0;
                       const isSelected = !!challan.id && selectedIds.has(challan.id);
                       const consigneeName = challan.shipToName || challan.billToName || '—';
-                      const hasDifferentBillTo =
-                        challan.billToName &&
-                        challan.shipToName &&
-                        challan.shipToName.trim().toLowerCase() !== challan.billToName.trim().toLowerCase();
                       const creator = getCreator(challan);
                       const pCost = Number(challan.procurementCost) || 0;
                       const comm = Number(challan.commissionAmount) || 0;
@@ -873,7 +888,7 @@ export function ChallanList({
                             isSelected ? 'bg-indigo-50/50 hover:bg-indigo-50/70' : 'hover:bg-slate-50/80'
                           }`}
                         >
-                          <TableCell className="px-3 py-3">
+                          <TableCell className="px-2.5 py-2.5">
                             {challan.id && (
                               <button
                                 type="button"
@@ -889,96 +904,89 @@ export function ChallanList({
                             )}
                           </TableCell>
 
-                          <TableCell className="py-3">
-                            <div className="flex items-center gap-1.5">
+                          <TableCell className="py-2.5">
+                            <div className="flex items-center gap-1">
                               <span
                                 onClick={() => {
                                   triggerHaptic('light');
                                   onSelectChallan(challan);
                                 }}
-                                className="font-mono font-bold text-sm text-[#3b2fc9] hover:underline cursor-pointer"
+                                className="font-mono font-bold text-xs text-[#3b2fc9] hover:underline cursor-pointer"
+                                title={challan.dcNumber}
                               >
-                                {challan.dcNumber}
+                                {formatShortDcNumber(challan.dcNumber)}
                               </span>
                               <button
                                 type="button"
                                 onClick={(e) => handleCopyDcNumber(e, challan.dcNumber)}
-                                className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-all"
-                                title="Copy DC #"
+                                className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-all"
+                                title={`Copy ${challan.dcNumber}`}
                               >
                                 {copiedId === challan.dcNumber ? (
-                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                  <Check className="w-3 h-3 text-emerald-600" />
                                 ) : (
-                                  <Copy className="w-3.5 h-3.5" />
+                                  <Copy className="w-3 h-3" />
                                 )}
                               </button>
                             </div>
                           </TableCell>
 
-                          <TableCell className="py-3 max-w-[240px]">
-                            <div className="font-semibold text-gray-900 truncate">
-                              {consigneeName}
+                          <TableCell className="py-2.5 max-w-[95px]">
+                            <div className="font-semibold text-gray-900 truncate text-xs" title={consigneeName}>
+                              {getFirstWord(consigneeName)}
                             </div>
-                            {hasDifferentBillTo && (
-                              <div className="text-[11px] text-gray-500 truncate">
-                                <span className="font-medium text-gray-400">Bill To:</span> {challan.billToName}
-                              </div>
-                            )}
                           </TableCell>
 
-                          <TableCell className="py-3 text-gray-500 font-medium whitespace-nowrap">
+                          <TableCell className="py-2.5 text-gray-500 font-medium whitespace-nowrap text-xs">
                             {challan.dcDate
                               ? format(new Date(challan.dcDate), 'dd MMM yyyy')
                               : '—'}
                           </TableCell>
 
-                          <TableCell className="py-3">
-                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 max-w-[110px]">
+                          <TableCell className="py-2.5">
+                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 max-w-[85px]">
                               <span className="w-3.5 h-3.5 rounded-full bg-indigo-200 text-indigo-800 font-bold text-[8px] flex items-center justify-center shrink-0">
                                 {creator.charAt(0).toUpperCase()}
                               </span>
-                              <span className="truncate font-semibold">{creator}</span>
+                              <span className="truncate font-semibold text-[11px]">{creator}</span>
                             </div>
                           </TableCell>
 
-                          <TableCell className="py-3">
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80">
+                          <TableCell className="py-2.5 text-center">
+                            <span className="inline-flex items-center justify-center text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80">
                               {itemCount}
                             </span>
                           </TableCell>
 
-                          <TableCell className="py-3 text-right font-mono font-black text-gray-900 tabular-nums">
-                            ₹{(Number(challan.total) || 0).toLocaleString('en-IN', {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
+                          <TableCell className="py-2.5 text-right font-mono">
+                            <div className="font-black text-gray-900 text-xs tabular-nums">
+                              ₹{(Number(challan.total) || 0).toLocaleString('en-IN', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </div>
+                            {showFinancials && (comm > 0 || profit !== 0) && (
+                              <div className="text-[10px] text-gray-500 flex items-center justify-end gap-1 mt-0.5 leading-tight">
+                                <span className="text-red-600 font-semibold" title="Commission (5.5%)">
+                                  -₹{comm.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                                </span>
+                                <span className="text-gray-300">|</span>
+                                <span className="text-emerald-700 font-bold" title="Estimated Profit">
+                                  ₹{profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                                  {margin !== 0 && ` (${margin.toFixed(0)}%)`}
+                                </span>
+                              </div>
+                            )}
                           </TableCell>
 
                           {showFinancials && (
-                            <>
-                              <TableCell className="py-3 text-right font-mono font-bold text-amber-800 tabular-nums">
-                                ₹{pCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                              </TableCell>
-                              <TableCell className="py-3 text-right font-mono font-semibold text-red-600 tabular-nums">
-                                -₹{comm.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                              </TableCell>
-                              <TableCell className="py-3 text-right">
-                                <div className="space-y-0.5">
-                                  <span className="font-mono font-black text-emerald-700 block tabular-nums">
-                                    ₹{profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                                  </span>
-                                  {margin !== 0 && (
-                                    <span className="text-[10px] text-gray-400 font-mono font-semibold block">
-                                      {margin.toFixed(0)}%
-                                    </span>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </>
+                            <TableCell className="py-2.5 text-right font-mono font-bold text-amber-800 tabular-nums text-xs">
+                              ₹{pCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                            </TableCell>
                           )}
 
-                          <TableCell className="py-3 text-right">
-                            <div className="flex items-center justify-end gap-1">
+                          <TableCell className="py-2.5 text-right">
+                            <div className="flex items-center justify-end gap-0.5">
                               {/* Attachment: Signed DC */}
                               <Button
                                 variant="ghost"
@@ -987,17 +995,17 @@ export function ChallanList({
                                   triggerHaptic('light');
                                   setAttachmentModal({ challan, type: 'signed_copy' });
                                 }}
-                                className={`h-7 px-2 rounded-lg text-[11px] font-bold flex items-center gap-1 ${
+                                className={`h-7 px-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 ${
                                   (challan.signedCopyUrls?.length ?? 0) > 0
                                     ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 shadow-2xs'
-                                    : 'text-gray-500 hover:text-emerald-700 hover:bg-emerald-50'
+                                    : 'text-gray-400 hover:text-emerald-700 hover:bg-emerald-50'
                                 }`}
-                                title="Upload or view Signed Delivery Challan"
+                                title="Manage Signed Copies"
                               >
-                                <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
-                                <span className="hidden xl:inline">Signed DC</span>
+                                <Paperclip className="w-3 h-3 text-emerald-600" />
+                                <span className="hidden xl:inline">Signed</span>
                                 {(challan.signedCopyUrls?.length ?? 0) > 0 && (
-                                  <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[9px] font-black">
+                                  <span className="ml-0.5 px-1 py-0.2 rounded-full bg-emerald-600 text-white text-[8px] font-black">
                                     {challan.signedCopyUrls!.length}
                                   </span>
                                 )}
@@ -1011,17 +1019,17 @@ export function ChallanList({
                                   triggerHaptic('light');
                                   setAttachmentModal({ challan, type: 'invoice' });
                                 }}
-                                className={`h-7 px-2 rounded-lg text-[11px] font-bold flex items-center gap-1 ${
+                                className={`h-7 px-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 ${
                                   (challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0
                                     ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/80 shadow-2xs'
-                                    : 'text-gray-500 hover:text-blue-700 hover:bg-blue-50'
+                                    : 'text-gray-400 hover:text-blue-700 hover:bg-blue-50'
                                 }`}
-                                title="Upload or view Goods Received / Purchase Invoice"
+                                title="Goods Received Invoice"
                               >
-                                <Receipt className="w-3.5 h-3.5 text-blue-600" />
+                                <FileText className="w-3 h-3 text-blue-600" />
                                 <span className="hidden xl:inline">Invoice</span>
                                 {(challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0 && (
-                                  <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[9px] font-black">
+                                  <span className="ml-0.5 px-1 py-0.2 rounded-full bg-blue-600 text-white text-[8px] font-black">
                                     {challan.goodsReceivedInvoiceUrls!.length}
                                   </span>
                                 )}
@@ -1259,7 +1267,15 @@ export function ChallanList({
           onClose={() => setAttachmentModal(null)}
           challan={attachmentModal.challan}
           type={attachmentModal.type}
-          onUpdate={() => {
+          title={attachmentModal.type === 'signed_copy' ? 'Signed Copies' : 'Goods Received Invoice'}
+          onUpdate={(updatedUrls) => {
+            if (updatedUrls && attachmentModal.challan) {
+              if (attachmentModal.type === 'signed_copy') {
+                attachmentModal.challan.signedCopyUrls = updatedUrls;
+              } else {
+                attachmentModal.challan.goodsReceivedInvoiceUrls = updatedUrls;
+              }
+            }
             onRefresh?.();
           }}
         />

@@ -1,15 +1,17 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Loader2, Paperclip, UploadCloud, Trash2, Eye, X, Download, FileText, CheckCircle2 } from 'lucide-react';
+import { Loader2, Paperclip, UploadCloud, Trash2, Camera, Eye, X, Download, FileText } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Challan, addChallanAttachment, removeChallanAttachment } from '@/services/challanService';
 import { uploadStorageFile, deleteStorageFile } from '@/services/storageService';
@@ -20,8 +22,9 @@ interface DeliveryChallanAttachmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   challan: Challan | null;
-  onUpdate: () => void;
-  type: 'signed_copy' | 'invoice';
+  onUpdate?: (updatedUrls?: string[]) => void;
+  title?: string;
+  type: 'signed_copy' | 'invoice' | 'goods_received';
 }
 
 export function DeliveryChallanAttachmentModal({
@@ -29,6 +32,7 @@ export function DeliveryChallanAttachmentModal({
   onClose,
   challan,
   onUpdate,
+  title,
   type,
 }: DeliveryChallanAttachmentModalProps) {
   const { toast } = useToast();
@@ -36,46 +40,79 @@ export function DeliveryChallanAttachmentModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [deletingUrl, setDeletingUrl] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+  const isSigned = type === 'signed_copy';
+  const defaultTitle = isSigned ? 'Signed Copies' : 'Goods Received Invoice';
+  const displayTitle = title || defaultTitle;
+  const folderName = isSigned ? 'delivery-challan-signed-dcs' : 'delivery-challan-invoices';
+  const prefix = isSigned ? 'signed_' : 'goods_';
+  const attachmentType = isSigned ? 'signed_copy' : 'invoice';
+
+  // Use local state to instantly reflect uploads and deletions in the UI
+  const initialUrls = challan
+    ? isSigned
+      ? challan.signedCopyUrls
+      : challan.goodsReceivedInvoiceUrls
+    : [];
+  const [localCopies, setLocalCopies] = useState<string[]>(initialUrls || []);
+
+  // Update localCopies if challan prop changes
+  React.useEffect(() => {
+    if (challan) {
+      const urls = isSigned ? challan.signedCopyUrls : challan.goodsReceivedInvoiceUrls;
+      setLocalCopies(urls || []);
+    }
+  }, [challan, isSigned]);
+
   if (!challan) return null;
 
-  const title = type === 'signed_copy' ? 'Signed DC Copy' : 'Goods Received / Purchase Invoice';
-  const folderName = type === 'signed_copy' ? 'delivery-challan-signed-dcs' : 'delivery-challan-invoices';
-  const prefix = type === 'signed_copy' ? 'signed_' : 'invoice_';
-  const currentUrls: string[] =
-    (type === 'signed_copy' ? challan.signedCopyUrls : challan.goodsReceivedInvoiceUrls) || [];
+  const safeDcNumber = (challan.dcNumber || 'dc').replace(/[/\\?%*:|"<>#]/g, '-');
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0 || !challan.id) return;
+  const processFiles = async (fileList: FileList | File[]) => {
+    if (!challan.id || fileList.length === 0) return;
 
     setIsUploading(true);
     triggerHaptic('medium');
 
     try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (file.size > 15 * 1024 * 1024) {
-          throw new Error(`File ${file.name} is too large (max 15MB)`);
+      const uploadedUrls: string[] = [];
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+
+        // Basic validation
+        if (file.size > 12 * 1024 * 1024) {
+          throw new Error(`File ${file.name} is too large (max 12MB)`);
         }
 
-        const url = await uploadStorageFile(challan.dcNumber, file, folderName, prefix);
-        await addChallanAttachment(challan.id, url, type, user?.email);
+        const url = await uploadStorageFile(safeDcNumber, file, folderName, prefix);
+        await addChallanAttachment(challan.id, url, attachmentType, user?.email || null);
+        uploadedUrls.push(url);
+      }
+
+      const nextCopies = [...localCopies, ...uploadedUrls];
+      setLocalCopies(nextCopies);
+
+      // Mutate local challan object in place for instant reactivity
+      if (isSigned) {
+        challan.signedCopyUrls = nextCopies;
+      } else {
+        challan.goodsReceivedInvoiceUrls = nextCopies;
       }
 
       toast({
-        title: 'Upload Successful',
-        description: `${title} uploaded for ${challan.dcNumber}.`,
+        title: 'Success',
+        description: `${displayTitle} uploaded successfully for ${challan.dcNumber}`,
       });
-      onUpdate();
+      onUpdate?.(nextCopies);
     } catch (err: any) {
       console.error('Attachment upload error:', err);
       toast({
         variant: 'destructive',
-        title: 'Upload Failed',
-        description: err.message || 'Could not upload attachment.',
+        title: 'Upload failed',
+        description: err.message || 'Could not upload file.',
       });
     } finally {
       setIsUploading(false);
@@ -83,26 +120,51 @@ export function DeliveryChallanAttachmentModal({
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    await processFiles(files);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await processFiles(e.dataTransfer.files);
+    }
+  };
+
   const handleDelete = async (url: string) => {
     if (!challan.id) return;
-    if (!confirm('Are you sure you want to delete this document attachment?')) return;
+    if (!confirm(`Are you sure you want to delete this ${displayTitle.toLowerCase()}?`)) return;
 
     triggerHaptic('medium');
     setDeletingUrl(url);
 
     try {
       await deleteStorageFile(url);
-      await removeChallanAttachment(challan.id, url, type, user?.email);
+      await removeChallanAttachment(challan.id, url, attachmentType, user?.email || null);
+
+      const nextCopies = localCopies.filter((u) => u !== url);
+      setLocalCopies(nextCopies);
+
+      // Mutate local challan object in place
+      if (isSigned) {
+        challan.signedCopyUrls = nextCopies;
+      } else {
+        challan.goodsReceivedInvoiceUrls = nextCopies;
+      }
+
       toast({
-        title: 'Document Deleted',
-        description: 'Attachment removed successfully.',
+        title: 'Deleted',
+        description: 'File removed successfully',
       });
-      onUpdate();
+      onUpdate?.(nextCopies);
     } catch (err: any) {
       console.error('Delete attachment error:', err);
       toast({
         variant: 'destructive',
-        title: 'Delete Failed',
+        title: 'Delete failed',
         description: err.message || 'Could not delete attachment.',
       });
     } finally {
@@ -110,185 +172,246 @@ export function DeliveryChallanAttachmentModal({
     }
   };
 
-  const handleDownload = (url: string) => {
-    triggerHaptic('light');
-    const isPdf = url.toLowerCase().includes('.pdf');
-    const safeDc = (challan.dcNumber || 'dc').replace(/[/\\?%*:|"<>#]/g, '-');
-    const filename = `${prefix}${safeDc}.${isPdf ? 'pdf' : 'jpg'}`;
-    const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+  const handleDownload = (url: string, isPdf: boolean) => {
+    try {
+      triggerHaptic('light');
+      const filename = `${prefix}${safeDcNumber}.${isPdf ? 'pdf' : 'jpg'}`;
+      const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
 
-    const a = document.createElement('a');
-    a.href = proxyUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+      const link = document.createElement('a');
+      link.href = proxyUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      window.open(url, '_blank');
+    }
   };
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-md rounded-2xl p-5 bg-white shadow-2xl border border-gray-200">
-          <DialogHeader className="border-b pb-3">
-            <div className="flex items-center gap-2 text-indigo-700">
-              <Paperclip className="h-5 w-5" />
-              <DialogTitle className="text-base font-bold text-gray-900">
-                {title}
-              </DialogTitle>
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden rounded-2xl">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-100 bg-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[#3b2fc9]">
+                {isSigned ? <Paperclip className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+                <DialogTitle className="text-xl font-bold">{displayTitle}</DialogTitle>
+              </div>
+              <Badge variant="outline" className="font-mono text-sm bg-blue-50 text-blue-700 border-blue-200">
+                {challan.dcNumber}
+              </Badge>
             </div>
             <DialogDescription className="text-xs text-gray-500 pt-1">
-              DC Number: <span className="font-mono font-bold text-gray-900">{challan.dcNumber}</span> • Consignee:{' '}
-              <span className="font-semibold text-gray-800">{challan.shipToName || challan.billToName || 'Consignee'}</span>
+              Upload and manage {displayTitle.toLowerCase()} for the delivery challan. You can upload images or PDF files.
             </DialogDescription>
           </DialogHeader>
 
-          {/* Upload Button Area */}
-          <div className="pt-2">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-              className="hidden"
-              multiple
-              accept="image/*,application/pdf"
-              disabled={isUploading}
-            />
+          <div className="flex-1 overflow-y-auto p-6 bg-gray-50 flex flex-col gap-6">
+            {/* Upload Area */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              className={`bg-white border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center gap-4 transition-colors ${
+                isDragging
+                  ? 'border-[#3b2fc9] bg-blue-50'
+                  : 'border-gray-200 hover:border-[#3b2fc9] hover:bg-blue-50/50'
+              }`}
+            >
+              <div className="bg-blue-100 p-3 rounded-full text-[#3b2fc9]">
+                <UploadCloud className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">Click to upload or drag and drop</p>
+                <p className="text-xs text-gray-500 mt-1">SVG, PNG, JPG or PDF (max. 12MB)</p>
+              </div>
 
+              <div className="flex gap-3 mt-2">
+                <Button
+                  onClick={() => {
+                    triggerHaptic('light');
+                    fileInputRef.current?.click();
+                  }}
+                  disabled={isUploading}
+                  variant="default"
+                  className="bg-[#3b2fc9] hover:bg-[#2a229c] text-white"
+                >
+                  {isUploading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Paperclip className="h-4 w-4 mr-2" />
+                  )}
+                  Select File(s)
+                </Button>
+
+                {/* Native mobile camera capture support */}
+                <div className="relative sm:hidden">
+                  <Button variant="outline" disabled={isUploading} className="overflow-hidden">
+                    <Camera className="h-4 w-4 mr-2 text-gray-600" />
+                    Take Photo
+                  </Button>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    onChange={handleFileUpload}
+                    disabled={isUploading}
+                  />
+                </div>
+              </div>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                multiple
+                accept="image/*,application/pdf"
+                onChange={handleFileUpload}
+              />
+            </div>
+
+            {/* Gallery */}
+            <div>
+              <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                Uploaded Files <Badge variant="secondary">{localCopies.length}</Badge>
+              </h4>
+
+              {localCopies.length === 0 ? (
+                <div className="text-center py-8 bg-white rounded-lg border border-gray-100 text-gray-500 text-sm">
+                  No {displayTitle.toLowerCase()} uploaded yet.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {localCopies.map((url, idx) => {
+                    const isPdf = url.toLowerCase().includes('.pdf');
+                    return (
+                      <div
+                        key={idx}
+                        className="relative group bg-white border border-gray-200 rounded-lg overflow-hidden aspect-square flex items-center justify-center shadow-xs hover:shadow-md transition-all"
+                      >
+                        {isPdf ? (
+                          <div className="flex flex-col items-center gap-2 text-red-500">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="32"
+                              height="32"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                              <polyline points="14 2 14 8 20 8" />
+                            </svg>
+                            <span className="text-xs font-medium text-gray-600">PDF Document</span>
+                          </div>
+                        ) : (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={url}
+                            alt={`${displayTitle} ${idx + 1}`}
+                            className="object-cover w-full h-full"
+                          />
+                        )}
+
+                        {/* Overlay Actions */}
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[2px]">
+                          {isPdf ? (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 bg-white rounded-full text-gray-900 hover:text-[#3b2fc9] hover:bg-blue-50 transition-colors"
+                              title="Open PDF"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </a>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewImage(url)}
+                              className="p-2 bg-white rounded-full text-gray-900 hover:text-[#3b2fc9] hover:bg-blue-50 transition-colors"
+                              title="Preview Image"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => handleDownload(url, isPdf)}
+                            className="p-2 bg-white rounded-full text-gray-900 hover:text-[#3b2fc9] hover:bg-blue-50 transition-colors"
+                            title="Download"
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(url)}
+                            disabled={deletingUrl === url}
+                            className="p-2 bg-white rounded-full text-gray-900 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Delete"
+                          >
+                            {deletingUrl === url ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-red-600" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="px-6 py-4 border-t border-gray-100 bg-white sm:justify-between">
+            <div className="text-sm text-gray-500 hidden sm:block">
+              Changes are saved automatically.
+            </div>
             <Button
               type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                fileInputRef.current?.click();
-              }}
-              disabled={isUploading}
-              className="w-full h-11 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 text-indigo-700 text-xs font-bold flex items-center justify-center gap-2 shadow-2xs transition-all"
+              onClick={onClose}
+              className="w-full sm:w-auto bg-gray-900 hover:bg-gray-800 text-white"
             >
-              {isUploading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
-                  <span>Uploading to Cloud Storage...</span>
-                </>
-              ) : (
-                <>
-                  <UploadCloud className="h-4 w-4 text-indigo-600" />
-                  <span>Upload {title} (PDF or Image)</span>
-                </>
-              )}
+              Done
             </Button>
-          </div>
-
-          {/* Existing Uploaded Files List */}
-          <div className="space-y-2 max-h-[300px] overflow-y-auto pt-2">
-            {currentUrls.length === 0 ? (
-              <div className="p-6 text-center rounded-xl bg-gray-50 border border-dashed border-gray-200">
-                <p className="text-xs text-gray-400 font-medium">No files uploaded yet.</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">
-                  Click the button above to upload signed receipts or scanned invoices.
-                </p>
-              </div>
-            ) : (
-              currentUrls.map((url, index) => {
-                const isPdf = url.toLowerCase().includes('.pdf');
-                const isDeleting = deletingUrl === url;
-
-                return (
-                  <div
-                    key={url}
-                    className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100/80 border border-gray-200 transition-all text-xs"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
-                        <FileText className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-gray-900 truncate">
-                          Attachment #{index + 1}
-                        </p>
-                        <span className="text-[10px] text-gray-400 uppercase font-mono font-bold">
-                          {isPdf ? 'PDF Document' : 'Image Scan'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 shrink-0">
-                      {/* View */}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          if (isPdf) {
-                            window.open(url, '_blank');
-                          } else {
-                            setPreviewImage(url);
-                          }
-                        }}
-                        className="h-8 w-8 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
-                        title="View Attachment"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-
-                      {/* Download */}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDownload(url)}
-                        className="h-8 w-8 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                        title="Download Attachment"
-                      >
-                        <Download className="w-4 h-4" />
-                      </Button>
-
-                      {/* Delete */}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        disabled={isDeleting}
-                        onClick={() => handleDelete(url)}
-                        className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                        title="Delete Attachment"
-                      >
-                        {isDeleting ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Image Preview Sub-Dialog */}
-      {previewImage && (
-        <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-          <DialogContent className="max-w-2xl p-2 bg-slate-950 text-white border-0 rounded-2xl overflow-hidden flex flex-col items-center">
-            <div className="w-full flex justify-between items-center p-2">
-              <span className="text-xs font-bold text-gray-300">Image Preview</span>
-              <button
-                type="button"
-                onClick={() => setPreviewImage(null)}
-                className="p-1 rounded-lg text-gray-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+      {/* Image Preview Modal */}
+      <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl bg-transparent border-none shadow-none flex items-center justify-center p-0">
+          <DialogTitle className="sr-only">Image Preview</DialogTitle>
+          <button
+            type="button"
+            onClick={() => setPreviewImage(null)}
+            className="absolute -top-12 right-0 p-2 text-white hover:text-gray-300 transition-colors z-50 bg-black/20 rounded-full backdrop-blur-sm"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          {previewImage && (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={previewImage}
-              alt="Document Scan"
-              className="max-h-[75vh] w-auto object-contain rounded-lg shadow-lg"
+              alt="Preview"
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
             />
-          </DialogContent>
-        </Dialog>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

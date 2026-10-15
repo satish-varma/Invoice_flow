@@ -26,7 +26,7 @@ export function MobileFloatingActions({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed right-5 bottom-20 z-40 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-white transition-all transform active:scale-90 ${
+        className={`fixed right-5 bottom-26 z-30 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-white transition-all transform active:scale-90 ${
           isOpen
             ? 'bg-gray-800 rotate-45'
             : 'bg-gradient-to-tr from-indigo-600 via-[#3b2fc9] to-violet-600 shadow-indigo-500/40'

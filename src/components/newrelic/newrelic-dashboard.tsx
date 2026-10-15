@@ -62,7 +62,7 @@ export function NewRelicDashboard({ challans, showFinancials }: NewRelicDashboar
         </div>
       </CardHeader>
       <CardContent>
-        <div className={cn("text-2xl font-black tracking-tight", valueClass)}>{value}</div>
+        <div className={cn("text-lg sm:text-2xl font-black tracking-tight truncate", valueClass)}>{value}</div>
         <p className="text-[11px] font-semibold text-gray-500 mt-1 flex items-center gap-1.5">{subtext}</p>
       </CardContent>
     </Card>

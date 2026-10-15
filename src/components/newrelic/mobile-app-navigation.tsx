@@ -141,6 +141,14 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
       desc: 'All tax invoices and client billing history',
     });
   }
+  if (hasPermission(user, 'newrelic_dc')) {
+    recordsItems.push({
+      label: 'NewRelic DC Hub',
+      href: '/newrelic',
+      icon: FileText,
+      desc: 'Bangalore & Hyderabad cafeteria dispatches',
+    });
+  }
   if (hasPermission(user, 'general_dc')) {
     recordsItems.push({
       label: 'Saved General Challans',

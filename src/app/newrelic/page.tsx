@@ -27,6 +27,7 @@ import { MobileFloatingActions } from '@/components/newrelic/mobile-floating-act
 import { triggerHaptic } from '@/lib/haptics';
 import { ChallanSkeletonLoader } from '@/components/newrelic/challan-skeleton-loader';
 import { MrpCalculatorModal } from '@/components/newrelic/mrp-calculator-modal';
+import { hasPermission } from '@/types/permissions';
 
 export default function NewRelicPage() {
   const router = useRouter();
@@ -39,16 +40,14 @@ export default function NewRelicPage() {
   const [formKey, setFormKey] = useState<string>('new');
   const [activeTab, setActiveTab] = useState<'active' | 'trash' | 'insights' | 'items'>('active');
   const { role, user } = useAuth();
+  const isAdmin = role === 'admin' || role === 'superadmin';
 
-  // Route guard: Non-NewRelic company managers (e.g. DSM, NTT Data) must not access delivery challans
+  // Route guard: Only redirect if user does not have permission for NewRelic DC
   useEffect(() => {
-    if (role && role !== 'admin') {
-      const site = user?.assignedSite || 'newrelic';
-      if (site !== 'newrelic') {
-        router.replace('/newrelic/tuckshop');
-      }
+    if (user && !isAdmin && !hasPermission(user, 'newrelic_dc')) {
+      router.replace('/newrelic/tuckshop');
     }
-  }, [role, user, router]);
+  }, [isAdmin, user, router]);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -461,7 +460,7 @@ export default function NewRelicPage() {
         {role === 'admin' || role === 'superadmin' ? (
           <NewRelicDashboard challans={displayChallans} showFinancials={isUnlocked && showFinancials} />
         ) : (
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
             <StatCard
               icon={<FileText className="h-4 sm:h-5 w-4 sm:w-5 text-white" />}
               label="Total Challans"
@@ -554,7 +553,7 @@ export default function NewRelicPage() {
                 triggerHaptic('light');
                 setShowCalculator(true);
               }}
-              className={`fixed ${showScrollTop ? 'left-4 bottom-38' : 'left-4 bottom-24'} z-50 w-12 h-12 rounded-full bg-gradient-to-tr from-[#181156] via-[#2a1d8f] to-[#3b2fc9] shadow-2xl shadow-indigo-950/70 text-amber-300 border-2 border-white/30 flex items-center justify-center sm:hidden active:scale-90 transition-all`}
+              className={`fixed ${showScrollTop ? 'left-4 bottom-44' : 'left-4 bottom-26'} z-30 w-12 h-12 rounded-full bg-gradient-to-tr from-[#181156] via-[#2a1d8f] to-[#3b2fc9] shadow-2xl shadow-indigo-950/70 text-amber-300 border-2 border-white/30 flex items-center justify-center sm:hidden active:scale-90 transition-all`}
               aria-label="MRP Calculator"
               title="MRP % Calculator"
             >
@@ -566,7 +565,7 @@ export default function NewRelicPage() {
               <button
                 type="button"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="fixed left-4 bottom-24 z-50 w-12 h-12 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-gray-200 text-gray-700 hover:text-[#3b2fc9] flex items-center justify-center sm:hidden active:scale-90 transition-transform animate-in fade-in"
+                className="fixed left-4 bottom-26 z-30 w-12 h-12 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-gray-200 text-gray-700 hover:text-[#3b2fc9] flex items-center justify-center sm:hidden active:scale-90 transition-transform animate-in fade-in"
                 aria-label="Scroll to top"
               >
                 <ArrowUp className="w-5 h-5 stroke-[2.2]" />
@@ -605,7 +604,7 @@ export default function NewRelicPage() {
                 : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
             }`}
           >
-            <span>Active Invoices</span>
+            <span>Active Challans</span>
             <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
               activeTab === 'active' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
             }`}>
@@ -613,7 +612,7 @@ export default function NewRelicPage() {
             </span>
           </button>
 
-          {role === 'admin' && (
+          {(role === 'admin' || role === 'superadmin') && (
             <>
               <Link
                 href="/newrelic/analytics"

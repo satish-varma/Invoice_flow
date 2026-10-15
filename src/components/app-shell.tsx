@@ -367,6 +367,14 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                     </DropdownMenuItem>
                   </>
                 )}
+                {hasPermission(user, 'newrelic_dc') && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/newrelic" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                      <FileText className="h-3.5 w-3.5 text-purple-600" />
+                      NewRelic DC Hub
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 {hasPermission(user, 'general_dc') && (
                   <DropdownMenuItem asChild>
                     <Link href="/delivery-challans" className="flex items-center gap-2 cursor-pointer font-medium text-xs">

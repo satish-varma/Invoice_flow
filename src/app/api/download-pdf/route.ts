@@ -47,7 +47,16 @@ export async function POST(req: NextRequest) {
       createdAt: Date.now(),
     });
 
-    const host = req.headers.get('host') || '';
+    const forwardedHost = req.headers.get('x-forwarded-host');
+    const hostHeader = req.headers.get('host') || '';
+    let host = forwardedHost || hostHeader;
+
+    // Cloud Run internal host returns 403 when called directly from client browsers.
+    // Ensure public domain is always used in Firebase App Hosting.
+    if (host.includes('.run.app')) {
+      host = 'studio--invoiceflow-24nxt.us-central1.hosted.app';
+    }
+
     const protocol = req.headers.get('x-forwarded-proto') || 'https';
     const baseUrl = host ? `${protocol}://${host}` : '';
 

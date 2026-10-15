@@ -72,7 +72,16 @@ export function PdfDownloadReadyModal({
     });
     if (!res.ok) throw new Error('Failed to prepare download link');
     const data = await res.json();
-    return { downloadUrl: data.downloadUrl, viewUrl: data.viewUrl };
+
+    // Ensure origin is always the public client domain (never internal run.app)
+    const origin = typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('.run.app')
+      ? window.location.origin
+      : 'https://studio--invoiceflow-24nxt.us-central1.hosted.app';
+
+    return {
+      downloadUrl: `${origin}/api/download-pdf?id=${data.id}&download=true`,
+      viewUrl: `${origin}/api/download-pdf?id=${data.id}`,
+    };
   };
 
   // 1. Direct Download Handler (Universal: Android DownloadManager via real HTTPS URL)

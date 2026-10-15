@@ -79,6 +79,19 @@ const authOptions: NextAuthOptions = {
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      // Allows relative callback URLs without prepending baseUrl
+      if (url.startsWith("/")) return url;
+      try {
+        const parsed = new URL(url);
+        if (parsed.origin === baseUrl) return url;
+        // For mobile/LAN dev or hybrid apps, return relative path to stay on client host
+        if (parsed.pathname) return parsed.pathname + parsed.search;
+      } catch {
+        // fallback
+      }
+      return baseUrl;
+    },
   },
   pages: {
     signIn: "/login",

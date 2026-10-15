@@ -163,7 +163,17 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token,
+      authorized: ({ req, token }) => {
+        const { pathname } = req.nextUrl;
+        if (
+          pathname.startsWith('/login') ||
+          pathname.startsWith('/api/auth') ||
+          pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|webp|pdf|woff2?|css|js)$/i)
+        ) {
+          return true;
+        }
+        return !!token;
+      },
     },
     pages: {
       signIn: '/login',
@@ -173,6 +183,6 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    '/((?!login|api/auth|_next/static|_next/image|favicon.ico|manifest.json|sw.js|workbox-.*\\.js|icon-.*\\.png).*)',
+    '/((?!login|api/auth|_next/static|_next/image|favicon.ico|manifest.json|sw.js|workbox-.*\\.js|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|pdf|woff2?|css|js)).*)',
   ],
 };

@@ -22,7 +22,7 @@ interface AuthContextType {
   user: AppUser | null;
   role: UserRole | null;
   loading: boolean;
-  signOut: () => void;
+  signOut: () => Promise<void> | void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -39,8 +39,15 @@ function AuthProviderInner({ children }: { children: React.ReactNode }) {
   const user = session?.user ? (session.user as unknown as AppUser) : null;
   const role = user?.role || null;
 
-  const signOut = () => {
-    nextAuthSignOut({ callbackUrl: '/login' });
+  const signOut = async () => {
+    try {
+      await nextAuthSignOut({ redirect: false });
+    } catch (err) {
+      console.error('Sign out error:', err);
+    }
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
   };
 
   return (

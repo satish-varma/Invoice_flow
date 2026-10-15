@@ -47,11 +47,20 @@ export default function LoginPage() {
       toast({ title: 'Welcome back!' });
       const searchParams = new URLSearchParams(window.location.search);
       const callback = searchParams.get('callbackUrl');
+      let target = '/';
       if (callback && callback !== '/' && !callback.includes('/login')) {
-        router.push(callback);
-      } else {
-        router.push('/');
+        try {
+          if (callback.startsWith('http://') || callback.startsWith('https://')) {
+            const parsed = new URL(callback);
+            target = parsed.pathname + parsed.search;
+          } else if (callback.startsWith('/')) {
+            target = callback;
+          }
+        } catch {
+          target = '/';
+        }
       }
+      router.push(target);
     } catch (err: any) {
       toast({
         variant: 'destructive',
@@ -79,7 +88,9 @@ export default function LoginPage() {
           <img
             src="/gut_guru_logo.png"
             alt="The Gut Guru Tracker"
-            className="h-16 w-16 mx-auto rounded-full object-contain shadow-md mb-3 border border-amber-900/10"
+            width={64}
+            height={64}
+            className="h-16 w-16 mx-auto rounded-full object-contain shadow-md mb-3 border border-amber-900/10 bg-white"
           />
           <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
             The Gut Guru Tracker

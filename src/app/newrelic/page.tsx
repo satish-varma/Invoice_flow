@@ -49,23 +49,20 @@ export default function NewRelicPage() {
     }
   }, [isAdmin, user, router]);
 
-  // Attendance gate: If daily check-in has not happened for user, redirect to attendance
+  // Non-blocking attendance check: If daily check-in is pending, show reminder banner without trapping user
+  const [isAttendancePending, setIsAttendancePending] = useState(false);
   useEffect(() => {
     if (!user || isAdmin) return;
     let isSubscribed = true;
     checkUserCheckedInToday(user.id, user.email).then((hasCheckedIn) => {
-      if (isSubscribed && !hasCheckedIn) {
-        toast({
-          title: 'Daily Check-In Required',
-          description: 'Please record your attendance check-in before opening the DC.',
-        });
-        router.replace('/newrelic/attendance');
+      if (isSubscribed) {
+        setIsAttendancePending(!hasCheckedIn);
       }
     });
     return () => {
       isSubscribed = false;
     };
-  }, [isAdmin, user, router, toast]);
+  }, [isAdmin, user]);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -463,60 +460,69 @@ export default function NewRelicPage() {
       )}
       <div className="max-w-6xl mx-auto px-3 sm:px-8 py-3 sm:py-8 space-y-4 sm:space-y-8">
 
-        {/* The Gut Guru Tracker - DC Hub Hero Banner */}
-        <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#2c1d24] via-[#43232f] to-[#1e1b4b] p-4 sm:p-6 text-white shadow-lg relative overflow-hidden">
-          {/* Subtle decorative glow circles */}
-          <div className="absolute -right-10 -top-10 w-44 h-44 bg-purple-500/20 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute right-32 -bottom-10 w-36 h-36 bg-amber-500/15 rounded-full blur-2xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/gut_guru_logo.png"
-                alt="The Gut Guru"
-                className="w-11 h-11 sm:w-14 sm:h-14 rounded-full border-2 border-amber-300/40 shadow-md object-contain bg-black/20 shrink-0"
-              />
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-base sm:text-xl font-black tracking-tight text-white">
-                    The Gut Guru Tracker
-                  </h1>
-                  <span className="text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                    DC Hub
-                  </span>
-                </div>
-                <p className="text-xs text-rose-100/70 font-medium mt-0.5">
-                  Delivery Challans, Cafeteria Stock & Item Dispatch Management
+        {/* Attendance Check-In Reminder Banner */}
+        {isAttendancePending && (
+          <div className="bg-amber-50/95 border border-amber-200 rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-3 shadow-xs animate-in fade-in">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="text-base shrink-0">⚠️</span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-amber-900 truncate">
+                  Daily Attendance Check-In Pending
+                </p>
+                <p className="text-[11px] text-amber-700 font-medium">
+                  Remember to record today&apos;s shift attendance with camera selfie.
                 </p>
               </div>
             </div>
+            <Link
+              href="/newrelic/attendance"
+              className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shrink-0 active:scale-95 transition-all shadow-xs"
+            >
+              Check In
+            </Link>
+          </div>
+        )}
 
-            <div className="flex items-center gap-2 self-end sm:self-center">
-              {(role === 'admin' || role === 'superadmin') && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setShowCalculator(true);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 active:scale-95 text-xs font-bold transition-all border border-amber-300/40"
-                  title="Open MRP % Calculator"
-                >
-                  <Calculator className="w-3.5 h-3.5" />
-                  <span>% Calc</span>
-                </button>
-              )}
+        {/* Clean DC Page Subheader */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+                Delivery Challans
+              </h1>
+              <span className="text-[10px] font-black bg-indigo-50 text-[#3b2fc9] border border-indigo-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                DC Hub
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 font-medium mt-0.5">
+              Cafeteria stock, inward challans &amp; dispatch management
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-center">
+            {(role === 'admin' || role === 'superadmin') && (
               <button
                 type="button"
-                onClick={handlePullRefresh}
-                disabled={isRefreshing}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-semibold text-white transition-all backdrop-blur-xs border border-white/15"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowCalculator(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#3b2fc9] text-xs font-bold transition-all border border-purple-200/80 shadow-2xs active:scale-95"
+                title="Open MRP % Calculator"
               >
-                <RefreshCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                <span>{isRefreshing ? 'Syncing...' : 'Sync Data'}</span>
+                <Calculator className="w-3.5 h-3.5" />
+                <span>% Calc</span>
               </button>
-            </div>
+            )}
+            <button
+              type="button"
+              onClick={handlePullRefresh}
+              disabled={isRefreshing}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 text-xs font-semibold text-gray-700 transition-all border border-gray-200 shadow-2xs"
+            >
+              <RefreshCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>{isRefreshing ? 'Syncing...' : 'Sync Data'}</span>
+            </button>
           </div>
         </div>
 
@@ -826,19 +832,21 @@ export default function NewRelicPage() {
                 </div>
               )}
 
-              {/* MRP % Calculator Trigger */}
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setShowCalculator(true);
-                }}
-                className="flex items-center gap-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 text-[#3b2fc9] text-xs font-bold px-3 py-1.5 rounded-lg border border-purple-200/80 shadow-2xs transition-colors shrink-0 ml-auto sm:ml-0"
-                title="MRP % Calculator"
-              >
-                <Calculator className="h-3.5 w-3.5" />
-                <span>MRP % Calc</span>
-              </button>
+              {/* MRP % Calculator Trigger - Admin & Superadmin only */}
+              {(role === 'admin' || role === 'superadmin') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setShowCalculator(true);
+                  }}
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 text-[#3b2fc9] text-xs font-bold px-3 py-1.5 rounded-lg border border-purple-200/80 shadow-2xs transition-colors shrink-0 ml-auto sm:ml-0"
+                  title="MRP % Calculator"
+                >
+                  <Calculator className="h-3.5 w-3.5" />
+                  <span>MRP % Calc</span>
+                </button>
+              )}
             </div>
 
             {/* Bottom Row: Date Presets & Filter Reset (Cycle only shown for admin/superadmin) */}

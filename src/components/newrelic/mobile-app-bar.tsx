@@ -53,15 +53,15 @@ export function MobileAppBar({ children }: MobileAppBarProps) {
           <div className="flex items-center gap-2">
             {children}
 
-            {/* Profile Avatar Button */}
-            <button
-              type="button"
-              onClick={() => setShowProfileDrawer(true)}
+            {/* Profile Avatar Button -> Navigates to Profile Page */}
+            <Link
+              href="/profile"
               className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#3b2fc9] to-[#6366f1] text-white flex items-center justify-center font-bold text-xs shadow-xs border border-white active:scale-95 transition-transform"
               aria-label="User Profile"
+              title="View your profile details"
             >
               {initials}
-            </button>
+            </Link>
           </div>
         </div>
       </header>

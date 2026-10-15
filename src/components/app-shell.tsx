@@ -219,18 +219,27 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               </Link>
             )}
 
-            <div className="flex flex-col items-end mr-1 text-right">
-              <span className="text-xs font-bold text-gray-800 truncate max-w-[170px]">
-                {user?.email}
-              </span>
-              <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
-                {role || 'User'}
-              </span>
-            </div>
+            <Link
+              href="/profile"
+              className="flex items-center gap-2 px-2.5 py-1 rounded-xl hover:bg-gray-100 transition-colors group cursor-pointer"
+              title="View account and employee details"
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#3b2fc9] to-[#6366f1] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                {user?.email ? user.email.substring(0, 2).toUpperCase() : 'GG'}
+              </div>
+              <div className="flex flex-col items-start text-left">
+                <span className="text-xs font-bold text-gray-800 group-hover:text-[#3b2fc9] transition-colors truncate max-w-[170px]">
+                  {user?.email}
+                </span>
+                <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+                  {role || 'User'}
+                </span>
+              </div>
+            </Link>
 
             <button
               onClick={signOut}
-              className="p-1.5 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+              className="p-1.5 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50 cursor-pointer"
               title="Sign out from device"
             >
               <LogOut className="h-4 w-4" />

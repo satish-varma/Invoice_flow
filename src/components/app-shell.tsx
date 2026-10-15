@@ -42,6 +42,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { COMPANY_SITES } from '@/types/site';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { triggerHaptic } from '@/lib/haptics';
+import { hasPermission, PermissionKey } from '@/types/permissions';
 
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -60,33 +61,50 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const isNonNewRelic = user?.assignedSite && user.assignedSite !== 'newrelic';
   const siteConfig = user?.assignedSite ? COMPANY_SITES[user.assignedSite] : null;
 
-  const portalHref = isNonNewRelic ? '/newrelic/tuckshop' : '/newrelic';
-  const portalLabel = siteConfig ? `${siteConfig.name} Portal` : 'NewRelic DC Hub';
+  // Compute portal target based on permissions
+  let portalHref = '/newrelic/tuckshop';
+  let portalLabel = siteConfig ? `${siteConfig.name} Portal` : 'Tuckshop Portal';
+  if (hasPermission(user, 'newrelic_dc')) {
+    portalHref = '/newrelic';
+    portalLabel = 'NewRelic DC Hub';
+  } else if (hasPermission(user, 'general_dc') && !hasPermission(user, 'tuckshop')) {
+    portalHref = '/delivery-challan';
+    portalLabel = 'General DC Hub';
+  }
 
-  const rawNavItems = [
-    { href: '/', label: 'Dashboard & Invoice', icon: LayoutDashboard, app: '/invoices', section: 'core' },
-    { href: '/quotation', label: 'New Quotation', icon: FilePlus, app: '/quotations', section: 'core' },
-    { href: '/delivery-challan', label: 'Delivery Challan', icon: Truck, app: '/delivery-challans', hideIfNonNewRelic: true, section: 'core' },
-    { href: '/offer-letter', label: 'Offer Letter', icon: Briefcase, app: '/offer-letter', section: 'hr' },
-    { href: '/payslip', label: 'Payslip', icon: Receipt, app: '/payslip', section: 'hr' },
-    { href: '/invoices', label: 'Saved Invoices', icon: ListOrdered, app: '/invoices', section: 'records' },
-    { href: '/quotations', label: 'Saved Quotations', icon: FileSearch, app: '/quotations', section: 'records' },
-    { href: '/delivery-challans', label: 'Saved Challans', icon: Truck, app: '/delivery-challans', hideIfNonNewRelic: true, section: 'records' },
-    { href: '/products', label: 'Products Master', icon: Package, app: '/invoices', section: 'master' },
-    { href: '/clients', label: 'Clients Directory', icon: User, app: '/invoices', section: 'master' },
-    { href: '/settings', label: 'Company Settings', icon: Settings, app: '/settings', section: 'system' },
-    { href: '/declarations', label: 'GST Declarations', icon: FileText, app: '/declarations', section: 'master' },
+  const rawNavItems: Array<{
+    href: string;
+    label: string;
+    icon: any;
+    perm?: PermissionKey;
+    app?: string;
+    section: string;
+  }> = [
+    { href: '/', label: 'Dashboard & Invoice', icon: LayoutDashboard, perm: 'billing', app: '/invoices', section: 'core' },
+    { href: '/quotation', label: 'New Quotation', icon: FilePlus, perm: 'billing', app: '/quotations', section: 'core' },
+    { href: '/delivery-challan', label: 'Delivery Challan (Other Companies)', icon: Truck, perm: 'general_dc', app: '/delivery-challans', section: 'core' },
+    { href: '/offer-letter', label: 'Offer Letter', icon: Briefcase, perm: 'hr_docs', app: '/offer-letter', section: 'hr' },
+    { href: '/payslip', label: 'Payslip', icon: Receipt, perm: 'hr_docs', app: '/payslip', section: 'hr' },
+    { href: '/invoices', label: 'Saved Invoices', icon: ListOrdered, perm: 'billing', app: '/invoices', section: 'records' },
+    { href: '/quotations', label: 'Saved Quotations', icon: FileSearch, perm: 'billing', app: '/quotations', section: 'records' },
+    { href: '/delivery-challans', label: 'Saved Challans', icon: Truck, perm: 'general_dc', app: '/delivery-challans', section: 'records' },
+    { href: '/products', label: 'Products Master', icon: Package, perm: 'masters', app: '/invoices', section: 'master' },
+    { href: '/clients', label: 'Clients Directory', icon: User, perm: 'masters', app: '/invoices', section: 'master' },
+    { href: '/admin/users', label: 'Access & Users', icon: Shield, perm: 'users_admin', section: 'system' },
+    { href: '/settings', label: 'Company Settings', icon: Settings, perm: 'settings', app: '/settings', section: 'system' },
+    { href: '/declarations', label: 'GST Declarations', icon: FileText, perm: 'hr_docs', app: '/declarations', section: 'master' },
   ];
 
   const isAdmin = auth?.role === 'admin' || auth?.role === 'superadmin';
   const assignedApps = user?.assignedApps || [];
 
   const navItems = rawNavItems.filter((item) => {
-    if (item.hideIfNonNewRelic && isNonNewRelic) return false;
     if (isAdmin) return true;
+    if (item.perm) {
+      return hasPermission(user, item.perm);
+    }
     if (assignedApps.length > 0 && item.app) {
       return assignedApps.includes(item.app);
     }
@@ -347,73 +365,81 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
               </div>
 
               <div className="grid grid-cols-1 gap-2.5">
-                <Link
-                  href="/#invoice-form"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setShowCreateSheet(false);
-                  }}
-                  className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-indigo-50/90 to-purple-50/80 border border-indigo-200/80 text-left active:scale-[0.99] transition-transform"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                    <FilePlus className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-indigo-950">New GST Invoice</p>
-                    <p className="text-xs text-indigo-700">Calculate tax, discounts &amp; export PDF</p>
-                  </div>
-                </Link>
+                {(isAdmin || hasPermission(user, 'billing')) && (
+                  <Link
+                    href="/#invoice-form"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setShowCreateSheet(false);
+                    }}
+                    className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-indigo-50/90 to-purple-50/80 border border-indigo-200/80 text-left active:scale-[0.99] transition-transform"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <FilePlus className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-indigo-950">New GST Invoice</p>
+                      <p className="text-xs text-indigo-700">Calculate tax, discounts &amp; export PDF</p>
+                    </div>
+                  </Link>
+                )}
 
-                <Link
-                  href="/quotation"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setShowCreateSheet(false);
-                  }}
-                  className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-amber-50/90 to-orange-50/80 border border-amber-200/80 text-left active:scale-[0.99] transition-transform"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-orange-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                    <FileSearch className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-amber-950">New Quotation / Proposal</p>
-                    <p className="text-xs text-amber-700">Draft estimate &amp; share client quote</p>
-                  </div>
-                </Link>
+                {(isAdmin || hasPermission(user, 'billing')) && (
+                  <Link
+                    href="/quotation"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setShowCreateSheet(false);
+                    }}
+                    className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-amber-50/90 to-orange-50/80 border border-amber-200/80 text-left active:scale-[0.99] transition-transform"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-orange-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <FileSearch className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-amber-950">New Quotation / Proposal</p>
+                      <p className="text-xs text-amber-700">Draft estimate &amp; share client quote</p>
+                    </div>
+                  </Link>
+                )}
 
-                <Link
-                  href="/delivery-challan"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setShowCreateSheet(false);
-                  }}
-                  className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/90 to-sky-50/80 border border-blue-200/80 text-left active:scale-[0.99] transition-transform"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                    <Truck className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-blue-950">New Delivery Challan</p>
-                    <p className="text-xs text-blue-700">Standard material dispatch challan</p>
-                  </div>
-                </Link>
+                {(isAdmin || hasPermission(user, 'general_dc')) && (
+                  <Link
+                    href="/delivery-challan"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setShowCreateSheet(false);
+                    }}
+                    className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/90 to-sky-50/80 border border-blue-200/80 text-left active:scale-[0.99] transition-transform"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Truck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-blue-950">New General Delivery Challan</p>
+                      <p className="text-xs text-blue-700">For HungerBox &amp; corporate clients</p>
+                    </div>
+                  </Link>
+                )}
 
-                <Link
-                  href="/offer-letter"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setShowCreateSheet(false);
-                  }}
-                  className="flex items-center gap-3.5 p-3 rounded-2xl bg-gray-50 border border-gray-200 text-left active:scale-[0.99] transition-transform"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-gray-200 text-gray-700 flex items-center justify-center shrink-0">
-                    <Briefcase className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-gray-800">New Offer Letter</p>
-                    <p className="text-[11px] text-gray-500">Employment contract document</p>
-                  </div>
-                </Link>
+                {(isAdmin || hasPermission(user, 'hr_docs')) && (
+                  <Link
+                    href="/offer-letter"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setShowCreateSheet(false);
+                    }}
+                    className="flex items-center gap-3.5 p-3 rounded-2xl bg-gray-50 border border-gray-200 text-left active:scale-[0.99] transition-transform"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-gray-200 text-gray-700 flex items-center justify-center shrink-0">
+                      <Briefcase className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-gray-800">New Offer Letter</p>
+                      <p className="text-[11px] text-gray-500">Employment contract document</p>
+                    </div>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -441,7 +467,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
 
-              {/* NewRelic Portal Highlight */}
+              {/* Operations Portal Highlight */}
               <Link
                 href={portalHref}
                 onClick={() => {
@@ -471,77 +497,103 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 
               {/* Module Links Grid */}
               <div className="grid grid-cols-2 gap-2.5 pt-1">
-                <Link
-                  href="/delivery-challans"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setShowMoreSheet(false);
-                  }}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
-                >
-                  <Truck className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span className="text-xs font-bold text-gray-800">Saved Challans</span>
-                </Link>
+                {(isAdmin || hasPermission(user, 'general_dc')) && (
+                  <Link
+                    href="/delivery-challans"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setShowMoreSheet(false);
+                    }}
+                    className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
+                  >
+                    <Truck className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span className="text-xs font-bold text-gray-800">Saved Challans</span>
+                  </Link>
+                )}
 
-                <Link
-                  href="/products"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setShowMoreSheet(false);
-                  }}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
-                >
-                  <Package className="w-4 h-4 text-purple-600 shrink-0" />
-                  <span className="text-xs font-bold text-gray-800">Products</span>
-                </Link>
+                {(isAdmin || hasPermission(user, 'masters')) && (
+                  <Link
+                    href="/products"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setShowMoreSheet(false);
+                    }}
+                    className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
+                  >
+                    <Package className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span className="text-xs font-bold text-gray-800">Products</span>
+                  </Link>
+                )}
 
-                <Link
-                  href="/clients"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setShowMoreSheet(false);
-                  }}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
-                >
-                  <User className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <span className="text-xs font-bold text-gray-800">Clients</span>
-                </Link>
+                {(isAdmin || hasPermission(user, 'masters')) && (
+                  <Link
+                    href="/clients"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setShowMoreSheet(false);
+                    }}
+                    className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
+                  >
+                    <User className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span className="text-xs font-bold text-gray-800">Clients</span>
+                  </Link>
+                )}
 
-                <Link
-                  href="/settings"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setShowMoreSheet(false);
-                  }}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
-                >
-                  <Settings className="w-4 h-4 text-gray-600 shrink-0" />
-                  <span className="text-xs font-bold text-gray-800">Settings</span>
-                </Link>
+                {(isAdmin || hasPermission(user, 'users_admin')) && (
+                  <Link
+                    href="/admin/users"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setShowMoreSheet(false);
+                    }}
+                    className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
+                  >
+                    <Shield className="w-4 h-4 text-[#3b2fc9] shrink-0" />
+                    <span className="text-xs font-bold text-gray-800">Access &amp; Users</span>
+                  </Link>
+                )}
 
-                <Link
-                  href="/declarations"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setShowMoreSheet(false);
-                  }}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
-                >
-                  <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span className="text-xs font-bold text-gray-800">GST Declarations</span>
-                </Link>
+                {(isAdmin || hasPermission(user, 'settings')) && (
+                  <Link
+                    href="/settings"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setShowMoreSheet(false);
+                    }}
+                    className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
+                  >
+                    <Settings className="w-4 h-4 text-gray-600 shrink-0" />
+                    <span className="text-xs font-bold text-gray-800">Settings</span>
+                  </Link>
+                )}
 
-                <Link
-                  href="/payslip"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setShowMoreSheet(false);
-                  }}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
-                >
-                  <Receipt className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span className="text-xs font-bold text-gray-800">Staff Payslips</span>
-                </Link>
+                {(isAdmin || hasPermission(user, 'hr_docs')) && (
+                  <Link
+                    href="/declarations"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setShowMoreSheet(false);
+                    }}
+                    className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
+                  >
+                    <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-xs font-bold text-gray-800">GST Declarations</span>
+                  </Link>
+                )}
+
+                {(isAdmin || hasPermission(user, 'hr_docs')) && (
+                  <Link
+                    href="/payslip"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setShowMoreSheet(false);
+                    }}
+                    className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
+                  >
+                    <Receipt className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span className="text-xs font-bold text-gray-800">Staff Payslips</span>
+                  </Link>
+                )}
               </div>
 
               {/* User profile & Sign Out */}

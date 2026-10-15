@@ -39,6 +39,22 @@ const nextConfig: NextConfig = {
             },
         ],
     },
+    async rewrites() {
+        return [
+            {
+                source: '/tuckshop',
+                destination: '/newrelic/tuckshop',
+            },
+            {
+                source: '/attendance',
+                destination: '/newrelic/attendance',
+            },
+            {
+                source: '/stock-request',
+                destination: '/newrelic/stock-request',
+            },
+        ];
+    },
     async headers() {
         return [
             {

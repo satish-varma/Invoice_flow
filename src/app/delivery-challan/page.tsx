@@ -42,6 +42,7 @@ import { DeliveryChallanViewModal } from '@/components/delivery-challan-view-mod
 import { AppShell } from '@/components/app-shell';
 import { triggerHaptic } from '@/lib/haptics';
 import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/types/permissions';
 
 export default function DeliveryChallanPage() {
   const [challans, setChallans] = useState<Challan[]>([]);
@@ -405,17 +406,19 @@ export default function DeliveryChallanPage() {
                   <span>{isRefreshing ? 'Syncing...' : 'Sync Data'}</span>
                 </button>
 
-                {/* Direct Link to NewRelic DC Portal */}
-                <Link
-                  href="/newrelic"
-                  onClick={() => triggerHaptic('light')}
-                  className="group flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 text-[11px] sm:text-xs font-black shadow-md active:scale-95 transition-all"
-                  title="Switch to NewRelic Cafeteria DC Hub"
-                >
-                  <Layers className="w-3.5 h-3.5 text-slate-950" />
-                  <span>NewRelic DC</span>
-                  <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                </Link>
+                {/* Direct Link to NewRelic DC Portal (Strictly if permitted) */}
+                {hasPermission(user, 'newrelic_dc') && (
+                  <Link
+                    href="/newrelic"
+                    onClick={() => triggerHaptic('light')}
+                    className="group flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 text-[11px] sm:text-xs font-black shadow-md active:scale-95 transition-all"
+                    title="Switch to NewRelic Cafeteria DC Hub"
+                  >
+                    <Layers className="w-3.5 h-3.5 text-slate-950" />
+                    <span>NewRelic DC</span>
+                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                  </Link>
+                )}
               </div>
             </div>
           </div>

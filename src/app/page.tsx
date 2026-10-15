@@ -3,40 +3,56 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import Home from "./(app)/page";
+import Home from './(app)/page';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
   const router = useRouter();
-  const { user } = useAuth();
-  const [isMobileDevice, setIsMobileDevice] = useState<boolean | null>(null);
+  const { user, loading } = useAuth();
+  const [redirecting, setRedirecting] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
-    const isMobileScreen = typeof window !== 'undefined' && (window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+    if (loading) return;
 
-    // Only redirect native Capacitor app (installed APK/AAB) or dedicated tuckshop sites
-    if (isCapacitor) {
-      setIsMobileDevice(true);
-      const site = user?.assignedSite;
-      if (site === 'dsm' || site === 'ntt_data') {
-        router.replace('/newrelic/tuckshop');
-      } else {
-        router.replace('/newrelic');
-      }
-    } else if (user?.assignedSite === 'dsm' || user?.assignedSite === 'ntt_data') {
-      setIsMobileDevice(true);
-      router.replace('/newrelic/tuckshop');
-    } else {
-      setIsMobileDevice(false);
+    if (!user) {
+      router.replace('/login');
+      return;
     }
-  }, [user, router]);
 
-  if (isMobileDevice === true) {
+    const defaultPage = user.defaultLandingPage;
+    const isCapacitor =
+      typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
+
+    // If user has a configured default landing page and it's not root '/' or '/invoices'
+    if (defaultPage && defaultPage !== '/' && defaultPage !== '/invoices') {
+      setRedirecting(true);
+      router.replace(defaultPage);
+      return;
+    }
+
+    // Default site routing for non-newrelic sites (DSM, NTT Data)
+    if (user.assignedSite === 'dsm' || user.assignedSite === 'ntt_data') {
+      setRedirecting(true);
+      router.replace('/newrelic/tuckshop');
+      return;
+    }
+
+    // If running inside Capacitor APK on mobile
+    if (isCapacitor) {
+      setRedirecting(true);
+      router.replace(defaultPage || '/newrelic');
+      return;
+    }
+
+    // If defaultLandingPage is '/' or user is admin/accountant stay on root Home
+    setRedirecting(false);
+  }, [user, loading, router]);
+
+  if (loading || redirecting !== false) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 gap-3">
         <Loader2 className="h-8 w-8 text-[#3b2fc9] animate-spin" />
-        <p className="text-xs text-gray-500 font-medium">Loading Operations Portal…</p>
+        <p className="text-xs text-gray-500 font-medium">Loading workspace…</p>
       </div>
     );
   }

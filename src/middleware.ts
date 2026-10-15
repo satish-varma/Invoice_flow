@@ -1,92 +1,155 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 
+function checkPermByRoute(
+  route: string,
+  checkPerm: (key: string) => boolean,
+  site?: string
+): boolean {
+  if (route === '/newrelic') return site === 'newrelic' && checkPerm('newrelic_dc');
+  if (route.startsWith('/delivery-challan')) return checkPerm('general_dc');
+  if (route.includes('tuckshop')) return checkPerm('tuckshop');
+  if (route.includes('attendance')) return checkPerm('attendance');
+  if (route.includes('stock-request')) return checkPerm('stock_request');
+  if (route.startsWith('/invoices') || route === '/') return checkPerm('billing');
+  if (route.startsWith('/payslip') || route.startsWith('/offer-letter')) return checkPerm('hr_docs');
+  return true;
+}
+
+function findFirstAccessibleRoute(
+  checkPerm: (key: string) => boolean,
+  site?: string
+): string {
+  if (checkPerm('tuckshop')) return '/newrelic/tuckshop';
+  if (checkPerm('attendance')) return '/newrelic/attendance';
+  if (checkPerm('stock_request')) return '/newrelic/stock-request';
+  if (site === 'newrelic' && checkPerm('newrelic_dc')) return '/newrelic';
+  if (checkPerm('general_dc')) return '/delivery-challan';
+  if (checkPerm('billing')) return '/invoices';
+  if (checkPerm('hr_docs')) return '/payslip';
+  return '/newrelic/tuckshop';
+}
+
 export default withAuth(
   function middleware(req) {
     const { token } = req.nextauth;
-    const { pathname } = req.nextUrl;
+    const { pathname, search } = req.nextUrl;
 
     if (!token) {
       return NextResponse.redirect(new URL('/login', req.url));
     }
 
-    const role = token.role as string;
-    
+    const role = (token.role as string) || 'user';
+
     // Admins have access to everything, always.
-    if (role === 'admin') {
+    if (role === 'admin' || role === 'superadmin') {
       return NextResponse.next();
     }
 
     const assignedSite = token.assignedSite as string | undefined;
+    const allowedTabs = (token.allowedTabs as string[]) || [];
+    const assignedApps = (token.assignedApps as string[]) || [];
+    const defaultLandingPage =
+      (token.defaultLandingPage as string) ||
+      (assignedSite && assignedSite !== 'newrelic' ? '/newrelic/tuckshop' : '/newrelic');
 
     // Protect /admin routes from non-admins
     if (pathname.startsWith('/admin')) {
-      const fallback = (assignedSite && assignedSite !== 'newrelic') ? '/newrelic/tuckshop' : '/newrelic';
+      const fallback = defaultLandingPage.startsWith('/admin')
+        ? '/newrelic/tuckshop'
+        : defaultLandingPage;
       return NextResponse.redirect(new URL(fallback, req.url));
     }
 
-    // Protect delivery challans from non-NewRelic sites (DSM, NTT Data)
-    if (assignedSite && assignedSite !== 'newrelic' && pathname.startsWith('/delivery-challan')) {
+    // Site Isolation: NewRelic cafeteria DC Hub (/newrelic) is strictly forbidden for non-NewRelic sites
+    if (pathname === '/newrelic' && assignedSite && assignedSite !== 'newrelic') {
       return NextResponse.redirect(new URL('/newrelic/tuckshop', req.url));
     }
 
-    // Route non-NewRelic site users directly to their Tuckshop page
-    if (assignedSite && assignedSite !== 'newrelic' && pathname === '/newrelic') {
-      return NextResponse.redirect(new URL('/newrelic/tuckshop', req.url));
-    }
+    // Helper to evaluate permission with backwards compatibility
+    const checkPerm = (key: string): boolean => {
+      if (allowedTabs.length > 0) {
+        return allowedTabs.includes(key);
+      }
+      // Backwards-compatible fallback with legacy assignedApps
+      if (key === 'general_dc') return assignedApps.includes('/delivery-challans');
+      if (key === 'newrelic_dc') return assignedApps.includes('/newrelic') && assignedSite === 'newrelic';
+      if (key === 'tuckshop') return assignedApps.includes('/newrelic') || assignedApps.includes('/tuckshop');
+      if (key === 'attendance') return assignedApps.includes('/newrelic');
+      if (key === 'stock_request') return assignedApps.includes('/newrelic');
+      if (key === 'billing' || key === 'masters') {
+        return assignedApps.includes('/invoices') || assignedApps.includes('/quotations');
+      }
+      if (key === 'hr_docs') {
+        return assignedApps.includes('/payslip') || assignedApps.includes('/offer-letter');
+      }
+      if (key === 'settings') return assignedApps.includes('/settings');
+      return false;
+    };
 
-    const assignedApps = (token.assignedApps as string[]) || [];
+    // Map URL path to required permission key
+    let requiredPerm: string | null = null;
 
-    // Map the requested path to its parent "app module" ID (which matches the checkboxes in admin)
-    let requiredAppModule: string | null = null;
-
-    if (pathname === '/' || pathname.startsWith('/invoices')) {
-      requiredAppModule = '/invoices';
-    } else if (pathname.startsWith('/quotation')) {
-      // Handles both /quotation and /quotations
-      requiredAppModule = '/quotations';
+    if (pathname === '/newrelic') {
+      requiredPerm = 'newrelic_dc';
+    } else if (pathname === '/newrelic/tuckshop' || pathname === '/tuckshop') {
+      requiredPerm = 'tuckshop';
+    } else if (pathname === '/newrelic/attendance' || pathname === '/attendance') {
+      if (search.includes('tab=payroll')) {
+        requiredPerm = 'payroll';
+      } else {
+        requiredPerm = 'attendance';
+      }
+    } else if (pathname === '/newrelic/stock-request' || pathname === '/stock-request') {
+      requiredPerm = 'stock_request';
+    } else if (pathname === '/newrelic/stock-requests-admin') {
+      requiredPerm = 'stock_admin';
+    } else if (pathname === '/newrelic/reconcile') {
+      requiredPerm = 'tuckshop_reconcile';
+    } else if (pathname === '/newrelic/pricing') {
+      requiredPerm = 'pricing';
+    } else if (pathname === '/newrelic/catalog') {
+      requiredPerm = 'catalog';
+    } else if (pathname === '/newrelic/employees') {
+      requiredPerm = 'employees';
+    } else if (pathname === '/newrelic/analytics') {
+      requiredPerm = 'analytics';
     } else if (pathname.startsWith('/delivery-challan')) {
-      // Handles both /delivery-challan and /delivery-challans
-      requiredAppModule = '/delivery-challans';
-    } else if (pathname.startsWith('/newrelic')) {
-      requiredAppModule = '/newrelic';
-    } else if (pathname.startsWith('/declarations')) {
-      requiredAppModule = '/declarations';
-    } else if (pathname.startsWith('/payslip')) {
-      requiredAppModule = '/payslip';
-    } else if (pathname.startsWith('/offer-letter')) {
-      requiredAppModule = '/offer-letter';
+      // General DC (Other companies like HungerBox)
+      requiredPerm = 'general_dc';
+    } else if (pathname === '/' || pathname.startsWith('/invoices')) {
+      requiredPerm = 'billing';
+    } else if (pathname.startsWith('/products') || pathname.startsWith('/clients')) {
+      requiredPerm = 'masters';
+    } else if (pathname.startsWith('/quotation')) {
+      requiredPerm = 'billing';
+    } else if (
+      pathname.startsWith('/payslip') ||
+      pathname.startsWith('/offer-letter') ||
+      pathname.startsWith('/declarations')
+    ) {
+      requiredPerm = 'hr_docs';
     } else if (pathname.startsWith('/settings')) {
-      requiredAppModule = '/settings';
+      requiredPerm = 'settings';
     }
 
-    if (requiredAppModule) {
-      if (!assignedApps.includes(requiredAppModule)) {
-        // Find a safe fallback route
-        let fallback = (assignedSite && assignedSite !== 'newrelic') ? '/newrelic/tuckshop' : '/newrelic';
-        if (assignedApps.length > 0) {
-          fallback = assignedApps[0];
-          // Since '/invoices' in our array actually means they can access '/', we could route to '/'
-          if (fallback === '/invoices') fallback = '/';
-          if (fallback === '/quotations') fallback = '/quotation';
-          if (fallback === '/delivery-challans') fallback = '/delivery-challan';
-        } else {
-          // If they have literally no apps, just send them to login or an unauthorized page
-          // But since we can't easily clear their session here, redirect to a static error string or /login
-          return NextResponse.redirect(new URL('/login', req.url));
+    if (requiredPerm) {
+      const isAllowed = checkPerm(requiredPerm);
+      if (!isAllowed) {
+        let fallback = defaultLandingPage;
+        if (fallback === pathname || !checkPermByRoute(fallback, checkPerm, assignedSite)) {
+          fallback = findFirstAccessibleRoute(checkPerm, assignedSite);
         }
-        
-        // Prevent infinite redirect loops if the fallback is the same as the current path
+
+        // Prevent infinite redirects
         if (pathname !== fallback && !pathname.startsWith(fallback)) {
           return NextResponse.redirect(new URL(fallback, req.url));
         } else {
-           // If they are stuck, force them out
-           return NextResponse.redirect(new URL('/login', req.url));
+          return NextResponse.redirect(new URL('/login', req.url));
         }
       }
     }
 
-    // Default: allow access
     return NextResponse.next();
   },
   {

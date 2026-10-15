@@ -18,15 +18,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // If already logged in, redirect to site-specific portal
+  // If already logged in, redirect to user's default landing page or site portal
   useEffect(() => {
     if (user) {
-      const site = user.assignedSite;
-      if (site === 'dsm' || site === 'ntt_data') {
-        router.replace('/newrelic/tuckshop');
-      } else {
-        router.replace('/newrelic');
-      }
+      const target =
+        user.defaultLandingPage ||
+        (user.assignedSite === 'dsm' || user.assignedSite === 'ntt_data'
+          ? '/newrelic/tuckshop'
+          : '/newrelic');
+      router.replace(target);
     }
   }, [user, router]);
 
@@ -50,7 +50,7 @@ export default function LoginPage() {
       if (callback && callback !== '/' && !callback.includes('/login')) {
         router.push(callback);
       } else {
-        router.push('/newrelic');
+        router.push('/');
       }
     } catch (err: any) {
       toast({

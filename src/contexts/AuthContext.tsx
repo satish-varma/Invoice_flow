@@ -14,6 +14,8 @@ export interface AppUser {
   preferredLocations?: string[];
   assignedApps?: string[];
   assignedSite?: SiteId;
+  defaultLandingPage?: string;
+  allowedTabs?: string[];
 }
 
 interface AuthContextType {

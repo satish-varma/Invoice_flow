@@ -1,640 +1,598 @@
 'use client';
 
-import React, { useState } from 'react';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarFooter,
-  SidebarInset,
-  SidebarTrigger,
-  useSidebar,
-  SidebarProvider,
-} from '@/components/ui/sidebar';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  FilePlus,
-  FileText,
-  Truck,
-  Settings,
-  ListOrdered,
-  LogOut,
-  User,
-  Package,
-  Briefcase,
-  Receipt,
-  ExternalLink,
-  LayoutDashboard,
-  FileSearch,
-  Plus,
-  MoreHorizontal,
-  X,
-  Sparkles,
-  ChevronRight,
-  Shield,
-  Layers,
-} from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
+import {
+  FileText,
+  Store,
+  CalendarCheck,
+  BarChart3,
+  BarChart2,
+  MoreHorizontal,
+  DollarSign,
+  PackageCheck,
+  Users,
+  Settings,
+  CreditCard,
+  Send,
+  Truck,
+  FileCheck2,
+  ListOrdered,
+  FileSearch,
+  Package,
+  Receipt,
+  Briefcase,
+  Layers,
+  ChevronDown,
+  Shield,
+  FilePlus,
+  LogOut,
+  Lock,
+  Unlock,
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { FinancialAuthProvider, useFinancialAuth } from '@/contexts/FinancialAuthContext';
+import { FinancialPasswordModal } from '@/components/newrelic/financial-password-modal';
+import { MobileAppNavigation } from '@/components/newrelic/mobile-app-navigation';
+import { MobileAppBar } from '@/components/newrelic/mobile-app-bar';
+import { NetworkStatusIndicator } from '@/components/newrelic/network-status-indicator';
+import { getStockRequests } from '@/services/newrelicStockRequestService';
 import { COMPANY_SITES } from '@/types/site';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { hasPermission } from '@/types/permissions';
 import { triggerHaptic } from '@/lib/haptics';
-import { hasPermission, PermissionKey } from '@/types/permissions';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-function AppShellContent({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const auth = useAuth();
-  const user = auth?.user;
-  const router = useRouter();
-  const { openMobile, setOpenMobile } = useSidebar();
+function FinancialStatusBadge() {
+  const { isUnlocked, remainingMinutes, lockFinancials } = useFinancialAuth();
+  const [showModal, setShowModal] = useState(false);
 
-  const [showCreateSheet, setShowCreateSheet] = useState(false);
-  const [showMoreSheet, setShowMoreSheet] = useState(false);
-
-  const handleSignOut = async () => {
-    if (auth && auth.signOut) {
-      triggerHaptic('medium');
-      await auth.signOut();
-    }
-  };
-
-  const siteConfig = user?.assignedSite ? COMPANY_SITES[user.assignedSite] : null;
-
-  // Compute portal target based on permissions
-  let portalHref = '/newrelic/tuckshop';
-  let portalLabel = siteConfig ? `${siteConfig.name} Portal` : 'Tuckshop Portal';
-  if (hasPermission(user, 'newrelic_dc')) {
-    portalHref = '/newrelic';
-    portalLabel = 'NewRelic DC Hub';
-  } else if (hasPermission(user, 'general_dc') && !hasPermission(user, 'tuckshop')) {
-    portalHref = '/delivery-challan';
-    portalLabel = 'General DC Hub';
+  if (isUnlocked) {
+    return (
+      <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] px-2.5 py-1 rounded-full font-medium shadow-xs">
+        <Unlock className="w-3 h-3 text-emerald-600" />
+        <span>Financials ({remainingMinutes}m)</span>
+        <button
+          onClick={lockFinancials}
+          title="Lock financials now"
+          className="ml-1 text-emerald-950 hover:text-red-600 transition-colors p-0.5 rounded"
+        >
+          <Lock className="w-2.5 h-2.5" />
+        </button>
+      </div>
+    );
   }
-
-  const rawNavItems: Array<{
-    href: string;
-    label: string;
-    icon: any;
-    perm?: PermissionKey;
-    app?: string;
-    section: string;
-  }> = [
-    { href: '/', label: 'Dashboard & Invoice', icon: LayoutDashboard, perm: 'billing', app: '/invoices', section: 'core' },
-    { href: '/quotation', label: 'New Quotation', icon: FilePlus, perm: 'billing', app: '/quotations', section: 'core' },
-    { href: '/delivery-challan', label: 'Delivery Challan (Other Companies)', icon: Truck, perm: 'general_dc', app: '/delivery-challans', section: 'core' },
-    { href: '/offer-letter', label: 'Offer Letter', icon: Briefcase, perm: 'hr_docs', app: '/offer-letter', section: 'hr' },
-    { href: '/payslip', label: 'Payslip', icon: Receipt, perm: 'hr_docs', app: '/payslip', section: 'hr' },
-    { href: '/invoices', label: 'Saved Invoices', icon: ListOrdered, perm: 'billing', app: '/invoices', section: 'records' },
-    { href: '/quotations', label: 'Saved Quotations', icon: FileSearch, perm: 'billing', app: '/quotations', section: 'records' },
-    { href: '/delivery-challans', label: 'Saved Challans', icon: Truck, perm: 'general_dc', app: '/delivery-challans', section: 'records' },
-    { href: '/products', label: 'Products Master', icon: Package, perm: 'masters', app: '/invoices', section: 'master' },
-    { href: '/clients', label: 'Clients Directory', icon: User, perm: 'masters', app: '/invoices', section: 'master' },
-    { href: '/admin/users', label: 'Access & Users', icon: Shield, perm: 'users_admin', section: 'system' },
-    { href: '/settings', label: 'Company Settings', icon: Settings, perm: 'settings', app: '/settings', section: 'system' },
-    { href: '/declarations', label: 'GST Declarations', icon: FileText, perm: 'hr_docs', app: '/declarations', section: 'master' },
-  ];
-
-  const isAdmin = auth?.role === 'admin' || auth?.role === 'superadmin';
-  const assignedApps = user?.assignedApps || [];
-
-  const navItems = rawNavItems.filter((item) => {
-    if (isAdmin) return true;
-    if (item.perm) {
-      return hasPermission(user, item.perm);
-    }
-    if (assignedApps.length > 0 && item.app) {
-      return assignedApps.includes(item.app);
-    }
-    return true;
-  });
 
   return (
     <>
-      {/* ── DESKTOP SIDEBAR ── */}
-      <Sidebar variant="inset" collapsible="icon" className="border-r border-gray-200/80 bg-white">
-        <SidebarHeader className="border-b border-gray-100 p-4">
-          <div className="flex items-center justify-between group-data-[collapsible=icon]:justify-center">
-            <Link
-              href="/"
-              className="flex items-center gap-2.5 group-data-[collapsible=icon]:hidden"
-            >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#181156] via-[#2a1d8f] to-[#3b2fc9] text-amber-300 flex items-center justify-center font-black shadow-md shadow-indigo-950/20 shrink-0">
-                <FileText className="w-5 h-5 text-amber-300" />
-              </div>
-              <div>
-                <h1 className="text-base font-black text-gray-900 tracking-tight leading-none">
-                  InvoiceFlow
-                </h1>
-                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
-                  Enterprise Suite
-                </span>
-              </div>
-            </Link>
-            <SidebarTrigger className="group-data-[collapsible=icon]:hidden" />
-          </div>
+      <button
+        onClick={() => setShowModal(true)}
+        className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors border border-gray-200"
+        title="Financials are locked. Click to enter admin password."
+      >
+        <Lock className="w-3 h-3 text-gray-500" />
+        <span>Financials Locked</span>
+      </button>
 
-          {/* Quick DC Portal Switcher Pill on Desktop */}
-          <div className="pt-2 group-data-[collapsible=icon]:hidden">
-            <Link
-              href={portalHref}
-              onClick={() => triggerHaptic('light')}
-              className="flex items-center justify-between p-2 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 border border-purple-200/80 text-[#3b2fc9] transition-all group/portal shadow-2xs"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span className="text-xs font-bold truncate">{portalLabel}</span>
-              </div>
-              <ExternalLink className="w-3.5 h-3.5 text-[#3b2fc9] group-hover/portal:translate-x-0.5 transition-transform shrink-0" />
-            </Link>
-          </div>
-        </SidebarHeader>
+      <FinancialPasswordModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+      />
+    </>
+  );
+}
 
-        <SidebarContent className="px-2 py-3">
-          <SidebarMenu className="space-y-1">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <SidebarMenuItem key={item.href}>
-                  <Link href={item.href} passHref>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      tooltip={{ children: item.label }}
-                      onClick={() => {
-                        triggerHaptic('light');
-                        if (openMobile) setOpenMobile(false);
-                      }}
-                      className={`h-9 px-3 rounded-xl font-medium text-xs transition-all ${
-                        isActive
-                          ? 'bg-gradient-to-r from-indigo-50 to-violet-50 text-[#3b2fc9] font-bold border border-indigo-200/70 shadow-2xs'
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/70'
-                      }`}
-                    >
-                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#3b2fc9]' : 'text-gray-400'}`} />
-                      <span className="truncate">{item.label}</span>
-                    </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarContent>
+function AppShellInner({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const { user, role, signOut } = useAuth();
+  const [pendingStockCount, setPendingStockCount] = useState(0);
 
-        <SidebarFooter className="border-t border-gray-100 p-3">
-          <SidebarMenu className="space-y-1.5">
-            <SidebarMenuItem>
-              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-gray-50 border border-gray-100">
-                <Avatar className="h-8 w-8 rounded-lg bg-indigo-100 text-[#3b2fc9] font-bold text-xs shrink-0">
-                  <AvatarFallback className="bg-indigo-100 text-[#3b2fc9]">
-                    {user?.email?.[0]?.toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col min-w-0 group-data-[collapsible=icon]:hidden">
-                  <span className="text-xs font-bold truncate text-gray-900">
-                    {user?.email?.split('@')[0]}
-                  </span>
-                  <span className="text-[10px] text-gray-500 capitalize truncate">
-                    {auth?.role || 'User'}
-                  </span>
-                </div>
-              </div>
-            </SidebarMenuItem>
+  const isAdmin = role === 'admin' || role === 'superadmin';
+  const site = user?.assignedSite || 'newrelic';
+  const siteConfig = COMPANY_SITES[site] || COMPANY_SITES.newrelic;
 
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                tooltip={{ children: 'Sign Out' }}
-                onClick={handleSignOut}
-                className="h-8 text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-xl"
-              >
-                <LogOut className="w-3.5 h-3.5 text-rose-500 mr-2 shrink-0" />
-                <span>Sign Out</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
+  useEffect(() => {
+    // Configure mobile status bar for native Android/iOS Capacitor wrapper
+    if (typeof window !== 'undefined') {
+      import('@capacitor/status-bar')
+        .then(({ StatusBar, Style }) => {
+          StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
+          StatusBar.setStyle({ style: Style.Light }).catch(() => {});
+          StatusBar.setBackgroundColor({ color: '#FFFFFF' }).catch(() => {});
+        })
+        .catch(() => {});
+    }
+  }, []);
 
-      {/* ── MAIN CONTENT INSET ── */}
-      <SidebarInset className="bg-gray-50/40 w-full max-w-full overflow-x-hidden min-w-0">
-        {/* ── STICKY MOBILE TOP APP BAR (md:hidden) ── */}
-        <header className="md:hidden sticky top-0 z-30 bg-[#181156] text-white px-3.5 py-2.5 shadow-md flex items-center justify-between border-b border-indigo-900/50">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger className="text-white hover:bg-white/10 p-1.5 rounded-lg" />
+  useEffect(() => {
+    if (isAdmin || hasPermission(user, 'stock_admin')) {
+      getStockRequests()
+        .then((reqs) => {
+          const pending = reqs.filter((r) => r.status === 'PENDING');
+          setPendingStockCount(pending.length);
+        })
+        .catch(() => {});
+    }
+  }, [isAdmin, user, pathname]);
+
+  // Active check helpers
+  const isRecordsActive =
+    pathname === '/invoices' ||
+    pathname === '/delivery-challans' ||
+    pathname === '/quotations' ||
+    pathname === '/quotation' ||
+    pathname === '/products';
+
+  const isHrActive =
+    pathname === '/payslip' ||
+    pathname === '/offer-letter' ||
+    pathname === '/declarations' ||
+    pathname === '/clients';
+
+  const isAdminActive =
+    pathname.startsWith('/newrelic/stock-requests-admin') ||
+    pathname === '/newrelic/reconcile' ||
+    pathname === '/newrelic/pricing' ||
+    pathname === '/newrelic/catalog' ||
+    (pathname === '/newrelic/attendance' && typeof window !== 'undefined' && window.location.search.includes('tab=payroll')) ||
+    pathname === '/newrelic/employees' ||
+    pathname === '/newrelic/analytics' ||
+    pathname.startsWith('/admin') ||
+    pathname === '/settings';
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Network offline/restored indicator */}
+      <NetworkStatusIndicator />
+
+      {/* Mobile Top App Bar (sm:hidden) */}
+      <div className="sm:hidden">
+        <MobileAppBar>
+          {isAdmin && <FinancialStatusBadge />}
+        </MobileAppBar>
+      </div>
+
+      {/* Desktop Top Header (hidden sm:block) */}
+      <header className="hidden sm:block border-b border-gray-100 bg-white sticky top-0 z-30 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 h-14 flex items-center justify-between gap-3">
+          {/* Brand & Site Scoping */}
+          <div className="flex items-center gap-3 shrink-0">
             <Link
               href="/"
               onClick={() => triggerHaptic('light')}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2.5 hover:opacity-90 transition-opacity"
             >
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center font-black text-amber-300 text-xs shadow-xs">
-                IF
-              </div>
-              <span className="text-sm font-black tracking-tight text-white">
-                InvoiceFlow
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/gut_guru_logo.png"
+                alt="The Gut Guru Tracker"
+                className="h-8 sm:h-9 w-8 sm:w-9 rounded-full object-contain shadow-xs border border-amber-900/10"
+              />
+              <span className="text-base font-black tracking-tight text-gray-900">
+                The Gut Guru Tracker
               </span>
             </Link>
+
+            <span className="text-gray-300 font-light">|</span>
+
+            {/* Site Indicator Badge */}
+            {isAdmin ? (
+              <span className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-full px-3 py-1 font-semibold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                Multi-Site Operations (HYD &amp; BLR)
+              </span>
+            ) : (
+              <span
+                className={`text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1.5 ${
+                  site === 'dsm'
+                    ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
+                    : site === 'ntt_data'
+                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                    : 'bg-indigo-50 text-[#3b2fc9] border-indigo-200'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                📍 {siteConfig.name} Stall
+              </span>
+            )}
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Direct 1-tap jump to NewRelic DC Portal on mobile */}
-            <Link
-              href={portalHref}
-              onClick={() => triggerHaptic('light')}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-300/35 text-xs font-bold active:scale-95 transition-transform"
-              title="Switch to NewRelic DC Portal"
-            >
-              <Layers className="w-3 h-3 text-amber-300" />
-              <span>DC Portal</span>
-            </Link>
+          {/* Right Action Items */}
+          <div className="flex items-center gap-3">
+            {isAdmin && <FinancialStatusBadge />}
+
+            {isAdmin && (
+              <Link
+                href="/admin/users"
+                className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-[#3b2fc9] bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 px-3 py-1.5 rounded-full transition-colors"
+              >
+                <Shield className="h-3.5 w-3.5 text-[#3b2fc9]" />
+                Access &amp; Users
+              </Link>
+            )}
+
+            <div className="flex flex-col items-end mr-1 text-right">
+              <span className="text-xs font-bold text-gray-800 truncate max-w-[170px]">
+                {user?.email}
+              </span>
+              <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+                {role || 'User'}
+              </span>
+            </div>
 
             <button
-              type="button"
-              onClick={handleSignOut}
-              className="p-1.5 rounded-lg text-indigo-200 hover:text-white hover:bg-white/10"
-              title="Sign Out"
+              onClick={signOut}
+              className="p-1.5 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+              title="Sign out from device"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="h-4 w-4" />
             </button>
           </div>
-        </header>
-
-        {/* Page Content with safe mobile bottom padding */}
-        <div className="flex-1 overflow-auto pb-24 md:pb-6">
-          {children}
         </div>
+      </header>
 
-        {/* ── FLOATING GLASSMORPHIC MOBILE BOTTOM NAVIGATION (md:hidden) ── */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pointer-events-none">
-          <nav className="pointer-events-auto bg-white/95 backdrop-blur-xl border border-gray-250/70 shadow-[0_12px_36px_-6px_rgba(15,23,42,0.22)] rounded-2xl overflow-hidden ring-1 ring-black/5">
-            <div className="flex items-center justify-around h-16 px-1 py-1">
-              {/* Tab 1: Dashboard */}
-              <Link
-                href="/"
-                onClick={() => triggerHaptic('light')}
-                className={`flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-95 ${
-                  pathname === '/' ? 'text-[#3b2fc9]' : 'text-gray-400 hover:text-gray-700'
+      {/* Desktop Secondary Navigation Bar with Categorized Dropdowns */}
+      <div className="hidden sm:block bg-white border-b border-gray-200 sticky top-14 z-20 shadow-2xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center gap-2 overflow-x-auto">
+          {/* Direct Tab 1: Tuckshop (Counter sales & ledger for assigned site) */}
+          {hasPermission(user, 'tuckshop') && (
+            <Link
+              href="/newrelic/tuckshop"
+              className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                pathname.startsWith('/newrelic/tuckshop') || pathname === '/tuckshop'
+                  ? 'border-[#3b2fc9] text-[#3b2fc9]'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+              }`}
+            >
+              <Store className="h-4 w-4" />
+              Tuckshop
+            </Link>
+          )}
+
+          {/* Direct Tab 2: Attendance (Daily check-in/out for assigned site) */}
+          {hasPermission(user, 'attendance') && (
+            <Link
+              href="/newrelic/attendance"
+              className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                (pathname.startsWith('/newrelic/attendance') || pathname === '/attendance') &&
+                !pathname.includes('payroll')
+                  ? 'border-[#3b2fc9] text-[#3b2fc9]'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+              }`}
+            >
+              <CalendarCheck className="h-4 w-4" />
+              Attendance
+            </Link>
+          )}
+
+          {/* Direct Tab 3: Dedicated NewRelic DC Hub (strictly NewRelic cafeteria) */}
+          {hasPermission(user, 'newrelic_dc') && (
+            <Link
+              href="/newrelic"
+              className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                pathname === '/newrelic'
+                  ? 'border-[#3b2fc9] text-[#3b2fc9]'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+              }`}
+            >
+              <FileText className="h-4 w-4" />
+              NewRelic DC
+            </Link>
+          )}
+
+          {/* Direct Tab 4: General DC (Universal delivery challan for other companies) */}
+          {hasPermission(user, 'general_dc') && (
+            <Link
+              href="/delivery-challan"
+              className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                pathname === '/delivery-challan'
+                  ? 'border-[#3b2fc9] text-[#3b2fc9]'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+              }`}
+            >
+              <Truck className="h-4 w-4" />
+              General DC
+            </Link>
+          )}
+
+          {/* Direct Tab 5: Invoicing & Billing */}
+          {hasPermission(user, 'billing') && (
+            <Link
+              href="/invoices"
+              className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                pathname === '/' || pathname === '/invoices'
+                  ? 'border-[#3b2fc9] text-[#3b2fc9]'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+              }`}
+            >
+              <ListOrdered className="h-4 w-4" />
+              Invoices Hub
+            </Link>
+          )}
+
+          {/* Direct Tab 6: Stock Requests (Operator view) */}
+          {hasPermission(user, 'stock_request') && !hasPermission(user, 'stock_admin') && (
+            <Link
+              href="/newrelic/stock-request"
+              className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                pathname === '/newrelic/stock-request' || pathname === '/stock-request'
+                  ? 'border-[#3b2fc9] text-[#3b2fc9]'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+              }`}
+            >
+              <Send className="h-4 w-4" />
+              Request Stock
+            </Link>
+          )}
+
+          {/* ── Dropdown 1: Records & Masters ── */}
+          {(hasPermission(user, 'billing') || hasPermission(user, 'general_dc') || hasPermission(user, 'masters')) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 outline-none cursor-pointer ${
+                  isRecordsActive
+                    ? 'border-[#3b2fc9] text-[#3b2fc9]'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                 }`}
               >
-                <LayoutDashboard className={`w-5 h-5 ${pathname === '/' ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-                <span className={`text-[10px] mt-0.5 ${pathname === '/' ? 'font-black' : 'font-medium'}`}>
-                  Dashboard
-                </span>
-              </Link>
+                <Package className="h-4 w-4" />
+                Records &amp; Masters
+                <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 p-1.5">
+                <DropdownMenuLabel className="text-[11px] font-bold uppercase text-gray-400 px-2 py-1">
+                  Master Records
+                </DropdownMenuLabel>
+                {hasPermission(user, 'billing') && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/invoices" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                      <ListOrdered className="h-3.5 w-3.5 text-indigo-600" />
+                      Saved Invoices
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                {hasPermission(user, 'general_dc') && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/delivery-challans" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                      <Truck className="h-3.5 w-3.5 text-blue-600" />
+                      Saved General Challans
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                {hasPermission(user, 'billing') && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/quotations" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                        <FileSearch className="h-3.5 w-3.5 text-amber-600" />
+                        Saved Quotations
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/quotation" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                        <FilePlus className="h-3.5 w-3.5 text-emerald-600" />
+                        New Quotation / Proposal
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {hasPermission(user, 'masters') && (
+                  <>
+                    <DropdownMenuSeparator className="my-1" />
+                    <DropdownMenuItem asChild>
+                      <Link href="/products" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                        <Package className="h-3.5 w-3.5 text-purple-600" />
+                        Products Master
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
-              {/* Tab 2: Invoices */}
-              <Link
-                href="/invoices"
-                onClick={() => triggerHaptic('light')}
-                className={`flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-95 ${
-                  pathname === '/invoices' ? 'text-[#3b2fc9]' : 'text-gray-400 hover:text-gray-700'
+          {/* ── Dropdown 2: HR & Legal (Rarely Used Documents) ── */}
+          {(hasPermission(user, 'hr_docs') || hasPermission(user, 'masters')) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 outline-none cursor-pointer ${
+                  isHrActive
+                    ? 'border-[#3b2fc9] text-[#3b2fc9]'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                 }`}
               >
-                <ListOrdered className={`w-5 h-5 ${pathname === '/invoices' ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-                <span className={`text-[10px] mt-0.5 ${pathname === '/invoices' ? 'font-black' : 'font-medium'}`}>
-                  Invoices
-                </span>
-              </Link>
+                <Briefcase className="h-4 w-4" />
+                HR &amp; Legal
+                <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 p-1.5">
+                <DropdownMenuLabel className="text-[11px] font-bold uppercase text-gray-400 px-2 py-1">
+                  HR &amp; Compliance Documents
+                </DropdownMenuLabel>
+                {hasPermission(user, 'hr_docs') && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/payslip" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                        <Receipt className="h-3.5 w-3.5 text-amber-600" />
+                        Staff Payslips
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/offer-letter" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                        <Briefcase className="h-3.5 w-3.5 text-blue-600" />
+                        Offer Letters
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/declarations" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                        <FileText className="h-3.5 w-3.5 text-emerald-600" />
+                        GST Declarations (URD)
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {hasPermission(user, 'masters') && (
+                  <>
+                    <DropdownMenuSeparator className="my-1" />
+                    <DropdownMenuItem asChild>
+                      <Link href="/clients" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                        <Users className="h-3.5 w-3.5 text-indigo-600" />
+                        Clients Directory
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
-              {/* Tab 3: Prominent Center (+) Creation Sheet Button */}
-              <div className="flex items-center justify-center px-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('medium');
-                    setShowCreateSheet(true);
-                  }}
-                  className="w-12 h-12 -mt-3 rounded-full bg-gradient-to-tr from-[#181156] via-[#2a1d8f] to-[#3b2fc9] text-amber-300 border-2 border-white/60 shadow-xl shadow-indigo-900/50 flex items-center justify-center active:scale-90 transition-transform"
-                  aria-label="Create Document"
-                  title="Create Document"
-                >
-                  <Plus className="w-6 h-6 stroke-[2.8]" />
-                </button>
-              </div>
-
-              {/* Tab 4: Quotations */}
-              <Link
-                href="/quotations"
-                onClick={() => triggerHaptic('light')}
-                className={`flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-95 ${
-                  pathname === '/quotations' ? 'text-[#3b2fc9]' : 'text-gray-400 hover:text-gray-700'
+          {/* ── Dropdown 3: Admin Tools (Strictly Admin Category) ── */}
+          {(isAdmin ||
+            hasPermission(user, 'stock_admin') ||
+            hasPermission(user, 'tuckshop_reconcile') ||
+            hasPermission(user, 'pricing') ||
+            hasPermission(user, 'catalog') ||
+            hasPermission(user, 'payroll') ||
+            hasPermission(user, 'employees') ||
+            hasPermission(user, 'analytics') ||
+            hasPermission(user, 'users_admin') ||
+            hasPermission(user, 'settings')) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 outline-none cursor-pointer ${
+                  isAdminActive
+                    ? 'border-[#3b2fc9] text-[#3b2fc9]'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                 }`}
               >
-                <FileSearch className={`w-5 h-5 ${pathname === '/quotations' ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-                <span className={`text-[10px] mt-0.5 ${pathname === '/quotations' ? 'font-black' : 'font-medium'}`}>
-                  Quotes
-                </span>
-              </Link>
-
-              {/* Tab 5: More Menu Sheet */}
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setShowMoreSheet(true);
-                }}
-                className={`flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-95 ${
-                  showMoreSheet ? 'text-[#3b2fc9]' : 'text-gray-400 hover:text-gray-700'
-                }`}
-              >
-                <MoreHorizontal className="w-5 h-5 stroke-[1.8]" />
-                <span className="text-[10px] font-medium mt-0.5">More</span>
-              </button>
-            </div>
-          </nav>
-        </div>
-
-        {/* ── MOBILE CREATE ACTION SHEET ── */}
-        {showCreateSheet && (
-          <div className="fixed inset-0 z-50 flex flex-col justify-end md:hidden">
-            <div
-              className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-              onClick={() => setShowCreateSheet(false)}
-            />
-            <div className="relative bg-white rounded-t-3xl p-5 pb-8 shadow-2xl space-y-3 animate-in slide-in-from-bottom duration-200">
-              <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-2" />
-              <div className="flex items-center justify-between pb-1">
-                <h4 className="text-sm font-bold text-gray-900">Create New Document</h4>
-                <button
-                  onClick={() => setShowCreateSheet(false)}
-                  className="p-1 text-gray-400 hover:text-gray-600 rounded-full"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 gap-2.5">
-                {(isAdmin || hasPermission(user, 'billing')) && (
-                  <Link
-                    href="/#invoice-form"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setShowCreateSheet(false);
-                    }}
-                    className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-indigo-50/90 to-purple-50/80 border border-indigo-200/80 text-left active:scale-[0.99] transition-transform"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                      <FilePlus className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-indigo-950">New GST Invoice</p>
-                      <p className="text-xs text-indigo-700">Calculate tax, discounts &amp; export PDF</p>
-                    </div>
-                  </Link>
+                <Settings className="h-4 w-4" />
+                Admin Tools
+                {pendingStockCount > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full min-w-[18px] text-center ml-0.5">
+                    {pendingStockCount}
+                  </span>
                 )}
-
-                {(isAdmin || hasPermission(user, 'billing')) && (
-                  <Link
-                    href="/quotation"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setShowCreateSheet(false);
-                    }}
-                    className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-amber-50/90 to-orange-50/80 border border-amber-200/80 text-left active:scale-[0.99] transition-transform"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-orange-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                      <FileSearch className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-amber-950">New Quotation / Proposal</p>
-                      <p className="text-xs text-amber-700">Draft estimate &amp; share client quote</p>
-                    </div>
-                  </Link>
+                <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64 p-1.5">
+                <DropdownMenuLabel className="text-[11px] font-bold uppercase text-gray-400 px-2 py-1">
+                  Privileged Operations
+                </DropdownMenuLabel>
+                {hasPermission(user, 'stock_admin') && (
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/newrelic/stock-requests-admin"
+                      className="flex items-center justify-between cursor-pointer font-medium text-xs"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Send className="h-3.5 w-3.5 text-indigo-600" />
+                        Stock Approvals
+                      </div>
+                      {pendingStockCount > 0 && (
+                        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+                          {pendingStockCount}
+                        </span>
+                      )}
+                    </Link>
+                  </DropdownMenuItem>
                 )}
-
-                {(isAdmin || hasPermission(user, 'general_dc')) && (
-                  <Link
-                    href="/delivery-challan"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setShowCreateSheet(false);
-                    }}
-                    className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/90 to-sky-50/80 border border-blue-200/80 text-left active:scale-[0.99] transition-transform"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                      <Truck className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-blue-950">New General Delivery Challan</p>
-                      <p className="text-xs text-blue-700">For HungerBox &amp; corporate clients</p>
-                    </div>
-                  </Link>
+                {hasPermission(user, 'tuckshop_reconcile') && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/newrelic/reconcile" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                      <FileCheck2 className="h-3.5 w-3.5 text-emerald-600" />
+                      Daily Cash Reconcile
+                    </Link>
+                  </DropdownMenuItem>
                 )}
-
-                {(isAdmin || hasPermission(user, 'hr_docs')) && (
-                  <Link
-                    href="/offer-letter"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setShowCreateSheet(false);
-                    }}
-                    className="flex items-center gap-3.5 p-3 rounded-2xl bg-gray-50 border border-gray-200 text-left active:scale-[0.99] transition-transform"
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-gray-200 text-gray-700 flex items-center justify-center shrink-0">
-                      <Briefcase className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-gray-800">New Offer Letter</p>
-                      <p className="text-[11px] text-gray-500">Employment contract document</p>
-                    </div>
-                  </Link>
+                {hasPermission(user, 'pricing') && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/newrelic/pricing" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                      <DollarSign className="h-3.5 w-3.5 text-green-600" />
+                      Pricing Matrix
+                    </Link>
+                  </DropdownMenuItem>
                 )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── MOBILE "MORE" NAVIGATION SHEET ── */}
-        {showMoreSheet && (
-          <div className="fixed inset-0 z-50 flex flex-col justify-end md:hidden">
-            <div
-              className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-              onClick={() => setShowMoreSheet(false)}
-            />
-            <div className="relative bg-white rounded-t-3xl p-5 pb-8 shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-200 max-h-[85vh] overflow-y-auto">
-              <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto" />
-              <div className="flex items-center justify-between pb-1 border-b border-gray-100">
-                <div>
-                  <h4 className="text-sm font-bold text-gray-900">All Modules &amp; Tools</h4>
-                  <p className="text-xs text-gray-400">Complete InvoiceFlow navigation</p>
-                </div>
-                <button
-                  onClick={() => setShowMoreSheet(false)}
-                  className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Operations Portal Highlight */}
-              <Link
-                href={portalHref}
-                onClick={() => {
-                  triggerHaptic('medium');
-                  setShowMoreSheet(false);
-                }}
-                className="flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-slate-900 to-[#181156] text-white shadow-md active:scale-[0.98] transition-transform"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-400 to-orange-500 text-slate-950 flex items-center justify-center font-black">
-                    <Layers className="w-5 h-5 text-slate-950" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-xs font-bold text-amber-300 uppercase tracking-wider">
-                        Operations Hub
-                      </p>
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    </div>
-                    <p className="text-sm font-extrabold text-white">
-                      {portalLabel}
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-indigo-300" />
-              </Link>
-
-              {/* Module Links Grid */}
-              <div className="grid grid-cols-2 gap-2.5 pt-1">
-                {(isAdmin || hasPermission(user, 'general_dc')) && (
-                  <Link
-                    href="/delivery-challans"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setShowMoreSheet(false);
-                    }}
-                    className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
-                  >
-                    <Truck className="w-4 h-4 text-blue-600 shrink-0" />
-                    <span className="text-xs font-bold text-gray-800">Saved Challans</span>
-                  </Link>
+                {hasPermission(user, 'catalog') && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/newrelic/catalog" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                      <PackageCheck className="h-3.5 w-3.5 text-purple-600" />
+                      Catalog &amp; Brands
+                    </Link>
+                  </DropdownMenuItem>
                 )}
-
-                {(isAdmin || hasPermission(user, 'masters')) && (
-                  <Link
-                    href="/products"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setShowMoreSheet(false);
-                    }}
-                    className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
-                  >
-                    <Package className="w-4 h-4 text-purple-600 shrink-0" />
-                    <span className="text-xs font-bold text-gray-800">Products</span>
-                  </Link>
+                {hasPermission(user, 'payroll') && (
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/newrelic/attendance?tab=payroll"
+                      className="flex items-center gap-2 cursor-pointer font-medium text-xs"
+                    >
+                      <CreditCard className="h-3.5 w-3.5 text-blue-600" />
+                      Salaries &amp; Advances (Payroll)
+                    </Link>
+                  </DropdownMenuItem>
                 )}
-
-                {(isAdmin || hasPermission(user, 'masters')) && (
-                  <Link
-                    href="/clients"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setShowMoreSheet(false);
-                    }}
-                    className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
-                  >
-                    <User className="w-4 h-4 text-indigo-600 shrink-0" />
-                    <span className="text-xs font-bold text-gray-800">Clients</span>
-                  </Link>
+                {hasPermission(user, 'employees') && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/newrelic/employees" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                      <Users className="h-3.5 w-3.5 text-indigo-600" />
+                      Employees Directory
+                    </Link>
+                  </DropdownMenuItem>
                 )}
-
+                {hasPermission(user, 'analytics') && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/newrelic/analytics" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                      <BarChart2 className="h-3.5 w-3.5 text-cyan-600" />
+                      Executive Analytics &amp; P&amp;L
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 {(isAdmin || hasPermission(user, 'users_admin')) && (
-                  <Link
-                    href="/admin/users"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setShowMoreSheet(false);
-                    }}
-                    className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
-                  >
-                    <Shield className="w-4 h-4 text-[#3b2fc9] shrink-0" />
-                    <span className="text-xs font-bold text-gray-800">Access &amp; Users</span>
-                  </Link>
+                  <>
+                    <DropdownMenuSeparator className="my-1" />
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/users" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                        <Shield className="h-3.5 w-3.5 text-[#3b2fc9]" />
+                        Access Control &amp; Users
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
                 )}
-
                 {(isAdmin || hasPermission(user, 'settings')) && (
-                  <Link
-                    href="/settings"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setShowMoreSheet(false);
-                    }}
-                    className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
-                  >
-                    <Settings className="w-4 h-4 text-gray-600 shrink-0" />
-                    <span className="text-xs font-bold text-gray-800">Settings</span>
-                  </Link>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                      <Settings className="h-3.5 w-3.5 text-gray-600" />
+                      Company Settings
+                    </Link>
+                  </DropdownMenuItem>
                 )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      </div>
 
-                {(isAdmin || hasPermission(user, 'hr_docs')) && (
-                  <Link
-                    href="/declarations"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setShowMoreSheet(false);
-                    }}
-                    className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
-                  >
-                    <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="text-xs font-bold text-gray-800">GST Declarations</span>
-                  </Link>
-                )}
+      {/* Main Page Content Body */}
+      <main className="flex-1 pb-24 sm:pb-8 max-w-full overflow-x-hidden min-w-0">
+        {children}
+      </main>
 
-                {(isAdmin || hasPermission(user, 'hr_docs')) && (
-                  <Link
-                    href="/payslip"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setShowMoreSheet(false);
-                    }}
-                    className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
-                  >
-                    <Receipt className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span className="text-xs font-bold text-gray-800">Staff Payslips</span>
-                  </Link>
-                )}
-              </div>
-
-              {/* User profile & Sign Out */}
-              <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8 rounded-lg bg-indigo-100 text-[#3b2fc9] font-bold text-xs">
-                    <AvatarFallback className="bg-indigo-100 text-[#3b2fc9]">
-                      {user?.email?.[0]?.toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-gray-900 truncate">
-                      {user?.email}
-                    </p>
-                    <p className="text-[10px] text-gray-400 capitalize">
-                      {auth?.role || 'User'}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  className="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold flex items-center gap-1.5"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </SidebarInset>
-    </>
+      {/* Native Mobile Bottom Navigation Bar */}
+      <MobileAppNavigation pendingStockCount={pendingStockCount} />
+    </div>
   );
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider>
-      <AppShellContent>{children}</AppShellContent>
-    </SidebarProvider>
+    <FinancialAuthProvider>
+      <AppShellInner>{children}</AppShellInner>
+    </FinancialAuthProvider>
   );
 }

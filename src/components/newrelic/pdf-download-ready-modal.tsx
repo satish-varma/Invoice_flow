@@ -81,35 +81,28 @@ export function PdfDownloadReadyModal({
       setIsProcessing(true);
       toast({
         title: 'Starting Download...',
-        description: 'Saving PDF to your device',
+        description: `Saving ${pdfData.fileName} to your device`,
       });
 
       const base64 = await getBase64();
 
-      // Native Capacitor attempt if plugins are available
+      // If native Capacitor app, also save directly into Documents
       if (Capacitor.isNativePlatform()) {
         try {
-          const saved = await Filesystem.writeFile({
+          await Filesystem.writeFile({
             path: pdfData.fileName,
             data: base64,
-            directory: Directory.Cache,
+            directory: Directory.Documents,
           });
-          await Share.share({
-            title: pdfData.fileName,
-            url: saved.uri,
-            dialogTitle: 'Save or Open Delivery Challan',
-          });
-          setIsProcessing(false);
-          return;
         } catch (capErr) {
-          console.warn('Capacitor native filesystem failed, falling back to server URL:', capErr);
+          console.warn('Capacitor native filesystem write skipped/failed:', capErr);
         }
       }
 
-      // Universal Server URL Download (Triggers Android Native DownloadManager)
+      // Universal Server URL Download (Triggers Android Native DownloadManager in WebView & standard browser download)
       const { downloadUrl } = await getServerUrls(base64);
       
-      // Trigger native download
+      // 1. DOM anchor click
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = pdfData.fileName;
@@ -119,7 +112,7 @@ export function PdfDownloadReadyModal({
         if (link.parentNode) link.parentNode.removeChild(link);
       }, 1000);
 
-      // Also navigate location for Android WebViews that don't auto-click
+      // 2. Direct location trigger for Android WebView DownloadListener
       setTimeout(() => {
         window.location.href = downloadUrl;
       }, 300);
@@ -129,7 +122,7 @@ export function PdfDownloadReadyModal({
       toast({
         variant: 'destructive',
         title: 'Download failed',
-        description: 'Please try "Open in PDF Viewer" instead.',
+        description: 'Please try "Open in PDF Viewer" or "Share" instead.',
       });
     } finally {
       setIsProcessing(false);
@@ -143,8 +136,14 @@ export function PdfDownloadReadyModal({
       const base64 = await getBase64();
       const { viewUrl } = await getServerUrls(base64);
       
-      // Open real HTTPS PDF URL in new tab / external viewer
-      window.open(viewUrl, '_blank');
+      if (Capacitor.isNativePlatform()) {
+        window.open(viewUrl, '_system');
+      } else {
+        const win = window.open(viewUrl, '_blank');
+        if (!win) {
+          window.location.href = viewUrl;
+        }
+      }
     } catch (err) {
       console.error('Error opening PDF:', err);
       window.open(pdfData.url, '_blank');

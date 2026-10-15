@@ -25,11 +25,22 @@ export interface GeneratedPdfResult {
 /**
  * Generates a multi-page PDF from an HTML element with discrete body, signature, and footer sections.
  * Supports Desktop Web, Mobile Browser (Web Share), and Native Capacitor Android.
- * @param element The HTML element to render into the PDF.
- * @param fileName The desired name of the output PDF file (used only in 'save' mode).
- * @param mode 'save' to trigger download/share, 'preview' to return data URI.
- * @returns Promise<GeneratedPdfResult | string>
  */
+export async function generateAndSavePdf(
+    element: HTMLElement,
+    fileName: string,
+    mode: 'preview'
+): Promise<string>;
+export async function generateAndSavePdf(
+    element: HTMLElement,
+    fileName: string,
+    mode?: 'save'
+): Promise<GeneratedPdfResult>;
+export async function generateAndSavePdf(
+    element: HTMLElement,
+    fileName: string,
+    mode?: 'save' | 'preview'
+): Promise<GeneratedPdfResult | string>;
 export async function generateAndSavePdf(
     element: HTMLElement,
     fileName: string,
@@ -148,7 +159,12 @@ export async function generateAndSavePdf(
                 } catch (shareErr: any) {
                     if (shareErr.name === 'AbortError') {
                         console.log("User dismissed share dialog.");
-                        return;
+                        return {
+                            blob,
+                            url: blobUrl,
+                            fileName: finalName,
+                            arrayBuffer,
+                        };
                     }
                     console.warn("Web Share failed, falling back to anchor download:", shareErr);
                 }

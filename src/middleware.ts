@@ -37,6 +37,11 @@ export default withAuth(
     const { token } = req.nextauth;
     const { pathname, search } = req.nextUrl;
 
+    // Public download endpoint for generated PDFs (has unique expiring token)
+    if (pathname.startsWith('/api/download-pdf')) {
+      return NextResponse.next();
+    }
+
     if (!token) {
       return NextResponse.redirect(new URL('/login', req.url));
     }
@@ -168,6 +173,7 @@ export default withAuth(
         if (
           pathname.startsWith('/login') ||
           pathname.startsWith('/api/auth') ||
+          pathname.startsWith('/api/download-pdf') ||
           pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|webp|pdf|woff2?|css|js)$/i)
         ) {
           return true;
@@ -183,6 +189,6 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    '/((?!login|api/auth|_next/static|_next/image|favicon.ico|manifest.json|sw.js|workbox-.*\\.js|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|pdf|woff2?|css|js)).*)',
+    '/((?!login|api/auth|api/download-pdf|_next/static|_next/image|favicon.ico|manifest.json|sw.js|workbox-.*\\.js|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|pdf|woff2?|css|js)).*)',
   ],
 };

@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Lock } from 'lucide-react';
 
+import { checkUserCheckedInToday } from '@/services/newrelicAttendanceService';
+
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -18,15 +20,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // If already logged in, redirect to user's default landing page or site portal
+  // If already logged in, check if today's check-in has happened
   useEffect(() => {
     if (user) {
-      const target =
-        user.defaultLandingPage ||
-        (user.assignedSite === 'dsm' || user.assignedSite === 'ntt_data'
-          ? '/newrelic/tuckshop'
-          : '/newrelic');
-      router.replace(target);
+      checkUserCheckedInToday(user.id, user.email).then((checkedIn) => {
+        if (!checkedIn) {
+          router.replace('/newrelic/attendance');
+        } else {
+          router.replace('/newrelic');
+        }
+      });
     }
   }, [user, router]);
 
@@ -45,22 +48,14 @@ export default function LoginPage() {
       }
 
       toast({ title: 'Welcome back!' });
-      const searchParams = new URLSearchParams(window.location.search);
-      const callback = searchParams.get('callbackUrl');
-      let target = '/';
-      if (callback && callback !== '/' && !callback.includes('/login')) {
-        try {
-          if (callback.startsWith('http://') || callback.startsWith('https://')) {
-            const parsed = new URL(callback);
-            target = parsed.pathname + parsed.search;
-          } else if (callback.startsWith('/')) {
-            target = callback;
-          }
-        } catch {
-          target = '/';
-        }
+      
+      // Check if user has checked in today: if not -> /newrelic/attendance, else -> /newrelic
+      const checkedIn = await checkUserCheckedInToday(undefined, email);
+      if (!checkedIn) {
+        router.push('/newrelic/attendance');
+      } else {
+        router.push('/newrelic');
       }
-      router.push(target);
     } catch (err: any) {
       toast({
         variant: 'destructive',

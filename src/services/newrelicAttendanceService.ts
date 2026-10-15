@@ -330,3 +330,42 @@ export async function getEmployeeMonthlyAttendance(
     }
   }
 }
+
+/**
+ * Checks if the logged-in user (matched against employee roster by userId or email)
+ * has already checked in today.
+ * Returns true if:
+ * - The employee has an attendance record for today with a valid checkIn.time.
+ * - OR the user is not on the cafeteria employee roster (e.g. superadmin).
+ * Returns false if:
+ * - The user IS a registered employee on the roster but has NOT checked in today.
+ */
+export async function checkUserCheckedInToday(userId?: string, email?: string): Promise<boolean> {
+  try {
+    const today = new Date().toISOString().substring(0, 10);
+    const employeesSnapshot = await getDocs(collection(db, 'newrelic_employees'));
+    const userEmailLower = (email || '').toLowerCase().trim();
+
+    // Match employee by userId or email
+    const matchedEmp = employeesSnapshot.docs.find((d) => {
+      const data = d.data();
+      const empEmail = (data.email || '').toLowerCase().trim();
+      return (
+        (userId && data.userId === userId) ||
+        (userEmailLower && empEmail && empEmail === userEmailLower)
+      );
+    });
+
+    // If user is not an employee on the roster, don't force attendance
+    if (!matchedEmp) {
+      return true;
+    }
+
+    const todayRecord = await getTodayAttendance(matchedEmp.id, today);
+    return Boolean(todayRecord?.checkIn?.time);
+  } catch (error) {
+    console.warn('Error checking today check-in status:', error);
+    return true; // Fail open to avoid blocking users on error
+  }
+}
+

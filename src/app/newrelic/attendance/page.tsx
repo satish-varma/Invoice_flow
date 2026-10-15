@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Loader2, Camera, LogIn, LogOut, MapPin, Clock, CheckCircle, AlertCircle, Calendar, Users, IndianRupee, Phone, Mail, CalendarDays, ChevronDown, ChevronUp, User, FileSpreadsheet, Calculator } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
@@ -73,6 +73,7 @@ function AttendancePageContent() {
   const isAdmin = isOwnerOrAdmin; // Strictly restricted to admin and superadmin only
 
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -597,11 +598,15 @@ function AttendancePageContent() {
           toast({
             variant: 'destructive',
             title: `⚠️ Checked In (Late by ${res.lateMinutes} mins)`,
-            description: `Shift deadline was ${LOCATION_SHIFT_RULES[selectedEmployee.location.toLowerCase()]?.cutoff || '06:30'} AM. Marked as Late.`,
+            description: `Shift deadline was ${LOCATION_SHIFT_RULES[selectedEmployee.location.toLowerCase()]?.cutoff || '06:30'} AM. Redirecting to DC Hub...`,
           });
         } else {
-          toast({ title: `✅ Checked in on time — ${formatTime(new Date().toISOString())}` });
+          toast({ title: `✅ Checked in on time — Redirecting to DC Hub...` });
         }
+        // Auto-redirect to DC page after recording attendance
+        setTimeout(() => {
+          router.push('/newrelic');
+        }, 1200);
       } else {
         if (!todayRecord?.id || !todayRecord.checkIn) {
           triggerHaptic('warning');

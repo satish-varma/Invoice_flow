@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   FileText,
   Store,
@@ -28,6 +28,8 @@ import {
   Shield,
   FilePlus,
   LayoutDashboard,
+  Plus,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { triggerHaptic } from '@/lib/haptics';
@@ -35,94 +37,43 @@ import { hasPermission } from '@/types/permissions';
 
 export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCount?: number }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { role, user } = useAuth();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showCreateSheet, setShowCreateSheet] = useState(false);
 
   const isAdmin = role === 'admin' || role === 'superadmin';
 
-  // Primary bottom tabs (Tailored to role, max 4 tabs + More)
-  const navTabs: Array<{
-    label: string;
-    href: string;
-    icon: any;
-    badge?: number;
-    isActive: boolean;
-  }> = [];
+  // 5-Slot Bottom Bar: 1. DC, 2. Tuckshop, 3. (+), 4. Attendance, 5. Stock Request (User) / More (Admin)
+  const tabDc = {
+    label: 'DC',
+    href: '/newrelic',
+    icon: FileText,
+    isActive: pathname === '/newrelic',
+  };
 
-  // 1. Tuckshop (if permitted)
-  if (hasPermission(user, 'tuckshop')) {
-    navTabs.push({
-      label: 'Tuckshop',
-      href: '/newrelic/tuckshop',
-      icon: Store,
-      isActive: pathname.startsWith('/newrelic/tuckshop') || pathname === '/tuckshop',
-    });
-  }
+  const tabTuckshop = {
+    label: 'Tuckshop',
+    href: '/newrelic/tuckshop',
+    icon: Store,
+    isActive: pathname.startsWith('/newrelic/tuckshop') || pathname === '/tuckshop',
+  };
 
-  // 2. Attendance (if permitted)
-  if (hasPermission(user, 'attendance')) {
-    navTabs.push({
-      label: 'Attendance',
-      href: '/newrelic/attendance',
-      icon: CalendarCheck,
-      isActive:
-        (pathname.startsWith('/newrelic/attendance') || pathname === '/attendance') &&
-        !pathname.includes('payroll'),
-    });
-  }
+  const tabAttendance = {
+    label: 'Attendance',
+    href: '/newrelic/attendance',
+    icon: CalendarCheck,
+    isActive:
+      (pathname.startsWith('/newrelic/attendance') || pathname === '/attendance') &&
+      !pathname.includes('payroll'),
+  };
 
-  // 3. NewRelic DC (Strictly if permitted and site is newrelic)
-  if (hasPermission(user, 'newrelic_dc')) {
-    navTabs.push({
-      label: 'NewRelic DC',
-      href: '/newrelic',
-      icon: FileText,
-      isActive: pathname === '/newrelic',
-    });
-  }
-
-  // 4. General DC (Universal DC for other companies)
-  if (hasPermission(user, 'general_dc')) {
-    navTabs.push({
-      label: 'General DC',
-      href: '/delivery-challan',
-      icon: Truck,
-      isActive: pathname.startsWith('/delivery-challan'),
-    });
-  }
-
-  // 5. Invoices & Dashboard (If user has billing and space available)
-  if (hasPermission(user, 'billing') && navTabs.length < 4) {
-    navTabs.push({
-      label: 'Invoices',
-      href: '/',
-      icon: LayoutDashboard,
-      isActive: pathname === '/',
-    });
-  }
-
-  // 6. Stock Requests (if permitted and space available)
-  if (navTabs.length < 4) {
-    if (hasPermission(user, 'stock_admin')) {
-      navTabs.push({
-        label: 'Stock Admin',
-        href: '/newrelic/stock-requests-admin',
-        icon: Send,
-        badge: pendingStockCount > 0 ? pendingStockCount : undefined,
-        isActive: pathname === '/newrelic/stock-requests-admin',
-      });
-    } else if (hasPermission(user, 'stock_request')) {
-      navTabs.push({
-        label: 'Stock Req',
-        href: '/newrelic/stock-request',
-        icon: Send,
-        isActive: pathname === '/newrelic/stock-request',
-      });
-    }
-  }
-
-  // Limit primary bar to 4 tabs max so "More" is the 5th
-  const visibleTabs = navTabs.slice(0, 4);
+  const tabStock = {
+    label: 'Stock Req',
+    href: '/newrelic/stock-request',
+    icon: Send,
+    isActive: pathname === '/newrelic/stock-request',
+  };
 
   // Grouped items for "More" Action Drawer
   // Group 1: Records & Masters
@@ -302,50 +253,119 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none">
         <nav className="pointer-events-auto bg-white/95 backdrop-blur-xl border border-gray-200/80 shadow-[0_12px_36px_-6px_rgba(15,23,42,0.18)] rounded-2xl overflow-hidden ring-1 ring-black/5">
           <div className="flex items-center justify-around h-16 px-1.5 py-1">
-            {visibleTabs.map((tab) => {
-              const Icon = tab.icon;
-              const active = tab.isActive;
-              return (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  prefetch={false}
-                  onClick={() => triggerHaptic('light')}
-                  className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-90 group"
+            {/* Slot 1: DC */}
+            <Link
+              href={tabDc.href}
+              prefetch={false}
+              onClick={() => triggerHaptic('light')}
+              className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-90 group"
+            >
+              <div className="relative">
+                <div
+                  className={`px-3 py-1.5 rounded-full transition-all flex items-center justify-center ${
+                    tabDc.isActive
+                      ? 'bg-gradient-to-r from-indigo-500/15 via-[#3b2fc9]/15 to-purple-500/15 text-[#3b2fc9] shadow-2xs border border-[#3b2fc9]/20'
+                      : 'text-gray-400 group-hover:text-gray-600'
+                  }`}
                 >
-                  <div className="relative">
-                    <div
-                      className={`px-3.5 py-1.5 rounded-full transition-all flex items-center justify-center ${
-                        active
-                          ? 'bg-gradient-to-r from-indigo-500/15 via-[#3b2fc9]/15 to-purple-500/15 text-[#3b2fc9] shadow-2xs border border-[#3b2fc9]/20'
-                          : 'text-gray-400 group-hover:text-gray-600'
-                      }`}
-                    >
-                      <Icon
-                        className={`w-5 h-5 transition-transform ${
-                          active ? 'scale-110 stroke-[2.4] text-[#3b2fc9]' : 'stroke-[1.8]'
-                        }`}
-                      />
-                    </div>
-                    {tab.badge !== undefined && (
-                      <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-xs ring-2 ring-white animate-pulse">
-                        {tab.badge}
-                      </span>
-                    )}
-                  </div>
-                  <span
-                    className={`text-[10px] mt-0.5 tracking-tight transition-all ${
-                      active ? 'font-black text-[#3b2fc9] scale-105' : 'font-semibold text-gray-500'
+                  <FileText
+                    className={`w-5 h-5 transition-transform ${
+                      tabDc.isActive ? 'scale-110 stroke-[2.4] text-[#3b2fc9]' : 'stroke-[1.8]'
                     }`}
-                  >
-                    {tab.label}
-                  </span>
-                </Link>
-              );
-            })}
+                  />
+                </div>
+              </div>
+              <span
+                className={`text-[10px] mt-0.5 tracking-tight transition-all ${
+                  tabDc.isActive ? 'font-black text-[#3b2fc9] scale-105' : 'font-semibold text-gray-500'
+                }`}
+              >
+                {tabDc.label}
+              </span>
+            </Link>
 
-            {/* "More" Sheet Trigger */}
-            {allMoreItems.length > 0 && (
+            {/* Slot 2: Tuckshop */}
+            <Link
+              href={tabTuckshop.href}
+              prefetch={false}
+              onClick={() => triggerHaptic('light')}
+              className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-90 group"
+            >
+              <div className="relative">
+                <div
+                  className={`px-3 py-1.5 rounded-full transition-all flex items-center justify-center ${
+                    tabTuckshop.isActive
+                      ? 'bg-gradient-to-r from-indigo-500/15 via-[#3b2fc9]/15 to-purple-500/15 text-[#3b2fc9] shadow-2xs border border-[#3b2fc9]/20'
+                      : 'text-gray-400 group-hover:text-gray-600'
+                  }`}
+                >
+                  <Store
+                    className={`w-5 h-5 transition-transform ${
+                      tabTuckshop.isActive ? 'scale-110 stroke-[2.4] text-[#3b2fc9]' : 'stroke-[1.8]'
+                    }`}
+                  />
+                </div>
+              </div>
+              <span
+                className={`text-[10px] mt-0.5 tracking-tight transition-all ${
+                  tabTuckshop.isActive ? 'font-black text-[#3b2fc9] scale-105' : 'font-semibold text-gray-500'
+                }`}
+              >
+                {tabTuckshop.label}
+              </span>
+            </Link>
+
+            {/* Slot 3: Center Elevated Plus (+) Action Button */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('medium');
+                setShowCreateSheet(true);
+              }}
+              className="flex-1 flex flex-col items-center justify-center -mt-5 relative z-10 group"
+              aria-label="New Action"
+            >
+              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#181156] via-[#281d8c] to-[#3b2fc9] text-white shadow-xl shadow-indigo-950/40 border-[3px] border-white flex items-center justify-center active:scale-90 group-hover:scale-105 transition-all">
+                <Plus className="w-6 h-6 stroke-[3] text-amber-300" />
+              </div>
+              <span className="text-[10px] font-black text-indigo-950 tracking-tight mt-0.5">
+                New
+              </span>
+            </button>
+
+            {/* Slot 4: Attendance */}
+            <Link
+              href={tabAttendance.href}
+              prefetch={false}
+              onClick={() => triggerHaptic('light')}
+              className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-90 group"
+            >
+              <div className="relative">
+                <div
+                  className={`px-3 py-1.5 rounded-full transition-all flex items-center justify-center ${
+                    tabAttendance.isActive
+                      ? 'bg-gradient-to-r from-indigo-500/15 via-[#3b2fc9]/15 to-purple-500/15 text-[#3b2fc9] shadow-2xs border border-[#3b2fc9]/20'
+                      : 'text-gray-400 group-hover:text-gray-600'
+                  }`}
+                >
+                  <CalendarCheck
+                    className={`w-5 h-5 transition-transform ${
+                      tabAttendance.isActive ? 'scale-110 stroke-[2.4] text-[#3b2fc9]' : 'stroke-[1.8]'
+                    }`}
+                  />
+                </div>
+              </div>
+              <span
+                className={`text-[10px] mt-0.5 tracking-tight transition-all ${
+                  tabAttendance.isActive ? 'font-black text-[#3b2fc9] scale-105' : 'font-semibold text-gray-500'
+                }`}
+              >
+                {tabAttendance.label}
+              </span>
+            </Link>
+
+            {/* Slot 5: Stock Request for regular users, More for admin */}
+            {isAdmin ? (
               <button
                 onClick={() => {
                   triggerHaptic('light');
@@ -354,7 +374,7 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
                 className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-90 group"
               >
                 <div
-                  className={`px-3.5 py-1.5 rounded-full transition-all flex items-center justify-center relative ${
+                  className={`px-3 py-1.5 rounded-full transition-all flex items-center justify-center relative ${
                     showMoreMenu || isMoreActive
                       ? 'bg-gradient-to-r from-indigo-500/15 via-[#3b2fc9]/15 to-purple-500/15 text-[#3b2fc9] shadow-2xs border border-[#3b2fc9]/20'
                       : 'text-gray-400 group-hover:text-gray-600'
@@ -362,31 +382,194 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
                 >
                   <MoreHorizontal
                     className={`w-5 h-5 transition-transform ${
-                      showMoreMenu || isMoreActive
-                        ? 'scale-110 stroke-[2.4] text-[#3b2fc9]'
-                        : 'stroke-[1.8]'
+                      showMoreMenu || isMoreActive ? 'scale-110 stroke-[2.4] text-[#3b2fc9]' : 'stroke-[1.8]'
                     }`}
                   />
-                  {pendingStockCount > 0 && isAdmin && (
-                    <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-black rounded-full h-3.5 w-3.5 flex items-center justify-center shadow-xs">
+                  {pendingStockCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-black rounded-full h-3.5 w-3.5 flex items-center justify-center shadow-xs ring-2 ring-white animate-pulse">
                       {pendingStockCount}
                     </span>
                   )}
                 </div>
                 <span
                   className={`text-[10px] mt-0.5 tracking-tight transition-all ${
-                    showMoreMenu || isMoreActive
-                      ? 'font-black text-[#3b2fc9] scale-105'
-                      : 'font-semibold text-gray-500'
+                    showMoreMenu || isMoreActive ? 'font-black text-[#3b2fc9] scale-105' : 'font-semibold text-gray-500'
                   }`}
                 >
                   More
                 </span>
               </button>
+            ) : (
+              <Link
+                href={tabStock.href}
+                prefetch={false}
+                onClick={() => triggerHaptic('light')}
+                className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-90 group"
+              >
+                <div className="relative">
+                  <div
+                    className={`px-3 py-1.5 rounded-full transition-all flex items-center justify-center ${
+                      tabStock.isActive
+                        ? 'bg-gradient-to-r from-indigo-500/15 via-[#3b2fc9]/15 to-purple-500/15 text-[#3b2fc9] shadow-2xs border border-[#3b2fc9]/20'
+                        : 'text-gray-400 group-hover:text-gray-600'
+                    }`}
+                  >
+                    <Send
+                      className={`w-5 h-5 transition-transform ${
+                        tabStock.isActive ? 'scale-110 stroke-[2.4] text-[#3b2fc9]' : 'stroke-[1.8]'
+                      }`}
+                    />
+                  </div>
+                </div>
+                <span
+                  className={`text-[10px] mt-0.5 tracking-tight transition-all ${
+                    tabStock.isActive ? 'font-black text-[#3b2fc9] scale-105' : 'font-semibold text-gray-500'
+                  }`}
+                >
+                  {tabStock.label}
+                </span>
+              </Link>
             )}
           </div>
         </nav>
       </div>
+
+      {/* ── Native Create Action Sheet (Opened by Center + Button) ── */}
+      {showCreateSheet && (
+        <div className="sm:hidden fixed inset-0 z-50 flex flex-col justify-end">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={() => setShowCreateSheet(false)}
+          />
+
+          {/* Action List Container */}
+          <div className="relative bg-white rounded-t-3xl p-5 pb-9 shadow-2xl space-y-3.5 animate-in slide-in-from-bottom duration-200">
+            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto" />
+
+            <div className="flex items-center justify-between pb-1">
+              <div>
+                <h4 className="text-base font-black text-gray-900 tracking-tight">Create & Quick Actions</h4>
+                <p className="text-xs text-gray-500">Fast operations across multi-site cafeteria hub</p>
+              </div>
+              <button
+                onClick={() => setShowCreateSheet(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Action 1: New Challan · Hyderabad */}
+            <button
+              onClick={() => {
+                setShowCreateSheet(false);
+                triggerHaptic('light');
+                if (pathname === '/newrelic') {
+                  window.dispatchEvent(new CustomEvent('open-new-challan', { detail: { location: 'hyderabad' } }));
+                } else {
+                  router.push('/newrelic?action=new&location=hyderabad');
+                }
+              }}
+              className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/90 to-indigo-50/70 border border-blue-200/80 text-left active:scale-[0.99] transition-transform shadow-xs"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-blue-950">New Challan · Hyderabad</p>
+                <p className="text-xs text-blue-700 font-medium">Mindspace, Hitec City cafeteria DC</p>
+              </div>
+            </button>
+
+            {/* Action 2: New Challan · Bangalore */}
+            <button
+              onClick={() => {
+                setShowCreateSheet(false);
+                triggerHaptic('light');
+                if (pathname === '/newrelic') {
+                  window.dispatchEvent(new CustomEvent('open-new-challan', { detail: { location: 'bangalore' } }));
+                } else {
+                  router.push('/newrelic?action=new&location=bangalore');
+                }
+              }}
+              className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50/90 to-teal-50/70 border border-emerald-200/80 text-left active:scale-[0.99] transition-transform shadow-xs"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-emerald-950">New Challan · Bangalore</p>
+                <p className="text-xs text-emerald-700 font-medium">Bagmane Tech Park cafeteria DC</p>
+              </div>
+            </button>
+
+            {/* Action 3: New Stock Request */}
+            <button
+              onClick={() => {
+                setShowCreateSheet(false);
+                triggerHaptic('light');
+                router.push('/newrelic/stock-request');
+              }}
+              className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-purple-50/90 to-violet-50/70 border border-purple-200/80 text-left active:scale-[0.99] transition-transform shadow-xs"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-violet-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                <Send className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-purple-950">New Stock Request</p>
+                <p className="text-xs text-purple-700 font-medium">Request items, raw materials &amp; supplies</p>
+              </div>
+            </button>
+
+            {/* Action 4: Today's Attendance / Check In */}
+            <button
+              onClick={() => {
+                setShowCreateSheet(false);
+                triggerHaptic('light');
+                router.push('/newrelic/attendance');
+              }}
+              className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-gradient-to-r from-amber-50/90 to-orange-50/70 border border-amber-200/80 text-left active:scale-[0.99] transition-transform shadow-xs"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                <CalendarCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-amber-950">Attendance Check-In / Out</p>
+                <p className="text-xs text-amber-700 font-medium">Selfie camera verification &amp; shift clock</p>
+              </div>
+            </button>
+
+            {/* Admin extras in + sheet: Reconciliation & Export Excel */}
+            {isAdmin && (
+              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-gray-100">
+                <Link
+                  href="/newrelic/reconcile"
+                  onClick={() => setShowCreateSheet(false)}
+                  className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-left text-xs font-bold text-amber-900 active:scale-95"
+                >
+                  <FileCheck2 className="w-4 h-4 text-amber-700" />
+                  <span>Reconcile Cash</span>
+                </Link>
+                <button
+                  onClick={() => {
+                    setShowCreateSheet(false);
+                    if (pathname === '/newrelic') {
+                      window.dispatchEvent(new CustomEvent('export-newrelic-excel'));
+                    } else {
+                      router.push('/newrelic?action=export');
+                    }
+                  }}
+                  className="flex items-center gap-2 p-3 rounded-xl bg-blue-50 border border-blue-200 text-left text-xs font-bold text-blue-900 active:scale-95"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-blue-700" />
+                  <span>Export DC Excel</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Categorized Native Mobile Action Sheet / Drawer for "More" ── */}
       {showMoreMenu && (

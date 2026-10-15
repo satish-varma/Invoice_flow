@@ -19,6 +19,8 @@ import { getChallans, Challan } from '@/services/challanService';
 import { triggerHaptic } from '@/lib/haptics';
 import { hasPermission } from '@/types/permissions';
 
+import { checkUserCheckedInToday } from '@/services/newrelicAttendanceService';
+
 export default function RootHomePage() {
   const router = useRouter();
   const { user, role, loading } = useAuth();
@@ -47,20 +49,22 @@ export default function RootHomePage() {
     const isAdmin = role === 'admin' || role === 'superadmin';
     const canAccessBilling = isAdmin || hasPermission(user, 'billing');
 
-    if (canAccessBilling) {
-      setRedirecting(false);
-      return;
-    }
+    // Verify if check-in for the day has happened
+    checkUserCheckedInToday(user.id, user.email).then((checkedIn) => {
+      if (!checkedIn) {
+        setRedirecting(true);
+        router.replace('/newrelic/attendance');
+        return;
+      }
 
-    // User without billing permission: redirect to accessible landing module
-    const defaultPage =
-      user.defaultLandingPage ||
-      (user.assignedSite === 'dsm' || user.assignedSite === 'ntt_data'
-        ? '/newrelic/tuckshop'
-        : '/newrelic');
+      if (canAccessBilling) {
+        setRedirecting(false);
+        return;
+      }
 
-    setRedirecting(true);
-    router.replace(defaultPage);
+      setRedirecting(true);
+      router.replace('/newrelic');
+    });
   }, [user, role, loading, router]);
 
   const fetchData = async () => {

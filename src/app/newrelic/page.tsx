@@ -23,7 +23,7 @@ import { useFinancialAuth } from '@/contexts/FinancialAuthContext';
 import { FinancialPasswordModal } from '@/components/newrelic/financial-password-modal';
 import { Lock, Unlock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { MobileFloatingActions } from '@/components/newrelic/mobile-floating-actions';
+import { checkUserCheckedInToday } from '@/services/newrelicAttendanceService';
 import { triggerHaptic } from '@/lib/haptics';
 import { ChallanSkeletonLoader } from '@/components/newrelic/challan-skeleton-loader';
 import { MrpCalculatorModal } from '@/components/newrelic/mrp-calculator-modal';
@@ -48,6 +48,24 @@ export default function NewRelicPage() {
       router.replace('/newrelic/tuckshop');
     }
   }, [isAdmin, user, router]);
+
+  // Attendance gate: If daily check-in has not happened for user, redirect to attendance
+  useEffect(() => {
+    if (!user || isAdmin) return;
+    let isSubscribed = true;
+    checkUserCheckedInToday(user.id, user.email).then((hasCheckedIn) => {
+      if (isSubscribed && !hasCheckedIn) {
+        toast({
+          title: 'Daily Check-In Required',
+          description: 'Please record your attendance check-in before opening the DC.',
+        });
+        router.replace('/newrelic/attendance');
+      }
+    });
+    return () => {
+      isSubscribed = false;
+    };
+  }, [isAdmin, user, router, toast]);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -287,6 +305,50 @@ export default function NewRelicPage() {
       toast({ variant: 'destructive', title: 'Export failed' });
     }
   };
+
+  /* ── Listeners for Mobile Navigation Center (+) Actions and Query Params ── */
+  const handleStartCreateNewRef = useRef(handleStartCreateNew);
+  handleStartCreateNewRef.current = handleStartCreateNew;
+  const handleExportExcelRef = useRef(handleExportExcel);
+  handleExportExcelRef.current = handleExportExcel;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get('action');
+    const loc = params.get('location') as NewRelicLocation | null;
+    if (action === 'new') {
+      handleStartCreateNewRef.current(loc === 'bangalore' ? 'bangalore' : 'hyderabad');
+    } else if (action === 'calculator' && isAdmin) {
+      setShowCalculator(true);
+    } else if (action === 'export' && isAdmin) {
+      handleExportExcelRef.current();
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    const handleOpenNew = (e: Event) => {
+      const customEvent = e as CustomEvent<{ location?: NewRelicLocation }>;
+      handleStartCreateNewRef.current(customEvent.detail?.location || 'hyderabad');
+    };
+    const handleOpenCalc = () => {
+      if (isAdmin) setShowCalculator(true);
+    };
+    const handleExport = () => {
+      if (isAdmin) handleExportExcelRef.current();
+    };
+
+    window.addEventListener('open-new-challan', handleOpenNew);
+    window.addEventListener('open-mrp-calculator', handleOpenCalc);
+    window.addEventListener('export-dc-excel', handleExport);
+    window.addEventListener('export-newrelic-excel', handleExport);
+    return () => {
+      window.removeEventListener('open-new-challan', handleOpenNew);
+      window.removeEventListener('open-mrp-calculator', handleOpenCalc);
+      window.removeEventListener('export-dc-excel', handleExport);
+      window.removeEventListener('export-newrelic-excel', handleExport);
+    };
+  }, [isAdmin]);
 
   /* ── PDF generation after preview mounts ── */
   useEffect(() => {
@@ -541,30 +603,6 @@ export default function NewRelicPage() {
                 </button>
               )}
             </div>
-
-            {/* Native Mobile Floating Action Button (+) */}
-            <MobileFloatingActions
-              onNewChallan={(loc) => handleStartCreateNew(loc)}
-              onExportExcel={(role === 'admin' || role === 'superadmin') ? handleExportExcel : undefined}
-              canReconcile={role === 'admin' || role === 'superadmin'}
-              onOpenCalculator={(role === 'admin' || role === 'superadmin') ? () => setShowCalculator(true) : undefined}
-            />
-
-            {/* Floating Mobile Calculator Button - Admin/Superadmin only */}
-            {(role === 'admin' || role === 'superadmin') && (
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setShowCalculator(true);
-                }}
-                className={`fixed ${showScrollTop ? 'left-4 bottom-44' : 'left-4 bottom-26'} z-30 w-12 h-12 rounded-full bg-gradient-to-tr from-[#181156] via-[#2a1d8f] to-[#3b2fc9] shadow-2xl shadow-indigo-950/70 text-amber-300 border-2 border-white/30 flex items-center justify-center sm:hidden active:scale-90 transition-all`}
-                aria-label="MRP Calculator"
-                title="MRP % Calculator"
-              >
-                <Calculator className="w-5 h-5 stroke-[2.2]" />
-              </button>
-            )}
 
             {/* Floating Back to Top Button on Mobile */}
             {showScrollTop && (

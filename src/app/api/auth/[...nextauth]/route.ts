@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { hashPassword } from "@/lib/hash";
+import { headers } from "next/headers";
 
 const authOptions: NextAuthOptions = {
   providers: [
@@ -80,17 +81,32 @@ const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs without prepending baseUrl
-      if (url.startsWith("/")) return url;
+      // 1. If it's already an absolute URL (http:// or https://), validate and return it
       try {
         const parsed = new URL(url);
-        if (parsed.origin === baseUrl) return url;
-        // For mobile/LAN dev or hybrid apps, return relative path to stay on client host
-        if (parsed.pathname) return parsed.pathname + parsed.search;
+        return parsed.toString();
       } catch {
-        // fallback
+        // url is relative
       }
-      return baseUrl;
+
+      // 2. Derive dynamic host from request headers if available (handles mobile LAN & reverse proxy)
+      let resolvedBase = baseUrl;
+      try {
+        const reqHeaders = await headers();
+        const host = reqHeaders.get("x-forwarded-host") || reqHeaders.get("host");
+        const proto = reqHeaders.get("x-forwarded-proto") || "http";
+        if (host) {
+          resolvedBase = `${proto}://${host}`;
+        }
+      } catch {
+        // fallback to baseUrl
+      }
+
+      // 3. Prepend resolved base so client-side new URL(data.url) never throws TypeError
+      if (url && url.startsWith("/")) {
+        return `${resolvedBase}${url}`;
+      }
+      return resolvedBase;
     },
   },
   pages: {

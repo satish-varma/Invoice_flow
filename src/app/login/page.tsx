@@ -37,10 +37,12 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
+      const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/newrelic` : undefined;
       const res = await signIn('credentials', {
         redirect: false,
         email,
         password,
+        callbackUrl,
       });
 
       if (res?.error) {

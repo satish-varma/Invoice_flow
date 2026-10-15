@@ -701,21 +701,52 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
             />
 
             <Card className="w-full rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden bg-white">
-                <CardHeader className="bg-gray-50/70 p-4 sm:p-5 border-b border-gray-100 flex flex-row items-center justify-between">
+                <CardHeader className="bg-gray-50/70 p-3.5 sm:p-5 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div>
-                        <CardTitle className="text-base font-bold text-gray-900">Dispatch &amp; Address Details</CardTitle>
-                        <p className="text-xs text-gray-500 mt-0.5">Originating branch, consignment party &amp; ship-to destination</p>
-                    </div>
-                    {user?.email && (
-                        <div className="hidden sm:flex items-center gap-1.5 text-xs text-gray-500 font-medium bg-white px-2.5 py-1 rounded-full border border-gray-200">
-                            <span>Creator:</span>
-                            <span className="font-bold text-indigo-700">{(user as any)?.name || user.email.split('@')[0]}</span>
+                        <div className="flex items-center gap-2">
+                            <CardTitle className="text-base font-bold text-gray-900">Dispatch &amp; Address Details</CardTitle>
+                            {user?.email && (
+                                <span className="text-[11px] text-gray-500 font-medium bg-white px-2 py-0.5 rounded-full border border-gray-200">
+                                    Creator: <strong className="text-indigo-700">{(user as any)?.name || user.email.split('@')[0]}</strong>
+                                </span>
+                            )}
                         </div>
-                    )}
+                        <p className="hidden sm:block text-xs text-gray-500 mt-0.5">Originating branch, consignment party &amp; ship-to destination</p>
+                    </div>
+
+                    {/* DC Number & DC Date in Header */}
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                        <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-gray-200 shadow-2xs">
+                            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider shrink-0">DC No:</span>
+                            <Input
+                                value={dcNumber}
+                                onChange={(e) => setDcNumber(e.target.value)}
+                                placeholder="Auto on save"
+                                disabled={!initialData}
+                                className="h-7 w-28 sm:w-36 text-xs font-mono font-bold text-indigo-700 border-0 p-0 focus-visible:ring-0 bg-transparent"
+                            />
+                        </div>
+
+                        <div className="relative flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-gray-200 shadow-2xs cursor-pointer">
+                            <CalendarIcon className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider shrink-0">Date:</span>
+                            <span className="text-xs font-bold text-gray-800">{dcDate ? format(dcDate, "dd MMM yyyy") : 'Select date'}</span>
+                            <Input
+                                type="date"
+                                className="absolute opacity-0 inset-0 w-full h-full cursor-pointer"
+                                value={dcDate ? format(dcDate, 'yyyy-MM-dd') : ''}
+                                onChange={(e) => {
+                                    if (e.target.value) {
+                                        setDcDate(new Date(e.target.value + 'T00:00:00'));
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
                 </CardHeader>
 
                 <CardContent className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Left Column: Fixed Sender & Billed Client + DC Info */}
+                    {/* Left Column: Fixed Sender & Billed Client */}
                     <div className="space-y-4">
                         <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-xs space-y-3">
                             <div className="flex items-start justify-between gap-3">
@@ -747,40 +778,6 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
                                     HungerBox
                                 </span>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3 pt-1">
-                            <div>
-                                <Label className="text-xs font-semibold text-gray-600">DC Number</Label>
-                                <Input
-                                    value={dcNumber}
-                                    onChange={(e) => setDcNumber(e.target.value)}
-                                    placeholder="Auto-generated on save"
-                                    disabled={!initialData}
-                                    className="h-9 mt-1 rounded-xl text-xs font-mono font-bold text-indigo-700 bg-gray-50"
-                                />
-                            </div>
-                            <div>
-                                <Label className="text-xs font-semibold text-gray-600">DC Date</Label>
-                                <div className="relative mt-1">
-                                    <div className="h-9 px-3 rounded-xl border border-gray-200 bg-white flex items-center justify-between text-xs cursor-pointer">
-                                        <div className="flex items-center gap-1.5 text-gray-700">
-                                            <CalendarIcon className="h-3.5 w-3.5 text-gray-400" />
-                                            <span>{dcDate ? format(dcDate, "dd MMM yyyy") : 'Select date'}</span>
-                                        </div>
-                                    </div>
-                                    <Input
-                                        type="date"
-                                        className="absolute opacity-0 inset-0 w-full h-full cursor-pointer"
-                                        value={dcDate ? format(dcDate, 'yyyy-MM-dd') : ''}
-                                        onChange={(e) => {
-                                            if (e.target.value) {
-                                                setDcDate(new Date(e.target.value + 'T00:00:00'));
-                                            }
-                                        }}
-                                    />
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -828,15 +825,6 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 onChange={e => setShipToAddress(e.target.value)}
                                 className="rounded-xl text-xs min-h-[95px] mt-1 bg-white"
                             />
-                        </div>
-
-                        <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 text-[11px] text-indigo-900 space-y-1">
-                            <span className="font-bold flex items-center gap-1 text-indigo-700">
-                                <Truck className="w-3.5 h-3.5" /> Destination Note:
-                            </span>
-                            <p className="text-indigo-800/80">
-                                This address appears as the primary delivery recipient on printed challans and mobile dispatch view.
-                            </p>
                         </div>
                     </div>
                 </CardContent>
@@ -1282,92 +1270,171 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 </CardContent>
 
                 {/* ── Card Footer: Notes & Clean Summary ── */}
-                <CardFooter className="bg-gray-50/80 p-4 sm:p-6 flex flex-col lg:flex-row justify-between items-start gap-6 border-t border-gray-100">
-                    {/* Left: Notes */}
-                    <div className="w-full lg:w-6/12 space-y-2">
-                        <Label className="text-xs font-semibold text-gray-600">Dispatch Terms &amp; Returnable Note</Label>
-                        <Textarea
-                            value={note}
-                            onChange={e => setNote(e.target.value)}
-                            className="rounded-xl text-xs bg-white min-h-[90px] border-gray-200"
-                        />
-                        <p className="text-[11px] text-gray-400">
-                            Printed on the bottom-left of the delivery challan PDF.
-                        </p>
+                <CardFooter className="bg-gray-50/80 p-3 sm:p-6 border-t border-gray-100">
+                    {/* Desktop View (>= lg) */}
+                    <div className="hidden lg:flex w-full justify-between items-start gap-6">
+                        <div className="w-6/12 space-y-2">
+                            <Label className="text-xs font-semibold text-gray-600">Dispatch Terms &amp; Returnable Note</Label>
+                            <Textarea
+                                value={note}
+                                onChange={e => setNote(e.target.value)}
+                                className="rounded-xl text-xs bg-white min-h-[90px] border-gray-200"
+                            />
+                            <p className="text-[11px] text-gray-400">
+                                Printed on the bottom-left of the delivery challan PDF.
+                            </p>
+                        </div>
+
+                        <div className="w-5/12 max-w-sm bg-white p-5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-3 self-end">
+                            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Challan Summary</span>
+                                <span className="text-[11px] text-gray-400 font-medium">Amounts in INR (₹)</span>
+                            </div>
+
+                            {/* Subtotal */}
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="font-semibold text-gray-600">Subtotal</span>
+                                <span className="font-mono font-bold text-sm text-gray-900">₹{subtotal.toFixed(2)}</span>
+                            </div>
+
+                            {/* GST @ % */}
+                            <div className="flex justify-between items-center text-xs">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="font-semibold text-gray-600">GST @</span>
+                                    <div className="inline-flex items-center bg-gray-100 rounded-lg px-2 py-0.5 border border-gray-200">
+                                        <input
+                                            type="number"
+                                            value={gstRate || ''}
+                                            onChange={e => setGstRate(parseFloat(e.target.value) || 0)}
+                                            className="w-10 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                            placeholder="5"
+                                            min="0"
+                                            step="0.5"
+                                        />
+                                        <span className="text-[10px] text-gray-500 font-bold ml-1">%</span>
+                                    </div>
+                                </div>
+                                <span className="font-mono font-bold text-sm text-gray-900">₹{gstAmount.toFixed(2)}</span>
+                            </div>
+
+                            {/* Shipping */}
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="font-semibold text-gray-600">Shipping / Transport</span>
+                                <div className="flex items-center gap-1 bg-gray-50 rounded-lg px-2 py-1 border border-gray-200 focus-within:border-indigo-400 focus-within:bg-white transition-all">
+                                    <span className="text-xs text-gray-400 font-semibold">₹</span>
+                                    <input
+                                        type="number"
+                                        value={shipping || ''}
+                                        onChange={e => setShipping(parseFloat(e.target.value) || 0)}
+                                        className="w-20 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                        placeholder="0"
+                                        min="0"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Other Charges */}
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="font-semibold text-gray-600">Other Charges</span>
+                                <div className="flex items-center gap-1 bg-gray-50 rounded-lg px-2 py-1 border border-gray-200 focus-within:border-indigo-400 focus-within:bg-white transition-all">
+                                    <span className="text-xs text-gray-400 font-semibold">₹</span>
+                                    <input
+                                        type="number"
+                                        value={other || ''}
+                                        onChange={e => setOther(parseFloat(e.target.value) || 0)}
+                                        className="w-20 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                        placeholder="0"
+                                        min="0"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Total Challan Value */}
+                            <div className="mt-2 p-3.5 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 flex items-center justify-between">
+                                <div>
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700 block">Total Challan Value</span>
+                                    <span className="text-[10px] text-indigo-500 font-medium">Grand Total</span>
+                                </div>
+                                <span className="font-mono text-xl font-black text-indigo-950">₹{total.toFixed(2)}</span>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Right: Improved Challan Totals Breakdown */}
-                    <div className="w-full lg:w-5/12 max-w-sm bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-3 self-end">
-                        <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-                            <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Challan Summary</span>
-                            <span className="text-[11px] text-gray-400 font-medium">Amounts in INR (₹)</span>
+                    {/* Mobile View (< lg): Super Slim Single Compact Summary Card */}
+                    <div className="lg:hidden w-full bg-white p-3 rounded-2xl border border-gray-200/90 shadow-2xs space-y-2.5">
+                        {/* Header + Total Value in One Row */}
+                        <div className="flex items-center justify-between pb-1.5 border-b border-gray-100">
+                            <div>
+                                <span className="text-xs font-black text-gray-900 uppercase tracking-wider block">Total Challan Value</span>
+                                <span className="text-[10px] text-gray-400 font-medium">All taxes &amp; charges incl.</span>
+                            </div>
+                            <span className="font-mono text-base font-black text-indigo-700">₹{total.toFixed(2)}</span>
                         </div>
 
-                        {/* Subtotal */}
-                        <div className="flex justify-between items-center text-xs">
-                            <span className="font-semibold text-gray-600">Subtotal</span>
-                            <span className="font-mono font-bold text-sm text-gray-900">₹{subtotal.toFixed(2)}</span>
-                        </div>
-
-                        {/* GST @ % */}
-                        <div className="flex justify-between items-center text-xs">
-                            <div className="flex items-center gap-1.5">
-                                <span className="font-semibold text-gray-600">GST @</span>
-                                <div className="inline-flex items-center bg-gray-100 rounded-lg px-2 py-0.5 border border-gray-200">
+                        {/* 2-Column Grid (Subtotal & GST) */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="flex items-center justify-between bg-gray-50/80 px-2 py-1.5 rounded-lg border border-gray-100">
+                                <span className="text-gray-500 font-medium text-[11px]">Subtotal</span>
+                                <span className="font-mono font-bold text-xs text-gray-900">₹{subtotal.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between bg-gray-50/80 px-2 py-1.5 rounded-lg border border-gray-100">
+                                <div className="flex items-center gap-1">
+                                    <span className="text-gray-500 font-medium text-[11px]">GST</span>
                                     <input
                                         type="number"
                                         value={gstRate || ''}
                                         onChange={e => setGstRate(parseFloat(e.target.value) || 0)}
-                                        className="w-10 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                        className="w-7 bg-white border border-gray-200 rounded text-center text-[10px] font-bold text-gray-900 h-5"
                                         placeholder="5"
                                         min="0"
-                                        step="0.5"
                                     />
-                                    <span className="text-[10px] text-gray-500 font-bold ml-1">%</span>
+                                    <span className="text-[10px] text-gray-400">%</span>
+                                </div>
+                                <span className="font-mono font-bold text-xs text-gray-900">₹{gstAmount.toFixed(2)}</span>
+                            </div>
+                        </div>
+
+                        {/* 2-Column Grid (Shipping & Other Charges) */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="flex items-center justify-between bg-gray-50/80 px-2 py-1.5 rounded-lg border border-gray-100">
+                                <span className="text-gray-500 font-medium text-[11px]">Shipping</span>
+                                <div className="flex items-center gap-0.5">
+                                    <span className="text-[10px] text-gray-400 font-semibold">₹</span>
+                                    <input
+                                        type="number"
+                                        value={shipping || ''}
+                                        onChange={e => setShipping(parseFloat(e.target.value) || 0)}
+                                        className="w-12 bg-white border border-gray-200 rounded text-right text-xs font-bold text-gray-900 h-5 px-1"
+                                        placeholder="0"
+                                        min="0"
+                                    />
                                 </div>
                             </div>
-                            <span className="font-mono font-bold text-sm text-gray-900">₹{gstAmount.toFixed(2)}</span>
-                        </div>
-
-                        {/* Shipping */}
-                        <div className="flex justify-between items-center text-xs">
-                            <span className="font-semibold text-gray-600">Shipping / Transport</span>
-                            <div className="flex items-center gap-1 bg-gray-50 rounded-lg px-2 py-1 border border-gray-200 focus-within:border-indigo-400 focus-within:bg-white transition-all">
-                                <span className="text-xs text-gray-400 font-semibold">₹</span>
-                                <input
-                                    type="number"
-                                    value={shipping || ''}
-                                    onChange={e => setShipping(parseFloat(e.target.value) || 0)}
-                                    className="w-20 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
-                                    placeholder="0"
-                                    min="0"
-                                />
+                            <div className="flex items-center justify-between bg-gray-50/80 px-2 py-1.5 rounded-lg border border-gray-100">
+                                <span className="text-gray-500 font-medium text-[11px]">Other</span>
+                                <div className="flex items-center gap-0.5">
+                                    <span className="text-[10px] text-gray-400 font-semibold">₹</span>
+                                    <input
+                                        type="number"
+                                        value={other || ''}
+                                        onChange={e => setOther(parseFloat(e.target.value) || 0)}
+                                        className="w-12 bg-white border border-gray-200 rounded text-right text-xs font-bold text-gray-900 h-5 px-1"
+                                        placeholder="0"
+                                        min="0"
+                                    />
+                                </div>
                             </div>
                         </div>
 
-                        {/* Other Charges */}
-                        <div className="flex justify-between items-center text-xs">
-                            <span className="font-semibold text-gray-600">Other Charges</span>
-                            <div className="flex items-center gap-1 bg-gray-50 rounded-lg px-2 py-1 border border-gray-200 focus-within:border-indigo-400 focus-within:bg-white transition-all">
-                                <span className="text-xs text-gray-400 font-semibold">₹</span>
-                                <input
-                                    type="number"
-                                    value={other || ''}
-                                    onChange={e => setOther(parseFloat(e.target.value) || 0)}
-                                    className="w-20 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
-                                    placeholder="0"
-                                    min="0"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Total Challan Value */}
-                        <div className="mt-2 p-3.5 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 flex items-center justify-between">
-                            <div>
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700 block">Total Challan Value</span>
-                                <span className="text-[10px] text-indigo-500 font-medium">Grand Total</span>
-                            </div>
-                            <span className="font-mono text-xl font-black text-indigo-950">₹{total.toFixed(2)}</span>
+                        {/* Single-line Note Input */}
+                        <div className="pt-1.5 border-t border-gray-100 flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider shrink-0">Note:</span>
+                            <Input
+                                value={note}
+                                onChange={e => setNote(e.target.value)}
+                                placeholder="Dispatch terms (e.g. non returnable basis)"
+                                className="h-6 text-[11px] bg-gray-50 border-gray-200 rounded-lg text-gray-700 px-2 w-full"
+                            />
                         </div>
                     </div>
                 </CardFooter>

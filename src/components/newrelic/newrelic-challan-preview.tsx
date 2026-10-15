@@ -21,6 +21,7 @@ import { NewRelicChallan, NewRelicChallanItem } from '@/types/challan';
 import React from 'react';
 import { format } from 'date-fns';
 import {NEWRELIC_LOCATIONS} from '@/services/newrelicChallanService';
+import { HUNGERBOX_LOGO_BASE64 } from './assets';
 
 /**
  * IMPORTANT NOTE ON ANALYTICS FIELDS (MRP, Transport Cost, Other Charges):
@@ -102,9 +103,8 @@ export const NewRelicChallanPreview = React.forwardRef<HTMLDivElement, Props>(
                   <div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src="/hungerbox_logo.png?v=2"
+                      src={HUNGERBOX_LOGO_BASE64}
                       alt="HungerBox"
-                      crossOrigin="anonymous"
                       style={{ width: '140px', objectFit: 'contain' }}
                     />
                   </div>
@@ -147,9 +147,8 @@ export const NewRelicChallanPreview = React.forwardRef<HTMLDivElement, Props>(
               <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '24px' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/hungerbox_logo.png?v=2"
+                  src={HUNGERBOX_LOGO_BASE64}
                   alt="HungerBox"
-                  crossOrigin="anonymous"
                   style={{ width: '140px', objectFit: 'contain' }}
                 />
               </div>

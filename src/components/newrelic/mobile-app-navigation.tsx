@@ -466,21 +466,20 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
   };
 
   const slot1 = allModules[0] || profileTab;
-  const slot2 = allModules[1] || profileTab;
-  const slot4 = allModules[2] || profileTab;
+  const slot2 = allModules[1] || (allModules.length <= 1 ? profileTab : profileTab);
+  const slot4 = allModules[2] || (allModules.length <= 2 ? profileTab : profileTab);
 
-  const requiresMoreMenu = allModules.length > 4 || adminItems.length > 0 || isAdmin;
+  // Always show "More" if there are any additional modules, drawer items, or admin tools
+  const requiresMoreMenu = allModules.length > 3 || allMoreItems.length > 0 || isAdmin;
   const slot5IsMore = requiresMoreMenu;
-  const slot5Tab = !slot5IsMore
-    ? allModules[3] || (allModules.length === 3 ? profileTab : null)
-    : null;
+  const slot5Tab = !slot5IsMore ? allModules[3] || null : null;
 
   /* Helper to render a navigation item with CRED ambient glow */
-  const renderTab = (tab: NavigationTabItem) => {
+  const renderTab = (tab: NavigationTabItem, slotKey: string) => {
     const Icon = tab.icon;
     return (
       <Link
-        key={tab.id}
+        key={slotKey}
         href={tab.href}
         prefetch={false}
         onClick={() => triggerHaptic('light')}
@@ -534,13 +533,14 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
 
           <div className="flex items-center justify-around h-[66px] px-1 py-1">
             {/* Slot 1: Primary Module */}
-            {renderTab(slot1)}
+            {renderTab(slot1, 'nav-slot-1')}
 
             {/* Slot 2: Secondary Module */}
-            {renderTab(slot2)}
+            {renderTab(slot2, 'nav-slot-2')}
 
             {/* Slot 3: Center Elevated Plus (+) Action Button - CRED Jewel Orb */}
             <button
+              key="nav-slot-3-plus"
               type="button"
               onClick={() => {
                 triggerHaptic('medium');
@@ -562,11 +562,12 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
             </button>
 
             {/* Slot 4: Tertiary Module or Profile */}
-            {renderTab(slot4)}
+            {renderTab(slot4, 'nav-slot-4')}
 
             {/* Slot 5: More Drawer (Admin / Extra Tools) or Quaternary Tab */}
             {slot5IsMore ? (
               <button
+                key="nav-slot-5-more"
                 type="button"
                 onClick={() => {
                   triggerHaptic('light');
@@ -610,9 +611,9 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
                 </span>
               </button>
             ) : slot5Tab ? (
-              renderTab(slot5Tab)
+              renderTab(slot5Tab, 'nav-slot-5')
             ) : (
-              renderTab(profileTab)
+              renderTab(profileTab, 'nav-slot-5')
             )}
           </div>
         </nav>

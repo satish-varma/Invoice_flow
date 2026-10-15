@@ -341,205 +341,149 @@ export default function DeliveryChallanPage() {
     <AppShell>
       <main className="min-h-screen bg-transparent flex flex-col items-center p-2.5 sm:p-6 lg:p-8 w-full max-w-full overflow-x-hidden">
         <div className="w-full max-w-7xl mx-auto space-y-4 sm:space-y-8">
-          {/* ── Executive Hero Banner (like /newrelic) ── */}
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-slate-950 via-[#181156] to-[#251b85] text-white p-4 sm:p-7 shadow-xl shadow-indigo-950/20 border border-indigo-900/40">
-            <div className="absolute top-0 right-0 -mt-6 -mr-6 w-56 h-56 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-1/3 -mb-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-5">
-              <div className="space-y-1.5 sm:space-y-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold bg-white/10 text-cyan-300 border border-cyan-300/25 backdrop-blur-md">
-                    <Truck className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
-                    Delivery Challan Hub
-                  </span>
-                  <span className="text-[10px] sm:text-[11px] text-indigo-200 font-medium">
-                    {now.toLocaleDateString('en-IN', {
-                      weekday: 'short',
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
-                  </span>
-                  {isAdmin && showFinancials && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                      <TrendingUp className="w-2.5 h-2.5" /> P.Cost Active
-                    </span>
-                  )}
-                </div>
-
-                <h1 className="text-lg sm:text-3xl font-black tracking-tight text-white">
-                  Material Dispatch &amp; Delivery Challans
+          {/* ── Single Merged Page Header: Title, Financials Toggle & Sync Data ── */}
+          <div className="flex items-center justify-between gap-2.5 pt-1">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight">
+                  Delivery Challans
                 </h1>
-                <p className="hidden sm:block text-xs sm:text-sm text-indigo-200/80 max-w-2xl font-normal leading-relaxed">
-                  Enterprise material dispatches, consignee destination tracking, procurement cost analysis, commission reporting, and instant batch PDF export.
+                <span className="text-[10px] font-black bg-indigo-50 text-[#3b2fc9] border border-indigo-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+                  General DC
+                </span>
+                {isAdmin && showFinancials && (
+                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <TrendingUp className="w-2.5 h-2.5 text-emerald-600" /> P.Cost Active
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] sm:text-xs text-gray-500 font-medium truncate mt-0.5">
+                Material dispatches for HungerBox &amp; corporate clients
+              </p>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setShowFinancials(!showFinancials);
+                  }}
+                  className={`hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-2xs ${
+                    showFinancials
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                  }`}
+                  title="Toggle Procurement Cost & Margin Visibility"
+                >
+                  {showFinancials ? <Eye className="w-3.5 h-3.5 text-emerald-600" /> : <EyeOff className="w-3.5 h-3.5 text-gray-400" />}
+                  <span>{showFinancials ? 'Financials: ON' : 'Financials: OFF'}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 text-xs font-semibold text-gray-700 transition-all border border-gray-200 shadow-2xs cursor-pointer"
+              >
+                <RefreshCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>{isRefreshing ? 'Syncing...' : 'Sync Data'}</span>
+              </button>
+
+              {/* Direct Link to NewRelic DC Portal (Strictly if permitted) */}
+              {hasPermission(user, 'newrelic_dc') && (
+                <Link
+                  href="/newrelic"
+                  prefetch={false}
+                  onClick={() => triggerHaptic('light')}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 text-xs font-black shadow-xs active:scale-95 transition-all"
+                  title="Switch to NewRelic Cafeteria DC Hub"
+                >
+                  <Layers className="w-3.5 h-3.5 text-slate-950" />
+                  <span>NewRelic DC</span>
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {/* ── Stat Metric Cards (Admin only) ── */}
+          {isAdmin && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+              <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/40 border border-indigo-200/80 shadow-xs">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200 uppercase tracking-wider">
+                    Challans
+                  </span>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                    <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </div>
+                </div>
+                <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Total Issued</p>
+                <p className="text-lg sm:text-2xl font-black text-gray-900 font-mono tabular-nums mt-0.5">
+                  {challans.length}
+                </p>
+                <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium truncate mt-0.5">
+                  Across {uniqueClients} consignees
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 self-start lg:self-center flex-wrap pt-1 sm:pt-0">
-                {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setShowFinancials(!showFinancials);
-                    }}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all border ${
-                      showFinancials
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
-                        : 'bg-white/10 text-white/80 border-white/15'
-                    }`}
-                    title="Toggle Procurement Cost, Commission & Margin Visibility"
-                  >
-                    {showFinancials ? <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-300" /> : <EyeOff className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400" />}
-                    <span>{showFinancials ? 'Financials: ON' : 'Financials: OFF'}</span>
-                  </button>
-                )}
+              <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-50/90 via-white to-sky-50/40 border border-blue-200/80 shadow-xs">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 uppercase tracking-wider">
+                    Gross Value
+                  </span>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                    <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </div>
+                </div>
+                <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Total Dispatched</p>
+                <p className="text-lg sm:text-2xl font-black text-gray-900 font-mono tabular-nums mt-0.5 truncate">
+                  ₹{totalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                </p>
+                <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium truncate mt-0.5">
+                  {totalItems} total line units
+                </p>
+              </div>
 
-                <button
-                  type="button"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-[11px] sm:text-xs font-bold text-white transition-all backdrop-blur-xs border border-white/15"
-                >
-                  <RefreshCcw className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  <span>{isRefreshing ? 'Syncing...' : 'Sync Data'}</span>
-                </button>
+              <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-50/90 via-white to-orange-50/40 border border-amber-200/80 shadow-xs">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wider">
+                    Procurement
+                  </span>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-xs">
+                    <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </div>
+                </div>
+                <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Total P.Cost</p>
+                <p className="text-lg sm:text-2xl font-black text-gray-900 font-mono tabular-nums mt-0.5 truncate">
+                  ₹{totalPCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                </p>
+                <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium truncate mt-0.5">
+                  Purchase / buy-in
+                </p>
+              </div>
 
-                {/* Direct Link to NewRelic DC Portal (Strictly if permitted) */}
-                {hasPermission(user, 'newrelic_dc') && (
-                  <Link
-                    href="/newrelic"
-                    prefetch={false}
-                    onClick={() => triggerHaptic('light')}
-                    className="group flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 text-[11px] sm:text-xs font-black shadow-md active:scale-95 transition-all"
-                    title="Switch to NewRelic Cafeteria DC Hub"
-                  >
-                    <Layers className="w-3.5 h-3.5 text-slate-950" />
-                    <span>NewRelic DC</span>
-                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  </Link>
-                )}
+              <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/40 border border-emerald-200/80 shadow-xs">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
+                    Margin / Profit
+                  </span>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                    <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </div>
+                </div>
+                <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Est. Net Profit</p>
+                <p className="text-lg sm:text-2xl font-black text-emerald-700 font-mono tabular-nums mt-0.5 truncate">
+                  ₹{totalGrossProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                </p>
+                <p className="text-[10px] sm:text-[11px] text-emerald-600 font-bold truncate mt-0.5">
+                  {overallMargin.toFixed(1)}% Gross Margin
+                </p>
               </div>
             </div>
-          </div>
-
-          {/* ── Stat Metric Cards (Dynamic Financials like NewRelic) ── */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/40 border border-indigo-200/80 shadow-xs">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200 uppercase tracking-wider">
-                  Challans
-                </span>
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
-                  <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </div>
-              </div>
-              <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Total Issued</p>
-              <p className="text-lg sm:text-2xl font-black text-gray-900 font-mono tabular-nums mt-0.5">
-                {challans.length}
-              </p>
-              <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium truncate mt-0.5">
-                Across {uniqueClients} consignees
-              </p>
-            </div>
-
-            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-50/90 via-white to-sky-50/40 border border-blue-200/80 shadow-xs">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 uppercase tracking-wider">
-                  Gross Value
-                </span>
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
-                  <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </div>
-              </div>
-              <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Total Dispatched</p>
-              <p className="text-lg sm:text-2xl font-black text-gray-900 font-mono tabular-nums mt-0.5 truncate">
-                ₹{totalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-              </p>
-              <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium truncate mt-0.5">
-                {totalItems} total line units
-              </p>
-            </div>
-
-            {isAdmin ? (
-              <>
-                <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-50/90 via-white to-orange-50/40 border border-amber-200/80 shadow-xs">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wider">
-                      Procurement
-                    </span>
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-xs">
-                      <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </div>
-                  </div>
-                  <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Total P.Cost</p>
-                  <p className="text-lg sm:text-2xl font-black text-gray-900 font-mono tabular-nums mt-0.5 truncate">
-                    ₹{totalPCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                  </p>
-                  <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium truncate mt-0.5">
-                    Purchase / buy-in
-                  </p>
-                </div>
-
-                <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/40 border border-emerald-200/80 shadow-xs">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
-                      Margin / Profit
-                    </span>
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                      <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </div>
-                  </div>
-                  <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Est. Net Profit</p>
-                  <p className="text-lg sm:text-2xl font-black text-emerald-700 font-mono tabular-nums mt-0.5 truncate">
-                    ₹{totalGrossProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                  </p>
-                  <p className="text-[10px] sm:text-[11px] text-emerald-600 font-bold truncate mt-0.5">
-                    {overallMargin.toFixed(1)}% Gross Margin
-                  </p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-50/90 via-white to-blue-50/40 border border-indigo-200/80 shadow-xs">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200 uppercase tracking-wider">
-                      Consignees
-                    </span>
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
-                      <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </div>
-                  </div>
-                  <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Active Destinations</p>
-                  <p className="text-lg sm:text-2xl font-black text-gray-900 font-mono tabular-nums mt-0.5 truncate">
-                    {uniqueClients}
-                  </p>
-                  <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium truncate mt-0.5">
-                    Client delivery sites
-                  </p>
-                </div>
-
-                <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-purple-50/90 via-white to-pink-50/40 border border-purple-200/80 shadow-xs">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200 uppercase tracking-wider">
-                      Line Units
-                    </span>
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs">
-                      <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </div>
-                  </div>
-                  <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Dispatched Items</p>
-                  <p className="text-lg sm:text-2xl font-black text-purple-900 font-mono tabular-nums mt-0.5 truncate">
-                    {totalItems}
-                  </p>
-                  <p className="text-[10px] sm:text-[11px] text-purple-600 font-medium truncate mt-0.5">
-                    Total consignment items
-                  </p>
-                </div>
-              </>
-            )}
-          </div>
+          )}
 
           {/* ── Mobile-Friendly Quick Navigation Switcher ── */}
           <div className="flex items-center justify-between gap-2 flex-wrap bg-white/80 backdrop-blur-md p-2 sm:p-3 rounded-2xl border border-gray-200/80 shadow-2xs">
@@ -586,27 +530,29 @@ export default function DeliveryChallanPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setShowAnalytics(!showAnalytics);
-                }}
-                className={`inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[11px] sm:text-xs font-bold border transition-all shadow-2xs active:scale-95 ${
-                  showAnalytics
-                    ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
-                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                }`}
-              >
-                <BarChart3 className="w-3.5 h-3.5" />
-                <span>{showAnalytics ? 'Hide Analytics' : 'Analytics'}</span>
-              </button>
-            </div>
+            {isAdmin && (
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setShowAnalytics(!showAnalytics);
+                  }}
+                  className={`inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[11px] sm:text-xs font-bold border transition-all shadow-2xs active:scale-95 ${
+                    showAnalytics
+                      ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
+                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>{showAnalytics ? 'Hide Analytics' : 'Analytics'}</span>
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* ── OPTIONAL FINANCIAL & CONSIGNEE ANALYTICS SECTION ── */}
-          {showAnalytics && (
+          {/* ── OPTIONAL FINANCIAL & CONSIGNEE ANALYTICS SECTION (Admin only) ── */}
+          {isAdmin && showAnalytics && (
             <div className="w-full space-y-6 animate-in fade-in duration-200">
               <div className={`grid grid-cols-1 ${isAdmin ? 'md:grid-cols-2' : ''} gap-6`}>
                 {/* Top Consignees Card */}

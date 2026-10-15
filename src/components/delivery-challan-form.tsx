@@ -705,36 +705,36 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
             />
 
             <Card className="w-full rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden bg-white">
-                <CardHeader className="bg-gray-50/70 p-3.5 sm:p-5 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <CardHeader className="bg-gray-50/70 p-4 sm:p-5 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div>
-                        <div className="flex items-center gap-2">
-                            <CardTitle className="text-sm sm:text-base font-bold text-gray-900">Consignee &amp; Delivery Destination</CardTitle>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <CardTitle className="text-base sm:text-lg font-bold text-gray-900">Consignee &amp; Delivery Destination</CardTitle>
                             {user?.email && (
-                                <span className="text-[11px] text-gray-500 font-medium bg-white px-2 py-0.5 rounded-full border border-gray-200">
+                                <span className="text-xs text-gray-600 font-medium bg-white px-2.5 py-1 rounded-full border border-gray-200 shadow-2xs">
                                     Creator: <strong className="text-indigo-700">{(user as any)?.name || user.email.split('@')[0]}</strong>
                                 </span>
                             )}
                         </div>
-                        <p className="hidden sm:block text-xs text-gray-500 mt-0.5">Quick fill consignee location and site delivery address</p>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1">Quick fill consignee location and site delivery address</p>
                     </div>
 
                     {/* DC Number & DC Date in Header */}
-                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                        <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-gray-200 shadow-2xs">
-                            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider shrink-0">DC No:</span>
+                    <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+                        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-gray-200 shadow-2xs">
+                            <span className="text-xs font-bold text-gray-600 uppercase tracking-wider shrink-0">DC No:</span>
                             <Input
                                 value={dcNumber}
                                 onChange={(e) => setDcNumber(e.target.value)}
                                 placeholder="Auto on save"
                                 disabled={!initialData}
-                                className="h-7 w-28 sm:w-36 text-xs font-mono font-bold text-indigo-700 border-0 p-0 focus-visible:ring-0 bg-transparent"
+                                className="h-8 w-28 sm:w-36 text-sm font-mono font-bold text-indigo-700 border-0 p-0 focus-visible:ring-0 bg-transparent"
                             />
                         </div>
 
-                        <div className="relative flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-gray-200 shadow-2xs cursor-pointer">
-                            <CalendarIcon className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider shrink-0">Date:</span>
-                            <span className="text-xs font-bold text-gray-800">{dcDate ? format(dcDate, "dd MMM yyyy") : 'Select date'}</span>
+                        <div className="relative flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-gray-200 shadow-2xs cursor-pointer">
+                            <CalendarIcon className="h-4 w-4 text-indigo-600 shrink-0" />
+                            <span className="text-xs font-bold text-gray-600 uppercase tracking-wider shrink-0">Date:</span>
+                            <span className="text-sm font-bold text-gray-800">{dcDate ? format(dcDate, "dd MMM yyyy") : 'Select date'}</span>
                             <Input
                                 type="date"
                                 className="absolute opacity-0 inset-0 w-full h-full cursor-pointer"
@@ -749,38 +749,38 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                     </div>
                 </CardHeader>
 
-                <CardContent className="p-3.5 sm:p-5">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 items-start">
+                <CardContent className="p-4 sm:p-5">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 items-start">
                         <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-gray-700">Select Saved Consignee</Label>
+                            <Label className="text-xs sm:text-sm font-bold text-gray-700">Select Saved Consignee</Label>
                             <Select onValueChange={(value) => handleContactSelect(value, 'shipTo')}>
-                                <SelectTrigger className="h-9 rounded-xl text-xs bg-white">
+                                <SelectTrigger className="h-11 rounded-xl text-sm bg-white border-gray-300 shadow-2xs">
                                     <SelectValue placeholder="Quick fill consignee..." />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {allSavedClients.map((c) =>
-                                        <SelectItem key={`${c.id}-${c.type}-ship`} value={`${c.id}|${c.type}`} className="text-xs">
+                                        <SelectItem key={`${c.id}-${c.type}-ship`} value={`${c.id}|${c.type}`} className="text-sm py-2">
                                             {c.displayName} ({c.type === 'client' ? 'Client' : c.type === 'billTo' ? 'Bill' : 'Ship'})
                                         </SelectItem>
                                     )}
                                 </SelectContent>
                             </Select>
                             {shipToName && (
-                                <div className="p-2 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs flex items-center gap-2">
-                                    <MapPin className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                                    <span className="font-bold text-gray-900 truncate">{shipToName}</span>
+                                <div className="p-2.5 bg-indigo-50/80 border border-indigo-200/80 rounded-xl text-xs sm:text-sm flex items-center gap-2 text-indigo-900 font-semibold shadow-2xs">
+                                    <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
+                                    <span className="font-bold truncate">{shipToName}</span>
                                 </div>
                             )}
                         </div>
 
                         <div className="md:col-span-2 space-y-1.5">
-                            <Label htmlFor="shipToAddress" className="text-xs font-semibold text-gray-700">Delivery / Site Address *</Label>
+                            <Label htmlFor="shipToAddress" className="text-xs sm:text-sm font-bold text-gray-700">Delivery / Site Address *</Label>
                             <Textarea
                                 id="shipToAddress"
                                 placeholder="Detailed Delivery / Site Address (Street, Plot, Mandal, PIN, State)"
                                 value={shipToAddress}
                                 onChange={e => setShipToAddress(e.target.value)}
-                                className="rounded-xl text-xs min-h-[72px] bg-white resize-none"
+                                className="rounded-xl text-sm min-h-[84px] bg-white border-gray-300 shadow-2xs resize-none p-3"
                                 rows={2}
                             />
                         </div>
@@ -789,17 +789,17 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
 
                 {/* ── Line Items Section with P.Cost & Margin ── */}
                 <CardContent className="p-4 sm:p-6 border-t border-gray-100">
-                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                    <div className="flex items-center justify-between mb-3.5 flex-wrap gap-2">
                         <div>
-                            <h3 className="font-bold text-sm text-gray-900 tracking-tight flex items-center gap-2">
+                            <h3 className="font-bold text-sm sm:text-base text-gray-900 tracking-tight flex items-center gap-2">
                                 <span>Dispatched Line Items ({lineItems.length})</span>
                                 {canSeeFinancials && totalProcurementCost > 0 && (
-                                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                                         Total P.Cost: ₹{totalProcurementCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                                     </span>
                                 )}
                             </h3>
-                            <p className="text-xs text-gray-500">Quantities, unit rates, purchase costs &amp; margin calculations</p>
+                            <p className="text-xs sm:text-sm text-gray-500">Quantities, unit rates, purchase costs &amp; margin calculations</p>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -811,7 +811,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                     triggerHaptic('light');
                                     setShowExtraColumns(!showExtraColumns);
                                 }}
-                                className="h-8 px-2.5 rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-semibold"
+                                className="h-9 px-3 rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-semibold"
                             >
                                 {showExtraColumns ? '− Hide HSN & Unit' : '+ Add HSN / Unit'}
                             </Button>
@@ -820,7 +820,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 onClick={handleAddItem}
                                 variant="outline"
                                 size="sm"
-                                className="h-8 px-2.5 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold active:scale-95"
+                                className="h-9 px-3 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold active:scale-95 shadow-2xs"
                             >
                                 <PlusCircle className="mr-1.5 h-3.5 w-3.5" /> Add Item
                             </Button>
@@ -828,7 +828,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                     </div>
 
                     {/* Mobile Line Items View */}
-                    <div className="md:hidden space-y-3">
+                    <div className="md:hidden space-y-4">
                         {lineItems.map((item, index) => {
                             const uPrice = Number(item.unitPrice) || 0;
                             const pCost = Number(item.procurementCost) || 0;
@@ -836,12 +836,12 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                             const margin = uPrice > 0 ? (profit / uPrice) * 100 : 0;
 
                             return (
-                                <div key={item.id} className="border border-gray-200 rounded-2xl p-3.5 bg-gray-50/60 space-y-2.5 shadow-2xs">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[11px] font-black text-indigo-700 uppercase tracking-wider">
-                                            #{index + 1}
+                                <div key={item.id} className="border border-gray-200 rounded-2xl p-4 bg-white space-y-3.5 shadow-sm overflow-hidden">
+                                    <div className="flex justify-between items-center pb-2.5 border-b border-gray-100">
+                                        <span className="text-xs font-black text-indigo-700 uppercase tracking-wider bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg">
+                                            Item #{index + 1}
                                         </span>
-                                        <div className="flex items-center gap-1">
+                                        <div className="flex items-center gap-1.5">
                                             <ChallanCalculator
                                                 currentUnitPrice={uPrice}
                                                 currentPCost={pCost}
@@ -854,34 +854,35 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                                 variant="ghost"
                                                 size="icon"
                                                 onClick={() => handleRemoveItem(item.id)}
-                                                className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                className="h-8 w-8 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl"
+                                                title="Delete item"
                                             >
-                                                <Trash2 className="h-3.5 w-3.5" />
+                                                <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
                                     </div>
 
                                     {showExtraColumns && (
-                                        <div>
-                                            <Label className="text-[11px] text-gray-500 font-semibold">Select Catalog Product</Label>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-gray-700">Select Catalog Product</Label>
                                             <Select onValueChange={(val) => handleProductSelect(item.id, val)}>
-                                                <SelectTrigger className="h-8 mt-0.5 rounded-xl text-xs bg-white">
+                                                <SelectTrigger className="h-11 rounded-xl text-sm bg-white border-gray-300 shadow-2xs">
                                                     <SelectValue placeholder="Quick fill product..." />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {products.map(p => (
-                                                        <SelectItem key={p.id} value={p.id!} className="text-xs">{p.name}</SelectItem>
+                                                        <SelectItem key={p.id} value={p.id!} className="text-sm py-2">{p.name}</SelectItem>
                                                     ))}
-                                                    <SelectItem value="none" className='text-gray-400 italic font-normal text-xs'>Manual entry...</SelectItem>
+                                                    <SelectItem value="none" className='text-gray-400 italic font-normal text-sm py-2'>Manual entry...</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                     )}
 
-                                    <div>
-                                        <Label className="text-[11px] text-gray-500 font-semibold">Item Description *</Label>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold text-gray-700">Item Description *</Label>
                                         <Input
-                                            className="mt-0.5 h-8 text-xs rounded-xl bg-white"
+                                            className="h-11 text-sm rounded-xl bg-white border-gray-300 shadow-2xs focus:border-indigo-500"
                                             placeholder="Item name / brand / pack size"
                                             value={item.name || ''}
                                             onChange={e => handleItemChange(item.id, 'name', e.target.value)}
@@ -889,20 +890,20 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                     </div>
 
                                     {showExtraColumns && (
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <Label className="text-[11px] text-gray-500 font-semibold">HSN Code</Label>
+                                        <div className="grid grid-cols-2 gap-2.5">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-bold text-gray-700">HSN Code</Label>
                                                 <Input
-                                                    className="mt-0.5 h-8 text-xs rounded-xl bg-white"
+                                                    className="h-11 text-sm rounded-xl bg-white border-gray-300 shadow-2xs"
                                                     placeholder="HSN"
                                                     value={item.hsnCode || ''}
                                                     onChange={e => handleItemChange(item.id, 'hsnCode', e.target.value)}
                                                 />
                                             </div>
-                                            <div>
-                                                <Label className="text-[11px] text-gray-500 font-semibold">Unit</Label>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-bold text-gray-700">Unit</Label>
                                                 <Input
-                                                    className="mt-0.5 h-8 text-xs rounded-xl bg-white"
+                                                    className="h-11 text-sm rounded-xl bg-white border-gray-300 shadow-2xs"
                                                     placeholder="Nos, Pcs, Box"
                                                     value={item.unit || ''}
                                                     onChange={e => handleItemChange(item.id, 'unit', e.target.value)}
@@ -911,21 +912,21 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                         </div>
                                     )}
 
-                                    <div className={`grid ${canSeeFinancials ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
-                                        <div>
-                                            <Label className="text-[11px] text-gray-500 font-semibold">Qty</Label>
+                                    <div className={`grid ${canSeeFinancials ? 'grid-cols-3' : 'grid-cols-2'} gap-2.5`}>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-gray-700">Qty</Label>
                                             <Input
-                                                className="mt-0.5 h-8 text-xs text-right rounded-xl font-bold bg-white"
+                                                className="h-11 text-sm text-center font-bold rounded-xl bg-white border-gray-300 shadow-2xs"
                                                 type="number"
                                                 value={item.quantity || ''}
                                                 onChange={e => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)}
                                                 min="0"
                                             />
                                         </div>
-                                        <div>
-                                            <Label className="text-[11px] text-gray-500 font-semibold">Unit Price (₹)</Label>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-bold text-gray-700">Unit Price (₹)</Label>
                                             <Input
-                                                className="mt-0.5 h-8 text-xs text-right rounded-xl font-bold text-gray-900 bg-white"
+                                                className="h-11 text-sm text-right font-bold text-gray-900 rounded-xl bg-white border-gray-300 shadow-2xs"
                                                 type="number"
                                                 value={item.unitPrice || ''}
                                                 onChange={e => handleItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
@@ -934,10 +935,10 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                             />
                                         </div>
                                         {canSeeFinancials && (
-                                            <div>
-                                                <Label className="text-[11px] text-emerald-700 font-semibold">P.Cost (₹)</Label>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-bold text-emerald-800">P.Cost (₹)</Label>
                                                 <Input
-                                                    className="mt-0.5 h-8 text-xs text-right rounded-xl font-bold text-emerald-800 bg-emerald-50/50 border-emerald-200"
+                                                    className="h-11 text-sm text-right font-bold text-emerald-900 rounded-xl bg-emerald-50/70 border-emerald-300 shadow-2xs"
                                                     type="number"
                                                     placeholder="Buy cost"
                                                     value={item.procurementCost || ''}
@@ -950,18 +951,18 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                     </div>
 
                                     {/* Mobile Item Margin & Total Bar */}
-                                    <div className="flex items-center justify-between pt-2 border-t border-gray-200/60 text-xs">
+                                    <div className="flex items-center justify-between pt-2.5 border-t border-gray-100 bg-gray-50/80 -mx-4 -mb-4 p-3 rounded-b-2xl">
                                         {canSeeFinancials && pCost > 0 ? (
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                                margin >= 20 ? 'bg-emerald-100 text-emerald-800' : margin >= 10 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'
+                                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-lg ${
+                                                margin >= 20 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : margin >= 10 ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-red-100 text-red-800 border border-red-200'
                                             }`}>
                                                 Margin: {margin.toFixed(1)}% (₹{profit.toFixed(1)}/u)
                                             </span>
                                         ) : (
-                                            <span className="text-[11px] text-gray-400">Line Total:</span>
+                                            <span className="text-xs font-semibold text-gray-500">Line Total:</span>
                                         )}
                                         <div className="text-right">
-                                            <span className="font-mono font-black text-sm text-gray-900">
+                                            <span className="font-mono font-black text-base text-gray-900">
                                                 ₹{(Number(item.total) || 0).toFixed(2)}
                                             </span>
                                         </div>
@@ -969,6 +970,15 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 </div>
                             );
                         })}
+
+                        <Button
+                            type="button"
+                            onClick={handleAddItem}
+                            variant="outline"
+                            className="w-full h-11 rounded-xl border-dashed border-2 border-indigo-200 text-indigo-700 bg-indigo-50/30 hover:bg-indigo-50 font-bold text-sm flex items-center justify-center gap-2 active:scale-98 transition-all"
+                        >
+                            <PlusCircle className="h-4 w-4" /> Add Another Item
+                        </Button>
                     </div>
 
                     {/* Desktop Table View */}
@@ -1113,17 +1123,17 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                     </div>
 
                     {/* ── Action & Attachment Bar Directly Below Line Items ── */}
-                    <div className="pt-3 border-t border-gray-200/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-slate-50 p-2.5 sm:p-4 rounded-2xl border border-gray-200 shadow-2xs">
+                    <div className="pt-3 border-t border-gray-200/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-slate-50 p-3 sm:p-4 rounded-2xl border border-gray-200 shadow-2xs">
                         {/* Left: Add Line Item & Upload Attachments */}
-                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <Button
                                 type="button"
                                 onClick={handleAddItem}
                                 variant="outline"
                                 size="sm"
-                                className="h-8 sm:h-9 px-3 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold active:scale-95 shadow-2xs flex-1 sm:flex-initial"
+                                className="h-10 sm:h-9 px-3.5 sm:px-3 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs sm:text-sm font-bold active:scale-95 shadow-2xs flex-1 sm:flex-initial"
                             >
-                                <PlusCircle className="mr-1.5 h-3.5 sm:h-4 w-3.5 sm:w-4" /> Add Item
+                                <PlusCircle className="mr-1.5 h-4 w-4" /> Add Item
                             </Button>
 
                             <Button
@@ -1134,7 +1144,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                     triggerHaptic('light');
                                     setShowExtraColumns(!showExtraColumns);
                                 }}
-                                className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl border-gray-200 text-gray-700 hover:bg-white text-xs font-semibold shadow-2xs flex-1 sm:flex-initial"
+                                className="h-10 sm:h-9 px-3 rounded-xl border-gray-200 text-gray-700 hover:bg-white text-xs font-semibold shadow-2xs flex-1 sm:flex-initial"
                             >
                                 {showExtraColumns ? '− Hide HSN / Unit' : '+ Add HSN / Unit'}
                             </Button>
@@ -1147,7 +1157,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleOpenAttachmentModal('signed_copy')}
-                                        className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-2xs flex-1 sm:flex-initial ${
+                                        className={`h-10 sm:h-9 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-2xs flex-1 sm:flex-initial ${
                                             signedCopyUrls.length > 0
                                                 ? 'bg-blue-50 text-[#3b2fc9] border-blue-300 hover:bg-blue-100 ring-1 ring-blue-300'
                                                 : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-[#3b2fc9]'
@@ -1170,7 +1180,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleOpenAttachmentModal('invoice')}
-                                        className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-2xs flex-1 sm:flex-initial ${
+                                        className={`h-10 sm:h-9 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-2xs flex-1 sm:flex-initial ${
                                             goodsReceivedInvoiceUrls.length > 0
                                                 ? 'bg-blue-50 text-[#3b2fc9] border-blue-300 hover:bg-blue-100 ring-1 ring-blue-300'
                                                 : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-[#3b2fc9]'
@@ -1192,14 +1202,14 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                         </div>
 
                         {/* Right: Update Only, Update & Download, Cancel Edit */}
-                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
                             {initialData && (
                                 <Button
                                     type="button"
                                     variant="outline"
                                     size="sm"
                                     onClick={handleCancelEdit}
-                                    className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 text-xs font-bold active:scale-95 shadow-2xs flex-1 sm:flex-initial"
+                                    className="h-10 sm:h-9 px-3 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 text-xs font-bold active:scale-95 shadow-2xs flex-1 sm:flex-initial"
                                 >
                                     <X className="w-3.5 h-3.5 mr-1 text-red-500" /> Cancel
                                 </Button>
@@ -1210,9 +1220,9 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 onClick={() => handleSaveChallan(false)}
                                 disabled={isSaving}
                                 size="sm"
-                                className="h-8 sm:h-9 px-3 sm:px-4 text-xs font-bold rounded-xl bg-gray-900 hover:bg-gray-800 text-white shadow-xs active:scale-95 flex-1 sm:flex-initial"
+                                className="h-11 sm:h-9 px-4 text-xs sm:text-sm font-bold rounded-xl bg-gray-900 hover:bg-gray-800 text-white shadow-xs active:scale-95 flex-1 sm:flex-initial"
                             >
-                                {isSaving ? <Loader className="animate-spin w-3.5 h-3.5 mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+                                {isSaving ? <Loader className="animate-spin w-4 h-4 mr-1.5" /> : <Save className="w-4 h-4 mr-1.5" />}
                                 {initialData ? 'Update Only' : 'Save Only'}
                             </Button>
 
@@ -1221,9 +1231,9 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 onClick={() => handleSaveChallan(true)}
                                 disabled={isSaving}
                                 size="sm"
-                                className="h-8 sm:h-9 px-3 sm:px-4 text-xs font-black rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm active:scale-95 w-full sm:w-auto"
+                                className="h-11 sm:h-9 px-4 text-xs sm:text-sm font-black rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm active:scale-95 w-full sm:w-auto"
                             >
-                                {isSaving ? <Loader className="animate-spin w-3.5 h-3.5 mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+                                {isSaving ? <Loader className="animate-spin w-4 h-4 mr-1.5" /> : <Save className="w-4 h-4 mr-1.5" />}
                                 {initialData ? 'Update & Download PDF' : 'Save & Download PDF'}
                             </Button>
                         </div>
@@ -1321,65 +1331,69 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                         </div>
                     </div>
 
-                    {/* Mobile View (< lg): Super Slim Single Compact Summary Card */}
-                    <div className="lg:hidden w-full bg-white p-3 rounded-2xl border border-gray-200/90 shadow-2xs space-y-2.5">
-                        {/* Header + Total Value in One Row */}
-                        <div className="flex items-center justify-between pb-1.5 border-b border-gray-100">
+                    {/* Mobile View (< lg): Spacious, Touch-Friendly Summary Card */}
+                    <div className="lg:hidden w-full bg-white p-4 rounded-2xl border border-gray-200/90 shadow-xs space-y-3">
+                        {/* Header + Total Value in Highlight Banner */}
+                        <div className="p-3.5 bg-gradient-to-r from-indigo-50/80 via-blue-50/80 to-indigo-50/80 rounded-xl border border-indigo-100 flex items-center justify-between">
                             <div>
-                                <span className="text-xs font-black text-gray-900 uppercase tracking-wider block">Total Challan Value</span>
-                                <span className="text-[10px] text-gray-400 font-medium">All taxes &amp; charges incl.</span>
+                                <span className="text-xs font-bold uppercase tracking-wider text-indigo-900 block">Total Challan Value</span>
+                                <span className="text-[11px] text-indigo-600 font-medium">All taxes &amp; charges included</span>
                             </div>
-                            <span className="font-mono text-base font-black text-indigo-700">₹{total.toFixed(2)}</span>
+                            <span className="font-mono text-xl font-black text-indigo-950">₹{total.toFixed(2)}</span>
                         </div>
 
-                        {/* 2-Column Grid (Subtotal & GST) */}
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="flex items-center justify-between bg-gray-50/80 px-2 py-1.5 rounded-lg border border-gray-100">
-                                <span className="text-gray-500 font-medium text-[11px]">Subtotal</span>
-                                <span className="font-mono font-bold text-xs text-gray-900">₹{subtotal.toFixed(2)}</span>
+                        {/* Subtotal & GST Rows */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
+                                <span className="text-xs font-bold text-gray-700">Subtotal</span>
+                                <span className="font-mono font-bold text-sm text-gray-900">₹{subtotal.toFixed(2)}</span>
                             </div>
-                            <div className="flex items-center justify-between bg-gray-50/80 px-2 py-1.5 rounded-lg border border-gray-100">
-                                <div className="flex items-center gap-1">
-                                    <span className="text-gray-500 font-medium text-[11px]">GST</span>
-                                    <input
-                                        type="number"
-                                        value={gstRate || ''}
-                                        onChange={e => setGstRate(parseFloat(e.target.value) || 0)}
-                                        className="w-7 bg-white border border-gray-200 rounded text-center text-[10px] font-bold text-gray-900 h-5"
-                                        placeholder="5"
-                                        min="0"
-                                    />
-                                    <span className="text-[10px] text-gray-400">%</span>
+
+                            <div className="flex items-center justify-between bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-gray-700">GST Rate</span>
+                                    <div className="flex items-center bg-white border border-gray-300 rounded-lg px-2 py-1 shadow-2xs">
+                                        <input
+                                            type="number"
+                                            value={gstRate || ''}
+                                            onChange={e => setGstRate(parseFloat(e.target.value) || 0)}
+                                            className="w-12 text-center text-xs font-bold text-gray-900 focus:outline-hidden"
+                                            placeholder="5"
+                                            min="0"
+                                            step="0.5"
+                                        />
+                                        <span className="text-xs text-gray-500 font-bold ml-1">%</span>
+                                    </div>
                                 </div>
-                                <span className="font-mono font-bold text-xs text-gray-900">₹{gstAmount.toFixed(2)}</span>
+                                <span className="font-mono font-bold text-sm text-gray-900">₹{gstAmount.toFixed(2)}</span>
                             </div>
                         </div>
 
                         {/* 2-Column Grid (Shipping & Other Charges) */}
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="flex items-center justify-between bg-gray-50/80 px-2 py-1.5 rounded-lg border border-gray-100">
-                                <span className="text-gray-500 font-medium text-[11px]">Shipping</span>
-                                <div className="flex items-center gap-0.5">
-                                    <span className="text-[10px] text-gray-400 font-semibold">₹</span>
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 space-y-1">
+                                <span className="text-xs font-bold text-gray-700 block">Shipping</span>
+                                <div className="flex items-center bg-white border border-gray-300 rounded-lg px-2 py-1 shadow-2xs">
+                                    <span className="text-xs text-gray-400 font-semibold mr-1">₹</span>
                                     <input
                                         type="number"
                                         value={shipping || ''}
                                         onChange={e => setShipping(parseFloat(e.target.value) || 0)}
-                                        className="w-12 bg-white border border-gray-200 rounded text-right text-xs font-bold text-gray-900 h-5 px-1"
+                                        className="w-full text-right text-xs font-bold text-gray-900 focus:outline-hidden"
                                         placeholder="0"
                                         min="0"
                                     />
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between bg-gray-50/80 px-2 py-1.5 rounded-lg border border-gray-100">
-                                <span className="text-gray-500 font-medium text-[11px]">Other</span>
-                                <div className="flex items-center gap-0.5">
-                                    <span className="text-[10px] text-gray-400 font-semibold">₹</span>
+                            <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 space-y-1">
+                                <span className="text-xs font-bold text-gray-700 block">Other Charges</span>
+                                <div className="flex items-center bg-white border border-gray-300 rounded-lg px-2 py-1 shadow-2xs">
+                                    <span className="text-xs text-gray-400 font-semibold mr-1">₹</span>
                                     <input
                                         type="number"
                                         value={other || ''}
                                         onChange={e => setOther(parseFloat(e.target.value) || 0)}
-                                        className="w-12 bg-white border border-gray-200 rounded text-right text-xs font-bold text-gray-900 h-5 px-1"
+                                        className="w-full text-right text-xs font-bold text-gray-900 focus:outline-hidden"
                                         placeholder="0"
                                         min="0"
                                     />
@@ -1387,14 +1401,14 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                             </div>
                         </div>
 
-                        {/* Single-line Note Input */}
-                        <div className="pt-1.5 border-t border-gray-100 flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider shrink-0">Note:</span>
+                        {/* Dispatch Note Input */}
+                        <div className="pt-2 border-t border-gray-100 space-y-1.5">
+                            <Label className="text-xs font-bold text-gray-700 block">Dispatch Terms &amp; Note</Label>
                             <Input
                                 value={note}
                                 onChange={e => setNote(e.target.value)}
-                                placeholder="Dispatch terms (e.g. non returnable basis)"
-                                className="h-6 text-[11px] bg-gray-50 border-gray-200 rounded-lg text-gray-700 px-2 w-full"
+                                placeholder="Dispatch terms (e.g. non-returnable basis)"
+                                className="h-10 text-xs sm:text-sm bg-white border-gray-300 rounded-xl text-gray-800 px-3 w-full shadow-2xs"
                             />
                         </div>
                     </div>

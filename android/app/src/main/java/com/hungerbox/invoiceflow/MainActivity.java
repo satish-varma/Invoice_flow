@@ -29,6 +29,7 @@ import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
+import com.getcapacitor.WebViewListener;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -38,40 +39,108 @@ public class MainActivity extends BridgeActivity {
 
     private static final String TAG = "InvoiceFlow";
 
+    private static final String INJECTED_DOWNLOAD_JS =
+        "(function() {" +
+        "  if (window.__invoice_flow_native_injected__) return;" +
+        "  window.__invoice_flow_native_injected__ = true;" +
+        "  console.log('[NativeBridge] Hook installed on window');" +
+        "  var origClick = HTMLAnchorElement.prototype.click;" +
+        "  HTMLAnchorElement.prototype.click = function() {" +
+        "    var href = this.href || '';" +
+        "    var download = this.download || this.getAttribute('download') || 'Delivery_Challan.pdf';" +
+        "    var isPdf = download.toLowerCase().indexOf('.pdf') !== -1 || href.indexOf('blob:') === 0 || href.indexOf('data:') === 0 || href.toLowerCase().indexOf('.pdf') !== -1;" +
+        "    if (isPdf && window.AndroidBridge && window.AndroidBridge.savePdfToDownloads) {" +
+        "      console.log('[NativeBridge] Intercepted programmatic anchor click:', download);" +
+        "      if (href.indexOf('data:') === 0) {" +
+        "        window.AndroidBridge.savePdfToDownloads(href, download, 'Delivery Challan');" +
+        "        return;" +
+        "      }" +
+        "      if (href.indexOf('blob:') === 0) {" +
+        "        fetch(href)" +
+        "          .then(function(r) { return r.blob(); })" +
+        "          .then(function(b) {" +
+        "            var reader = new FileReader();" +
+        "            reader.onloadend = function() {" +
+        "              window.AndroidBridge.savePdfToDownloads(reader.result, download, 'Delivery Challan');" +
+        "            };" +
+        "            reader.readAsDataURL(b);" +
+        "          })" +
+        "          .catch(function(err) { console.error('[NativeBridge] Blob fetch error:', err); });" +
+        "        return;" +
+        "      }" +
+        "    }" +
+        "    return origClick.apply(this, arguments);" +
+        "  };" +
+        "})();";
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         // Register official Capacitor plugin BEFORE super.onCreate
         registerPlugin(AndroidPdfPlugin.class);
         super.onCreate(savedInstanceState);
 
-        // Configure WebView for reliable in-app downloads without opening external browsers
         try {
             WebView webView = getBridge().getWebView();
             if (webView != null) {
-                // 1. Register direct JavaScriptInterface bridge
+                // Clear stale cache and ServiceWorker caches so fresh web code loads
+                webView.clearCache(true);
+
+                // 1. Direct JavaScriptInterface bridge
                 webView.addJavascriptInterface(new AndroidPdfBridge(), "AndroidBridge");
 
-                // 2. Set DownloadListener to intercept ALL downloads (blob:, data:, https:) in-app
+                // 2. DownloadListener to intercept browser-initiated downloads
                 webView.setDownloadListener(new DownloadListener() {
                     @Override
                     public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimeType, long contentLength) {
                         handleInAppDownload(webView, url, userAgent, contentDisposition, mimeType);
                     }
                 });
-                Log.d(TAG, "AndroidBridge and DownloadListener registered successfully on WebView");
+
+                // 3. Inject JS anchor interception on page load
+                bridge.addWebViewListener(new WebViewListener() {
+                    @Override
+                    public void onPageLoaded(WebView loadedWebView) {
+                        injectNativeDownloadHook(loadedWebView);
+                    }
+                });
+
+                Log.d(TAG, "AndroidBridge, DownloadListener, and WebViewListener successfully installed");
             }
         } catch (Exception e) {
-            Log.e(TAG, "Error configuring WebView downloads", e);
+            Log.e(TAG, "Error configuring WebView", e);
         }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        try {
+            WebView webView = getBridge().getWebView();
+            if (webView != null) {
+                injectNativeDownloadHook(webView);
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void injectNativeDownloadHook(WebView webView) {
+        if (webView == null) return;
+        runOnUiThread(() -> {
+            try {
+                webView.evaluateJavascript(INJECTED_DOWNLOAD_JS, null);
+                Log.d(TAG, "Evaluated native download hook JS");
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to evaluate download hook JS", e);
+            }
+        });
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Intercept and Handle Downloads In-App (No Chrome, No External Browser)
     // ─────────────────────────────────────────────────────────────────────────────
 
-    private void handleInAppDownload(WebView webView, String url, String userAgent, String contentDisposition, String mimeType) {
+    public void handleInAppDownload(WebView webView, String url, String userAgent, String contentDisposition, String mimeType) {
         if (url == null || url.isEmpty()) return;
-        Log.d(TAG, "handleInAppDownload: url=" + (url.length() > 60 ? url.substring(0, 60) + "..." : url) + " mimeType=" + mimeType);
+        Log.d(TAG, "handleInAppDownload: url=" + (url.length() > 60 ? url.substring(0, 60) + "..." : url));
 
         String guessName = URLUtil.guessFileName(url, contentDisposition, mimeType);
         if (guessName == null || guessName.isEmpty() || guessName.equals("downloadfile.bin")) {
@@ -83,9 +152,8 @@ public class MainActivity extends BridgeActivity {
         final String fileName = guessName;
 
         // Case 1: Blob URL (jsPDF, pdf.save, URL.createObjectURL)
-        // Convert blob to base64 inside WebView and pass to doSavePdf
         if (url.startsWith("blob:")) {
-            Log.d(TAG, "Intercepted blob download: " + fileName);
+            Log.d(TAG, "Intercepted blob URL: " + fileName);
             String js = "(() => {"
                     + "  try {"
                     + "    fetch('" + url + "')"
@@ -99,8 +167,8 @@ public class MainActivity extends BridgeActivity {
                     + "        };"
                     + "        reader.readAsDataURL(b);"
                     + "      })"
-                    + "      .catch(function(err){ console.error('Blob fetch failed in native listener', err); });"
-                    + "  } catch(e) { console.error('Blob error', e); }"
+                    + "      .catch(function(err){ console.error('Blob fetch failed:', err); });"
+                    + "  } catch(e) { console.error('Blob error:', e); }"
                     + "})();";
             runOnUiThread(() -> webView.evaluateJavascript(js, null));
             return;
@@ -108,12 +176,12 @@ public class MainActivity extends BridgeActivity {
 
         // Case 2: Data URL (base64)
         if (url.startsWith("data:")) {
-            Log.d(TAG, "Intercepted data URI download: " + fileName);
+            Log.d(TAG, "Intercepted data URI: " + fileName);
             doSavePdf(url, fileName);
             return;
         }
 
-        // Case 3: HTTP/HTTPS standard URL - download via system DownloadManager
+        // Case 3: HTTP/HTTPS standard URL via DownloadManager
         if (url.startsWith("http://") || url.startsWith("https://")) {
             Log.d(TAG, "Intercepted HTTP download via DownloadManager: " + fileName);
             try {
@@ -142,7 +210,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Native In-App PDF Save to Device Downloads (100% in-app, no browser popup)
+    // Native In-App PDF Save to Device Downloads (100% in-app, NO BROWSER)
     // ─────────────────────────────────────────────────────────────────────────────
 
     public boolean doSavePdf(String base64Data, String fileName) {
@@ -170,7 +238,7 @@ public class MainActivity extends BridgeActivity {
             Uri savedUri = null;
             String savedFilePath = null;
 
-            // Strategy 1: Android 10+ (API 29+) MediaStore.Downloads (Universal Scoped Storage)
+            // Strategy 1: Android 10+ (API 29+) MediaStore.Downloads
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 try {
                     ContentValues values = new ContentValues();
@@ -406,6 +474,21 @@ public class MainActivity extends BridgeActivity {
     @CapacitorPlugin(name = "AndroidPdf")
     public static class AndroidPdfPlugin extends Plugin {
 
+        @Override
+        public Boolean shouldOverrideLoad(Uri url) {
+            String urlStr = url != null ? url.toString() : "";
+            // Intercept any download or PDF link so Capacitor NEVER hands it to an external browser!
+            if (urlStr.endsWith(".pdf") || urlStr.contains("download") || urlStr.contains(".pdf?") || urlStr.startsWith("blob:") || urlStr.startsWith("data:")) {
+                Log.d(TAG, "shouldOverrideLoad BLOCKED external browser for: " + urlStr);
+                MainActivity activity = (MainActivity) getActivity();
+                if (activity != null) {
+                    activity.handleInAppDownload(getBridge().getWebView(), urlStr, null, null, "application/pdf");
+                }
+                return true; // TRUE = handled completely inside the app!
+            }
+            return null; // Let default handling proceed
+        }
+
         @PluginMethod
         public void savePdf(PluginCall call) {
             String base64 = call.getString("base64");
@@ -452,7 +535,7 @@ public class MainActivity extends BridgeActivity {
 
         @JavascriptInterface
         public boolean savePdfToDownloads(String base64Data, String fileName, String title) {
-            Log.d(TAG, "AndroidBridge.savePdfToDownloads called for: " + fileName);
+            Log.d(TAG, "AndroidBridge.savePdfToDownloads called directly for: " + fileName);
             return doSavePdf(base64Data, fileName);
         }
 

@@ -141,12 +141,31 @@ export function PdfDownloadReadyModal({
       }, 1200);
 
     } catch (err) {
-      console.error('Download error:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Download failed',
-        description: 'Please try "Open in PDF Viewer" or "Share" instead.',
-      });
+      console.warn('Network upload failed or offline, falling back to direct local blob download:', err);
+      try {
+        const localUrl = URL.createObjectURL(pdfData.blob);
+        const link = document.createElement('a');
+        link.href = localUrl;
+        link.download = pdfData.fileName;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          if (link.parentNode) link.parentNode.removeChild(link);
+          URL.revokeObjectURL(localUrl);
+          onClose();
+        }, 1200);
+        toast({
+          title: 'Downloaded Offline',
+          description: `Saved ${pdfData.fileName} locally to your device.`,
+        });
+      } catch (fallbackErr) {
+        console.error('Offline fallback download failed:', fallbackErr);
+        toast({
+          variant: 'destructive',
+          title: 'Download failed',
+          description: 'Please try "Share" instead.',
+        });
+      }
     } finally {
       setIsProcessing(false);
     }

@@ -107,37 +107,64 @@ export async function generateAndSavePdf(
             const arrayBuffer = pdf.output('arraybuffer');
             const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
             const blobUrl = URL.createObjectURL(blob);
+            const base64Data = arrayBufferToBase64(arrayBuffer);
 
-            // 1. Native Capacitor Android / iOS Handling
-            if (Capacitor.isNativePlatform()) {
-                console.log("Native Capacitor detected, saving via Filesystem & Share...");
+            // 1. Native AndroidBridge (MediaStore.Downloads + Notification + Auto-view, 100% in-app)
+            if (typeof window !== 'undefined' && (window as any).AndroidBridge?.savePdfToDownloads) {
+                console.log("Using native AndroidBridge for in-app download...");
                 try {
-                    const base64Data = arrayBufferToBase64(arrayBuffer);
-                    const savedFile = await Filesystem.writeFile({
-                        path: finalName,
-                        data: base64Data,
-                        directory: Directory.Cache
-                    });
-                    console.log("File written to cache:", savedFile.uri);
-                    await Share.share({
-                        title: finalName,
-                        text: `Delivery Challan ${finalName}`,
-                        url: savedFile.uri,
-                        dialogTitle: `Save or Open ${finalName}`,
-                    });
-                    console.log("Native Share dialog opened successfully.");
-                    return {
-                        blob,
-                        url: blobUrl,
-                        fileName: finalName,
-                        arrayBuffer,
-                    };
-                } catch (nativeErr) {
-                    console.warn("Capacitor Filesystem/Share failed, trying fallback:", nativeErr);
+                    const ok = (window as any).AndroidBridge.savePdfToDownloads(base64Data, finalName, 'Delivery Challan');
+                    if (ok) {
+                        return {
+                            blob,
+                            url: blobUrl,
+                            fileName: finalName,
+                            arrayBuffer,
+                        };
+                    }
+                } catch (bridgeErr) {
+                    console.warn("AndroidBridge save failed, trying fallback:", bridgeErr);
                 }
             }
 
-            // 2. Mobile Browser Web Share API Handling (Chrome on Android, Safari on iOS)
+            // 2. Native Capacitor Android / iOS Handling
+            if (Capacitor.isNativePlatform()) {
+                console.log("Native Capacitor detected, saving via Filesystem & Share...");
+                try {
+                    // Save to Documents directory (accessible to user)
+                    await Filesystem.writeFile({
+                        path: finalName,
+                        data: base64Data,
+                        directory: Directory.Documents
+                    });
+                    console.log("File written to Documents:", finalName);
+                } catch (docErr) {
+                    console.warn("Documents write failed, falling back to cache:", docErr);
+                    try {
+                        const savedFile = await Filesystem.writeFile({
+                            path: finalName,
+                            data: base64Data,
+                            directory: Directory.Cache
+                        });
+                        await Share.share({
+                            title: finalName,
+                            text: `Delivery Challan ${finalName}`,
+                            url: savedFile.uri,
+                            dialogTitle: `Save or Open ${finalName}`,
+                        });
+                    } catch (shareErr) {
+                        console.warn("Share fallback failed:", shareErr);
+                    }
+                }
+                return {
+                    blob,
+                    url: blobUrl,
+                    fileName: finalName,
+                    arrayBuffer,
+                };
+            }
+
+            // 3. Mobile Browser Web Share API Handling (Chrome on Android, Safari on iOS)
             if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function') {
                 try {
                     const file = new File([blob], finalName, { type: 'application/pdf' });
@@ -170,8 +197,8 @@ export async function generateAndSavePdf(
                 }
             }
 
-            // 3. Desktop / Standard Browser Anchor Download Fallback
-            console.log("Triggering anchor download for desktop/fallback...");
+            // 4. Desktop / Standard Browser Anchor Download (Immediate 1-click download, NO POPUP!)
+            console.log("Triggering anchor download for desktop...");
             const link = document.createElement('a');
             link.style.display = 'none';
             link.href = blobUrl;
@@ -183,6 +210,7 @@ export async function generateAndSavePdf(
                 if (link.parentNode) {
                     link.parentNode.removeChild(link);
                 }
+                URL.revokeObjectURL(blobUrl);
             }, 3000);
 
             console.log("PDF Saved directly as:", finalName, "Blob Size:", (blob.size / 1024).toFixed(2), "KB");

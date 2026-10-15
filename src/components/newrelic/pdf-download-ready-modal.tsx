@@ -135,6 +135,11 @@ export function PdfDownloadReadyModal({
         window.location.href = downloadUrl;
       }, 400);
 
+      // Auto-dismiss modal after download is triggered
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+
     } catch (err) {
       console.error('Download error:', err);
       toast({

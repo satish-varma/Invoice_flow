@@ -21,7 +21,7 @@ import { NewRelicChallan, NewRelicChallanItem } from '@/types/challan';
 import React from 'react';
 import { format } from 'date-fns';
 import {NEWRELIC_LOCATIONS} from '@/services/newrelicChallanService';
-import { HUNGERBOX_LOGO_BASE64 } from './assets';
+import { HUNGERBOX_LOGO_BASE64, HUNGERBOX_STAMP_BASE64, HUNGERBOX_FOOTER_BASE64 } from './assets';
 
 /**
  * IMPORTANT NOTE ON ANALYTICS FIELDS (MRP, Transport Cost, Other Charges):
@@ -270,9 +270,8 @@ export const NewRelicChallanPreview = React.forwardRef<HTMLDivElement, Props>(
               <div style={{ marginTop: '24px', marginBottom: '12px' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/hungerbox_stamp_and_sign.png"
+                  src={HUNGERBOX_STAMP_BASE64}
                   alt="Stamp and Signature"
-                  crossOrigin="anonymous"
                   style={{ width: '120px', objectFit: 'contain' }}
                 />
               </div>
@@ -285,9 +284,8 @@ export const NewRelicChallanPreview = React.forwardRef<HTMLDivElement, Props>(
             <div style={{ position: 'absolute', bottom: '20px', left: '64px', right: '64px' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/hungerbox_footer.png"
+                src={HUNGERBOX_FOOTER_BASE64}
                 alt="HungerBox Footer"
-                crossOrigin="anonymous"
                 style={{ width: '100%', objectFit: 'contain' }}
               />
             </div>

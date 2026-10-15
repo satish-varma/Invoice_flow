@@ -85,16 +85,37 @@ export function PdfDownloadReadyModal({
     });
   };
 
-  // 1. Download to Phone — uploads to Firebase Storage, then navigates to the persistent URL
+  // 1. Download to Phone — saves directly inside the app to public /Downloads
   const handleDownload = async () => {
     try {
       setIsProcessing(true);
-      toast({
-        title: 'Preparing Download...',
-        description: `Uploading ${pdfData.fileName} for download`,
-      });
 
-      // On native Capacitor, write directly to Documents folder
+      // Priority 1: Native AndroidBridge (100% in-app, MediaStore.Downloads, no Chrome, 0 network)
+      if (typeof window !== 'undefined' && (window as any).AndroidBridge?.savePdfToDownloads) {
+        toast({
+          title: 'Saving to Downloads...',
+          description: `Saving ${pdfData.fileName} to your device`,
+        });
+        const base64 = await getBase64();
+        const success = (window as any).AndroidBridge.savePdfToDownloads(
+          base64,
+          pdfData.fileName,
+          'Delivery Challan'
+        );
+        if (success) {
+          toast({
+            title: 'Saved to Downloads',
+            description: `${pdfData.fileName} is in your phone's Downloads folder`,
+          });
+          setTimeout(() => {
+            onClose();
+          }, 1000);
+          setIsProcessing(false);
+          return;
+        }
+      }
+
+      // Priority 2: Native Capacitor Filesystem
       if (Capacitor.isNativePlatform()) {
         try {
           const base64 = await getBase64();
@@ -107,14 +128,17 @@ export function PdfDownloadReadyModal({
             title: 'Saved!',
             description: `${pdfData.fileName} saved to Documents`,
           });
+          setTimeout(() => {
+            onClose();
+          }, 1000);
           setIsProcessing(false);
           return;
         } catch (capErr) {
-          console.warn('Capacitor filesystem write failed, falling back to Firebase Storage:', capErr);
+          console.warn('Capacitor filesystem write failed, falling back:', capErr);
         }
       }
 
-      // Upload to Firebase Storage to get a persistent cross-instance URL
+      // Priority 3: Browser Fallback (Upload to Firebase Storage for persistent download URL)
       const downloadUrl = await uploadToFirebaseStorage();
 
       toast({
@@ -122,7 +146,6 @@ export function PdfDownloadReadyModal({
         description: 'Your PDF is being downloaded',
       });
 
-      // Trigger download: anchor click first, then location.href for Android WebView DownloadListener
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = pdfData.fileName;
@@ -130,12 +153,6 @@ export function PdfDownloadReadyModal({
       link.click();
       setTimeout(() => { if (link.parentNode) link.parentNode.removeChild(link); }, 1000);
 
-      // For Android WebView: set location.href triggers the native DownloadListener
-      setTimeout(() => {
-        window.location.href = downloadUrl;
-      }, 400);
-
-      // Auto-dismiss modal after download is triggered
       setTimeout(() => {
         onClose();
       }, 1200);
@@ -171,10 +188,20 @@ export function PdfDownloadReadyModal({
     }
   };
 
-  // 2. Open in PDF Viewer — uploads to Firebase Storage and opens the URL in the system viewer
+  // 2. Open in PDF Viewer — opens natively via FileProvider or browser
   const handleOpenPdf = async () => {
     try {
       setIsProcessing(true);
+
+      // Priority 1: Native AndroidBridge via FileProvider (100% in-app, no Chrome)
+      if (typeof window !== 'undefined' && (window as any).AndroidBridge?.openPdf) {
+        const base64 = await getBase64();
+        const success = (window as any).AndroidBridge.openPdf(base64, pdfData.fileName);
+        if (success) {
+          setIsProcessing(false);
+          return;
+        }
+      }
 
       if (Capacitor.isNativePlatform()) {
         try {
@@ -203,17 +230,26 @@ export function PdfDownloadReadyModal({
       }
     } catch (err) {
       console.error('Error opening PDF:', err);
-      // Last resort: blob URL (works on desktop browsers at least)
       window.open(pdfData.url, '_blank');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // 3. Share — native share sheet or Web Share API with the Firebase Storage URL
+  // 3. Share — native Android share sheet or Web Share API
   const handleShare = async () => {
     try {
       setIsProcessing(true);
+
+      // Priority 1: Native AndroidBridge via FileProvider intent
+      if (typeof window !== 'undefined' && (window as any).AndroidBridge?.sharePdf) {
+        const base64 = await getBase64();
+        const success = (window as any).AndroidBridge.sharePdf(base64, pdfData.fileName);
+        if (success) {
+          setIsProcessing(false);
+          return;
+        }
+      }
 
       // Native Capacitor Share
       if (Capacitor.isNativePlatform()) {

@@ -12,9 +12,40 @@ interface DeliveryChallanPreviewProps {
     settings: Settings;
 }
 
+const defaultGutGuruProfile = {
+    id: 'default-gut-guru',
+    profileName: 'The Gut Guru',
+    companyName: 'THE GUT GURU',
+    companyAddress: 'H NO.6-46/3/A, VENKATESWARA NAGAR, Chanda Nagar, Hyderabad, Telangana, 500050',
+    companyGstin: '36DDTPJ6536D1Z8',
+    companyPan: 'DDTPJ6536D',
+    companyPhone: '+91 7700832898',
+    companyEmail: 'thegutguru.in@gmail.com',
+    invoicePrefix: 'TGG',
+    bankBeneficiary: 'THE GUT GURU',
+    bankName: 'HDFC BANK',
+    bankAccount: '',
+    bankIfsc: '',
+    bankBranch: 'CHANDA NAGAR',
+    stampLogoUrl: '/sigwithsign_small.png',
+    logoUrl: '/logo.svg',
+};
+
+const defaultBillToName = 'EatGood Technologies Pvt. Ltd. (HungerBox)';
+const defaultBillToAddress = 'Outer Ring Road, Kadubeesanahalli, Bengaluru, Karnataka 560103';
+
 export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryChallanPreviewProps>(({ challan, settings }, ref) => {
 
-    const activeProfile = settings.companyProfiles?.find(p => p.id === challan.companyProfileId);
+    const activeProfile = settings.companyProfiles?.find(p => p.id === challan.companyProfileId)
+        || settings.companyProfiles?.find(p => p.companyName?.toLowerCase().includes('gut guru') || p.invoicePrefix === 'TGG')
+        || settings.companyProfiles?.[0]
+        || defaultGutGuruProfile;
+
+    const billToName = challan.billToName || defaultBillToName;
+    const billToAddress = challan.billToAddress || defaultBillToAddress;
+    const shipToName = challan.shipToName || billToName;
+    const shipToAddress = challan.shipToAddress || billToAddress;
+
     const gstRate = challan.subtotal > 0 ? (challan.gstAmount / challan.subtotal) * 100 : 0;
 
     return (
@@ -59,13 +90,13 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                         <div className="grid grid-cols-2 gap-8 items-start py-6">
                             <div className="space-y-1">
                                 <p className='font-bold text-gray-500 uppercase'>Bill To</p>
-                                <p className='font-bold'>{challan.billToName}</p>
-                                <p className='text-sm' style={{ whiteSpace: 'pre-wrap' }}>{challan.billToAddress}</p>
+                                <p className='font-bold'>{billToName}</p>
+                                <p className='text-sm' style={{ whiteSpace: 'pre-wrap' }}>{billToAddress}</p>
                             </div>
                             <div className='space-y-1'>
                                 <p className='font-bold text-gray-500 uppercase'>Ship To</p>
-                                <p className='font-bold'>{challan.shipToName || challan.billToName}</p>
-                                <p className='text-sm' style={{ whiteSpace: 'pre-wrap' }}>{challan.shipToAddress || challan.billToAddress}</p>
+                                <p className='font-bold'>{shipToName}</p>
+                                <p className='text-sm' style={{ whiteSpace: 'pre-wrap' }}>{shipToAddress}</p>
                             </div>
                         </div>
 

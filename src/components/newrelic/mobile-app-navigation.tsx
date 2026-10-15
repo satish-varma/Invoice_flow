@@ -251,9 +251,9 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
     <>
       {/* ── Floating CRED-Style Glowing Bottom Navigation Bar ── */}
       <div className="sm:hidden fixed bottom-2 left-2.5 right-2.5 z-40 pb-[env(safe-area-inset-bottom)] pointer-events-none">
-        <nav className="pointer-events-auto relative bg-[#090b16]/95 backdrop-blur-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.65),0_0_30px_rgba(99,102,241,0.15)] rounded-3xl overflow-hidden ring-1 ring-white/10">
+        <nav className="pointer-events-auto relative bg-[#090b16]/95 backdrop-blur-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.65),0_0_30px_rgba(99,102,241,0.15)] rounded-3xl ring-1 ring-white/10">
           {/* Ambient top neon accent line */}
-          <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-cyan-400/60 via-purple-500/60 via-pink-500/60 to-amber-400/60" />
+          <div className="absolute top-0 left-3 right-3 h-[1.5px] bg-gradient-to-r from-cyan-400/60 via-purple-500/60 via-pink-500/60 to-amber-400/60 rounded-full" />
 
           <div className="flex items-center justify-around h-[66px] px-1 py-1">
             {/* Slot 1: DC (Cyber Cyan Glow) */}
@@ -339,14 +339,14 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
                 triggerHaptic('medium');
                 setShowCreateSheet(true);
               }}
-              className="flex-1 flex flex-col items-center justify-center -mt-6 relative z-10 group"
+              className="flex-1 flex flex-col items-center justify-center -mt-7 relative z-30 group"
               aria-label="New Action"
             >
               <div className="relative">
                 {/* Ambient Multi-Color Glow Halo */}
                 <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-indigo-500 blur-md opacity-75 group-hover:opacity-100 animate-pulse transition-opacity" />
-                <div className="relative w-12 h-12 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-indigo-600 text-white shadow-xl shadow-rose-950/60 border-2 border-white/70 flex items-center justify-center active:scale-90 group-hover:scale-105 transition-all">
-                  <Plus className="w-6 h-6 stroke-[3] text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
+                <div className="relative w-12 h-12 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-indigo-600 text-white shadow-xl shadow-rose-950/60 border-2 border-white/80 flex items-center justify-center active:scale-90 group-hover:scale-105 transition-all">
+                  <Plus className="w-6 h-6 stroke-[3.2] text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
                 </div>
               </div>
               <span className="text-[10px] font-black bg-gradient-to-r from-amber-300 via-rose-300 to-indigo-200 bg-clip-text text-transparent tracking-tight mt-1">

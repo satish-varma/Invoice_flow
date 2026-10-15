@@ -483,23 +483,23 @@ export default function NewRelicPage() {
           </div>
         )}
 
-        {/* Clean DC Page Subheader */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-          <div>
+        {/* DC Page Header - Heading & Sync Data on Same Line */}
+        <div className="flex items-center justify-between gap-2.5 pt-1">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+              <h1 className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight">
                 Delivery Challans
               </h1>
-              <span className="text-[10px] font-black bg-indigo-50 text-[#3b2fc9] border border-indigo-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              <span className="text-[10px] font-black bg-indigo-50 text-[#3b2fc9] border border-indigo-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
                 DC Hub
               </span>
             </div>
-            <p className="text-xs text-gray-500 font-medium mt-0.5">
+            <p className="text-[11px] sm:text-xs text-gray-500 font-medium truncate mt-0.5">
               Cafeteria stock, inward challans &amp; dispatch management
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-center">
+          <div className="flex items-center gap-1.5 shrink-0">
             {(role === 'admin' || role === 'superadmin') && (
               <button
                 type="button"
@@ -507,7 +507,7 @@ export default function NewRelicPage() {
                   triggerHaptic('light');
                   setShowCalculator(true);
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#3b2fc9] text-xs font-bold transition-all border border-purple-200/80 shadow-2xs active:scale-95"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#3b2fc9] text-xs font-bold transition-all border border-purple-200/80 shadow-2xs active:scale-95"
                 title="Open MRP % Calculator"
               >
                 <Calculator className="w-3.5 h-3.5" />
@@ -518,7 +518,7 @@ export default function NewRelicPage() {
               type="button"
               onClick={handlePullRefresh}
               disabled={isRefreshing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 text-xs font-semibold text-gray-700 transition-all border border-gray-200 shadow-2xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 text-xs font-semibold text-gray-700 transition-all border border-gray-200 shadow-2xs cursor-pointer"
             >
               <RefreshCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
               <span>{isRefreshing ? 'Syncing...' : 'Sync Data'}</span>
@@ -736,7 +736,14 @@ export default function NewRelicPage() {
           <div className="bg-white p-3 sm:p-4 rounded-2xl border border-indigo-100/70 shadow-xs space-y-2.5">
             {/* Top Row: Segmented Location Switcher (Mobile & Desktop) */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="inline-flex p-1 bg-gray-100/90 rounded-xl max-w-full overflow-x-auto scrollbar-none no-scrollbar gap-1">
+              {/* Responsive Segmented Switcher (Zero horizontal scroll on mobile) */}
+              <div
+                className={`grid ${
+                  user?.preferredLocations && user.preferredLocations.length > 0
+                    ? 'grid-cols-2 sm:flex'
+                    : 'grid-cols-3 sm:flex'
+                } p-1 bg-gray-100/90 rounded-xl w-full sm:w-auto gap-1 text-center`}
+              >
                 {user?.preferredLocations && user.preferredLocations.length > 0 && (
                   <button
                     type="button"
@@ -744,10 +751,10 @@ export default function NewRelicPage() {
                       triggerHaptic('light');
                       setFilterLocation('preferred');
                     }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                    className={`flex items-center justify-center text-center px-3 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition-all ${
                       filterLocation === 'preferred'
                         ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs'
-                        : 'text-gray-600 hover:text-gray-900'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
                     }`}
                   >
                     ⭐ Preferred
@@ -759,10 +766,10 @@ export default function NewRelicPage() {
                     triggerHaptic('light');
                     setFilterLocation('all');
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                  className={`flex items-center justify-center text-center px-3 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition-all ${
                     filterLocation === 'all'
                       ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-xs'
-                      : 'text-gray-600 hover:text-gray-900'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
                   }`}
                 >
                   All Hubs ({activeChallans.length})
@@ -783,11 +790,11 @@ export default function NewRelicPage() {
                         triggerHaptic('light');
                         setFilterLocation(key);
                       }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                        isSelected ? activeColor : 'text-gray-600 hover:text-gray-900'
+                      className={`flex items-center justify-center text-center px-3 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        isSelected ? activeColor : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
                       }`}
                     >
-                      {loc.label} <span className="text-[10px] opacity-80">({count})</span>
+                      {loc.label} <span className="text-[10px] opacity-80 ml-1">({count})</span>
                     </button>
                   );
                 })}

@@ -14,7 +14,7 @@ This skill captures architectural rules, lessons learned, and guidelines for mai
 InvoiceFlow operates as both a mobile PWA (responsive web) and an Android APK/Bundle built with **Capacitor 8**.
 
 * **Capacitor Configuration (`capacitor.config.ts`):**
-  - Package ID: `com.hungerbox.invoiceflow`
+  - Package ID: `com.gutguru.invoiceflow`
   - Development URL: Configured to local dev IP (`http://192.168.x.x:9002` or `http://10.0.2.2:9002` for Android emulator) with `cleartext: true` for HTTP development.
   - Production URL: Points to production web deployment or static `webDir: 'public'`.
   - Android specific: `allowMixedContent: true`, `webContentsDebuggingEnabled: true` (allows remote debugging via `chrome://inspect`).

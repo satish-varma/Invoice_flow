@@ -15,15 +15,26 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
     return window.btoa(binary);
 }
 
+export interface GeneratedPdfResult {
+    blob: Blob;
+    url: string;
+    fileName: string;
+    arrayBuffer: ArrayBuffer;
+}
+
 /**
  * Generates a multi-page PDF from an HTML element with discrete body, signature, and footer sections.
  * Supports Desktop Web, Mobile Browser (Web Share), and Native Capacitor Android.
  * @param element The HTML element to render into the PDF.
  * @param fileName The desired name of the output PDF file (used only in 'save' mode).
  * @param mode 'save' to trigger download/share, 'preview' to return data URI.
- * @returns Promise<string | void> Data URI if mode is 'preview', void otherwise.
+ * @returns Promise<GeneratedPdfResult | string>
  */
-export async function generateAndSavePdf(element: HTMLElement, fileName: string, mode: 'save' | 'preview' = 'save'): Promise<string | void> {
+export async function generateAndSavePdf(
+    element: HTMLElement,
+    fileName: string,
+    mode: 'save' | 'preview' = 'save'
+): Promise<GeneratedPdfResult | string> {
     console.log("Starting PDF generation for:", fileName);
     
     // 0. Wait for all images to be loaded
@@ -84,6 +95,7 @@ export async function generateAndSavePdf(element: HTMLElement, fileName: string,
             console.log("Preparing file output for:", finalName);
             const arrayBuffer = pdf.output('arraybuffer');
             const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+            const blobUrl = URL.createObjectURL(blob);
 
             // 1. Native Capacitor Android / iOS Handling
             if (Capacitor.isNativePlatform()) {
@@ -103,7 +115,12 @@ export async function generateAndSavePdf(element: HTMLElement, fileName: string,
                         dialogTitle: `Save or Open ${finalName}`,
                     });
                     console.log("Native Share dialog opened successfully.");
-                    return;
+                    return {
+                        blob,
+                        url: blobUrl,
+                        fileName: finalName,
+                        arrayBuffer,
+                    };
                 } catch (nativeErr) {
                     console.warn("Capacitor Filesystem/Share failed, trying fallback:", nativeErr);
                 }
@@ -121,7 +138,12 @@ export async function generateAndSavePdf(element: HTMLElement, fileName: string,
                             text: `Delivery Challan: ${finalName}`,
                         });
                         console.log("Web Share completed.");
-                        return;
+                        return {
+                            blob,
+                            url: blobUrl,
+                            fileName: finalName,
+                            arrayBuffer,
+                        };
                     }
                 } catch (shareErr: any) {
                     if (shareErr.name === 'AbortError') {
@@ -136,7 +158,7 @@ export async function generateAndSavePdf(element: HTMLElement, fileName: string,
             console.log("Triggering anchor download for desktop/fallback...");
             const link = document.createElement('a');
             link.style.display = 'none';
-            link.href = URL.createObjectURL(blob);
+            link.href = blobUrl;
             link.download = finalName;
             document.body.appendChild(link);
             link.click();
@@ -145,10 +167,16 @@ export async function generateAndSavePdf(element: HTMLElement, fileName: string,
                 if (link.parentNode) {
                     link.parentNode.removeChild(link);
                 }
-                URL.revokeObjectURL(link.href);
             }, 3000);
 
             console.log("PDF Saved directly as:", finalName, "Blob Size:", (blob.size / 1024).toFixed(2), "KB");
+
+            return {
+                blob,
+                url: blobUrl,
+                fileName: finalName,
+                arrayBuffer,
+            };
         } else {
             console.log("Generating Preview Blob...");
             const blob = pdf.output('blob');

@@ -16,7 +16,8 @@ import { NewRelicChallanViewModal } from '@/components/newrelic/newrelic-challan
 import { NewRelicAdminPreviewModal } from '@/components/newrelic/newrelic-admin-preview-modal';
 
 import { NewRelicGlobalAuditLog } from '@/components/newrelic/newrelic-global-audit-log';
-import { generateAndSavePdf } from '@/lib/pdf';
+import { generateAndSavePdf, GeneratedPdfResult } from '@/lib/pdf';
+import { PdfDownloadReadyModal } from '@/components/newrelic/pdf-download-ready-modal';
 import { NewRelicDashboard } from '@/components/newrelic/newrelic-dashboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFinancialAuth } from '@/contexts/FinancialAuthContext';
@@ -36,6 +37,8 @@ export default function NewRelicPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedChallan, setSelectedChallan] = useState<NewRelicChallan | null>(null);
   const [challanToDownload, setChallanToDownload] = useState<NewRelicChallan | null>(null);
+  const [readyPdf, setReadyPdf] = useState<GeneratedPdfResult | null>(null);
+  const [pdfChallan, setPdfChallan] = useState<NewRelicChallan | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState<NewRelicLocation | null>(null);
   const [formKey, setFormKey] = useState<string>('new');
   const [activeTab, setActiveTab] = useState<'active' | 'trash' | 'insights' | 'items'>('active');
@@ -208,6 +211,7 @@ export default function NewRelicPage() {
   };
 
   const handleDownload = (challan: NewRelicChallan) => {
+    setPdfChallan(challan);
     toast({
       title: 'Generating Delivery Challan...',
       description: `Preparing DC ${challan.dcNumber} for download`,
@@ -357,7 +361,10 @@ export default function NewRelicPage() {
           NEWRELIC_LOCATIONS[challanToDownload.location].label
         }.pdf`;
         try {
-          await generateAndSavePdf(previewRef.current, fileName);
+          const result = await generateAndSavePdf(previewRef.current, fileName);
+          if (typeof result === 'object' && result && 'blob' in result) {
+            setReadyPdf(result);
+          }
           toast({
             title: 'Delivery Challan Ready',
             description: fileName,
@@ -1075,6 +1082,14 @@ export default function NewRelicPage() {
           <NewRelicChallanPreview ref={previewRef} challan={challanToDownload} />
         </div>
       )}
+
+      {/* Mobile-friendly PDF Ready Action Modal (Save, Share, View) */}
+      <PdfDownloadReadyModal
+        isOpen={!!readyPdf}
+        onClose={() => setReadyPdf(null)}
+        pdfData={readyPdf}
+        onViewDocument={pdfChallan ? () => setSelectedChallan(pdfChallan) : undefined}
+      />
     </div>
   );
 }

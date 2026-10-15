@@ -352,24 +352,29 @@ export default function NewRelicPage() {
     if (!challanToDownload) return;
 
     const timer = setTimeout(async () => {
-      if (previewRef.current) {
-        const fileName = `DC-${challanToDownload.dcNumber}-${
-          NEWRELIC_LOCATIONS[challanToDownload.location].label
-        }.pdf`;
-        try {
-          await generateAndSavePdf(previewRef.current, fileName);
-          toast({
-            title: 'Delivery Challan Downloaded',
-            description: fileName,
-          });
-        } catch (err) {
-          console.error(err);
-          toast({ variant: 'destructive', title: 'PDF generation failed', description: String(err) });
-        } finally {
-          setChallanToDownload(null);
+      try {
+        if (!previewRef.current) {
+          console.warn("Preview ref not ready after timeout");
+          return;
         }
+        const locLabel = NEWRELIC_LOCATIONS[challanToDownload.location]?.label || challanToDownload.location;
+        const fileName = `DC-${challanToDownload.dcNumber}-${locLabel}.pdf`;
+        await generateAndSavePdf(previewRef.current, fileName);
+        toast({
+          title: 'Delivery Challan Downloaded',
+          description: fileName,
+        });
+      } catch (err) {
+        console.error("PDF generation failed:", err);
+        toast({
+          variant: 'destructive',
+          title: 'PDF generation failed',
+          description: err instanceof Error ? err.message : String(err),
+        });
+      } finally {
+        setChallanToDownload(null);
       }
-    }, 600);
+    }, 400);
 
     return () => clearTimeout(timer);
   }, [challanToDownload, toast]);
@@ -1063,13 +1068,16 @@ export default function NewRelicPage() {
 
       {challanToDownload && (
         <div
+          id="newrelic-pdf-capture-container"
           style={{
             position: 'fixed',
             top: 0,
-            left: '-9999px',
+            left: 0,
             width: '794px',
+            zIndex: -9999,
             pointerEvents: 'none',
             overflow: 'visible',
+            backgroundColor: '#ffffff',
           }}
         >
           <NewRelicChallanPreview ref={previewRef} challan={challanToDownload} />

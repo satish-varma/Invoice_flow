@@ -108,8 +108,9 @@ export async function generateAndSavePdf(
             const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
             const blobUrl = URL.createObjectURL(blob);
             const base64Data = arrayBufferToBase64(arrayBuffer);
+            const isMobileDevice = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-            // 1. Native AndroidBridge (MediaStore.Downloads + Notification + Auto-view, 100% in-app)
+            // 1. Native AndroidBridge (MediaStore.Downloads + Notification + Auto-view, 100% in-app on Android APK)
             if (typeof window !== 'undefined' && (window as any).AndroidBridge?.savePdfToDownloads) {
                 console.log("Using native AndroidBridge for in-app download...");
                 try {
@@ -129,15 +130,20 @@ export async function generateAndSavePdf(
 
             // 2. Native Capacitor Android / iOS Handling
             if (Capacitor.isNativePlatform()) {
-                console.log("Native Capacitor detected, saving via Filesystem & Share...");
+                console.log("Native Capacitor detected, saving via Filesystem & Documents...");
                 try {
-                    // Save to Documents directory (accessible to user)
                     await Filesystem.writeFile({
                         path: finalName,
                         data: base64Data,
                         directory: Directory.Documents
                     });
                     console.log("File written to Documents:", finalName);
+                    return {
+                        blob,
+                        url: blobUrl,
+                        fileName: finalName,
+                        arrayBuffer,
+                    };
                 } catch (docErr) {
                     console.warn("Documents write failed, falling back to cache:", docErr);
                     try {
@@ -152,24 +158,24 @@ export async function generateAndSavePdf(
                             url: savedFile.uri,
                             dialogTitle: `Save or Open ${finalName}`,
                         });
+                        return {
+                            blob,
+                            url: blobUrl,
+                            fileName: finalName,
+                            arrayBuffer,
+                        };
                     } catch (shareErr) {
                         console.warn("Share fallback failed:", shareErr);
                     }
                 }
-                return {
-                    blob,
-                    url: blobUrl,
-                    fileName: finalName,
-                    arrayBuffer,
-                };
             }
 
-            // 3. Mobile Browser Web Share API Handling (Chrome on Android, Safari on iOS)
-            if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function') {
+            // 3. Mobile Browser Web Share API (ONLY for mobile phones/tablets, NEVER for desktop!)
+            if (isMobileDevice && typeof navigator !== 'undefined' && typeof navigator.canShare === 'function') {
                 try {
                     const file = new File([blob], finalName, { type: 'application/pdf' });
                     if (navigator.canShare({ files: [file] })) {
-                        console.log("Using Web Share API with File object...");
+                        console.log("Using Web Share API with File object on mobile device...");
                         await navigator.share({
                             files: [file],
                             title: finalName,
@@ -193,25 +199,26 @@ export async function generateAndSavePdf(
                             arrayBuffer,
                         };
                     }
-                    console.warn("Web Share failed, falling back to anchor download:", shareErr);
+                    console.warn("Web Share failed, falling back to desktop save:", shareErr);
                 }
             }
 
-            // 4. Desktop / Standard Browser Anchor Download (Immediate 1-click download, NO POPUP!)
-            console.log("Triggering anchor download for desktop...");
-            const link = document.createElement('a');
-            link.style.display = 'none';
-            link.href = blobUrl;
-            link.download = finalName;
-            document.body.appendChild(link);
-            link.click();
-            
-            setTimeout(() => {
-                if (link.parentNode) {
-                    link.parentNode.removeChild(link);
-                }
-                URL.revokeObjectURL(blobUrl);
-            }, 3000);
+            // 4. Desktop / Standard Web: Official jsPDF save() — 100% reliable 1-click download in all desktop browsers!
+            console.log("Triggering official jsPDF save for:", finalName);
+            try {
+                pdf.save(finalName);
+            } catch (saveErr) {
+                console.warn("pdf.save() encountered an error, trying anchor fallback:", saveErr);
+                const link = document.createElement('a');
+                link.style.display = 'none';
+                link.href = blobUrl;
+                link.download = finalName;
+                document.body.appendChild(link);
+                link.click();
+                setTimeout(() => {
+                    if (link.parentNode) link.parentNode.removeChild(link);
+                }, 2000);
+            }
 
             console.log("PDF Saved directly as:", finalName, "Blob Size:", (blob.size / 1024).toFixed(2), "KB");
 

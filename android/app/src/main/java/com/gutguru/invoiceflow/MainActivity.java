@@ -1,4 +1,4 @@
-package com.hungerbox.invoiceflow;
+package com.gutguru.invoiceflow;
 
 import com.getcapacitor.BridgeActivity;
 

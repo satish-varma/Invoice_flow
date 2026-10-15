@@ -10,12 +10,18 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Download, Share2, FileText, CheckCircle2, Loader2, ExternalLink } from 'lucide-react';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { useToast } from '@/hooks/use-toast';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
+
+interface AndroidPdfPluginType {
+  savePdf(options: { base64: string; fileName: string }): Promise<{ success: boolean }>;
+  openPdf(options: { base64: string; fileName: string }): Promise<{ success: boolean }>;
+  sharePdf(options: { base64: string; fileName: string }): Promise<{ success: boolean }>;
+}
+
+const AndroidPdf = registerPlugin<AndroidPdfPluginType>('AndroidPdf');
 
 interface PdfReadyModalProps {
   isOpen: boolean;
@@ -43,28 +49,7 @@ export function PdfDownloadReadyModal({
   const fileSizeKb = (pdfData.blob.size / 1024).toFixed(1);
 
   /**
-   * Upload the PDF blob to Firebase Storage and return a persistent public URL.
-   * Firebase Storage URLs work across all server instances and don't expire quickly.
-   */
-  const uploadToFirebaseStorage = async (): Promise<string> => {
-    const safeFileName = pdfData.fileName
-      .replace(/[/\\?%*:|"<>#]/g, '-')
-      .replace(/\s+/g, '_');
-    const finalName = safeFileName.toLowerCase().endsWith('.pdf') ? safeFileName : `${safeFileName}.pdf`;
-    const uniqueName = `${Date.now()}_${finalName}`;
-    const storageRef = ref(storage, `temp-challans/${uniqueName}`);
-
-    await uploadBytes(storageRef, pdfData.blob, {
-      contentType: 'application/pdf',
-      contentDisposition: `attachment; filename="${finalName}"`,
-    });
-
-    const downloadUrl = await getDownloadURL(storageRef);
-    return downloadUrl;
-  };
-
-  /**
-   * Get base64 string from the PDF blob (for Capacitor native Filesystem writes).
+   * Extract clean base64 string from arrayBuffer or blob.
    */
   const getBase64 = async (): Promise<string> => {
     if (pdfData.arrayBuffer) {
@@ -85,40 +70,53 @@ export function PdfDownloadReadyModal({
     });
   };
 
-  // 1. Download to Phone — saves directly inside the app to public /Downloads
+  // 1. Download to Phone — 100% in-app, never opens external browser
   const handleDownload = async () => {
     try {
       setIsProcessing(true);
+      const base64 = await getBase64();
 
-      // Priority 1: Native AndroidBridge (100% in-app, MediaStore.Downloads, no Chrome, 0 network)
+      // Priority 1: Direct AndroidBridge JavaScriptInterface (100% in-app, MediaStore.Downloads, no Chrome)
       if (typeof window !== 'undefined' && (window as any).AndroidBridge?.savePdfToDownloads) {
         toast({
           title: 'Saving to Downloads...',
           description: `Saving ${pdfData.fileName} to your device`,
         });
-        const base64 = await getBase64();
-        const success = (window as any).AndroidBridge.savePdfToDownloads(
+        const ok = (window as any).AndroidBridge.savePdfToDownloads(
           base64,
           pdfData.fileName,
           'Delivery Challan'
         );
-        if (success) {
+        if (ok) {
           toast({
             title: 'Saved to Downloads',
             description: `${pdfData.fileName} is in your phone's Downloads folder`,
           });
-          setTimeout(() => {
-            onClose();
-          }, 1000);
+          setTimeout(() => onClose(), 800);
           setIsProcessing(false);
           return;
         }
       }
 
-      // Priority 2: Native Capacitor Filesystem
+      // Priority 2: Capacitor Native Plugin AndroidPdf
+      try {
+        const res = await AndroidPdf.savePdf({ base64, fileName: pdfData.fileName });
+        if (res?.success) {
+          toast({
+            title: 'Saved to Downloads',
+            description: `${pdfData.fileName} is in your phone's Downloads folder`,
+          });
+          setTimeout(() => onClose(), 800);
+          setIsProcessing(false);
+          return;
+        }
+      } catch (plugErr) {
+        // Plugin not loaded (running in web browser)
+      }
+
+      // Priority 3: Capacitor Native Filesystem
       if (Capacitor.isNativePlatform()) {
         try {
-          const base64 = await getBase64();
           await Filesystem.writeFile({
             path: pdfData.fileName,
             data: base64,
@@ -128,84 +126,70 @@ export function PdfDownloadReadyModal({
             title: 'Saved!',
             description: `${pdfData.fileName} saved to Documents`,
           });
-          setTimeout(() => {
-            onClose();
-          }, 1000);
+          setTimeout(() => onClose(), 800);
           setIsProcessing(false);
           return;
         } catch (capErr) {
-          console.warn('Capacitor filesystem write failed, falling back:', capErr);
+          console.warn('Capacitor filesystem write failed:', capErr);
         }
       }
 
-      // Priority 3: Browser Fallback (Upload to Firebase Storage for persistent download URL)
-      const downloadUrl = await uploadToFirebaseStorage();
-
-      toast({
-        title: 'Downloading...',
-        description: 'Your PDF is being downloaded',
-      });
-
+      // Priority 4: Browser Local Blob Download (Never navigates to external URLs, stays 100% on page)
+      const localUrl = URL.createObjectURL(pdfData.blob);
       const link = document.createElement('a');
-      link.href = downloadUrl;
+      link.href = localUrl;
       link.download = pdfData.fileName;
       document.body.appendChild(link);
       link.click();
-      setTimeout(() => { if (link.parentNode) link.parentNode.removeChild(link); }, 1000);
-
       setTimeout(() => {
+        if (link.parentNode) link.parentNode.removeChild(link);
+        URL.revokeObjectURL(localUrl);
         onClose();
-      }, 1200);
+      }, 1000);
+      toast({
+        title: 'Download Started',
+        description: `Saved ${pdfData.fileName} to your device.`,
+      });
 
     } catch (err) {
-      console.warn('Network upload failed or offline, falling back to direct local blob download:', err);
-      try {
-        const localUrl = URL.createObjectURL(pdfData.blob);
-        const link = document.createElement('a');
-        link.href = localUrl;
-        link.download = pdfData.fileName;
-        document.body.appendChild(link);
-        link.click();
-        setTimeout(() => {
-          if (link.parentNode) link.parentNode.removeChild(link);
-          URL.revokeObjectURL(localUrl);
-          onClose();
-        }, 1200);
-        toast({
-          title: 'Downloaded Offline',
-          description: `Saved ${pdfData.fileName} locally to your device.`,
-        });
-      } catch (fallbackErr) {
-        console.error('Offline fallback download failed:', fallbackErr);
-        toast({
-          variant: 'destructive',
-          title: 'Download failed',
-          description: 'Please try "Share" instead.',
-        });
-      }
+      console.error('Download error:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Download failed',
+        description: 'Please try "Share" instead.',
+      });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // 2. Open in PDF Viewer — opens natively via FileProvider or browser
+  // 2. Open in PDF Viewer — opens natively via FileProvider or browser blob
   const handleOpenPdf = async () => {
     try {
       setIsProcessing(true);
+      const base64 = await getBase64();
 
       // Priority 1: Native AndroidBridge via FileProvider (100% in-app, no Chrome)
       if (typeof window !== 'undefined' && (window as any).AndroidBridge?.openPdf) {
-        const base64 = await getBase64();
-        const success = (window as any).AndroidBridge.openPdf(base64, pdfData.fileName);
-        if (success) {
+        const ok = (window as any).AndroidBridge.openPdf(base64, pdfData.fileName);
+        if (ok) {
           setIsProcessing(false);
           return;
         }
       }
 
+      // Priority 2: Capacitor Native Plugin
+      try {
+        const res = await AndroidPdf.openPdf({ base64, fileName: pdfData.fileName });
+        if (res?.success) {
+          setIsProcessing(false);
+          return;
+        }
+      } catch (ignored) {}
+
+      // Priority 3: Native Share / Filesystem
       if (Capacitor.isNativePlatform()) {
         try {
-          const base64 = await getBase64();
           const saved = await Filesystem.writeFile({
             path: pdfData.fileName,
             data: base64,
@@ -219,15 +203,13 @@ export function PdfDownloadReadyModal({
           setIsProcessing(false);
           return;
         } catch (capErr) {
-          console.warn('Capacitor open failed, falling back to Firebase Storage:', capErr);
+          console.warn('Capacitor open failed:', capErr);
         }
       }
 
-      const viewUrl = await uploadToFirebaseStorage();
-      const win = window.open(viewUrl, '_blank');
-      if (!win) {
-        window.location.href = viewUrl;
-      }
+      // Priority 4: In-browser blob view
+      const localUrl = URL.createObjectURL(pdfData.blob);
+      window.open(localUrl, '_blank');
     } catch (err) {
       console.error('Error opening PDF:', err);
       window.open(pdfData.url, '_blank');
@@ -240,21 +222,29 @@ export function PdfDownloadReadyModal({
   const handleShare = async () => {
     try {
       setIsProcessing(true);
+      const base64 = await getBase64();
 
       // Priority 1: Native AndroidBridge via FileProvider intent
       if (typeof window !== 'undefined' && (window as any).AndroidBridge?.sharePdf) {
-        const base64 = await getBase64();
-        const success = (window as any).AndroidBridge.sharePdf(base64, pdfData.fileName);
-        if (success) {
+        const ok = (window as any).AndroidBridge.sharePdf(base64, pdfData.fileName);
+        if (ok) {
           setIsProcessing(false);
           return;
         }
       }
 
-      // Native Capacitor Share
+      // Priority 2: Capacitor Native Plugin
+      try {
+        const res = await AndroidPdf.sharePdf({ base64, fileName: pdfData.fileName });
+        if (res?.success) {
+          setIsProcessing(false);
+          return;
+        }
+      } catch (ignored) {}
+
+      // Priority 3: Native Capacitor Share
       if (Capacitor.isNativePlatform()) {
         try {
-          const base64 = await getBase64();
           const saved = await Filesystem.writeFile({
             path: pdfData.fileName,
             data: base64,
@@ -273,7 +263,7 @@ export function PdfDownloadReadyModal({
         }
       }
 
-      // Web Share API with File object (most mobile browsers)
+      // Priority 4: Web Share API with File object
       if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function') {
         const file = new File([pdfData.blob], pdfData.fileName, { type: 'application/pdf' });
         if (navigator.canShare({ files: [file] })) {
@@ -287,19 +277,7 @@ export function PdfDownloadReadyModal({
         }
       }
 
-      // Fallback: share Firebase Storage URL (works without file support)
-      const shareUrl = await uploadToFirebaseStorage();
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        await navigator.share({
-          title: pdfData.fileName,
-          text: `Delivery Challan: ${pdfData.fileName}`,
-          url: shareUrl,
-        });
-        setIsProcessing(false);
-        return;
-      }
-
-      // Last resort: trigger download
+      // Fallback: trigger local download
       await handleDownload();
     } catch (err: any) {
       if (err.name !== 'AbortError') {

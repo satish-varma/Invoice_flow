@@ -18,6 +18,13 @@ const config: CapacitorConfig = {
     // Change this to your deployed domain in production (e.g. 'https://invoice-flow.vercel.app/newrelic')
     url: process.env.CAPACITOR_SERVER_URL || 'https://studio--invoiceflow-24nxt.us-central1.hosted.app/newrelic',
     cleartext: false, // Enforce HTTPS for live production play store release
+    allowNavigation: [
+      'studio--invoiceflow-24nxt.us-central1.hosted.app',
+      '*.hosted.app',
+      '*.firebasestorage.app',
+      '*.googleapis.com',
+      '*.google.com',
+    ],
   },
   android: {
     allowMixedContent: true,

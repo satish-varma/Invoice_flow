@@ -156,10 +156,12 @@ export const DeliveryChallanPreview = React.forwardRef<HTMLDivElement, DeliveryC
                             <div className="w-2/5 max-w-sm text-sm">
                                 <table className="w-full">
                                     <tbody>
-                                        <tr>
-                                            <td className="py-1 text-right font-bold uppercase text-xs text-gray-500">Subtotal</td>
-                                            <td className="py-1 text-right w-[100px]">{(Number(challan.subtotal) || 0).toFixed(2)}</td>
-                                        </tr>
+                                        {(gstRate > 0 || (challan.shipping && challan.shipping > 0) || (challan.other && challan.other > 0)) ? (
+                                            <tr>
+                                                <td className="py-1 text-right font-bold uppercase text-xs text-gray-500">Subtotal</td>
+                                                <td className="py-1 text-right w-[100px]">{(Number(challan.subtotal) || 0).toFixed(2)}</td>
+                                            </tr>
+                                        ) : null}
                                         {gstRate > 0 ? (
                                             <tr>
                                                 <td className="py-1 text-right font-bold uppercase text-xs text-gray-500">GST @{(Number(gstRate) || 0).toFixed(2)}%</td>

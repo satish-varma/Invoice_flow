@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, Sheet, Calculator, DollarSign, TrendingUp, Percent, Sparkles, Eye, EyeOff, X, FileCheck, Receipt, Paperclip, Download, MapPin } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, Sheet, Calculator, DollarSign, TrendingUp, Percent, Sparkles, Eye, EyeOff, X, FileCheck, Receipt, Paperclip, Download, MapPin, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
@@ -73,9 +73,15 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     const [products, setProducts] = useState<Product[]>([]);
     const [saveAsClient, setSaveAsClient] = useState(false);
 
-    const [gstRate, setGstRate] = useState(5);
+    // Client-facing taxes & charges (Hidden by default for standard delivery challans)
+    const [showClientCharges, setShowClientCharges] = useState(false);
+    const [gstRate, setGstRate] = useState(0);
     const [shipping, setShipping] = useState(0);
     const [other, setOther] = useState(0);
+
+    // Internal Expenses (Private - not sent to client, for profit calculation)
+    const [transportationExpense, setTransportationExpense] = useState<number>(0);
+    const [otherExpense, setOtherExpense] = useState<number>(0);
 
     // Modern Financials (like NewRelic)
     const [commissionRate, setCommissionRate] = useState<number>(5.5);
@@ -116,16 +122,20 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         return subtotal - commissionAmount;
     }, [subtotal, commissionAmount]);
 
+    const totalInternalExpenses = useMemo(() => {
+        return totalProcurementCost + (Number(transportationExpense) || 0) + (Number(otherExpense) || 0);
+    }, [totalProcurementCost, transportationExpense, otherExpense]);
+
     const grossProfit = useMemo(() => {
-        return revenue - totalProcurementCost - Number(shipping) - Number(other);
-    }, [revenue, totalProcurementCost, shipping, other]);
+        return revenue - totalInternalExpenses;
+    }, [revenue, totalInternalExpenses]);
 
     const marginPercent = useMemo(() => {
         return subtotal > 0 ? (grossProfit / subtotal) * 100 : 0;
     }, [grossProfit, subtotal]);
 
     const gstAmount = useMemo(() => {
-        return (subtotal * gstRate) / 100;
+        return (subtotal * (Number(gstRate) || 0)) / 100;
     }, [subtotal, gstRate]);
 
     const total = useMemo(() => {
@@ -208,10 +218,19 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
             }));
             setLineItems(parsedItems);
             setShowExtraColumns(parsedItems.some(i => i.hsnCode || i.unit));
-            const calculatedGstRate = initialData.subtotal > 0 ? (initialData.gstAmount / initialData.subtotal) * 100 : 5;
+            const calculatedGstRate = initialData.subtotal > 0 && initialData.gstAmount ? (initialData.gstAmount / initialData.subtotal) * 100 : 0;
+            const initShipping = Number(initialData.shipping) || 0;
+            const initOther = Number(initialData.other) || 0;
             setGstRate(calculatedGstRate);
-            setShipping(initialData.shipping || 0);
-            setOther(initialData.other || 0);
+            setShipping(initShipping);
+            setOther(initOther);
+            setShowClientCharges(calculatedGstRate > 0 || initShipping > 0 || initOther > 0);
+
+            const initTransport = Number(initialData.transportationExpense ?? initialData.transportCost) || 0;
+            const initOtherExp = Number(initialData.otherExpense) || 0;
+            setTransportationExpense(initTransport);
+            setOtherExpense(initOtherExp);
+
             if (initialData.commissionRate !== undefined && initialData.commissionRate !== null) {
                 setCommissionRate(initialData.commissionRate);
             }
@@ -263,6 +282,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 const match = product.taxCategory.match(/\d+/);
                 if (match) {
                     setGstRate(parseInt(match[0]));
+                    setShowClientCharges(true);
                 }
             }
         }
@@ -277,9 +297,12 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         setShipToAddress('');
         setLineItems([{ id: Date.now(), name: '', hsnCode: '', unit: '', quantity: 0, unitPrice: 0, procurementCost: 0, total: 0 }]);
         setShowExtraColumns(false);
-        setGstRate(5);
+        setGstRate(0);
         setShipping(0);
         setOther(0);
+        setShowClientCharges(false);
+        setTransportationExpense(0);
+        setOtherExpense(0);
         setCommissionRate(5.5);
         setNote('The above goods sent on non returnable basis');
         setSignedCopyUrls([]);
@@ -359,13 +382,16 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 }),
                 subtotal,
                 gstAmount,
-                shipping: Number(shipping),
-                other: Number(other),
+                shipping: Number(shipping) || 0,
+                other: Number(other) || 0,
                 total,
                 note,
                 procurementCost: totalProcurementCost,
                 commissionRate: Number(commissionRate) || 5.5,
                 commissionAmount,
+                transportCost: Number(transportationExpense) || 0,
+                transportationExpense: Number(transportationExpense) || 0,
+                otherExpense: Number(otherExpense) || 0,
                 revenue,
                 grossProfit,
                 marginPercent,
@@ -1022,90 +1048,200 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                     {/* Desktop View (>= lg) */}
                     <div className="hidden lg:flex flex-col w-full gap-5">
                         <div className="flex w-full justify-between items-start gap-6">
-                            <div className="w-6/12 space-y-2">
+                            <div className="w-5/12 space-y-2">
                                 <Label className="text-xs font-semibold text-gray-600">Dispatch Terms &amp; Returnable Note</Label>
                                 <Textarea
                                     value={note}
                                     onChange={e => setNote(e.target.value)}
                                     placeholder="Dispatch terms (e.g. non returnable basis)"
-                                    className="rounded-xl text-xs bg-white min-h-[90px] border-gray-200"
+                                    className="rounded-xl text-xs bg-white min-h-[120px] border-gray-200"
                                 />
                                 <p className="text-[11px] text-gray-400">
                                     Printed on the bottom-left of the delivery challan PDF.
                                 </p>
                             </div>
 
-                            <div className="w-5/12 max-w-sm bg-white p-5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-3 self-end">
+                            <div className="w-7/12 max-w-md bg-white p-5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-3.5">
                                 <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-                                    <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Challan Summary</span>
-                                    <span className="text-[11px] text-gray-400 font-medium">Amounts in INR (₹)</span>
-                                </div>
-
-                                {/* Subtotal */}
-                                <div className="flex justify-between items-center text-xs">
-                                    <span className="font-semibold text-gray-600">Subtotal</span>
-                                    <span className="font-mono font-bold text-sm text-gray-900">₹{subtotal.toFixed(2)}</span>
-                                </div>
-
-                                {/* GST @ % */}
-                                <div className="flex justify-between items-center text-xs">
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="font-semibold text-gray-600">GST @</span>
-                                        <div className="inline-flex items-center bg-gray-100 rounded-lg px-2 py-0.5 border border-gray-200">
-                                            <input
-                                                type="number"
-                                                value={gstRate || ''}
-                                                onChange={e => setGstRate(parseFloat(e.target.value) || 0)}
-                                                className="w-10 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
-                                                placeholder="5"
-                                                min="0"
-                                                step="0.5"
-                                            />
-                                            <span className="text-[10px] text-gray-500 font-bold ml-1">%</span>
-                                        </div>
+                                    <div>
+                                        <span className="text-xs font-bold text-gray-800 uppercase tracking-wider block">Challan Summary</span>
+                                        <span className="text-[11px] text-gray-400 font-medium">Standard Delivery Challan</span>
                                     </div>
-                                    <span className="font-mono font-bold text-sm text-gray-900">₹{gstAmount.toFixed(2)}</span>
+                                    <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
+                                        {lineItems.length} {lineItems.length === 1 ? 'item' : 'items'}
+                                    </span>
                                 </div>
 
-                                {/* Shipping */}
-                                <div className="flex justify-between items-center text-xs">
-                                    <span className="font-semibold text-gray-600">Shipping / Transport</span>
-                                    <div className="flex items-center gap-1 bg-gray-50 rounded-lg px-2 py-1 border border-gray-200 focus-within:border-indigo-400 focus-within:bg-white transition-all">
-                                        <span className="text-xs text-gray-400 font-semibold">₹</span>
-                                        <input
-                                            type="number"
-                                            value={shipping || ''}
-                                            onChange={e => setShipping(parseFloat(e.target.value) || 0)}
-                                            className="w-20 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
-                                            placeholder="0"
-                                            min="0"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Other Charges */}
-                                <div className="flex justify-between items-center text-xs">
-                                    <span className="font-semibold text-gray-600">Other Charges</span>
-                                    <div className="flex items-center gap-1 bg-gray-50 rounded-lg px-2 py-1 border border-gray-200 focus-within:border-indigo-400 focus-within:bg-white transition-all">
-                                        <span className="text-xs text-gray-400 font-semibold">₹</span>
-                                        <input
-                                            type="number"
-                                            value={other || ''}
-                                            onChange={e => setOther(parseFloat(e.target.value) || 0)}
-                                            className="w-20 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
-                                            placeholder="0"
-                                            min="0"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Total Challan Value */}
-                                <div className="mt-2 p-3.5 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 flex items-center justify-between">
+                                {/* Total Challan Value (Grand Total) - Always Visible */}
+                                <div className="p-3.5 bg-gradient-to-r from-indigo-50/90 via-blue-50/90 to-indigo-50/90 rounded-xl border border-indigo-100 flex items-center justify-between">
                                     <div>
                                         <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700 block">Total Challan Value</span>
-                                        <span className="text-[10px] text-indigo-500 font-medium">Grand Total</span>
+                                        <span className="text-[10px] text-indigo-500 font-medium">
+                                            {showClientCharges ? 'Includes extra taxes & client charges' : 'Standard Challan (Total Goods Value)'}
+                                        </span>
                                     </div>
                                     <span className="font-mono text-xl font-black text-indigo-950">₹{total.toFixed(2)}</span>
+                                </div>
+
+                                {/* Optional Client Taxes & Charges (Subtotal, GST, Shipping, Other Charges) */}
+                                {!showClientCharges ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            triggerHaptic('light');
+                                            setShowClientCharges(true);
+                                        }}
+                                        className="w-full py-2 px-3 rounded-xl border border-dashed border-gray-300 hover:border-indigo-400 hover:bg-indigo-50/40 text-gray-600 hover:text-indigo-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Add Subtotal, GST &amp; Client Charges (Optional)</span>
+                                    </button>
+                                ) : (
+                                    <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200/70 space-y-2 text-xs">
+                                        <div className="flex items-center justify-between pb-1 border-b border-slate-200/60">
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-600">Client Charges &amp; Taxes</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    triggerHaptic('light');
+                                                    setGstRate(0);
+                                                    setShipping(0);
+                                                    setOther(0);
+                                                    setShowClientCharges(false);
+                                                }}
+                                                className="text-[10px] font-bold text-red-500 hover:text-red-700 hover:underline"
+                                            >
+                                                Hide / Reset
+                                            </button>
+                                        </div>
+
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-semibold text-gray-600">Subtotal</span>
+                                            <span className="font-mono font-bold text-gray-900">₹{subtotal.toFixed(2)}</span>
+                                        </div>
+
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="font-semibold text-gray-600">GST @</span>
+                                                <div className="inline-flex items-center bg-white rounded-lg px-2 py-0.5 border border-gray-200">
+                                                    <input
+                                                        type="number"
+                                                        value={gstRate || ''}
+                                                        onChange={e => setGstRate(parseFloat(e.target.value) || 0)}
+                                                        className="w-10 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                                        placeholder="0"
+                                                        min="0"
+                                                        step="0.5"
+                                                    />
+                                                    <span className="text-[10px] text-gray-500 font-bold ml-1">%</span>
+                                                </div>
+                                            </div>
+                                            <span className="font-mono font-bold text-gray-900">₹{gstAmount.toFixed(2)}</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/40">
+                                            <div>
+                                                <span className="text-[10px] font-semibold text-gray-500 block mb-0.5">Shipping (Client)</span>
+                                                <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-gray-200 focus-within:border-indigo-400">
+                                                    <span className="text-xs text-gray-400 font-semibold">₹</span>
+                                                    <input
+                                                        type="number"
+                                                        value={shipping || ''}
+                                                        onChange={e => setShipping(parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                                        placeholder="0"
+                                                        min="0"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span className="text-[10px] font-semibold text-gray-500 block mb-0.5">Other Charges (Client)</span>
+                                                <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-gray-200 focus-within:border-indigo-400">
+                                                    <span className="text-xs text-gray-400 font-semibold">₹</span>
+                                                    <input
+                                                        type="number"
+                                                        value={other || ''}
+                                                        onChange={e => setOther(parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                                        placeholder="0"
+                                                        min="0"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Internal Expenses (Transportation & Other Expenses - Not sent to client) */}
+                                <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-200/80 space-y-2">
+                                    <div className="flex items-center justify-between pb-1 border-b border-amber-200/60">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900">Our Expenses</span>
+                                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                                                Private • Not on DC
+                                            </span>
+                                        </div>
+                                        <span className="text-[10px] text-amber-700/80 font-medium">Used for profit calculation</span>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-1">
+                                            <Label className="text-[11px] font-bold text-gray-700 block">Transportation (₹)</Label>
+                                            <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-amber-300/80 focus-within:border-amber-500 shadow-2xs">
+                                                <span className="text-xs text-gray-400 font-semibold">₹</span>
+                                                <input
+                                                    type="number"
+                                                    value={transportationExpense || ''}
+                                                    onChange={e => setTransportationExpense(parseFloat(e.target.value) || 0)}
+                                                    className="w-full bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                                    placeholder="0"
+                                                    min="0"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label className="text-[11px] font-bold text-gray-700 block">Other Expenses (₹)</Label>
+                                            <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-amber-300/80 focus-within:border-amber-500 shadow-2xs">
+                                                <span className="text-xs text-gray-400 font-semibold">₹</span>
+                                                <input
+                                                    type="number"
+                                                    value={otherExpense || ''}
+                                                    onChange={e => setOtherExpense(parseFloat(e.target.value) || 0)}
+                                                    className="w-full bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                                    placeholder="0"
+                                                    min="0"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Financial Summary & Live Profit */}
+                                    <div className="pt-2 border-t border-amber-200/60 space-y-1 text-xs">
+                                        <div className="flex justify-between items-center text-gray-600">
+                                            <span className="text-[11px]">Revenue (after 5.5% comm)</span>
+                                            <span className="font-mono font-bold text-gray-800">₹{revenue.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-gray-600">
+                                            <span className="text-[11px]">Total Expenses (P.Cost + Trans + Other)</span>
+                                            <span className="font-mono font-bold text-amber-900">
+                                                -₹{totalInternalExpenses.toFixed(2)}
+                                            </span>
+                                        </div>
+                                        <div className={`mt-1 p-2 rounded-lg border flex items-center justify-between ${
+                                            grossProfit >= 0
+                                                ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+                                                : 'bg-red-50 text-red-900 border-red-200'
+                                        }`}>
+                                            <div>
+                                                <span className="text-[10px] font-bold uppercase tracking-wider block">Estimated Profit</span>
+                                                <span className="text-[9px] font-medium opacity-80">Margin: {marginPercent.toFixed(1)}%</span>
+                                            </div>
+                                            <span className="font-mono font-black text-sm">
+                                                ₹{grossProfit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1202,66 +1338,167 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                         <div className="p-3.5 bg-gradient-to-r from-indigo-50/80 via-blue-50/80 to-indigo-50/80 rounded-xl border border-indigo-100 flex items-center justify-between">
                             <div>
                                 <span className="text-xs font-bold uppercase tracking-wider text-indigo-900 block">Total Challan Value</span>
-                                <span className="text-[11px] text-indigo-600 font-medium">All taxes &amp; charges included</span>
+                                <span className="text-[11px] text-indigo-600 font-medium">
+                                    {showClientCharges ? 'Includes extra taxes & client charges' : 'Standard Challan (Total Goods Value)'}
+                                </span>
                             </div>
                             <span className="font-mono text-xl font-black text-indigo-950">₹{total.toFixed(2)}</span>
                         </div>
 
-                        {/* Subtotal & GST Rows */}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
-                                <span className="text-xs font-bold text-gray-700">Subtotal</span>
-                                <span className="font-mono font-bold text-sm text-gray-900">₹{subtotal.toFixed(2)}</span>
-                            </div>
+                        {/* Optional Client Taxes & Charges (Subtotal, GST, Shipping, Other Charges) */}
+                        {!showClientCharges ? (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    triggerHaptic('light');
+                                    setShowClientCharges(true);
+                                }}
+                                className="w-full py-2 px-3 rounded-xl border border-dashed border-gray-300 hover:border-indigo-400 hover:bg-indigo-50/40 text-gray-600 text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-2xs"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Add Subtotal, GST &amp; Client Charges (Optional)</span>
+                            </button>
+                        ) : (
+                            <div className="p-3 bg-gray-50/90 rounded-xl border border-gray-200/80 space-y-2.5">
+                                <div className="flex items-center justify-between pb-1.5 border-b border-gray-200">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-gray-700">Client Taxes &amp; Charges</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            triggerHaptic('light');
+                                            setGstRate(0);
+                                            setShipping(0);
+                                            setOther(0);
+                                            setShowClientCharges(false);
+                                        }}
+                                        className="text-xs font-bold text-red-500 hover:text-red-700 hover:underline"
+                                    >
+                                        Hide / Reset
+                                    </button>
+                                </div>
 
-                            <div className="flex items-center justify-between bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-gray-700">GST Rate</span>
-                                    <div className="flex items-center bg-white border border-gray-300 rounded-lg px-2 py-1 shadow-2xs">
-                                        <input
-                                            type="number"
-                                            value={gstRate || ''}
-                                            onChange={e => setGstRate(parseFloat(e.target.value) || 0)}
-                                            className="w-12 text-center text-xs font-bold text-gray-900 focus:outline-hidden"
-                                            placeholder="5"
-                                            min="0"
-                                            step="0.5"
-                                        />
-                                        <span className="text-xs text-gray-500 font-bold ml-1">%</span>
+                                <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
+                                    <span className="text-xs font-bold text-gray-700">Subtotal</span>
+                                    <span className="font-mono font-bold text-sm text-gray-900">₹{subtotal.toFixed(2)}</span>
+                                </div>
+
+                                <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-gray-700">GST Rate</span>
+                                        <div className="flex items-center bg-gray-50 border border-gray-300 rounded-lg px-2 py-0.5">
+                                            <input
+                                                type="number"
+                                                value={gstRate || ''}
+                                                onChange={e => setGstRate(parseFloat(e.target.value) || 0)}
+                                                className="w-12 text-center text-xs font-bold text-gray-900 focus:outline-hidden"
+                                                placeholder="0"
+                                                min="0"
+                                                step="0.5"
+                                            />
+                                            <span className="text-xs text-gray-500 font-bold ml-1">%</span>
+                                        </div>
+                                    </div>
+                                    <span className="font-mono font-bold text-sm text-gray-900">₹{gstAmount.toFixed(2)}</span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="bg-white p-2 rounded-xl border border-gray-200 shadow-2xs space-y-1">
+                                        <span className="text-[11px] font-bold text-gray-700 block">Shipping (Client)</span>
+                                        <div className="flex items-center">
+                                            <span className="text-xs text-gray-400 font-semibold mr-1">₹</span>
+                                            <input
+                                                type="number"
+                                                value={shipping || ''}
+                                                onChange={e => setShipping(parseFloat(e.target.value) || 0)}
+                                                className="w-full text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                                placeholder="0"
+                                                min="0"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-2 rounded-xl border border-gray-200 shadow-2xs space-y-1">
+                                        <span className="text-[11px] font-bold text-gray-700 block">Other (Client)</span>
+                                        <div className="flex items-center">
+                                            <span className="text-xs text-gray-400 font-semibold mr-1">₹</span>
+                                            <input
+                                                type="number"
+                                                value={other || ''}
+                                                onChange={e => setOther(parseFloat(e.target.value) || 0)}
+                                                className="w-full text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                                placeholder="0"
+                                                min="0"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                                <span className="font-mono font-bold text-sm text-gray-900">₹{gstAmount.toFixed(2)}</span>
                             </div>
-                        </div>
+                        )}
 
-                        {/* 2-Column Grid (Shipping & Other Charges) */}
-                        <div className="grid grid-cols-2 gap-2.5">
-                            <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 space-y-1">
-                                <span className="text-xs font-bold text-gray-700 block">Shipping</span>
-                                <div className="flex items-center bg-white border border-gray-300 rounded-lg px-2 py-1 shadow-2xs">
-                                    <span className="text-xs text-gray-400 font-semibold mr-1">₹</span>
-                                    <input
-                                        type="number"
-                                        value={shipping || ''}
-                                        onChange={e => setShipping(parseFloat(e.target.value) || 0)}
-                                        className="w-full text-right text-xs font-bold text-gray-900 focus:outline-hidden"
-                                        placeholder="0"
-                                        min="0"
-                                    />
+                        {/* Internal Expenses (Transportation & Other Expenses - Not sent to client) */}
+                        <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-200/80 space-y-2.5">
+                            <div className="flex items-center justify-between pb-1 border-b border-amber-200/60">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-amber-900">Our Expenses</span>
+                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                                        Private • Not on DC
+                                    </span>
+                                </div>
+                                <span className="text-[10px] text-amber-700 font-medium">Profit Calc</span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-bold text-gray-700 block">Transportation (₹)</Label>
+                                    <div className="flex items-center bg-white border border-amber-300 rounded-lg px-2.5 py-1.5 shadow-2xs">
+                                        <span className="text-xs text-gray-400 font-semibold mr-1">₹</span>
+                                        <input
+                                            type="number"
+                                            value={transportationExpense || ''}
+                                            onChange={e => setTransportationExpense(parseFloat(e.target.value) || 0)}
+                                            className="w-full text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                            placeholder="0"
+                                            min="0"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-bold text-gray-700 block">Other Expenses (₹)</Label>
+                                    <div className="flex items-center bg-white border border-amber-300 rounded-lg px-2.5 py-1.5 shadow-2xs">
+                                        <span className="text-xs text-gray-400 font-semibold mr-1">₹</span>
+                                        <input
+                                            type="number"
+                                            value={otherExpense || ''}
+                                            onChange={e => setOtherExpense(parseFloat(e.target.value) || 0)}
+                                            className="w-full text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                            placeholder="0"
+                                            min="0"
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                            <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 space-y-1">
-                                <span className="text-xs font-bold text-gray-700 block">Other Charges</span>
-                                <div className="flex items-center bg-white border border-gray-300 rounded-lg px-2 py-1 shadow-2xs">
-                                    <span className="text-xs text-gray-400 font-semibold mr-1">₹</span>
-                                    <input
-                                        type="number"
-                                        value={other || ''}
-                                        onChange={e => setOther(parseFloat(e.target.value) || 0)}
-                                        className="w-full text-right text-xs font-bold text-gray-900 focus:outline-hidden"
-                                        placeholder="0"
-                                        min="0"
-                                    />
+
+                            {/* Profit breakdown for mobile */}
+                            <div className="pt-2 border-t border-amber-200/60 space-y-1 text-xs">
+                                <div className="flex justify-between items-center text-gray-600">
+                                    <span className="text-[11px]">Revenue (after 5.5% comm)</span>
+                                    <span className="font-mono font-bold text-gray-800">₹{revenue.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-gray-600">
+                                    <span className="text-[11px]">Expenses (P.Cost + Trans + Other)</span>
+                                    <span className="font-mono font-bold text-amber-900">-₹{totalInternalExpenses.toFixed(2)}</span>
+                                </div>
+                                <div className={`mt-1.5 p-2 rounded-xl border flex items-center justify-between ${
+                                    grossProfit >= 0
+                                        ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+                                        : 'bg-red-50 text-red-900 border-red-200'
+                                }`}>
+                                    <div>
+                                        <span className="text-[11px] font-bold uppercase tracking-wider block">Estimated Profit</span>
+                                        <span className="text-[10px] font-medium opacity-80">Margin: {marginPercent.toFixed(1)}%</span>
+                                    </div>
+                                    <span className="font-mono font-black text-base">
+                                        ₹{grossProfit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
                                 </div>
                             </div>
                         </div>

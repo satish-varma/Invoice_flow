@@ -49,6 +49,11 @@ export interface Challan {
   grossProfit?: number;
   marginPercent?: number;
 
+  // Internal Expenses (Private - Not sent to client, used for profit calculation)
+  transportCost?: number;
+  transportationExpense?: number;
+  otherExpense?: number;
+
   // Document Attachments
   signedCopyUrls?: string[];
   goodsReceivedInvoiceUrls?: string[];
@@ -210,10 +215,14 @@ export async function getChallans(): Promise<Challan[]> {
         ? Number(data.commissionAmount)
         : (subtotal * commRate) / 100;
 
+      const transportExp = Number(data.transportationExpense ?? data.transportCost) || 0;
+      const otherExp = Number(data.otherExpense) || 0;
+      const totalExpenses = procurementCost + transportExp + otherExp;
+
       const revenue = subtotal - commissionAmount;
       const grossProfit = data.grossProfit !== undefined && data.grossProfit !== null
         ? Number(data.grossProfit)
-        : (revenue - procurementCost - (Number(data.shipping) || 0) - (Number(data.other) || 0));
+        : (revenue - totalExpenses);
       const marginPercent = subtotal > 0 ? (grossProfit / subtotal) * 100 : 0;
 
       challans.push({
@@ -224,6 +233,9 @@ export async function getChallans(): Promise<Challan[]> {
         procurementCost,
         commissionRate: commRate,
         commissionAmount,
+        transportCost: transportExp,
+        transportationExpense: transportExp,
+        otherExpense: otherExp,
         revenue,
         grossProfit,
         marginPercent,

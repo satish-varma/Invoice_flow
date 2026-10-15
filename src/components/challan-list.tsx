@@ -374,6 +374,8 @@ export function ChallanList({
                       row['P.Cost (₹)'] = c.procurementCost || 0;
                       row['Commission Rate (%)'] = c.commissionRate || 5.5;
                       row['Commission (₹)'] = c.commissionAmount || 0;
+                      row['Transport Expense (₹)'] = c.transportationExpense ?? c.transportCost ?? 0;
+                      row['Other Expenses (₹)'] = c.otherExpense || 0;
                       row['Net Revenue (₹)'] = c.revenue || 0;
                       row['Gross Profit (₹)'] = c.grossProfit || 0;
                       row['Margin (%)'] = (c.marginPercent || 0).toFixed(1);

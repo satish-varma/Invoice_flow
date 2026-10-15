@@ -208,6 +208,10 @@ export default function NewRelicPage() {
   };
 
   const handleDownload = (challan: NewRelicChallan) => {
+    toast({
+      title: 'Generating Delivery Challan...',
+      description: `Preparing DC ${challan.dcNumber} for download`,
+    });
     setChallanToDownload(challan);
   };
 
@@ -354,14 +358,18 @@ export default function NewRelicPage() {
         }.pdf`;
         try {
           await generateAndSavePdf(previewRef.current, fileName);
+          toast({
+            title: 'Delivery Challan Ready',
+            description: fileName,
+          });
         } catch (err) {
           console.error(err);
-          toast({ variant: 'destructive', title: 'PDF generation failed' });
+          toast({ variant: 'destructive', title: 'PDF generation failed', description: String(err) });
         } finally {
           setChallanToDownload(null);
         }
       }
-    }, 1000);
+    }, 600);
 
     return () => clearTimeout(timer);
   }, [challanToDownload, toast]);
@@ -1058,11 +1066,9 @@ export default function NewRelicPage() {
           style={{
             position: 'fixed',
             top: 0,
-            left: 0,
+            left: '-9999px',
             width: '794px',
-            opacity: 0,
             pointerEvents: 'none',
-            zIndex: -9999,
             overflow: 'visible',
           }}
         >

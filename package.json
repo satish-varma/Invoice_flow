@@ -21,6 +21,8 @@
     "@capacitor/android": "^8.5.3",
     "@capacitor/cli": "^8.5.3",
     "@capacitor/core": "^8.5.3",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/share": "^8.0.3",
     "@capacitor/status-bar": "^8.0.4",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@genkit-ai/googleai": "^1.14.1",

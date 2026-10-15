@@ -1,12 +1,26 @@
 
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+}
 
 /**
  * Generates a multi-page PDF from an HTML element with discrete body, signature, and footer sections.
+ * Supports Desktop Web, Mobile Browser (Web Share), and Native Capacitor Android.
  * @param element The HTML element to render into the PDF.
  * @param fileName The desired name of the output PDF file (used only in 'save' mode).
- * @param mode 'save' to trigger download, 'preview' to return data URI.
+ * @param mode 'save' to trigger download/share, 'preview' to return data URI.
  * @returns Promise<string | void> Data URI if mode is 'preview', void otherwise.
  */
 export async function generateAndSavePdf(element: HTMLElement, fileName: string, mode: 'save' | 'preview' = 'save'): Promise<string | void> {
@@ -31,6 +45,9 @@ export async function generateAndSavePdf(element: HTMLElement, fileName: string,
             logging: false,
             backgroundColor: '#ffffff',
             imageTimeout: 15000,
+            windowWidth: 1200, // Forces desktop layout viewport so 794px A4 element is not squished on 390px mobile screens
+            scrollX: 0,
+            scrollY: 0,
             ignoreElements: (el) => el.classList.contains('no-print')
         });
 
@@ -64,9 +81,59 @@ export async function generateAndSavePdf(element: HTMLElement, fileName: string,
             const safeName = fileName.replace(/[/\\?%*:|"<>#]/g, '-').replace(/\s+/g, '_');
             const finalName = safeName.toLowerCase().endsWith('.pdf') ? safeName : `${safeName}.pdf`;
             
-            console.log("Triggering direct file download for:", finalName);
+            console.log("Preparing file output for:", finalName);
             const arrayBuffer = pdf.output('arraybuffer');
             const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+
+            // 1. Native Capacitor Android / iOS Handling
+            if (Capacitor.isNativePlatform()) {
+                console.log("Native Capacitor detected, saving via Filesystem & Share...");
+                try {
+                    const base64Data = arrayBufferToBase64(arrayBuffer);
+                    const savedFile = await Filesystem.writeFile({
+                        path: finalName,
+                        data: base64Data,
+                        directory: Directory.Cache
+                    });
+                    console.log("File written to cache:", savedFile.uri);
+                    await Share.share({
+                        title: finalName,
+                        text: `Delivery Challan ${finalName}`,
+                        url: savedFile.uri,
+                        dialogTitle: `Save or Open ${finalName}`,
+                    });
+                    console.log("Native Share dialog opened successfully.");
+                    return;
+                } catch (nativeErr) {
+                    console.warn("Capacitor Filesystem/Share failed, trying fallback:", nativeErr);
+                }
+            }
+
+            // 2. Mobile Browser Web Share API Handling (Chrome on Android, Safari on iOS)
+            if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function') {
+                try {
+                    const file = new File([blob], finalName, { type: 'application/pdf' });
+                    if (navigator.canShare({ files: [file] })) {
+                        console.log("Using Web Share API with File object...");
+                        await navigator.share({
+                            files: [file],
+                            title: finalName,
+                            text: `Delivery Challan: ${finalName}`,
+                        });
+                        console.log("Web Share completed.");
+                        return;
+                    }
+                } catch (shareErr: any) {
+                    if (shareErr.name === 'AbortError') {
+                        console.log("User dismissed share dialog.");
+                        return;
+                    }
+                    console.warn("Web Share failed, falling back to anchor download:", shareErr);
+                }
+            }
+
+            // 3. Desktop / Standard Browser Anchor Download Fallback
+            console.log("Triggering anchor download for desktop/fallback...");
             const link = document.createElement('a');
             link.style.display = 'none';
             link.href = URL.createObjectURL(blob);
@@ -79,7 +146,7 @@ export async function generateAndSavePdf(element: HTMLElement, fileName: string,
                     link.parentNode.removeChild(link);
                 }
                 URL.revokeObjectURL(link.href);
-            }, 2000);
+            }, 3000);
 
             console.log("PDF Saved directly as:", finalName, "Blob Size:", (blob.size / 1024).toFixed(2), "KB");
         } else {

@@ -520,58 +520,56 @@ export function NewRelicChallanList({
                       <span>Duplicate</span>
                     </Button>
 
-                    {/* Three-Dot Overflow Menu (Contains Duplicate, History, and Delete) */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-9 w-9 p-0 border-gray-200 text-gray-600 hover:text-gray-900 rounded-xl ml-auto active:scale-95 transition-transform"
-                          aria-label="More actions"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-lg">
-                        <DropdownMenuItem
-                          onClick={() => {
-                            triggerHaptic('light');
-                            onDuplicateChallan(challan);
-                          }}
-                          className="cursor-pointer gap-2 py-2"
-                        >
-                          <Copy className="h-4 w-4 text-purple-600" />
-                          <span>Duplicate Challan</span>
-                        </DropdownMenuItem>
-                        {role === 'admin' && onViewHistory && (
+                    {/* Three-Dot Overflow Menu (History and Delete) - Admin only */}
+                    {(role === 'admin' || role === 'superadmin') && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-9 w-9 p-0 border-gray-200 text-gray-600 hover:text-gray-900 rounded-xl ml-auto active:scale-95 transition-transform"
+                            aria-label="More actions"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-lg">
                           <DropdownMenuItem
                             onClick={() => {
                               triggerHaptic('light');
-                              onViewHistory(challan);
+                              onDuplicateChallan(challan);
                             }}
                             className="cursor-pointer gap-2 py-2"
                           >
-                            <History className="h-4 w-4 text-blue-500" />
-                            <span>Edit History</span>
+                            <Copy className="h-4 w-4 text-purple-600" />
+                            <span>Duplicate Challan</span>
                           </DropdownMenuItem>
-                        )}
-                        {role === 'admin' && (
-                          <>
-                            <DropdownMenuSeparator />
+                          {onViewHistory && (
                             <DropdownMenuItem
                               onClick={() => {
-                                triggerHaptic('warning');
-                                setDeleteConfirmChallan(challan);
+                                triggerHaptic('light');
+                                onViewHistory(challan);
                               }}
-                              className="cursor-pointer gap-2 py-2 text-red-600 focus:text-red-600 focus:bg-red-50"
+                              className="cursor-pointer gap-2 py-2"
                             >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                              <span>{isTrashView ? 'Delete Permanently' : 'Delete Challan'}</span>
+                              <History className="h-4 w-4 text-blue-500" />
+                              <span>Edit History</span>
                             </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => {
+                              triggerHaptic('warning');
+                              setDeleteConfirmChallan(challan);
+                            }}
+                            className="cursor-pointer gap-2 py-2 text-red-600 focus:text-red-600 focus:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                            <span>{isTrashView ? 'Delete Permanently' : 'Delete Challan'}</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </>
                 )}
               </div>

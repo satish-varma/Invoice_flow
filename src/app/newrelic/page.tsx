@@ -163,14 +163,10 @@ export default function NewRelicPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Initialize filterLocation based on preferredLocations
+  // Initialize filterLocation defaulting to user's preferred location
   useEffect(() => {
     if (user?.preferredLocations && user.preferredLocations.length > 0) {
-      if (user.preferredLocations.length === 1) {
-        setFilterLocation(user.preferredLocations[0]);
-      } else {
-        setFilterLocation('preferred');
-      }
+      setFilterLocation(user.preferredLocations[0]);
     }
   }, [user]);
 
@@ -378,11 +374,7 @@ export default function NewRelicPage() {
     let list = activeTab === 'trash' ? trashChallans : activeChallans;
     
     if (filterLocation !== 'all') {
-      if (filterLocation === 'preferred' && user?.preferredLocations) {
-        list = list.filter((c) => user.preferredLocations!.includes(c.location));
-      } else {
-        list = list.filter((c) => c.location === filterLocation);
-      }
+      list = list.filter((c) => c.location === filterLocation);
     }
     if (filterMonth !== 'all') {
       list = list.filter((c) => new Date(c.dcDate).getMonth().toString() === filterMonth);
@@ -736,37 +728,15 @@ export default function NewRelicPage() {
           <div className="bg-white p-3 sm:p-4 rounded-2xl border border-indigo-100/70 shadow-xs space-y-2.5">
             {/* Top Row: Segmented Location Switcher (Mobile & Desktop) */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              {/* Responsive Segmented Switcher (Zero horizontal scroll on mobile) */}
-              <div
-                className={`grid ${
-                  user?.preferredLocations && user.preferredLocations.length > 0
-                    ? 'grid-cols-2 sm:flex'
-                    : 'grid-cols-3 sm:flex'
-                } p-1 bg-gray-100/90 rounded-xl w-full sm:w-auto gap-1 text-center`}
-              >
-                {user?.preferredLocations && user.preferredLocations.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setFilterLocation('preferred');
-                    }}
-                    className={`flex items-center justify-center text-center px-3 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      filterLocation === 'preferred'
-                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
-                    }`}
-                  >
-                    ⭐ Preferred
-                  </button>
-                )}
+              {/* Responsive Segmented Switcher (Single line, zero horizontal scroll on mobile) */}
+              <div className="flex items-center p-1 bg-gray-100/90 rounded-xl w-full sm:w-auto gap-1">
                 <button
                   type="button"
                   onClick={() => {
                     triggerHaptic('light');
                     setFilterLocation('all');
                   }}
-                  className={`flex items-center justify-center text-center px-3 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex-1 sm:flex-initial flex items-center justify-center text-center px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     filterLocation === 'all'
                       ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-xs'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
@@ -790,7 +760,7 @@ export default function NewRelicPage() {
                         triggerHaptic('light');
                         setFilterLocation(key);
                       }}
-                      className={`flex items-center justify-center text-center px-3 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      className={`flex-1 sm:flex-initial flex items-center justify-center text-center px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                         isSelected ? activeColor : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
                       }`}
                     >
@@ -959,14 +929,12 @@ export default function NewRelicPage() {
                 </div>
 
                 {/* Clear Active Filters Button */}
-                {(filterLocation !== (user?.preferredLocations && user.preferredLocations.length === 1 ? user.preferredLocations[0] : (user?.preferredLocations?.length ? 'preferred' : 'all')) || filterMonth !== 'all' || filterYear !== 'all' || filterCycle !== 'all' || searchQuery.trim() !== '') && (
+                {(filterLocation !== (user?.preferredLocations?.[0] || 'all') || filterMonth !== 'all' || filterYear !== 'all' || filterCycle !== 'all' || searchQuery.trim() !== '') && (
                   <button
                     type="button"
                     onClick={() => {
                       triggerHaptic('medium');
-                      const defaultLoc = user?.preferredLocations && user.preferredLocations.length === 1 
-                        ? user.preferredLocations[0] 
-                        : (user?.preferredLocations?.length ? 'preferred' : 'all');
+                      const defaultLoc = user?.preferredLocations?.[0] || 'all';
                       setFilterLocation(defaultLoc);
                       setFilterMonth('all');
                       setFilterYear('all');

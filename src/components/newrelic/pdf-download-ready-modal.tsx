@@ -14,6 +14,8 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { useToast } from '@/hooks/use-toast';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
 
 interface PdfReadyModalProps {
   isOpen: boolean;
@@ -40,7 +42,30 @@ export function PdfDownloadReadyModal({
 
   const fileSizeKb = (pdfData.blob.size / 1024).toFixed(1);
 
-  // Helper to extract base64 string
+  /**
+   * Upload the PDF blob to Firebase Storage and return a persistent public URL.
+   * Firebase Storage URLs work across all server instances and don't expire quickly.
+   */
+  const uploadToFirebaseStorage = async (): Promise<string> => {
+    const safeFileName = pdfData.fileName
+      .replace(/[/\\?%*:|"<>#]/g, '-')
+      .replace(/\s+/g, '_');
+    const finalName = safeFileName.toLowerCase().endsWith('.pdf') ? safeFileName : `${safeFileName}.pdf`;
+    const uniqueName = `${Date.now()}_${finalName}`;
+    const storageRef = ref(storage, `temp-challans/${uniqueName}`);
+
+    await uploadBytes(storageRef, pdfData.blob, {
+      contentType: 'application/pdf',
+      contentDisposition: `attachment; filename="${finalName}"`,
+    });
+
+    const downloadUrl = await getDownloadURL(storageRef);
+    return downloadUrl;
+  };
+
+  /**
+   * Get base64 string from the PDF blob (for Capacitor native Filesystem writes).
+   */
   const getBase64 = async (): Promise<string> => {
     if (pdfData.arrayBuffer) {
       const bytes = new Uint8Array(pdfData.arrayBuffer);
@@ -60,71 +85,55 @@ export function PdfDownloadReadyModal({
     });
   };
 
-  // Helper to cache on server and get universal HTTPS download URL
-  const getServerUrls = async (base64: string): Promise<{ downloadUrl: string; viewUrl: string }> => {
-    const res = await fetch('/api/download-pdf', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        pdfBase64: base64,
-        filename: pdfData.fileName,
-      }),
-    });
-    if (!res.ok) throw new Error('Failed to prepare download link');
-    const data = await res.json();
-
-    // Ensure origin is always the public client domain (never internal run.app)
-    const origin = typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('.run.app')
-      ? window.location.origin
-      : 'https://studio--invoiceflow-24nxt.us-central1.hosted.app';
-
-    return {
-      downloadUrl: `${origin}/api/download-pdf?id=${data.id}&download=true`,
-      viewUrl: `${origin}/api/download-pdf?id=${data.id}`,
-    };
-  };
-
-  // 1. Direct Download Handler (Universal: Android DownloadManager via real HTTPS URL)
+  // 1. Download to Phone — uploads to Firebase Storage, then navigates to the persistent URL
   const handleDownload = async () => {
     try {
       setIsProcessing(true);
       toast({
-        title: 'Starting Download...',
-        description: `Saving ${pdfData.fileName} to your device`,
+        title: 'Preparing Download...',
+        description: `Uploading ${pdfData.fileName} for download`,
       });
 
-      const base64 = await getBase64();
-
-      // If native Capacitor app, also save directly into Documents
+      // On native Capacitor, write directly to Documents folder
       if (Capacitor.isNativePlatform()) {
         try {
+          const base64 = await getBase64();
           await Filesystem.writeFile({
             path: pdfData.fileName,
             data: base64,
             directory: Directory.Documents,
           });
+          toast({
+            title: 'Saved!',
+            description: `${pdfData.fileName} saved to Documents`,
+          });
+          setIsProcessing(false);
+          return;
         } catch (capErr) {
-          console.warn('Capacitor native filesystem write skipped/failed:', capErr);
+          console.warn('Capacitor filesystem write failed, falling back to Firebase Storage:', capErr);
         }
       }
 
-      // Universal Server URL Download (Triggers Android Native DownloadManager in WebView & standard browser download)
-      const { downloadUrl } = await getServerUrls(base64);
-      
-      // 1. DOM anchor click
+      // Upload to Firebase Storage to get a persistent cross-instance URL
+      const downloadUrl = await uploadToFirebaseStorage();
+
+      toast({
+        title: 'Downloading...',
+        description: 'Your PDF is being downloaded',
+      });
+
+      // Trigger download: anchor click first, then location.href for Android WebView DownloadListener
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = pdfData.fileName;
       document.body.appendChild(link);
       link.click();
-      setTimeout(() => {
-        if (link.parentNode) link.parentNode.removeChild(link);
-      }, 1000);
+      setTimeout(() => { if (link.parentNode) link.parentNode.removeChild(link); }, 1000);
 
-      // 2. Direct location trigger for Android WebView DownloadListener
+      // For Android WebView: set location.href triggers the native DownloadListener
       setTimeout(() => {
         window.location.href = downloadUrl;
-      }, 300);
+      }, 400);
 
     } catch (err) {
       console.error('Download error:', err);
@@ -138,38 +147,54 @@ export function PdfDownloadReadyModal({
     }
   };
 
-  // 2. Open / View in Native PDF Viewer Handler
+  // 2. Open in PDF Viewer — uploads to Firebase Storage and opens the URL in the system viewer
   const handleOpenPdf = async () => {
     try {
       setIsProcessing(true);
-      const base64 = await getBase64();
-      const { viewUrl } = await getServerUrls(base64);
-      
+
       if (Capacitor.isNativePlatform()) {
-        window.open(viewUrl, '_system');
-      } else {
-        const win = window.open(viewUrl, '_blank');
-        if (!win) {
-          window.location.href = viewUrl;
+        try {
+          const base64 = await getBase64();
+          const saved = await Filesystem.writeFile({
+            path: pdfData.fileName,
+            data: base64,
+            directory: Directory.Cache,
+          });
+          await Share.share({
+            title: pdfData.fileName,
+            url: saved.uri,
+            dialogTitle: 'Open Delivery Challan',
+          });
+          setIsProcessing(false);
+          return;
+        } catch (capErr) {
+          console.warn('Capacitor open failed, falling back to Firebase Storage:', capErr);
         }
+      }
+
+      const viewUrl = await uploadToFirebaseStorage();
+      const win = window.open(viewUrl, '_blank');
+      if (!win) {
+        window.location.href = viewUrl;
       }
     } catch (err) {
       console.error('Error opening PDF:', err);
+      // Last resort: blob URL (works on desktop browsers at least)
       window.open(pdfData.url, '_blank');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // 3. Native Share Sheet Handler (WhatsApp, Drive, Gmail)
+  // 3. Share — native share sheet or Web Share API with the Firebase Storage URL
   const handleShare = async () => {
     try {
       setIsProcessing(true);
-      const base64 = await getBase64();
 
-      // Native Capacitor Share if available
+      // Native Capacitor Share
       if (Capacitor.isNativePlatform()) {
         try {
+          const base64 = await getBase64();
           const saved = await Filesystem.writeFile({
             path: pdfData.fileName,
             data: base64,
@@ -188,7 +213,7 @@ export function PdfDownloadReadyModal({
         }
       }
 
-      // Web Share API with File object
+      // Web Share API with File object (most mobile browsers)
       if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function') {
         const file = new File([pdfData.blob], pdfData.fileName, { type: 'application/pdf' });
         if (navigator.canShare({ files: [file] })) {
@@ -202,19 +227,19 @@ export function PdfDownloadReadyModal({
         }
       }
 
-      // Fallback: Share server view URL
-      const { viewUrl } = await getServerUrls(base64);
+      // Fallback: share Firebase Storage URL (works without file support)
+      const shareUrl = await uploadToFirebaseStorage();
       if (typeof navigator !== 'undefined' && navigator.share) {
         await navigator.share({
           title: pdfData.fileName,
           text: `Delivery Challan: ${pdfData.fileName}`,
-          url: viewUrl,
+          url: shareUrl,
         });
         setIsProcessing(false);
         return;
       }
 
-      // If no share sheet supported, trigger download
+      // Last resort: trigger download
       await handleDownload();
     } catch (err: any) {
       if (err.name !== 'AbortError') {

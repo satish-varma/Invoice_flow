@@ -249,11 +249,14 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
 
   return (
     <>
-      {/* ── Floating Glassmorphic Bottom Navigation Bar ── */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none">
-        <nav className="pointer-events-auto bg-white/95 backdrop-blur-xl border border-gray-200/80 shadow-[0_12px_36px_-6px_rgba(15,23,42,0.18)] rounded-2xl overflow-hidden ring-1 ring-black/5">
-          <div className="flex items-center justify-around h-16 px-1.5 py-1">
-            {/* Slot 1: DC */}
+      {/* ── Floating CRED-Style Glowing Bottom Navigation Bar ── */}
+      <div className="sm:hidden fixed bottom-2 left-2.5 right-2.5 z-40 pb-[env(safe-area-inset-bottom)] pointer-events-none">
+        <nav className="pointer-events-auto relative bg-[#090b16]/95 backdrop-blur-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.65),0_0_30px_rgba(99,102,241,0.15)] rounded-3xl overflow-hidden ring-1 ring-white/10">
+          {/* Ambient top neon accent line */}
+          <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-cyan-400/60 via-purple-500/60 via-pink-500/60 to-amber-400/60" />
+
+          <div className="flex items-center justify-around h-[66px] px-1 py-1">
+            {/* Slot 1: DC (Cyber Cyan Glow) */}
             <Link
               href={tabDc.href}
               prefetch={false}
@@ -262,29 +265,36 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
             >
               <div className="relative">
                 <div
-                  className={`px-3 py-1.5 rounded-full transition-all flex items-center justify-center ${
+                  className={`px-3 py-1.5 rounded-2xl transition-all duration-200 flex items-center justify-center ${
                     tabDc.isActive
-                      ? 'bg-gradient-to-r from-indigo-500/15 via-[#3b2fc9]/15 to-purple-500/15 text-[#3b2fc9] shadow-2xs border border-[#3b2fc9]/20'
-                      : 'text-gray-400 group-hover:text-gray-600'
+                      ? 'bg-gradient-to-b from-cyan-500/25 to-blue-600/30 border border-cyan-400/40 shadow-[0_0_16px_rgba(56,189,248,0.45)]'
+                      : 'bg-white/[0.03] border border-white/[0.05] group-hover:bg-white/[0.08]'
                   }`}
                 >
                   <FileText
-                    className={`w-5 h-5 transition-transform ${
-                      tabDc.isActive ? 'scale-110 stroke-[2.4] text-[#3b2fc9]' : 'stroke-[1.8]'
+                    className={`w-5 h-5 transition-all duration-200 ${
+                      tabDc.isActive
+                        ? 'scale-110 stroke-[2.4] text-cyan-300 drop-shadow-[0_0_8px_rgba(56,189,248,0.85)]'
+                        : 'stroke-[1.8] text-slate-400 group-hover:text-cyan-200'
                     }`}
                   />
                 </div>
               </div>
               <span
-                className={`text-[10px] mt-0.5 tracking-tight transition-all ${
-                  tabDc.isActive ? 'font-black text-[#3b2fc9] scale-105' : 'font-semibold text-gray-500'
+                className={`text-[10px] mt-1 tracking-tight transition-all flex items-center gap-1 ${
+                  tabDc.isActive
+                    ? 'font-black text-cyan-300 drop-shadow-[0_0_6px_rgba(56,189,248,0.6)] scale-105'
+                    : 'font-semibold text-slate-400 group-hover:text-slate-200'
                 }`}
               >
                 {tabDc.label}
+                {tabDc.isActive && (
+                  <span className="w-1 h-1 rounded-full bg-cyan-400 shadow-[0_0_6px_#38bdf8]" />
+                )}
               </span>
             </Link>
 
-            {/* Slot 2: Tuckshop */}
+            {/* Slot 2: Tuckshop (Emerald Mint Glow) */}
             <Link
               href={tabTuckshop.href}
               prefetch={false}
@@ -293,47 +303,58 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
             >
               <div className="relative">
                 <div
-                  className={`px-3 py-1.5 rounded-full transition-all flex items-center justify-center ${
+                  className={`px-3 py-1.5 rounded-2xl transition-all duration-200 flex items-center justify-center ${
                     tabTuckshop.isActive
-                      ? 'bg-gradient-to-r from-indigo-500/15 via-[#3b2fc9]/15 to-purple-500/15 text-[#3b2fc9] shadow-2xs border border-[#3b2fc9]/20'
-                      : 'text-gray-400 group-hover:text-gray-600'
+                      ? 'bg-gradient-to-b from-emerald-500/25 to-teal-600/30 border border-emerald-400/40 shadow-[0_0_16px_rgba(52,211,153,0.45)]'
+                      : 'bg-white/[0.03] border border-white/[0.05] group-hover:bg-white/[0.08]'
                   }`}
                 >
                   <Store
-                    className={`w-5 h-5 transition-transform ${
-                      tabTuckshop.isActive ? 'scale-110 stroke-[2.4] text-[#3b2fc9]' : 'stroke-[1.8]'
+                    className={`w-5 h-5 transition-all duration-200 ${
+                      tabTuckshop.isActive
+                        ? 'scale-110 stroke-[2.4] text-emerald-300 drop-shadow-[0_0_8px_rgba(52,211,153,0.85)]'
+                        : 'stroke-[1.8] text-slate-400 group-hover:text-emerald-200'
                     }`}
                   />
                 </div>
               </div>
               <span
-                className={`text-[10px] mt-0.5 tracking-tight transition-all ${
-                  tabTuckshop.isActive ? 'font-black text-[#3b2fc9] scale-105' : 'font-semibold text-gray-500'
+                className={`text-[10px] mt-1 tracking-tight transition-all flex items-center gap-1 ${
+                  tabTuckshop.isActive
+                    ? 'font-black text-emerald-300 drop-shadow-[0_0_6px_rgba(52,211,153,0.6)] scale-105'
+                    : 'font-semibold text-slate-400 group-hover:text-slate-200'
                 }`}
               >
                 {tabTuckshop.label}
+                {tabTuckshop.isActive && (
+                  <span className="w-1 h-1 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
+                )}
               </span>
             </Link>
 
-            {/* Slot 3: Center Elevated Plus (+) Action Button */}
+            {/* Slot 3: Center Elevated Plus (+) Action Button - CRED Jewel Orb */}
             <button
               type="button"
               onClick={() => {
                 triggerHaptic('medium');
                 setShowCreateSheet(true);
               }}
-              className="flex-1 flex flex-col items-center justify-center -mt-5 relative z-10 group"
+              className="flex-1 flex flex-col items-center justify-center -mt-6 relative z-10 group"
               aria-label="New Action"
             >
-              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#181156] via-[#281d8c] to-[#3b2fc9] text-white shadow-xl shadow-indigo-950/40 border-[3px] border-white flex items-center justify-center active:scale-90 group-hover:scale-105 transition-all">
-                <Plus className="w-6 h-6 stroke-[3] text-amber-300" />
+              <div className="relative">
+                {/* Ambient Multi-Color Glow Halo */}
+                <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-indigo-500 blur-md opacity-75 group-hover:opacity-100 animate-pulse transition-opacity" />
+                <div className="relative w-12 h-12 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-indigo-600 text-white shadow-xl shadow-rose-950/60 border-2 border-white/70 flex items-center justify-center active:scale-90 group-hover:scale-105 transition-all">
+                  <Plus className="w-6 h-6 stroke-[3] text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
+                </div>
               </div>
-              <span className="text-[10px] font-black text-indigo-950 tracking-tight mt-0.5">
+              <span className="text-[10px] font-black bg-gradient-to-r from-amber-300 via-rose-300 to-indigo-200 bg-clip-text text-transparent tracking-tight mt-1">
                 New
               </span>
             </button>
 
-            {/* Slot 4: Attendance */}
+            {/* Slot 4: Attendance (Solar Amber Flame Glow) */}
             <Link
               href={tabAttendance.href}
               prefetch={false}
@@ -342,29 +363,36 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
             >
               <div className="relative">
                 <div
-                  className={`px-3 py-1.5 rounded-full transition-all flex items-center justify-center ${
+                  className={`px-3 py-1.5 rounded-2xl transition-all duration-200 flex items-center justify-center ${
                     tabAttendance.isActive
-                      ? 'bg-gradient-to-r from-indigo-500/15 via-[#3b2fc9]/15 to-purple-500/15 text-[#3b2fc9] shadow-2xs border border-[#3b2fc9]/20'
-                      : 'text-gray-400 group-hover:text-gray-600'
+                      ? 'bg-gradient-to-b from-amber-500/25 to-orange-600/30 border border-amber-400/40 shadow-[0_0_16px_rgba(251,191,36,0.45)]'
+                      : 'bg-white/[0.03] border border-white/[0.05] group-hover:bg-white/[0.08]'
                   }`}
                 >
                   <CalendarCheck
-                    className={`w-5 h-5 transition-transform ${
-                      tabAttendance.isActive ? 'scale-110 stroke-[2.4] text-[#3b2fc9]' : 'stroke-[1.8]'
+                    className={`w-5 h-5 transition-all duration-200 ${
+                      tabAttendance.isActive
+                        ? 'scale-110 stroke-[2.4] text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.85)]'
+                        : 'stroke-[1.8] text-slate-400 group-hover:text-amber-200'
                     }`}
                   />
                 </div>
               </div>
               <span
-                className={`text-[10px] mt-0.5 tracking-tight transition-all ${
-                  tabAttendance.isActive ? 'font-black text-[#3b2fc9] scale-105' : 'font-semibold text-gray-500'
+                className={`text-[10px] mt-1 tracking-tight transition-all flex items-center gap-1 ${
+                  tabAttendance.isActive
+                    ? 'font-black text-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)] scale-105'
+                    : 'font-semibold text-slate-400 group-hover:text-slate-200'
                 }`}
               >
                 {tabAttendance.label}
+                {tabAttendance.isActive && (
+                  <span className="w-1 h-1 rounded-full bg-amber-400 shadow-[0_0_6px_#fbbf24]" />
+                )}
               </span>
             </Link>
 
-            {/* Slot 5: Stock Request for regular users, More for admin */}
+            {/* Slot 5: Stock Request (Cyber Violet) for user, More (Ruby Rose) for admin */}
             {isAdmin ? (
               <button
                 onClick={() => {
@@ -373,30 +401,39 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
                 }}
                 className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-90 group"
               >
-                <div
-                  className={`px-3 py-1.5 rounded-full transition-all flex items-center justify-center relative ${
-                    showMoreMenu || isMoreActive
-                      ? 'bg-gradient-to-r from-indigo-500/15 via-[#3b2fc9]/15 to-purple-500/15 text-[#3b2fc9] shadow-2xs border border-[#3b2fc9]/20'
-                      : 'text-gray-400 group-hover:text-gray-600'
-                  }`}
-                >
-                  <MoreHorizontal
-                    className={`w-5 h-5 transition-transform ${
-                      showMoreMenu || isMoreActive ? 'scale-110 stroke-[2.4] text-[#3b2fc9]' : 'stroke-[1.8]'
+                <div className="relative">
+                  <div
+                    className={`px-3 py-1.5 rounded-2xl transition-all duration-200 flex items-center justify-center relative ${
+                      showMoreMenu || isMoreActive
+                        ? 'bg-gradient-to-b from-rose-500/25 to-pink-600/30 border border-rose-400/40 shadow-[0_0_16px_rgba(244,63,94,0.45)]'
+                        : 'bg-white/[0.03] border border-white/[0.05] group-hover:bg-white/[0.08]'
                     }`}
-                  />
-                  {pendingStockCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-black rounded-full h-3.5 w-3.5 flex items-center justify-center shadow-xs ring-2 ring-white animate-pulse">
-                      {pendingStockCount}
-                    </span>
-                  )}
+                  >
+                    <MoreHorizontal
+                      className={`w-5 h-5 transition-all duration-200 ${
+                        showMoreMenu || isMoreActive
+                          ? 'scale-110 stroke-[2.4] text-rose-300 drop-shadow-[0_0_8px_rgba(244,63,94,0.85)]'
+                          : 'stroke-[1.8] text-slate-400 group-hover:text-rose-200'
+                      }`}
+                    />
+                    {pendingStockCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-rose-600 text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-[0_0_8px_#f43f5e] ring-2 ring-[#090b16] animate-pulse">
+                        {pendingStockCount}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <span
-                  className={`text-[10px] mt-0.5 tracking-tight transition-all ${
-                    showMoreMenu || isMoreActive ? 'font-black text-[#3b2fc9] scale-105' : 'font-semibold text-gray-500'
+                  className={`text-[10px] mt-1 tracking-tight transition-all flex items-center gap-1 ${
+                    showMoreMenu || isMoreActive
+                      ? 'font-black text-rose-300 drop-shadow-[0_0_6px_rgba(244,63,94,0.6)] scale-105'
+                      : 'font-semibold text-slate-400 group-hover:text-slate-200'
                   }`}
                 >
                   More
+                  {(showMoreMenu || isMoreActive) && (
+                    <span className="w-1 h-1 rounded-full bg-rose-400 shadow-[0_0_6px_#fb7185]" />
+                  )}
                 </span>
               </button>
             ) : (
@@ -408,25 +445,32 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
               >
                 <div className="relative">
                   <div
-                    className={`px-3 py-1.5 rounded-full transition-all flex items-center justify-center ${
+                    className={`px-3 py-1.5 rounded-2xl transition-all duration-200 flex items-center justify-center ${
                       tabStock.isActive
-                        ? 'bg-gradient-to-r from-indigo-500/15 via-[#3b2fc9]/15 to-purple-500/15 text-[#3b2fc9] shadow-2xs border border-[#3b2fc9]/20'
-                        : 'text-gray-400 group-hover:text-gray-600'
+                        ? 'bg-gradient-to-b from-purple-500/25 to-pink-600/30 border border-purple-400/40 shadow-[0_0_16px_rgba(192,132,252,0.45)]'
+                        : 'bg-white/[0.03] border border-white/[0.05] group-hover:bg-white/[0.08]'
                     }`}
                   >
                     <Send
-                      className={`w-5 h-5 transition-transform ${
-                        tabStock.isActive ? 'scale-110 stroke-[2.4] text-[#3b2fc9]' : 'stroke-[1.8]'
+                      className={`w-5 h-5 transition-all duration-200 ${
+                        tabStock.isActive
+                          ? 'scale-110 stroke-[2.4] text-purple-300 drop-shadow-[0_0_8px_rgba(192,132,252,0.85)]'
+                          : 'stroke-[1.8] text-slate-400 group-hover:text-purple-200'
                       }`}
                     />
                   </div>
                 </div>
                 <span
-                  className={`text-[10px] mt-0.5 tracking-tight transition-all ${
-                    tabStock.isActive ? 'font-black text-[#3b2fc9] scale-105' : 'font-semibold text-gray-500'
+                  className={`text-[10px] mt-1 tracking-tight transition-all flex items-center gap-1 ${
+                    tabStock.isActive
+                      ? 'font-black text-purple-300 drop-shadow-[0_0_6px_rgba(192,132,252,0.6)] scale-105'
+                      : 'font-semibold text-slate-400 group-hover:text-slate-200'
                   }`}
                 >
                   {tabStock.label}
+                  {tabStock.isActive && (
+                    <span className="w-1 h-1 rounded-full bg-purple-400 shadow-[0_0_6px_#c084fc]" />
+                  )}
                 </span>
               </Link>
             )}

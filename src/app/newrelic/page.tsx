@@ -431,18 +431,20 @@ export default function NewRelicPage() {
             </div>
 
             <div className="flex items-center gap-2 self-end sm:self-center">
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setShowCalculator(true);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 active:scale-95 text-xs font-bold transition-all border border-amber-300/40"
-                title="Open MRP % Calculator"
-              >
-                <Calculator className="w-3.5 h-3.5" />
-                <span>% Calc</span>
-              </button>
+              {(role === 'admin' || role === 'superadmin') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setShowCalculator(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 active:scale-95 text-xs font-bold transition-all border border-amber-300/40"
+                  title="Open MRP % Calculator"
+                >
+                  <Calculator className="w-3.5 h-3.5" />
+                  <span>% Calc</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handlePullRefresh}
@@ -460,7 +462,7 @@ export default function NewRelicPage() {
         {role === 'admin' || role === 'superadmin' ? (
           <NewRelicDashboard challans={displayChallans} showFinancials={isUnlocked && showFinancials} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
+          <div className="hidden sm:grid sm:grid-cols-3 gap-2.5 sm:gap-4">
             <StatCard
               icon={<FileText className="h-4 sm:h-5 w-4 sm:w-5 text-white" />}
               label="Total Challans"
@@ -524,18 +526,20 @@ export default function NewRelicPage() {
                   Export Excel
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setShowCalculator(true);
-                }}
-                className="bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#3b2fc9]/40 text-gray-800 py-3.5 px-4 rounded-xl font-bold transition-all shadow-xs active:scale-[0.98] flex items-center justify-center gap-2 group shrink-0"
-                title="Calculate MRP percentage and purchase cost"
-              >
-                <Calculator className="h-5 w-5 text-[#3b2fc9] group-hover:scale-110 transition-transform" />
-                <span>% Calculator</span>
-              </button>
+              {(role === 'admin' || role === 'superadmin') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setShowCalculator(true);
+                  }}
+                  className="bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#3b2fc9]/40 text-gray-800 py-3.5 px-4 rounded-xl font-bold transition-all shadow-xs active:scale-[0.98] flex items-center justify-center gap-2 group shrink-0"
+                  title="Calculate MRP percentage and purchase cost"
+                >
+                  <Calculator className="h-5 w-5 text-[#3b2fc9] group-hover:scale-110 transition-transform" />
+                  <span>% Calculator</span>
+                </button>
+              )}
             </div>
 
             {/* Native Mobile Floating Action Button (+) */}
@@ -543,22 +547,24 @@ export default function NewRelicPage() {
               onNewChallan={(loc) => handleStartCreateNew(loc)}
               onExportExcel={(role === 'admin' || role === 'superadmin') ? handleExportExcel : undefined}
               canReconcile={role === 'admin' || role === 'superadmin'}
-              onOpenCalculator={() => setShowCalculator(true)}
+              onOpenCalculator={(role === 'admin' || role === 'superadmin') ? () => setShowCalculator(true) : undefined}
             />
 
-            {/* Floating Mobile Calculator Button */}
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setShowCalculator(true);
-              }}
-              className={`fixed ${showScrollTop ? 'left-4 bottom-44' : 'left-4 bottom-26'} z-30 w-12 h-12 rounded-full bg-gradient-to-tr from-[#181156] via-[#2a1d8f] to-[#3b2fc9] shadow-2xl shadow-indigo-950/70 text-amber-300 border-2 border-white/30 flex items-center justify-center sm:hidden active:scale-90 transition-all`}
-              aria-label="MRP Calculator"
-              title="MRP % Calculator"
-            >
-              <Calculator className="w-5 h-5 stroke-[2.2]" />
-            </button>
+            {/* Floating Mobile Calculator Button - Admin/Superadmin only */}
+            {(role === 'admin' || role === 'superadmin') && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowCalculator(true);
+                }}
+                className={`fixed ${showScrollTop ? 'left-4 bottom-44' : 'left-4 bottom-26'} z-30 w-12 h-12 rounded-full bg-gradient-to-tr from-[#181156] via-[#2a1d8f] to-[#3b2fc9] shadow-2xl shadow-indigo-950/70 text-amber-300 border-2 border-white/30 flex items-center justify-center sm:hidden active:scale-90 transition-all`}
+                aria-label="MRP Calculator"
+                title="MRP % Calculator"
+              >
+                <Calculator className="w-5 h-5 stroke-[2.2]" />
+              </button>
+            )}
 
             {/* Floating Back to Top Button on Mobile */}
             {showScrollTop && (
@@ -594,62 +600,69 @@ export default function NewRelicPage() {
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none no-scrollbar">
-          <button
-            onClick={() => setActiveTab('active')}
-            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-              activeTab === 'active'
-                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm shadow-indigo-200'
-                : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
-            }`}
-          >
-            <span>Active Challans</span>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
-              activeTab === 'active' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
-            }`}>
-              {activeChallans.length}
-            </span>
-          </button>
+        {/* Tabs - Show full tab bar for Admin; for user/manager hide single Active Challans card on mobile */}
+        {role === 'admin' || role === 'superadmin' ? (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none no-scrollbar">
+            <button
+              onClick={() => setActiveTab('active')}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === 'active'
+                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm shadow-indigo-200'
+                  : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
+              }`}
+            >
+              <span>Active Challans</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                activeTab === 'active' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
+              }`}>
+                {activeChallans.length}
+              </span>
+            </button>
 
-          {(role === 'admin' || role === 'superadmin') && (
-            <>
-              <Link
-                href="/newrelic/analytics"
-                className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 shrink-0 bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/40"
-              >
-                <span>📊 Analytics</span>
-              </Link>
+            <Link
+              href="/newrelic/analytics"
+              className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 shrink-0 bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/40"
+            >
+              <span>📊 Analytics</span>
+            </Link>
 
-              <button
-                onClick={() => setActiveTab('items')}
-                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 shrink-0 ${
-                  activeTab === 'items'
-                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm shadow-indigo-200'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
-                }`}
-              >
-                <span>📋 Item Ledger</span>
-              </button>
+            <button
+              onClick={() => setActiveTab('items')}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                activeTab === 'items'
+                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm shadow-indigo-200'
+                  : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
+              }`}
+            >
+              <span>📋 Item Ledger</span>
+            </button>
 
-              <button
-                onClick={() => setActiveTab('trash')}
-                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                  activeTab === 'trash'
-                    ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-sm shadow-rose-200'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
-                }`}
-              >
-                <span>Trash / Audit</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
-                  activeTab === 'trash' ? 'bg-white/20 text-white' : 'bg-rose-50 text-rose-600'
-                }`}>
-                  {trashChallans.length}
-                </span>
-              </button>
-            </>
-          )}
-        </div>
+            <button
+              onClick={() => setActiveTab('trash')}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === 'trash'
+                  ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-sm shadow-rose-200'
+                  : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
+              }`}
+            >
+              <span>Trash / Audit</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                activeTab === 'trash' ? 'bg-white/20 text-white' : 'bg-rose-50 text-rose-600'
+              }`}>
+                {trashChallans.length}
+              </span>
+            </button>
+          </div>
+        ) : (
+          <div className="hidden sm:flex items-center gap-2 pb-1">
+            <div className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80 flex items-center gap-2">
+              <span>Active Challans</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-indigo-600 text-white">
+                {activeChallans.length}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Instant Search Bar & Filter Controls */}
         <div className="space-y-2.5">

@@ -320,17 +320,14 @@ public class MainActivity extends BridgeActivity {
 
             final String finalFileName = safeName;
             final Uri finalUri = savedUri;
+            final String finalBase64 = cleanBase64;
 
-            // Show Toast inside the app (user stays on current screen!)
+            // Show interactive option to open or share the file directly in the app!
             runOnUiThread(() -> {
-                Toast.makeText(
-                    MainActivity.this,
-                    "Saved to Downloads: " + finalFileName,
-                    Toast.LENGTH_LONG
-                ).show();
+                showDownloadSuccessDialog(finalFileName, finalBase64);
             });
 
-            // Post system status bar notification with tap-to-view
+            // Post system status bar notification with tap-to-view and explicit OPEN / SHARE buttons
             showDownloadNotification(finalUri, finalFileName, pdfBytes);
 
             return true;
@@ -340,6 +337,33 @@ public class MainActivity extends BridgeActivity {
                 Toast.makeText(MainActivity.this, "Save error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             });
             return false;
+        }
+    }
+
+    private void showDownloadSuccessDialog(String fileName, String base64Data) {
+        try {
+            if (isFinishing() || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed())) {
+                return;
+            }
+
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Delivery Challan Downloaded")
+                .setMessage("Saved to Downloads folder:\n" + fileName + "\n\nWould you like to open it now?")
+                .setIcon(android.R.drawable.stat_sys_download_done)
+                .setPositiveButton("Open", (dialog, which) -> {
+                    doOpenPdf(base64Data, fileName);
+                })
+                .setNeutralButton("Share", (dialog, which) -> {
+                    doSharePdf(base64Data, fileName);
+                })
+                .setNegativeButton("Done", (dialog, which) -> {
+                    dialog.dismiss();
+                })
+                .setCancelable(true)
+                .show();
+        } catch (Exception e) {
+            Log.w(TAG, "Error displaying download success dialog", e);
+            Toast.makeText(MainActivity.this, "Saved to Downloads: " + fileName, Toast.LENGTH_LONG).show();
         }
     }
 
@@ -370,10 +394,13 @@ public class MainActivity extends BridgeActivity {
             intent.setDataAndType(contentUri, "application/pdf");
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
 
-            startActivity(intent);
+            Intent chooser = Intent.createChooser(intent, "Open " + safeName);
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(chooser);
             return true;
         } catch (Exception e) {
             Log.e(TAG, "Error in doOpenPdf", e);
+            runOnUiThread(() -> Toast.makeText(MainActivity.this, "No PDF viewer app found to open file", Toast.LENGTH_SHORT).show());
             return false;
         }
     }
@@ -443,15 +470,27 @@ public class MainActivity extends BridgeActivity {
             }
             Uri viewUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", cacheFile);
 
-            Intent viewIntent = new Intent(Intent.ACTION_VIEW);
-            viewIntent.setDataAndType(viewUri, "application/pdf");
-            viewIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-
             int flags = PendingIntent.FLAG_UPDATE_CURRENT;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 flags |= PendingIntent.FLAG_IMMUTABLE;
             }
-            PendingIntent pendingIntent = PendingIntent.getActivity(this, (int) System.currentTimeMillis(), viewIntent, flags);
+
+            // Open Intent with Chooser
+            Intent viewIntent = new Intent(Intent.ACTION_VIEW);
+            viewIntent.setDataAndType(viewUri, "application/pdf");
+            viewIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+            Intent openChooser = Intent.createChooser(viewIntent, "Open " + fileName);
+            openChooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            PendingIntent openPendingIntent = PendingIntent.getActivity(this, (int) System.currentTimeMillis(), openChooser, flags);
+
+            // Share Intent with Chooser
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("application/pdf");
+            shareIntent.putExtra(Intent.EXTRA_STREAM, viewUri);
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Intent shareChooser = Intent.createChooser(shareIntent, "Share Delivery Challan");
+            shareChooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            PendingIntent sharePendingIntent = PendingIntent.getActivity(this, (int) (System.currentTimeMillis() + 1), shareChooser, flags);
 
             NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
                     .setSmallIcon(android.R.drawable.stat_sys_download_done)
@@ -459,7 +498,9 @@ public class MainActivity extends BridgeActivity {
                     .setContentText(fileName)
                     .setSubText("Saved to Downloads")
                     .setAutoCancel(true)
-                    .setContentIntent(pendingIntent)
+                    .setContentIntent(openPendingIntent)
+                    .addAction(android.R.drawable.ic_menu_view, "OPEN", openPendingIntent)
+                    .addAction(android.R.drawable.ic_menu_share, "SHARE", sharePendingIntent)
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT);
 
             nm.notify((int) (System.currentTimeMillis() % 100000), builder.build());

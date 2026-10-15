@@ -660,29 +660,7 @@ export default function DeliveryChallanPage() {
           </div>
 
           {/* ── 2. SAVED CHALLANS LIST (Directly below new challan) ── */}
-          <div id="saved-challans-section" className="w-full pt-4 space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse" />
-                <h2 className="text-base sm:text-lg font-black text-gray-900 tracking-tight">
-                  Saved Delivery Challans
-                </h2>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 font-mono">
-                  {challans.length} Total
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1"
-              >
-                &uarr; Back to Top Form
-              </button>
-            </div>
-
+          <div id="saved-challans-section" className="w-full pt-2">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-gray-200/80 gap-3">
                 <Loader className="h-8 w-8 text-[#3b2fc9] animate-spin" />

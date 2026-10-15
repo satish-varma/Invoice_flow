@@ -330,25 +330,17 @@ export function ChallanList({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <CardTitle className="text-base sm:text-lg font-black text-gray-900 tracking-tight">
-                  Delivery Challans
+                  Saved Delivery Challans
                 </CardTitle>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60 font-mono">
-                  {filteredChallans.length} of {challans.length}
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 font-mono">
+                  {filteredChallans.length === challans.length ? `${challans.length} Total` : `${filteredChallans.length} of ${challans.length}`}
                 </span>
                 {selectedIds.size > 0 && (
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-600 text-white font-mono animate-in fade-in">
                     {selectedIds.size} selected
                   </span>
                 )}
-                {canSeeFinancials && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center gap-1">
-                    <TrendingUp className="w-3 h-3" /> P.Cost &amp; Margins Active
-                  </span>
-                )}
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Consignee destination, creator logs, procurement cost, commission &amp; bulk exports
-              </p>
             </div>
 
             <div className="flex w-full lg:w-auto items-center gap-2 flex-wrap sm:flex-nowrap">
@@ -394,6 +386,19 @@ export function ChallanList({
               >
                 <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5 text-emerald-600" />
                 CSV
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  triggerHaptic('light');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="hidden sm:inline-flex h-9 px-2.5 rounded-xl text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 shrink-0"
+                title="Scroll to Create / Edit Challan form"
+              >
+                &uarr; Top Form
               </Button>
             </div>
           </div>

@@ -102,7 +102,7 @@ export const NewRelicChallanPreview = React.forwardRef<HTMLDivElement, Props>(
                   <div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src="/hungerbox_logo.png"
+                      src="/hungerbox_logo.png?v=2"
                       alt="HungerBox"
                       crossOrigin="anonymous"
                       style={{ width: '140px', objectFit: 'contain' }}
@@ -147,7 +147,7 @@ export const NewRelicChallanPreview = React.forwardRef<HTMLDivElement, Props>(
               <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '24px' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/hungerbox_logo.png"
+                  src="/hungerbox_logo.png?v=2"
                   alt="HungerBox"
                   crossOrigin="anonymous"
                   style={{ width: '140px', objectFit: 'contain' }}

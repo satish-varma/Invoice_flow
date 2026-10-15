@@ -1,13 +1,18 @@
 package com.hungerbox.invoiceflow;
 
+import android.Manifest;
+import android.app.AlertDialog;
 import android.app.DownloadManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.ClipData;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
@@ -22,7 +27,10 @@ import android.webkit.JavascriptInterface;
 import android.webkit.URLUtil;
 import android.webkit.WebView;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.JSObject;
@@ -38,6 +46,7 @@ import java.io.OutputStream;
 public class MainActivity extends BridgeActivity {
 
     private static final String TAG = "InvoiceFlow";
+    private static final int REQUEST_NOTIFICATION_PERMISSION = 1001;
 
     private static final String INJECTED_DOWNLOAD_JS =
         "(function() {" +
@@ -79,6 +88,9 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AndroidPdfPlugin.class);
         super.onCreate(savedInstanceState);
 
+        // Prompt for notification permissions on Android 13+ (API 33+)
+        requestNotificationPermissionIfNeeded();
+
         try {
             WebView webView = getBridge().getWebView();
             if (webView != null) {
@@ -108,6 +120,33 @@ public class MainActivity extends BridgeActivity {
             }
         } catch (Exception e) {
             Log.e(TAG, "Error configuring WebView", e);
+        }
+    }
+
+    public void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "Requesting POST_NOTIFICATIONS runtime permission");
+                ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                    REQUEST_NOTIFICATION_PERMISSION
+                );
+            } else {
+                Log.d(TAG, "POST_NOTIFICATIONS runtime permission already granted");
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "POST_NOTIFICATIONS runtime permission granted by user");
+            } else {
+                Log.w(TAG, "POST_NOTIFICATIONS runtime permission denied by user");
+            }
         }
     }
 
@@ -322,12 +361,12 @@ public class MainActivity extends BridgeActivity {
             final Uri finalUri = savedUri;
             final String finalBase64 = cleanBase64;
 
-            // Show interactive option to open or share the file directly in the app!
+            // 1. Show interactive in-app dialog with Open, Share, and Done buttons directly over the screen
             runOnUiThread(() -> {
                 showDownloadSuccessDialog(finalFileName, finalBase64);
             });
 
-            // Post system status bar notification with tap-to-view and explicit OPEN / SHARE buttons
+            // 2. Post system status bar notification with explicit [ OPEN ] and [ SHARE ] action buttons
             showDownloadNotification(finalUri, finalFileName, pdfBytes);
 
             return true;
@@ -346,56 +385,109 @@ public class MainActivity extends BridgeActivity {
                 return;
             }
 
-            new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Delivery Challan Downloaded")
-                .setMessage("Saved to Downloads folder:\n" + fileName + "\n\nWould you like to open it now?")
-                .setIcon(android.R.drawable.stat_sys_download_done)
-                .setPositiveButton("Open", (dialog, which) -> {
-                    doOpenPdf(base64Data, fileName);
-                })
-                .setNeutralButton("Share", (dialog, which) -> {
-                    doSharePdf(base64Data, fileName);
-                })
-                .setNegativeButton("Done", (dialog, which) -> {
-                    dialog.dismiss();
-                })
-                .setCancelable(true)
-                .show();
-        } catch (Exception e) {
-            Log.w(TAG, "Error displaying download success dialog", e);
-            Toast.makeText(MainActivity.this, "Saved to Downloads: " + fileName, Toast.LENGTH_LONG).show();
+            DialogInterface.OnClickListener openListener = (dialog, which) -> {
+                Log.d(TAG, "User clicked Open in download dialog");
+                doOpenPdf(base64Data, fileName);
+            };
+
+            DialogInterface.OnClickListener shareListener = (dialog, which) -> {
+                Log.d(TAG, "User clicked Share in download dialog");
+                doSharePdf(base64Data, fileName);
+            };
+
+            DialogInterface.OnClickListener doneListener = (dialog, which) -> {
+                Log.d(TAG, "User clicked Done in download dialog");
+                dialog.dismiss();
+            };
+
+            // Platform AlertDialog does NOT require Theme.AppCompat and works on any theme (including Theme.SplashScreen)
+            AlertDialog.Builder builder;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+                builder = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Light_Dialog_Alert);
+            } else {
+                builder = new AlertDialog.Builder(this);
+            }
+
+            builder.setTitle("Delivery Challan Downloaded")
+                   .setMessage("Saved to Downloads folder:\n\n" + fileName + "\n\nWould you like to open or share it now?")
+                   .setIcon(android.R.drawable.stat_sys_download_done)
+                   .setPositiveButton("Open", openListener)
+                   .setNeutralButton("Share", shareListener)
+                   .setNegativeButton("Done", doneListener)
+                   .setCancelable(true);
+
+            AlertDialog dialog = builder.create();
+            dialog.setCanceledOnTouchOutside(true);
+            dialog.show();
+            Log.d(TAG, "Download success dialog displayed successfully for: " + fileName);
+        } catch (Throwable t) {
+            Log.w(TAG, "Error displaying dialog with platform AlertDialog, trying themed fallback", t);
+            try {
+                androidx.appcompat.view.ContextThemeWrapper themedContext =
+                        new androidx.appcompat.view.ContextThemeWrapper(this, androidx.appcompat.R.style.Theme_AppCompat_Light_Dialog_Alert);
+                new androidx.appcompat.app.AlertDialog.Builder(themedContext)
+                        .setTitle("Delivery Challan Downloaded")
+                        .setMessage("Saved to Downloads folder:\n\n" + fileName + "\n\nWould you like to open or share it now?")
+                        .setIcon(android.R.drawable.stat_sys_download_done)
+                        .setPositiveButton("Open", (d, w) -> doOpenPdf(base64Data, fileName))
+                        .setNeutralButton("Share", (d, w) -> doSharePdf(base64Data, fileName))
+                        .setNegativeButton("Done", (d, w) -> d.dismiss())
+                        .setCancelable(true)
+                        .show();
+                Log.d(TAG, "Download success dialog displayed via themed fallback");
+            } catch (Throwable t2) {
+                Log.e(TAG, "Fatal dialog error", t2);
+                Toast.makeText(MainActivity.this, "Saved to Downloads: " + fileName, Toast.LENGTH_LONG).show();
+            }
         }
     }
 
     public boolean doOpenPdf(String base64Data, String fileName) {
         try {
-            if (base64Data == null || base64Data.isEmpty()) return false;
-            String cleanBase64 = base64Data.contains(",")
-                    ? base64Data.substring(base64Data.indexOf(",") + 1)
-                    : base64Data;
-            byte[] pdfBytes = Base64.decode(cleanBase64, Base64.DEFAULT);
+            File fileToOpen = null;
+            if (base64Data != null && !base64Data.isEmpty()) {
+                String cleanBase64 = base64Data.contains(",")
+                        ? base64Data.substring(base64Data.indexOf(",") + 1)
+                        : base64Data;
+                byte[] pdfBytes = Base64.decode(cleanBase64, Base64.DEFAULT);
 
-            File cacheDir = new File(getCacheDir(), "challans");
-            if (!cacheDir.exists()) cacheDir.mkdirs();
-            String safeName = fileName != null && !fileName.isEmpty() ? fileName : "challan.pdf";
-            File file = new File(cacheDir, safeName);
-            try (FileOutputStream fos = new FileOutputStream(file)) {
-                fos.write(pdfBytes);
-                fos.flush();
+                File cacheDir = new File(getCacheDir(), "challans");
+                if (!cacheDir.exists()) cacheDir.mkdirs();
+                String safeName = fileName != null && !fileName.isEmpty() ? fileName : "challan.pdf";
+                fileToOpen = new File(cacheDir, safeName);
+                try (FileOutputStream fos = new FileOutputStream(fileToOpen)) {
+                    fos.write(pdfBytes);
+                    fos.flush();
+                }
+            } else if (fileName != null) {
+                File cached = new File(new File(getCacheDir(), "downloads"), fileName);
+                if (cached.exists()) {
+                    fileToOpen = cached;
+                } else {
+                    File publicFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
+                    if (publicFile.exists()) fileToOpen = publicFile;
+                }
+            }
+
+            if (fileToOpen == null || !fileToOpen.exists()) {
+                Log.e(TAG, "No file found to open for: " + fileName);
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Cannot locate PDF file to open", Toast.LENGTH_SHORT).show());
+                return false;
             }
 
             Uri contentUri = FileProvider.getUriForFile(
                     MainActivity.this,
                     getPackageName() + ".fileprovider",
-                    file
+                    fileToOpen
             );
 
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setDataAndType(contentUri, "application/pdf");
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.setClipData(ClipData.newRawUri("", contentUri));
 
-            Intent chooser = Intent.createChooser(intent, "Open " + safeName);
-            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            Intent chooser = Intent.createChooser(intent, "Open " + fileName);
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(chooser);
             return true;
         } catch (Exception e) {
@@ -407,35 +499,51 @@ public class MainActivity extends BridgeActivity {
 
     public boolean doSharePdf(String base64Data, String fileName) {
         try {
-            if (base64Data == null || base64Data.isEmpty()) return false;
-            String cleanBase64 = base64Data.contains(",")
-                    ? base64Data.substring(base64Data.indexOf(",") + 1)
-                    : base64Data;
-            byte[] pdfBytes = Base64.decode(cleanBase64, Base64.DEFAULT);
+            File fileToShare = null;
+            if (base64Data != null && !base64Data.isEmpty()) {
+                String cleanBase64 = base64Data.contains(",")
+                        ? base64Data.substring(base64Data.indexOf(",") + 1)
+                        : base64Data;
+                byte[] pdfBytes = Base64.decode(cleanBase64, Base64.DEFAULT);
 
-            File cacheDir = new File(getCacheDir(), "challans");
-            if (!cacheDir.exists()) cacheDir.mkdirs();
-            String safeName = fileName != null && !fileName.isEmpty() ? fileName : "challan.pdf";
-            File file = new File(cacheDir, safeName);
-            try (FileOutputStream fos = new FileOutputStream(file)) {
-                fos.write(pdfBytes);
-                fos.flush();
+                File cacheDir = new File(getCacheDir(), "challans");
+                if (!cacheDir.exists()) cacheDir.mkdirs();
+                String safeName = fileName != null && !fileName.isEmpty() ? fileName : "challan.pdf";
+                fileToShare = new File(cacheDir, safeName);
+                try (FileOutputStream fos = new FileOutputStream(fileToShare)) {
+                    fos.write(pdfBytes);
+                    fos.flush();
+                }
+            } else if (fileName != null) {
+                File cached = new File(new File(getCacheDir(), "downloads"), fileName);
+                if (cached.exists()) {
+                    fileToShare = cached;
+                } else {
+                    File publicFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
+                    if (publicFile.exists()) fileToShare = publicFile;
+                }
+            }
+
+            if (fileToShare == null || !fileToShare.exists()) {
+                Log.e(TAG, "No file found to share for: " + fileName);
+                return false;
             }
 
             Uri contentUri = FileProvider.getUriForFile(
                     MainActivity.this,
                     getPackageName() + ".fileprovider",
-                    file
+                    fileToShare
             );
 
             Intent intent = new Intent(Intent.ACTION_SEND);
             intent.setType("application/pdf");
             intent.putExtra(Intent.EXTRA_STREAM, contentUri);
-            intent.putExtra(Intent.EXTRA_SUBJECT, safeName);
+            intent.putExtra(Intent.EXTRA_SUBJECT, fileName);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.setClipData(ClipData.newRawUri("", contentUri));
 
             Intent chooser = Intent.createChooser(intent, "Share Delivery Challan");
-            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(chooser);
             return true;
         } catch (Exception e) {
@@ -449,14 +557,26 @@ public class MainActivity extends BridgeActivity {
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm == null) return;
 
-            String channelId = "downloads_channel";
+            // Prompt permission if not yet granted on Android 13+ (API 33+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    Log.w(TAG, "POST_NOTIFICATIONS permission not granted. Requesting...");
+                    runOnUiThread(this::requestNotificationPermissionIfNeeded);
+                    return;
+                }
+            }
+
+            String channelId = "downloads_channel_v2";
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 NotificationChannel channel = new NotificationChannel(
                         channelId,
                         "Delivery Challan Downloads",
-                        NotificationManager.IMPORTANCE_DEFAULT
+                        NotificationManager.IMPORTANCE_HIGH
                 );
                 channel.setDescription("Notifications for downloaded delivery challans");
+                channel.enableLights(true);
+                channel.enableVibration(true);
+                channel.setShowBadge(true);
                 nm.createNotificationChannel(channel);
             }
 
@@ -479,8 +599,9 @@ public class MainActivity extends BridgeActivity {
             Intent viewIntent = new Intent(Intent.ACTION_VIEW);
             viewIntent.setDataAndType(viewUri, "application/pdf");
             viewIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+            viewIntent.setClipData(ClipData.newRawUri("", viewUri));
             Intent openChooser = Intent.createChooser(viewIntent, "Open " + fileName);
-            openChooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            openChooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
             PendingIntent openPendingIntent = PendingIntent.getActivity(this, (int) System.currentTimeMillis(), openChooser, flags);
 
             // Share Intent with Chooser
@@ -488,8 +609,9 @@ public class MainActivity extends BridgeActivity {
             shareIntent.setType("application/pdf");
             shareIntent.putExtra(Intent.EXTRA_STREAM, viewUri);
             shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            shareIntent.setClipData(ClipData.newRawUri("", viewUri));
             Intent shareChooser = Intent.createChooser(shareIntent, "Share Delivery Challan");
-            shareChooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            shareChooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
             PendingIntent sharePendingIntent = PendingIntent.getActivity(this, (int) (System.currentTimeMillis() + 1), shareChooser, flags);
 
             NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
@@ -498,14 +620,16 @@ public class MainActivity extends BridgeActivity {
                     .setContentText(fileName)
                     .setSubText("Saved to Downloads")
                     .setAutoCancel(true)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setDefaults(NotificationCompat.DEFAULT_ALL)
                     .setContentIntent(openPendingIntent)
                     .addAction(android.R.drawable.ic_menu_view, "OPEN", openPendingIntent)
-                    .addAction(android.R.drawable.ic_menu_share, "SHARE", sharePendingIntent)
-                    .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+                    .addAction(android.R.drawable.ic_menu_share, "SHARE", sharePendingIntent);
 
             nm.notify((int) (System.currentTimeMillis() % 100000), builder.build());
+            Log.d(TAG, "Download notification posted successfully for: " + fileName);
         } catch (Exception e) {
-            Log.w(TAG, "Notification error: " + e.getMessage());
+            Log.w(TAG, "Notification error: " + e.getMessage(), e);
         }
     }
 

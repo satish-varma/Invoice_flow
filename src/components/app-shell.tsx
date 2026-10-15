@@ -200,7 +200,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
       </Sidebar>
 
       {/* ── MAIN CONTENT INSET ── */}
-      <SidebarInset className="bg-gray-50/40">
+      <SidebarInset className="bg-gray-50/40 w-full max-w-full overflow-x-hidden min-w-0">
         {/* ── STICKY MOBILE TOP APP BAR (md:hidden) ── */}
         <header className="md:hidden sticky top-0 z-30 bg-[#181156] text-white px-3.5 py-2.5 shadow-md flex items-center justify-between border-b border-indigo-900/50">
           <div className="flex items-center gap-2">

@@ -389,9 +389,9 @@ export function ChallanList({
           </div>
 
           {/* Quick Filter Bar (Dates, Creators, Sort) */}
-          <div className="flex items-center gap-2 flex-wrap pt-1 text-xs">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1 text-xs w-full max-w-full">
             {/* Date Filters */}
-            <div className="flex items-center bg-white p-0.5 rounded-xl border border-gray-200">
+            <div className="flex items-center bg-white p-0.5 rounded-xl border border-gray-200 shrink-0">
               <button
                 type="button"
                 onClick={() => setDateFilter('all')}
@@ -435,7 +435,7 @@ export function ChallanList({
                   triggerHaptic('light');
                   setYearFilter(e.target.value);
                 }}
-                className={`h-7 text-[11px] font-bold rounded-xl border px-2 py-0.5 shadow-2xs transition-all ${
+                className={`h-7 text-[11px] font-bold rounded-xl border px-2 py-0.5 shadow-2xs transition-all shrink-0 ${
                   yearFilter !== 'all'
                     ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                     : 'border-gray-200 bg-white text-gray-700'
@@ -458,7 +458,7 @@ export function ChallanList({
                 triggerHaptic('light');
                 setMonthFilter(e.target.value);
               }}
-              className={`h-7 text-[11px] font-bold rounded-xl border px-2 py-0.5 shadow-2xs transition-all ${
+              className={`h-7 text-[11px] font-bold rounded-xl border px-2 py-0.5 shadow-2xs transition-all shrink-0 ${
                 monthFilter !== 'all'
                   ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                   : 'border-gray-200 bg-white text-gray-700'
@@ -480,7 +480,7 @@ export function ChallanList({
                   triggerHaptic('light');
                   setCreatorFilter(e.target.value);
                 }}
-                className={`h-7 text-[11px] font-bold rounded-xl border px-2 py-0.5 shadow-2xs transition-all ${
+                className={`h-7 text-[11px] font-bold rounded-xl border px-2 py-0.5 shadow-2xs transition-all shrink-0 ${
                   creatorFilter !== 'all'
                     ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                     : 'border-gray-200 bg-white text-gray-700'
@@ -507,7 +507,7 @@ export function ChallanList({
                   setDateFilter('all');
                   setSearchTerm('');
                 }}
-                className="h-7 px-2 text-[10px] font-bold rounded-xl text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 flex items-center gap-1 transition-all"
+                className="h-7 px-2 text-[10px] font-bold rounded-xl text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 flex items-center gap-1 transition-all shrink-0"
                 title="Reset all active filters"
               >
                 <X className="w-3 h-3" />
@@ -519,7 +519,7 @@ export function ChallanList({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="h-7 text-[11px] font-bold rounded-xl border-gray-200 bg-white px-2 py-0.5 text-gray-700 shadow-2xs ml-auto"
+              className="h-7 text-[11px] font-bold rounded-xl border-gray-200 bg-white px-2 py-0.5 text-gray-700 shadow-2xs shrink-0 sm:ml-auto"
             >
               <option value="date_desc">Date: Newest First</option>
               <option value="date_asc">Date: Oldest First</option>
@@ -642,10 +642,12 @@ export function ChallanList({
                               </span>
                               <p className="font-bold text-xs text-gray-900 truncate" title={consigneeName}>
                                 {getFirstWord(consigneeName)}
-                                <span className="font-normal text-gray-400 ml-1.5 text-[11px] truncate">
-                                  ({consigneeName})
-                                </span>
                               </p>
+                              {consigneeName && consigneeName !== getFirstWord(consigneeName) && (
+                                <p className="font-normal text-gray-500 text-[11px] truncate">
+                                  {consigneeName}
+                                </p>
+                              )}
                               {hasDifferentBillTo && (
                                 <p className="text-[11px] text-gray-500 truncate mt-0.5">
                                   <span className="font-semibold text-gray-600">Bill To:</span> {challan.billToName}
@@ -672,17 +674,17 @@ export function ChallanList({
                           {/* Mobile Financials Breakdown Pill */}
                           {showFinancials && (
                             <div className="mt-2 pt-1.5 border-t border-gray-200/60 grid grid-cols-3 gap-1 text-[10px] font-mono">
-                              <div className="bg-white p-1 rounded-lg border border-gray-100">
-                                <span className="text-gray-400 block text-[9px]">P.COST</span>
-                                <span className="font-bold text-amber-700">₹{pCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                              <div className="bg-white p-1 rounded-lg border border-gray-100 min-w-0">
+                                <span className="text-gray-400 block text-[9px] truncate">P.COST</span>
+                                <span className="font-bold text-amber-700 truncate block">₹{pCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                               </div>
-                              <div className="bg-white p-1 rounded-lg border border-gray-100">
-                                <span className="text-gray-400 block text-[9px]">COMM (5.5%)</span>
-                                <span className="font-bold text-red-600">-₹{comm.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                              <div className="bg-white p-1 rounded-lg border border-gray-100 min-w-0">
+                                <span className="text-gray-400 block text-[9px] truncate">COMM (5.5%)</span>
+                                <span className="font-bold text-red-600 truncate block">-₹{comm.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                               </div>
-                              <div className="bg-white p-1 rounded-lg border border-gray-100">
-                                <span className="text-gray-400 block text-[9px]">EST. PROFIT</span>
-                                <span className="font-bold text-emerald-700">₹{profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                              <div className="bg-white p-1 rounded-lg border border-gray-100 min-w-0">
+                                <span className="text-gray-400 block text-[9px] truncate">EST. PROFIT</span>
+                                <span className="font-bold text-emerald-700 truncate block">₹{profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                               </div>
                             </div>
                           )}
@@ -742,95 +744,107 @@ export function ChallanList({
                         </div>
 
                         {/* Bottom Row: Amount + Actions */}
-                        <div className="flex items-center justify-between pt-1 border-t border-gray-100 gap-2">
-                          <div>
-                            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">
-                              Total Value
-                            </span>
-                            <div className="flex items-baseline gap-1.5">
-                              <p className="text-sm font-black text-gray-900 font-mono tabular-nums leading-tight">
-                                ₹{(Number(challan.total) || 0).toLocaleString('en-IN', {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </p>
-                              {showFinancials && margin !== 0 && (
-                                <span className={`text-[10px] font-bold px-1.5 rounded-full ${
-                                  margin >= 15 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                                }`}>
-                                  {margin.toFixed(0)}% mgn
-                                </span>
-                              )}
+                        <div className="pt-2 border-t border-gray-100 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">
+                                Total Value
+                              </span>
+                              <div className="flex items-baseline gap-1.5">
+                                <p className="text-sm font-black text-gray-900 font-mono tabular-nums leading-tight">
+                                  ₹{(Number(challan.total) || 0).toLocaleString('en-IN', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </p>
+                                {showFinancials && margin !== 0 && (
+                                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                                    margin >= 15 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                                  }`}>
+                                    {margin.toFixed(0)}% mgn
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Primary Document Buttons: View & PDF */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  triggerHaptic('light');
+                                  onViewChallan(challan);
+                                }}
+                                className="h-7 px-2.5 rounded-lg border-indigo-200 bg-indigo-50/50 text-indigo-700 hover:bg-indigo-100 text-xs font-bold flex items-center gap-1 shadow-2xs"
+                                title="View Document"
+                              >
+                                <Eye className="w-3 h-3 text-indigo-600" />
+                                <span>View</span>
+                              </Button>
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  triggerHaptic('medium');
+                                  onDownloadChallan(challan);
+                                }}
+                                className="h-7 px-2.5 rounded-lg border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 text-xs font-bold flex items-center gap-1 shadow-2xs"
+                                title="Download PDF"
+                              >
+                                <Download className="w-3 h-3 text-blue-600" />
+                                <span>PDF</span>
+                              </Button>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                triggerHaptic('light');
-                                onViewChallan(challan);
-                              }}
-                              className="h-7 px-2 rounded-lg border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-100 flex items-center gap-1 shadow-2xs"
-                              title="View Document"
-                            >
-                              <Eye className="w-3 h-3 text-indigo-600" />
-                              <span>View</span>
-                            </Button>
+                          {/* Quick Management Row: Duplicate, Edit, Delete */}
+                          <div className="flex items-center justify-between pt-1 border-t border-gray-100/70">
+                            <span className="text-[10px] text-gray-400 font-medium">Manage:</span>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  triggerHaptic('light');
+                                  onDuplicateChallan(challan);
+                                }}
+                                className="h-6 px-2 rounded-lg text-purple-700 hover:bg-purple-50 text-[11px] font-bold flex items-center gap-1"
+                                title="Duplicate Challan"
+                              >
+                                <Copy className="w-3 h-3 text-purple-600" />
+                                <span>Copy</span>
+                              </Button>
 
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                triggerHaptic('medium');
-                                onDownloadChallan(challan);
-                              }}
-                              className="h-7 px-2 rounded-lg border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-100 flex items-center gap-1 shadow-2xs"
-                              title="Download PDF"
-                            >
-                              <Download className="w-3 h-3 text-blue-600" />
-                              <span>PDF</span>
-                            </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  triggerHaptic('light');
+                                  onSelectChallan(challan);
+                                }}
+                                className="h-6 px-2 rounded-lg text-blue-700 hover:bg-blue-50 text-[11px] font-bold flex items-center gap-1"
+                                title="Edit in Form"
+                              >
+                                <Edit className="w-3 h-3 text-blue-600" />
+                                <span>Edit</span>
+                              </Button>
 
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                triggerHaptic('light');
-                                onDuplicateChallan(challan);
-                              }}
-                              className="h-7 w-7 p-0 rounded-lg border-gray-200 text-gray-700 hover:text-purple-700 hover:bg-purple-50"
-                              title="Duplicate Challan"
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                triggerHaptic('light');
-                                onSelectChallan(challan);
-                              }}
-                              className="h-7 w-7 p-0 rounded-lg border-gray-200 text-gray-700 hover:text-blue-700 hover:bg-blue-50"
-                              title="Edit in Form"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                triggerHaptic('medium');
-                                setDeleteDialogChallan(challan);
-                              }}
-                              className="h-7 w-7 p-0 rounded-lg border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
-                              title="Delete Challan"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  triggerHaptic('medium');
+                                  setDeleteDialogChallan(challan);
+                                }}
+                                className="h-6 px-2 rounded-lg text-red-600 hover:bg-red-50 text-[11px] font-bold flex items-center gap-1"
+                                title="Delete Challan"
+                              >
+                                <Trash2 className="w-3 h-3 text-red-500" />
+                                <span>Delete</span>
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1114,7 +1128,7 @@ export function ChallanList({
 
       {/* ── FLOATING BULK ACTIONS TOOLBAR ── */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[94vw] max-w-3xl bg-gray-950 text-white p-3 sm:px-5 sm:py-3.5 rounded-2xl shadow-2xl border border-gray-800 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-5 duration-200">
+        <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-[94vw] max-w-3xl bg-gray-950 text-white p-3 sm:px-5 sm:py-3.5 rounded-2xl shadow-2xl border border-gray-800 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-5 duration-200">
           <div className="flex items-center gap-3">
             <span className="bg-[#3b2fc9] text-white text-xs font-black px-2.5 py-0.5 rounded-full font-mono">
               {selectedIds.size}

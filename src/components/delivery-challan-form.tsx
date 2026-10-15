@@ -511,33 +511,33 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
 
     return (
         <>
-            <div className="mb-6">
-                <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4'>
+            <div className="mb-4 sm:mb-6">
+                <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-4 mb-3 sm:mb-4'>
                     <div>
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h1 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight">
                                 {initialData ? `Edit Delivery Challan` : 'Create Delivery Challan'}
                             </h1>
                             {initialData?.dcNumber && (
-                                <span className="font-mono text-sm px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-bold border border-indigo-200/70">
+                                <span className="font-mono text-xs sm:text-sm px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-bold border border-indigo-200/70">
                                     {initialData.dcNumber}
                                 </span>
                             )}
                         </div>
-                        <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
+                        <p className="hidden sm:block text-gray-500 text-xs sm:text-sm mt-0.5">
                             Dispatched goods details, consignee destination, procurement cost &amp; margin calculations
                         </p>
                     </div>
 
                     {/* Financials & Quick Tool Bar */}
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 self-start sm:self-auto">
                         <button
                             type="button"
                             onClick={() => {
                                 triggerHaptic('light');
                                 setShowFinancials(!showFinancials);
                             }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                            className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
                                 showFinancials
                                     ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
                                     : 'bg-gray-100 text-gray-600 border-gray-200'
@@ -554,7 +554,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    className="h-8 px-2.5 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold flex items-center gap-1.5"
+                                    className="h-7 sm:h-8 px-2.5 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold flex items-center gap-1.5"
                                 >
                                     <Calculator className="w-3.5 h-3.5" />
                                     <span>MRP Calc</span>
@@ -564,7 +564,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                     </div>
                 </div>
 
-                <div className='bg-white p-2.5 rounded-2xl border border-gray-200/80 shadow-xs w-full flex flex-col sm:flex-row items-center justify-between gap-2 flex-wrap'>
+                <div className='hidden sm:flex bg-white p-2.5 rounded-2xl border border-gray-200/80 shadow-xs w-full flex-col sm:flex-row items-center justify-between gap-2 flex-wrap'>
                     <nav className="flex items-center gap-1 flex-wrap">
                         <Button asChild variant="ghost" size="sm" className="h-8 text-xs font-semibold rounded-xl">
                             <Link href="/"><FilePlus className="w-3.5 h-3.5 mr-1" /> New Invoice</Link>
@@ -1173,17 +1173,17 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                     </div>
 
                     {/* ── Action & Attachment Bar Directly Below Line Items ── */}
-                    <div className="pt-4 border-t border-gray-200/80 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-slate-50 p-3 sm:p-4 rounded-2xl border border-gray-200 shadow-2xs">
+                    <div className="pt-3 border-t border-gray-200/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-slate-50 p-2.5 sm:p-4 rounded-2xl border border-gray-200 shadow-2xs">
                         {/* Left: Add Line Item & Upload Attachments */}
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                             <Button
                                 type="button"
                                 onClick={handleAddItem}
                                 variant="outline"
                                 size="sm"
-                                className="h-9 px-3 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold active:scale-95 shadow-2xs"
+                                className="h-8 sm:h-9 px-3 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold active:scale-95 shadow-2xs flex-1 sm:flex-initial"
                             >
-                                <PlusCircle className="mr-1.5 h-4 w-4" /> Add Item
+                                <PlusCircle className="mr-1.5 h-3.5 sm:h-4 w-3.5 sm:w-4" /> Add Item
                             </Button>
 
                             {/* Upload Signed DC Copy Button */}
@@ -1192,15 +1192,15 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleOpenAttachmentModal('signed_copy')}
-                                className={`h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs ${
+                                className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-2xs flex-1 sm:flex-initial ${
                                     signedCopyUrls.length > 0
                                         ? 'bg-blue-50 text-[#3b2fc9] border-blue-300 hover:bg-blue-100 ring-1 ring-blue-300'
                                         : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-[#3b2fc9]'
                                 }`}
                                 title={initialData ? "Manage Signed Copies" : "Save challan first to upload signed copy"}
                             >
-                                <Paperclip className="w-4 h-4 text-[#3b2fc9]" />
-                                <span>Manage Signed Copies</span>
+                                <Paperclip className="w-3.5 h-3.5 text-[#3b2fc9]" />
+                                <span>Signed DC</span>
                                 {signedCopyUrls.length > 0 ? (
                                     <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
                                         {signedCopyUrls.length}
@@ -1216,15 +1216,15 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleOpenAttachmentModal('invoice')}
-                                className={`h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs ${
+                                className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-2xs flex-1 sm:flex-initial ${
                                     goodsReceivedInvoiceUrls.length > 0
                                         ? 'bg-blue-50 text-[#3b2fc9] border-blue-300 hover:bg-blue-100 ring-1 ring-blue-300'
                                         : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-[#3b2fc9]'
                                 }`}
                                 title={initialData ? "Goods Received Invoice" : "Save challan first to upload invoice"}
                             >
-                                <FileText className="w-4 h-4 text-[#3b2fc9]" />
-                                <span>Goods Received Invoice</span>
+                                <FileText className="w-3.5 h-3.5 text-[#3b2fc9]" />
+                                <span>Goods Invoice</span>
                                 {goodsReceivedInvoiceUrls.length > 0 ? (
                                     <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
                                         {goodsReceivedInvoiceUrls.length}
@@ -1236,16 +1236,16 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                         </div>
 
                         {/* Right: Update Only, Update & Download, Cancel Edit */}
-                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
                             {initialData && (
                                 <Button
                                     type="button"
                                     variant="outline"
                                     size="sm"
                                     onClick={handleCancelEdit}
-                                    className="h-9 px-3 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 text-xs font-bold active:scale-95 shadow-2xs"
+                                    className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 text-xs font-bold active:scale-95 shadow-2xs flex-1 sm:flex-initial"
                                 >
-                                    <X className="w-4 h-4 mr-1 text-red-500" /> Cancel Edit
+                                    <X className="w-3.5 h-3.5 mr-1 text-red-500" /> Cancel
                                 </Button>
                             )}
 
@@ -1254,7 +1254,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 onClick={() => handleSaveChallan(false)}
                                 disabled={isSaving}
                                 size="sm"
-                                className="h-9 px-4 text-xs font-bold rounded-xl bg-gray-900 hover:bg-gray-800 text-white shadow-xs active:scale-95"
+                                className="h-8 sm:h-9 px-3 sm:px-4 text-xs font-bold rounded-xl bg-gray-900 hover:bg-gray-800 text-white shadow-xs active:scale-95 flex-1 sm:flex-initial"
                             >
                                 {isSaving ? <Loader className="animate-spin w-3.5 h-3.5 mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
                                 {initialData ? 'Update Only' : 'Save Only'}
@@ -1265,7 +1265,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 onClick={() => handleSaveChallan(true)}
                                 disabled={isSaving}
                                 size="sm"
-                                className="h-9 px-4 text-xs font-black rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm active:scale-95"
+                                className="h-8 sm:h-9 px-3 sm:px-4 text-xs font-black rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm active:scale-95 w-full sm:w-auto"
                             >
                                 {isSaving ? <Loader className="animate-spin w-3.5 h-3.5 mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
                                 {initialData ? 'Update & Download PDF' : 'Save & Download PDF'}
@@ -1455,65 +1455,6 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                     {initialData ? 'Update Only' : 'Save Only'}
                 </Button>
             </div>
-
-            {/* ── Mobile floating action dock ── */}
-            <div className="sm:hidden fixed bottom-20 left-3 right-3 z-40 bg-slate-950/95 text-white backdrop-blur-xl border border-indigo-500/30 shadow-2xl rounded-2xl p-2.5 flex items-center gap-2 no-print ring-1 ring-white/10">
-                {initialData && (
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-10 px-2.5 text-xs text-rose-300 hover:text-white hover:bg-rose-500/30 rounded-xl font-bold shrink-0"
-                        onClick={() => {
-                            triggerHaptic('light');
-                            handleCancelEdit();
-                        }}
-                    >
-                        <X className="mr-1 h-3.5 w-3.5" />
-                        Cancel
-                    </Button>
-                )}
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 h-10 text-xs bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl"
-                    onClick={() => {
-                        triggerHaptic('light');
-                        excelInputRef.current?.click();
-                    }}
-                    disabled={isImportingExcel}
-                >
-                    {isImportingExcel ? <Loader className="animate-spin mr-1 h-3.5 w-3.5" /> : <Sheet className="mr-1 h-3.5 w-3.5 text-emerald-400" />}
-                    Import
-                </Button>
-                <Button
-                    variant="secondary"
-                    size="sm"
-                    className="flex-1 h-10 text-xs bg-white/20 text-white hover:bg-white/30 rounded-xl font-bold"
-                    onClick={() => {
-                        triggerHaptic('light');
-                        handleSaveChallan(false);
-                    }}
-                    disabled={isSaving}
-                >
-                    {isSaving ? <Loader className="animate-spin mr-1 h-3.5 w-3.5" /> : <Save className="mr-1 h-3.5 w-3.5 text-amber-300" />}
-                    {initialData ? 'Update' : 'Save'}
-                </Button>
-                <Button
-                    size="sm"
-                    className="flex-1 h-10 text-xs bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black rounded-xl shadow-md shadow-emerald-500/30"
-                    onClick={() => {
-                        triggerHaptic('medium');
-                        handleSaveChallan(true);
-                    }}
-                    disabled={isSaving}
-                >
-                    {isSaving ? <Loader className="animate-spin mr-1 h-3.5 w-3.5" /> : <Save className="mr-1 h-3.5 w-3.5" />}
-                    Save+PDF
-                </Button>
-            </div>
-
-            <div className="sm:hidden h-28" />
 
             {/* Attachment Modal for Form */}
             {activeAttachmentModal && initialData && (

@@ -6,7 +6,8 @@ function checkPermByRoute(
   checkPerm: (key: string) => boolean,
   site?: string
 ): boolean {
-  if (route === '/newrelic') return site === 'newrelic' && checkPerm('newrelic_dc');
+  const effectiveSite = site === 'dsm' || site === 'ntt_data' ? site : 'newrelic';
+  if (route === '/newrelic') return effectiveSite === 'newrelic' && checkPerm('newrelic_dc');
   if (route.startsWith('/delivery-challan')) return checkPerm('general_dc');
   if (route.includes('tuckshop')) return checkPerm('tuckshop');
   if (route.includes('attendance')) return checkPerm('attendance');
@@ -20,10 +21,11 @@ function findFirstAccessibleRoute(
   checkPerm: (key: string) => boolean,
   site?: string
 ): string {
+  const effectiveSite = site === 'dsm' || site === 'ntt_data' ? site : 'newrelic';
   if (checkPerm('tuckshop')) return '/newrelic/tuckshop';
   if (checkPerm('attendance')) return '/newrelic/attendance';
   if (checkPerm('stock_request')) return '/newrelic/stock-request';
-  if (site === 'newrelic' && checkPerm('newrelic_dc')) return '/newrelic';
+  if (effectiveSite === 'newrelic' && checkPerm('newrelic_dc')) return '/newrelic';
   if (checkPerm('general_dc')) return '/delivery-challan';
   if (checkPerm('billing')) return '/invoices';
   if (checkPerm('hr_docs')) return '/payslip';
@@ -46,12 +48,14 @@ export default withAuth(
       return NextResponse.next();
     }
 
-    const assignedSite = token.assignedSite as string | undefined;
+    const rawSite = token.assignedSite as string | undefined;
+    const assignedSite = rawSite === 'dsm' || rawSite === 'ntt_data' ? rawSite : 'newrelic';
+    const isNewRelicSite = assignedSite === 'newrelic';
     const allowedTabs = (token.allowedTabs as string[]) || [];
     const assignedApps = (token.assignedApps as string[]) || [];
     const defaultLandingPage =
       (token.defaultLandingPage as string) ||
-      (assignedSite && assignedSite !== 'newrelic' ? '/newrelic/tuckshop' : '/newrelic');
+      (!isNewRelicSite ? '/newrelic/tuckshop' : '/newrelic');
 
     // Protect /admin routes from non-admins
     if (pathname.startsWith('/admin')) {
@@ -62,18 +66,23 @@ export default withAuth(
     }
 
     // Site Isolation: NewRelic cafeteria DC Hub (/newrelic) is strictly forbidden for non-NewRelic sites
-    if (pathname === '/newrelic' && assignedSite && assignedSite !== 'newrelic') {
+    if (pathname === '/newrelic' && !isNewRelicSite) {
       return NextResponse.redirect(new URL('/newrelic/tuckshop', req.url));
     }
 
     // Helper to evaluate permission with backwards compatibility
     const checkPerm = (key: string): boolean => {
+      // NewRelic DC is strictly blocked for non-NewRelic sites (DSM / NTT Data)
+      if (key === 'newrelic_dc' && !isNewRelicSite) {
+        return false;
+      }
+
       if (allowedTabs.length > 0) {
         return allowedTabs.includes(key);
       }
       // Backwards-compatible fallback with legacy assignedApps
       if (key === 'general_dc') return assignedApps.includes('/delivery-challans');
-      if (key === 'newrelic_dc') return assignedApps.includes('/newrelic') && assignedSite === 'newrelic';
+      if (key === 'newrelic_dc') return assignedApps.includes('/newrelic');
       if (key === 'tuckshop') return assignedApps.includes('/newrelic') || assignedApps.includes('/tuckshop');
       if (key === 'attendance') return assignedApps.includes('/newrelic');
       if (key === 'stock_request') return assignedApps.includes('/newrelic');

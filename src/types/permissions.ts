@@ -282,8 +282,8 @@ export function hasPermission(
   if (!user) return false;
   if (user.role === 'admin' || user.role === 'superadmin') return true;
 
-  // NewRelic DC is strictly blocked for non-NewRelic sites
-  if (key === 'newrelic_dc' && user.assignedSite && user.assignedSite !== 'newrelic') {
+  // NewRelic DC is strictly blocked for non-NewRelic sites (DSM & NTT Data)
+  if (key === 'newrelic_dc' && (user.assignedSite === 'dsm' || user.assignedSite === 'ntt_data')) {
     return false;
   }
 

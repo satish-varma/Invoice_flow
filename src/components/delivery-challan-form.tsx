@@ -540,161 +540,6 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
 
     return (
         <>
-            <div className="mb-4 sm:mb-6">
-                <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-4 mb-3 sm:mb-4'>
-                    <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <h1 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight">
-                                {initialData ? `Edit Delivery Challan` : 'Create Delivery Challan'}
-                            </h1>
-                            {initialData?.dcNumber && (
-                                <span className="font-mono text-xs sm:text-sm px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-bold border border-indigo-200/70">
-                                    {initialData.dcNumber}
-                                </span>
-                            )}
-                        </div>
-                        <p className="hidden sm:block text-gray-500 text-xs sm:text-sm mt-0.5">
-                            Dispatched goods details, consignee destination, procurement cost &amp; margin calculations
-                        </p>
-                    </div>
-
-                    {/* Financials & Quick Tool Bar */}
-                    <div className="flex items-center gap-2 self-start sm:self-auto">
-                        {isAdmin && (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    triggerHaptic('light');
-                                    setShowFinancials(!showFinancials);
-                                }}
-                                className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                                    showFinancials
-                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
-                                        : 'bg-gray-100 text-gray-600 border-gray-200'
-                                }`}
-                                title="Toggle Procurement Cost & Margin breakdown"
-                            >
-                                {showFinancials ? <Eye className="w-3.5 h-3.5 text-emerald-600" /> : <EyeOff className="w-3.5 h-3.5 text-gray-400" />}
-                                <span>Financials: {showFinancials ? 'ON' : 'OFF'}</span>
-                            </button>
-                        )}
-
-                        <ChallanCalculator
-                            triggerButton={
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 sm:h-8 px-2.5 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold flex items-center gap-1.5"
-                                >
-                                    <Calculator className="w-3.5 h-3.5" />
-                                    <span>MRP Calc</span>
-                                </Button>
-                            }
-                        />
-                    </div>
-                </div>
-
-                <div className='hidden sm:flex bg-white p-2.5 rounded-2xl border border-gray-200/80 shadow-xs w-full flex-col sm:flex-row items-center justify-between gap-2 flex-wrap'>
-                    <nav className="flex items-center gap-1 flex-wrap">
-                        <Button asChild variant="ghost" size="sm" className="h-8 text-xs font-semibold rounded-xl">
-                            <Link href="/"><FilePlus className="w-3.5 h-3.5 mr-1" /> New Invoice</Link>
-                        </Button>
-                        <Button asChild variant="ghost" size="sm" className="h-8 text-xs font-semibold rounded-xl">
-                            <Link href="/quotation"><FileText className="w-3.5 h-3.5 mr-1" /> Quotation</Link>
-                        </Button>
-                        <Button variant="secondary" size="sm" onClick={handleNewClick} className="h-8 text-xs font-bold rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
-                            <Truck className="w-3.5 h-3.5 mr-1" /> New Challan
-                        </Button>
-                        <Button asChild variant="ghost" size="sm" className="h-8 text-xs font-semibold rounded-xl">
-                            <Link href="/settings"><SettingsIcon className="w-3.5 h-3.5 mr-1" /> Settings</Link>
-                        </Button>
-                    </nav>
-
-                    {/* Desktop action buttons */}
-                    <div className="hidden sm:flex items-center gap-2 flex-wrap">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-xs font-semibold rounded-xl border-gray-200 text-gray-700"
-                            onClick={() => excelInputRef.current?.click()}
-                            disabled={isImportingExcel}
-                        >
-                            {isImportingExcel ? (
-                                <><Loader className="animate-spin w-3.5 h-3.5 mr-1" /> Importing...</>
-                            ) : (
-                                <><Sheet className="h-3.5 w-3.5 mr-1 text-emerald-600" /> Import Excel</>
-                            )}
-                        </Button>
-                        {initialData && (
-                            <>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleOpenAttachmentModal('signed_copy')}
-                                    className={`h-8 text-xs font-bold rounded-xl ${
-                                        signedCopyUrls.length > 0
-                                            ? 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100'
-                                            : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                                    }`}
-                                    title="Manage Signed Copies"
-                                >
-                                    <Paperclip className="w-3.5 h-3.5 mr-1 text-[#3b2fc9]" />
-                                    Signed Copies
-                                    {signedCopyUrls.length > 0 && ` (${signedCopyUrls.length})`}
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleOpenAttachmentModal('invoice')}
-                                    className={`h-8 text-xs font-bold rounded-xl ${
-                                        goodsReceivedInvoiceUrls.length > 0
-                                            ? 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100'
-                                            : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                                    }`}
-                                    title="Goods Received Invoice"
-                                >
-                                    <FileText className="w-3.5 h-3.5 mr-1 text-[#3b2fc9]" />
-                                    Goods Invoice
-                                    {goodsReceivedInvoiceUrls.length > 0 && ` (${goodsReceivedInvoiceUrls.length})`}
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handleCancelEdit}
-                                    className="h-8 text-xs font-bold rounded-xl border-gray-300 text-gray-600 hover:bg-gray-100"
-                                >
-                                    <X className="w-3.5 h-3.5 mr-1" /> Cancel
-                                </Button>
-                            </>
-                        )}
-                        <Button
-                            type="button"
-                            onClick={() => handleSaveChallan(false)}
-                            disabled={isSaving}
-                            size="sm"
-                            className="h-8 text-xs font-bold rounded-xl bg-gray-900 hover:bg-gray-800 text-white shadow-xs"
-                        >
-                            {isSaving ? <Loader className="animate-spin w-3.5 h-3.5 mr-1" /> : <Save className="w-3.5 h-3.5 mr-1" />}
-                            {initialData ? 'Update Only' : 'Save Only'}
-                        </Button>
-                        <Button
-                            type="button"
-                            onClick={() => handleSaveChallan(true)}
-                            disabled={isSaving}
-                            size="sm"
-                            className="h-8 text-xs font-black rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm"
-                        >
-                            {isSaving ? <Loader className="animate-spin w-3.5 h-3.5 mr-1" /> : <Save className="w-3.5 h-3.5 mr-1" />}
-                            {initialData ? 'Update & Download PDF' : 'Save & Download PDF'}
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
             <input
                 type="file"
                 ref={excelInputRef}
@@ -704,21 +549,70 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 disabled={isImportingExcel}
             />
 
-            <Card className="w-full rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden bg-white">
+            <Card className="w-full rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden bg-white mb-6">
                 <CardHeader className="bg-gray-50/70 p-4 sm:p-5 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                    <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <CardTitle className="text-base sm:text-lg font-bold text-gray-900">Consignee &amp; Delivery Destination</CardTitle>
-                            {user?.email && (
-                                <span className="text-xs text-gray-600 font-medium bg-white px-2.5 py-1 rounded-full border border-gray-200 shadow-2xs">
-                                    Creator: <strong className="text-indigo-700">{(user as any)?.name || user.email.split('@')[0]}</strong>
-                                </span>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                        <CardTitle className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight">
+                            {initialData ? 'Edit Delivery Challan' : 'Create Delivery Challan'}
+                        </CardTitle>
+                        {initialData?.dcNumber && (
+                            <span className="font-mono text-xs sm:text-sm px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-bold border border-indigo-200/70">
+                                {initialData.dcNumber}
+                            </span>
+                        )}
+
+                        {/* Financials & MRP Calculator for Admins */}
+                        {isAdmin && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    triggerHaptic('light');
+                                    setShowFinancials(!showFinancials);
+                                }}
+                                className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all border ${
+                                    showFinancials
+                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
+                                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                }`}
+                                title="Toggle Procurement Cost & Margin breakdown"
+                            >
+                                {showFinancials ? <Eye className="w-3.5 h-3.5 text-emerald-600" /> : <EyeOff className="w-3.5 h-3.5 text-gray-400" />}
+                                <span>Financials: {showFinancials ? 'ON' : 'OFF'}</span>
+                            </button>
+                        )}
+
+                        {isAdmin && (
+                            <ChallanCalculator
+                                triggerButton={
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 px-2.5 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold flex items-center gap-1.5"
+                                    >
+                                        <Calculator className="w-3.5 h-3.5" />
+                                        <span>MRP Calc</span>
+                                    </Button>
+                                }
+                            />
+                        )}
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="hidden sm:inline-flex h-8 text-xs font-semibold rounded-xl border-gray-200 text-gray-700 hover:bg-gray-100"
+                            onClick={() => excelInputRef.current?.click()}
+                            disabled={isImportingExcel}
+                        >
+                            {isImportingExcel ? (
+                                <><Loader className="animate-spin w-3.5 h-3.5 mr-1" /> Importing...</>
+                            ) : (
+                                <><Sheet className="h-3.5 w-3.5 mr-1 text-emerald-600" /> Import Excel</>
                             )}
-                        </div>
-                        <p className="text-xs sm:text-sm text-gray-500 mt-1">Quick fill consignee location and site delivery address</p>
+                        </Button>
                     </div>
 
-                    {/* DC Number & DC Date in Header */}
+                    {/* DC Number & DC Date in Card in SAME LINE with Create Delivery Challan */}
                     <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
                         <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-gray-200 shadow-2xs">
                             <span className="text-xs font-bold text-gray-600 uppercase tracking-wider shrink-0">DC No:</span>
@@ -1240,99 +1134,187 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                     </div>
                 </CardContent>
 
-                {/* ── Card Footer: Notes & Clean Summary ── */}
-                <CardFooter className="bg-gray-50/80 p-3 sm:p-6 border-t border-gray-100">
+                {/* ── Card Footer: Notes, Clean Summary & Actions ── */}
+                <CardFooter className="bg-gray-50/80 p-4 sm:p-6 border-t border-gray-100 flex flex-col gap-5">
                     {/* Desktop View (>= lg) */}
-                    <div className="hidden lg:flex w-full justify-between items-start gap-6">
-                        <div className="w-6/12 space-y-2">
-                            <Label className="text-xs font-semibold text-gray-600">Dispatch Terms &amp; Returnable Note</Label>
-                            <Textarea
-                                value={note}
-                                onChange={e => setNote(e.target.value)}
-                                className="rounded-xl text-xs bg-white min-h-[90px] border-gray-200"
-                            />
-                            <p className="text-[11px] text-gray-400">
-                                Printed on the bottom-left of the delivery challan PDF.
-                            </p>
-                        </div>
-
-                        <div className="w-5/12 max-w-sm bg-white p-5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-3 self-end">
-                            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-                                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Challan Summary</span>
-                                <span className="text-[11px] text-gray-400 font-medium">Amounts in INR (₹)</span>
+                    <div className="hidden lg:flex flex-col w-full gap-5">
+                        <div className="flex w-full justify-between items-start gap-6">
+                            <div className="w-6/12 space-y-2">
+                                <Label className="text-xs font-semibold text-gray-600">Dispatch Terms &amp; Returnable Note</Label>
+                                <Textarea
+                                    value={note}
+                                    onChange={e => setNote(e.target.value)}
+                                    placeholder="Dispatch terms (e.g. non returnable basis)"
+                                    className="rounded-xl text-xs bg-white min-h-[90px] border-gray-200"
+                                />
+                                <p className="text-[11px] text-gray-400">
+                                    Printed on the bottom-left of the delivery challan PDF.
+                                </p>
                             </div>
 
-                            {/* Subtotal */}
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="font-semibold text-gray-600">Subtotal</span>
-                                <span className="font-mono font-bold text-sm text-gray-900">₹{subtotal.toFixed(2)}</span>
-                            </div>
+                            <div className="w-5/12 max-w-sm bg-white p-5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-3 self-end">
+                                <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                                    <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Challan Summary</span>
+                                    <span className="text-[11px] text-gray-400 font-medium">Amounts in INR (₹)</span>
+                                </div>
 
-                            {/* GST @ % */}
-                            <div className="flex justify-between items-center text-xs">
-                                <div className="flex items-center gap-1.5">
-                                    <span className="font-semibold text-gray-600">GST @</span>
-                                    <div className="inline-flex items-center bg-gray-100 rounded-lg px-2 py-0.5 border border-gray-200">
+                                {/* Subtotal */}
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="font-semibold text-gray-600">Subtotal</span>
+                                    <span className="font-mono font-bold text-sm text-gray-900">₹{subtotal.toFixed(2)}</span>
+                                </div>
+
+                                {/* GST @ % */}
+                                <div className="flex justify-between items-center text-xs">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="font-semibold text-gray-600">GST @</span>
+                                        <div className="inline-flex items-center bg-gray-100 rounded-lg px-2 py-0.5 border border-gray-200">
+                                            <input
+                                                type="number"
+                                                value={gstRate || ''}
+                                                onChange={e => setGstRate(parseFloat(e.target.value) || 0)}
+                                                className="w-10 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                                placeholder="5"
+                                                min="0"
+                                                step="0.5"
+                                            />
+                                            <span className="text-[10px] text-gray-500 font-bold ml-1">%</span>
+                                        </div>
+                                    </div>
+                                    <span className="font-mono font-bold text-sm text-gray-900">₹{gstAmount.toFixed(2)}</span>
+                                </div>
+
+                                {/* Shipping */}
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="font-semibold text-gray-600">Shipping / Transport</span>
+                                    <div className="flex items-center gap-1 bg-gray-50 rounded-lg px-2 py-1 border border-gray-200 focus-within:border-indigo-400 focus-within:bg-white transition-all">
+                                        <span className="text-xs text-gray-400 font-semibold">₹</span>
                                         <input
                                             type="number"
-                                            value={gstRate || ''}
-                                            onChange={e => setGstRate(parseFloat(e.target.value) || 0)}
-                                            className="w-10 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
-                                            placeholder="5"
+                                            value={shipping || ''}
+                                            onChange={e => setShipping(parseFloat(e.target.value) || 0)}
+                                            className="w-20 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                            placeholder="0"
                                             min="0"
-                                            step="0.5"
                                         />
-                                        <span className="text-[10px] text-gray-500 font-bold ml-1">%</span>
                                     </div>
                                 </div>
-                                <span className="font-mono font-bold text-sm text-gray-900">₹{gstAmount.toFixed(2)}</span>
-                            </div>
 
-                            {/* Shipping */}
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="font-semibold text-gray-600">Shipping / Transport</span>
-                                <div className="flex items-center gap-1 bg-gray-50 rounded-lg px-2 py-1 border border-gray-200 focus-within:border-indigo-400 focus-within:bg-white transition-all">
-                                    <span className="text-xs text-gray-400 font-semibold">₹</span>
-                                    <input
-                                        type="number"
-                                        value={shipping || ''}
-                                        onChange={e => setShipping(parseFloat(e.target.value) || 0)}
-                                        className="w-20 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
-                                        placeholder="0"
-                                        min="0"
-                                    />
+                                {/* Other Charges */}
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="font-semibold text-gray-600">Other Charges</span>
+                                    <div className="flex items-center gap-1 bg-gray-50 rounded-lg px-2 py-1 border border-gray-200 focus-within:border-indigo-400 focus-within:bg-white transition-all">
+                                        <span className="text-xs text-gray-400 font-semibold">₹</span>
+                                        <input
+                                            type="number"
+                                            value={other || ''}
+                                            onChange={e => setOther(parseFloat(e.target.value) || 0)}
+                                            className="w-20 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
+                                            placeholder="0"
+                                            min="0"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Total Challan Value */}
+                                <div className="mt-2 p-3.5 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 flex items-center justify-between">
+                                    <div>
+                                        <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700 block">Total Challan Value</span>
+                                        <span className="text-[10px] text-indigo-500 font-medium">Grand Total</span>
+                                    </div>
+                                    <span className="font-mono text-xl font-black text-indigo-950">₹{total.toFixed(2)}</span>
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Other Charges */}
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="font-semibold text-gray-600">Other Charges</span>
-                                <div className="flex items-center gap-1 bg-gray-50 rounded-lg px-2 py-1 border border-gray-200 focus-within:border-indigo-400 focus-within:bg-white transition-all">
-                                    <span className="text-xs text-gray-400 font-semibold">₹</span>
-                                    <input
-                                        type="number"
-                                        value={other || ''}
-                                        onChange={e => setOther(parseFloat(e.target.value) || 0)}
-                                        className="w-20 bg-transparent text-right text-xs font-bold text-gray-900 focus:outline-hidden"
-                                        placeholder="0"
-                                        min="0"
-                                    />
-                                </div>
+                        {/* Save & Action Buttons Below Dispatch Terms & Summary */}
+                        <div className="pt-4 border-t border-gray-200 flex items-center justify-between gap-3 flex-wrap">
+                            <div className="flex items-center gap-2">
+                                {Boolean(initialData?.id) && (
+                                    <>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleOpenAttachmentModal('signed_copy')}
+                                            className={`h-10 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
+                                                signedCopyUrls.length > 0
+                                                    ? 'bg-blue-50 text-[#3b2fc9] border-blue-300 hover:bg-blue-100'
+                                                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            <Paperclip className="w-3.5 h-3.5 text-[#3b2fc9]" />
+                                            <span>Signed DC</span>
+                                            {signedCopyUrls.length > 0 && (
+                                                <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
+                                                    {signedCopyUrls.length}
+                                                </span>
+                                            )}
+                                        </Button>
+
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleOpenAttachmentModal('invoice')}
+                                            className={`h-10 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
+                                                goodsReceivedInvoiceUrls.length > 0
+                                                    ? 'bg-blue-50 text-[#3b2fc9] border-blue-300 hover:bg-blue-100'
+                                                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            <FileText className="w-3.5 h-3.5 text-[#3b2fc9]" />
+                                            <span>Goods Invoice</span>
+                                            {goodsReceivedInvoiceUrls.length > 0 && (
+                                                <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
+                                                    {goodsReceivedInvoiceUrls.length}
+                                                </span>
+                                            )}
+                                        </Button>
+                                    </>
+                                )}
                             </div>
 
-                            {/* Total Challan Value */}
-                            <div className="mt-2 p-3.5 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 flex items-center justify-between">
-                                <div>
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700 block">Total Challan Value</span>
-                                    <span className="text-[10px] text-indigo-500 font-medium">Grand Total</span>
-                                </div>
-                                <span className="font-mono text-xl font-black text-indigo-950">₹{total.toFixed(2)}</span>
+                            <div className="flex items-center gap-2.5">
+                                {initialData && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleCancelEdit}
+                                        className="h-10 px-4 rounded-xl border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold shadow-2xs"
+                                    >
+                                        <X className="w-3.5 h-3.5 mr-1 text-red-500" /> Cancel
+                                    </Button>
+                                )}
+
+                                <Button
+                                    type="button"
+                                    onClick={() => handleSaveChallan(false)}
+                                    disabled={isSaving}
+                                    size="sm"
+                                    className="h-10 px-5 text-xs sm:text-sm font-bold rounded-xl bg-gray-900 hover:bg-gray-800 text-white shadow-xs active:scale-95"
+                                >
+                                    {isSaving ? <Loader className="animate-spin w-4 h-4 mr-1.5" /> : <Save className="w-4 h-4 mr-1.5" />}
+                                    {initialData ? 'Update Only' : 'Save Only'}
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    onClick={() => handleSaveChallan(true)}
+                                    disabled={isSaving}
+                                    size="sm"
+                                    className="h-10 px-5 text-xs sm:text-sm font-black rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm active:scale-95"
+                                >
+                                    {isSaving ? <Loader className="animate-spin w-4 h-4 mr-1.5" /> : <Save className="w-4 h-4 mr-1.5" />}
+                                    {initialData ? 'Update & Download PDF' : 'Save & Download PDF'}
+                                </Button>
                             </div>
                         </div>
                     </div>
 
-                    {/* Mobile View (< lg): Spacious, Touch-Friendly Summary Card */}
-                    <div className="lg:hidden w-full bg-white p-4 rounded-2xl border border-gray-200/90 shadow-xs space-y-3">
+                    {/* Mobile View (< lg): Spacious, Touch-Friendly Summary Card & Save Actions */}
+                    <div className="lg:hidden w-full bg-white p-4 rounded-2xl border border-gray-200/90 shadow-xs space-y-3.5">
                         {/* Header + Total Value in Highlight Banner */}
                         <div className="p-3.5 bg-gradient-to-r from-indigo-50/80 via-blue-50/80 to-indigo-50/80 rounded-xl border border-indigo-100 flex items-center justify-between">
                             <div>
@@ -1410,6 +1392,84 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 placeholder="Dispatch terms (e.g. non-returnable basis)"
                                 className="h-10 text-xs sm:text-sm bg-white border-gray-300 rounded-xl text-gray-800 px-3 w-full shadow-2xs"
                             />
+                        </div>
+
+                        {/* Save & Action Buttons DIRECTLY BELOW dispatch terms and note */}
+                        <div className="pt-3 border-t border-gray-100 space-y-2.5">
+                            {initialData && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={handleCancelEdit}
+                                    className="h-11 w-full rounded-xl border-red-200 text-red-600 hover:bg-red-50 text-sm font-bold shadow-2xs active:scale-98"
+                                >
+                                    <X className="w-4 h-4 mr-1.5 text-red-500" /> Cancel Edit
+                                </Button>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-2.5">
+                                <Button
+                                    type="button"
+                                    onClick={() => handleSaveChallan(false)}
+                                    disabled={isSaving}
+                                    className="h-12 rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-bold text-xs sm:text-sm shadow-xs active:scale-98 flex items-center justify-center"
+                                >
+                                    {isSaving ? <Loader className="animate-spin w-4 h-4 mr-1.5" /> : <Save className="w-4 h-4 mr-1.5" />}
+                                    {initialData ? 'Update Only' : 'Save Only'}
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    onClick={() => handleSaveChallan(true)}
+                                    disabled={isSaving}
+                                    className="h-12 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-sm active:scale-98 flex items-center justify-center text-center"
+                                >
+                                    {isSaving ? <Loader className="animate-spin w-4 h-4 mr-1.5" /> : <Save className="w-4 h-4 mr-1.5" />}
+                                    {initialData ? 'Update & PDF' : 'Save & Download'}
+                                </Button>
+                            </div>
+
+                            {Boolean(initialData?.id) && (
+                                <div className="grid grid-cols-2 gap-2 pt-1">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => handleOpenAttachmentModal('signed_copy')}
+                                        className={`h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs ${
+                                            signedCopyUrls.length > 0
+                                                ? 'bg-blue-50 text-[#3b2fc9] border-blue-300'
+                                                : 'bg-white border-gray-300 text-gray-700'
+                                        }`}
+                                    >
+                                        <Paperclip className="w-3.5 h-3.5 text-[#3b2fc9]" />
+                                        <span>Signed DC</span>
+                                        {signedCopyUrls.length > 0 && (
+                                            <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
+                                                {signedCopyUrls.length}
+                                            </span>
+                                        )}
+                                    </Button>
+
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => handleOpenAttachmentModal('invoice')}
+                                        className={`h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs ${
+                                            goodsReceivedInvoiceUrls.length > 0
+                                                ? 'bg-blue-50 text-[#3b2fc9] border-blue-300'
+                                                : 'bg-white border-gray-300 text-gray-700'
+                                        }`}
+                                    >
+                                        <FileText className="w-3.5 h-3.5 text-[#3b2fc9]" />
+                                        <span>Goods Invoice</span>
+                                        {goodsReceivedInvoiceUrls.length > 0 && (
+                                            <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
+                                                {goodsReceivedInvoiceUrls.length}
+                                            </span>
+                                        )}
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </CardFooter>

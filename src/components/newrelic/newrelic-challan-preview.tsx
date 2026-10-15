@@ -14,7 +14,7 @@ import { NewRelicChallan, NewRelicChallanItem } from '@/types/challan';
  *   - Footer image (EVERY PAGE)
  *
  * Smart pagination:
- *   - Page 1: fits header info + up to 10 items
+ *   - Page 1: fits header info + up to 8 items (prevents stamp from overlapping footer)
  *   - Pages 2+: fits continuation header + up to 18 items
  */
 
@@ -30,7 +30,7 @@ import {NEWRELIC_LOCATIONS} from '@/services/newrelicChallanService';
  */
 
 const HUNGERBOX_GST = '29AADCE9896J1ZQ';
-const FIRST_PAGE_ITEMS = 10;
+const FIRST_PAGE_ITEMS = 8;
 const SUBSEQUENT_PAGE_ITEMS = 18;
 
 interface Props {
@@ -47,7 +47,7 @@ export const NewRelicChallanPreview = React.forwardRef<HTMLDivElement, Props>(
       ? format(new Date(challan.dcDate), 'dd-MM-yyyy')
       : '';
 
-    // Smart pagination: Page 1 max 10 items, subsequent pages max 18 items
+    // Smart pagination: Page 1 max 8 items, subsequent pages max 18 items
     const pages: { items: NewRelicChallanItem[]; startIndex: number }[] = [];
     const allItems = challan.lineItems ?? [];
 

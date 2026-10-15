@@ -96,7 +96,9 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     const [activeCompanyProfile, setActiveCompanyProfile] = useState<CompanyProfile | null>(null);
 
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user, role } = useAuth();
+    const isAdmin = role === 'admin' || role === 'superadmin';
+    const canSeeFinancials = isAdmin && showFinancials;
 
     const subtotal = useMemo(() => {
         return lineItems.reduce((acc, item) => acc + item.total, 0);
@@ -558,22 +560,24 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
 
                     {/* Financials & Quick Tool Bar */}
                     <div className="flex items-center gap-2 self-start sm:self-auto">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                triggerHaptic('light');
-                                setShowFinancials(!showFinancials);
-                            }}
-                            className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                                showFinancials
-                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
-                                    : 'bg-gray-100 text-gray-600 border-gray-200'
-                            }`}
-                            title="Toggle Procurement Cost & Margin breakdown"
-                        >
-                            {showFinancials ? <Eye className="w-3.5 h-3.5 text-emerald-600" /> : <EyeOff className="w-3.5 h-3.5 text-gray-400" />}
-                            <span>Financials: {showFinancials ? 'ON' : 'OFF'}</span>
-                        </button>
+                        {isAdmin && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    triggerHaptic('light');
+                                    setShowFinancials(!showFinancials);
+                                }}
+                                className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                                    showFinancials
+                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
+                                        : 'bg-gray-100 text-gray-600 border-gray-200'
+                                }`}
+                                title="Toggle Procurement Cost & Margin breakdown"
+                            >
+                                {showFinancials ? <Eye className="w-3.5 h-3.5 text-emerald-600" /> : <EyeOff className="w-3.5 h-3.5 text-gray-400" />}
+                                <span>Financials: {showFinancials ? 'ON' : 'OFF'}</span>
+                            </button>
+                        )}
 
                         <ChallanCalculator
                             triggerButton={
@@ -704,14 +708,14 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 <CardHeader className="bg-gray-50/70 p-3.5 sm:p-5 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div>
                         <div className="flex items-center gap-2">
-                            <CardTitle className="text-base font-bold text-gray-900">Dispatch &amp; Address Details</CardTitle>
+                            <CardTitle className="text-sm sm:text-base font-bold text-gray-900">Consignee &amp; Delivery Destination</CardTitle>
                             {user?.email && (
                                 <span className="text-[11px] text-gray-500 font-medium bg-white px-2 py-0.5 rounded-full border border-gray-200">
                                     Creator: <strong className="text-indigo-700">{(user as any)?.name || user.email.split('@')[0]}</strong>
                                 </span>
                             )}
                         </div>
-                        <p className="hidden sm:block text-xs text-gray-500 mt-0.5">Originating branch, consignment party &amp; ship-to destination</p>
+                        <p className="hidden sm:block text-xs text-gray-500 mt-0.5">Quick fill consignee location and site delivery address</p>
                     </div>
 
                     {/* DC Number & DC Date in Header */}
@@ -745,56 +749,13 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                     </div>
                 </CardHeader>
 
-                <CardContent className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Left Column: Fixed Sender & Billed Client */}
-                    <div className="space-y-4">
-                        <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-xs space-y-3">
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="space-y-0.5">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">From (Sender)</span>
-                                    <p className="font-black text-sm text-gray-900">{activeCompanyProfile?.companyName || defaultGutGuruProfile.companyName}</p>
-                                    <p className="text-[11px] text-gray-500 whitespace-pre-wrap leading-relaxed">
-                                        {activeCompanyProfile?.companyAddress || defaultGutGuruProfile.companyAddress}
-                                    </p>
-                                    {(activeCompanyProfile?.companyGstin || defaultGutGuruProfile.companyGstin) && (
-                                        <p className="text-[11px] font-mono text-gray-600 pt-0.5">
-                                            <span className="font-bold">GSTIN:</span> {activeCompanyProfile?.companyGstin || defaultGutGuruProfile.companyGstin}
-                                        </p>
-                                    )}
-                                </div>
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                                    The Gut Guru
-                                </span>
-                            </div>
-
-                            <div className="border-t border-slate-200/80 pt-3 flex items-start justify-between gap-3">
-                                <div className="space-y-0.5">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">Billed To (Client)</span>
-                                    <p className="font-bold text-xs text-gray-900">{billToName || defaultHungerBoxBillTo.name}</p>
-                                    <p className="text-[11px] text-gray-500 whitespace-pre-wrap leading-relaxed">
-                                        {billToAddress || defaultHungerBoxBillTo.address}
-                                    </p>
-                                </div>
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
-                                    HungerBox
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right Column: Ship To (Consignee) */}
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-sm text-indigo-700 uppercase tracking-wider">
-                                Ship To (Consignee Destination)
-                            </h3>
-                        </div>
-
-                        <div>
-                            <Label className="text-xs font-semibold text-gray-600">Select Saved Consignee</Label>
+                <CardContent className="p-3.5 sm:p-5">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 items-start">
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-gray-700">Select Saved Consignee</Label>
                             <Select onValueChange={(value) => handleContactSelect(value, 'shipTo')}>
-                                <SelectTrigger className="h-9 mt-1 rounded-xl text-xs">
-                                    <SelectValue placeholder="Quick fill consignee location..." />
+                                <SelectTrigger className="h-9 rounded-xl text-xs bg-white">
+                                    <SelectValue placeholder="Quick fill consignee..." />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {allSavedClients.map((c) =>
@@ -804,26 +765,23 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                     )}
                                 </SelectContent>
                             </Select>
+                            {shipToName && (
+                                <div className="p-2 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs flex items-center gap-2">
+                                    <MapPin className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                    <span className="font-bold text-gray-900 truncate">{shipToName}</span>
+                                </div>
+                            )}
                         </div>
 
-                        {shipToName && (
-                            <div className="p-2.5 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
-                                <div className="leading-tight">
-                                    <span className="text-[10px] uppercase font-bold text-indigo-400 block">Consignee Name</span>
-                                    <span className="font-bold text-gray-900">{shipToName}</span>
-                                </div>
-                            </div>
-                        )}
-
-                        <div>
-                            <Label htmlFor='shipToAddress' className="text-xs font-semibold text-gray-600">Consignee Delivery Address *</Label>
+                        <div className="md:col-span-2 space-y-1.5">
+                            <Label htmlFor="shipToAddress" className="text-xs font-semibold text-gray-700">Delivery / Site Address *</Label>
                             <Textarea
                                 id="shipToAddress"
                                 placeholder="Detailed Delivery / Site Address (Street, Plot, Mandal, PIN, State)"
                                 value={shipToAddress}
                                 onChange={e => setShipToAddress(e.target.value)}
-                                className="rounded-xl text-xs min-h-[95px] mt-1 bg-white"
+                                className="rounded-xl text-xs min-h-[72px] bg-white resize-none"
+                                rows={2}
                             />
                         </div>
                     </div>
@@ -835,7 +793,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                         <div>
                             <h3 className="font-bold text-sm text-gray-900 tracking-tight flex items-center gap-2">
                                 <span>Dispatched Line Items ({lineItems.length})</span>
-                                {showFinancials && totalProcurementCost > 0 && (
+                                {canSeeFinancials && totalProcurementCost > 0 && (
                                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                                         Total P.Cost: ₹{totalProcurementCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                                     </span>
@@ -953,7 +911,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                         </div>
                                     )}
 
-                                    <div className={`grid ${showFinancials ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
+                                    <div className={`grid ${canSeeFinancials ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
                                         <div>
                                             <Label className="text-[11px] text-gray-500 font-semibold">Qty</Label>
                                             <Input
@@ -975,7 +933,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                                 step="0.01"
                                             />
                                         </div>
-                                        {showFinancials && (
+                                        {canSeeFinancials && (
                                             <div>
                                                 <Label className="text-[11px] text-emerald-700 font-semibold">P.Cost (₹)</Label>
                                                 <Input
@@ -993,7 +951,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
 
                                     {/* Mobile Item Margin & Total Bar */}
                                     <div className="flex items-center justify-between pt-2 border-t border-gray-200/60 text-xs">
-                                        {showFinancials && pCost > 0 ? (
+                                        {canSeeFinancials && pCost > 0 ? (
                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                                                 margin >= 20 ? 'bg-emerald-100 text-emerald-800' : margin >= 10 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'
                                             }`}>
@@ -1024,7 +982,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                     {showExtraColumns && <TableHead className="w-[70px]">Unit</TableHead>}
                                     <TableHead className="w-[75px] text-right">Qty</TableHead>
                                     <TableHead className="w-[110px] text-right">Unit Price (₹)</TableHead>
-                                    {showFinancials && (
+                                    {canSeeFinancials && (
                                         <TableHead className="w-[110px] text-right text-emerald-700">P.Cost (₹)</TableHead>
                                     )}
                                     <TableHead className="w-[110px] text-right">Total (₹)</TableHead>
@@ -1102,7 +1060,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                                 />
                                             </TableCell>
 
-                                            {showFinancials && (
+                                            {canSeeFinancials && (
                                                 <TableCell className="p-2">
                                                     <div className="space-y-0.5">
                                                         <Input
@@ -1181,53 +1139,56 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 {showExtraColumns ? '− Hide HSN / Unit' : '+ Add HSN / Unit'}
                             </Button>
 
-                            {/* Upload Signed DC Copy Button */}
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleOpenAttachmentModal('signed_copy')}
-                                className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-2xs flex-1 sm:flex-initial ${
-                                    signedCopyUrls.length > 0
-                                        ? 'bg-blue-50 text-[#3b2fc9] border-blue-300 hover:bg-blue-100 ring-1 ring-blue-300'
-                                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-[#3b2fc9]'
-                                }`}
-                                title={initialData ? "Manage Signed Copies" : "Save challan first to upload signed copy"}
-                            >
-                                <Paperclip className="w-3.5 h-3.5 text-[#3b2fc9]" />
-                                <span>Signed DC</span>
-                                {signedCopyUrls.length > 0 ? (
-                                    <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
-                                        {signedCopyUrls.length}
-                                    </span>
-                                ) : (
-                                    <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
-                                )}
-                            </Button>
+                            {/* Upload Signed DC Copy & Goods Invoice - Only available when editing an existing challan */}
+                            {Boolean(initialData?.id) && (
+                                <>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleOpenAttachmentModal('signed_copy')}
+                                        className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-2xs flex-1 sm:flex-initial ${
+                                            signedCopyUrls.length > 0
+                                                ? 'bg-blue-50 text-[#3b2fc9] border-blue-300 hover:bg-blue-100 ring-1 ring-blue-300'
+                                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-[#3b2fc9]'
+                                        }`}
+                                        title="Manage Signed Copies"
+                                    >
+                                        <Paperclip className="w-3.5 h-3.5 text-[#3b2fc9]" />
+                                        <span>Signed DC</span>
+                                        {signedCopyUrls.length > 0 ? (
+                                            <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
+                                                {signedCopyUrls.length}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
+                                        )}
+                                    </Button>
 
-                            {/* Goods Received Invoice Button */}
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleOpenAttachmentModal('invoice')}
-                                className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-2xs flex-1 sm:flex-initial ${
-                                    goodsReceivedInvoiceUrls.length > 0
-                                        ? 'bg-blue-50 text-[#3b2fc9] border-blue-300 hover:bg-blue-100 ring-1 ring-blue-300'
-                                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-[#3b2fc9]'
-                                }`}
-                                title={initialData ? "Goods Received Invoice" : "Save challan first to upload invoice"}
-                            >
-                                <FileText className="w-3.5 h-3.5 text-[#3b2fc9]" />
-                                <span>Goods Invoice</span>
-                                {goodsReceivedInvoiceUrls.length > 0 ? (
-                                    <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
-                                        {goodsReceivedInvoiceUrls.length}
-                                    </span>
-                                ) : (
-                                    <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
-                                )}
-                            </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleOpenAttachmentModal('invoice')}
+                                        className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-2xs flex-1 sm:flex-initial ${
+                                            goodsReceivedInvoiceUrls.length > 0
+                                                ? 'bg-blue-50 text-[#3b2fc9] border-blue-300 hover:bg-blue-100 ring-1 ring-blue-300'
+                                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-[#3b2fc9]'
+                                        }`}
+                                        title="Goods Received Invoice"
+                                    >
+                                        <FileText className="w-3.5 h-3.5 text-[#3b2fc9]" />
+                                        <span>Goods Invoice</span>
+                                        {goodsReceivedInvoiceUrls.length > 0 ? (
+                                            <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
+                                                {goodsReceivedInvoiceUrls.length}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
+                                        )}
+                                    </Button>
+                                </>
+                            )}
                         </div>
 
                         {/* Right: Update Only, Update & Download, Cancel Edit */}

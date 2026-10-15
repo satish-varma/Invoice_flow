@@ -43,6 +43,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { exportToCSV } from '@/lib/export';
 import { triggerHaptic } from '@/lib/haptics';
+import { useAuth } from '@/contexts/AuthContext';
 import { DeliveryChallanAttachmentModal } from './delivery-challan-attachment-modal';
 import {
   AlertDialog,
@@ -117,6 +118,10 @@ export function ChallanList({
   isBulkDownloading = false,
   showFinancials = true,
 }: ChallanListProps) {
+  const { role } = useAuth();
+  const isAdmin = role === 'admin' || role === 'superadmin';
+  const canSeeFinancials = isAdmin && showFinancials;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -335,7 +340,7 @@ export function ChallanList({
                     {selectedIds.size} selected
                   </span>
                 )}
-                {showFinancials && (
+                {canSeeFinancials && (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center gap-1">
                     <TrendingUp className="w-3 h-3" /> P.Cost &amp; Margins Active
                   </span>
@@ -363,24 +368,29 @@ export function ChallanList({
                 className="h-9 px-3 rounded-xl border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-100 shrink-0"
                 onClick={() => {
                   triggerHaptic('light');
-                  const exportData = filteredChallans.map((c) => ({
-                    'DC Number': c.dcNumber,
-                    'DC Date': c.dcDate ? format(new Date(c.dcDate), 'yyyy-MM-dd') : '',
-                    'Consignee (Ship To)': c.shipToName || c.billToName || '',
-                    'Bill To': c.billToName || '',
-                    'Created By': getCreator(c),
-                    'Total Items': c.lineItems?.length || 0,
-                    'Total Value (₹)': c.total || 0,
-                    'P.Cost (₹)': c.procurementCost || 0,
-                    'Commission Rate (%)': c.commissionRate || 5.5,
-                    'Commission (₹)': c.commissionAmount || 0,
-                    'Net Revenue (₹)': c.revenue || 0,
-                    'Gross Profit (₹)': c.grossProfit || 0,
-                    'Margin (%)': (c.marginPercent || 0).toFixed(1),
-                  }));
-                  exportToCSV(exportData, 'delivery-challans-advanced-export.csv');
+                  const exportData = filteredChallans.map((c) => {
+                    const row: Record<string, any> = {
+                      'DC Number': c.dcNumber,
+                      'DC Date': c.dcDate ? format(new Date(c.dcDate), 'yyyy-MM-dd') : '',
+                      'Consignee (Ship To)': c.shipToName || c.billToName || '',
+                      'Bill To': c.billToName || '',
+                      'Created By': getCreator(c),
+                      'Total Items': c.lineItems?.length || 0,
+                      'Total Value (₹)': c.total || 0,
+                    };
+                    if (canSeeFinancials) {
+                      row['P.Cost (₹)'] = c.procurementCost || 0;
+                      row['Commission Rate (%)'] = c.commissionRate || 5.5;
+                      row['Commission (₹)'] = c.commissionAmount || 0;
+                      row['Net Revenue (₹)'] = c.revenue || 0;
+                      row['Gross Profit (₹)'] = c.grossProfit || 0;
+                      row['Margin (%)'] = (c.marginPercent || 0).toFixed(1);
+                    }
+                    return row;
+                  });
+                  exportToCSV(exportData, 'delivery-challans-export.csv');
                 }}
-                title="Export with complete financials to CSV"
+                title={canSeeFinancials ? "Export with complete financials to CSV" : "Export delivery challans to CSV"}
               >
                 <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5 text-emerald-600" />
                 CSV
@@ -672,7 +682,7 @@ export function ChallanList({
                           </div>
 
                           {/* Mobile Financials Breakdown Pill */}
-                          {showFinancials && (
+                          {canSeeFinancials && (
                             <div className="mt-2 pt-1.5 border-t border-gray-200/60 grid grid-cols-3 gap-1 text-[10px] font-mono">
                               <div className="bg-white p-1 rounded-lg border border-gray-100 min-w-0">
                                 <span className="text-gray-400 block text-[9px] truncate">P.COST</span>
@@ -757,7 +767,7 @@ export function ChallanList({
                                     maximumFractionDigits: 2,
                                   })}
                                 </p>
-                                {showFinancials && margin !== 0 && (
+                                {canSeeFinancials && margin !== 0 && (
                                   <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
                                     margin >= 15 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                                   }`}>
@@ -877,8 +887,8 @@ export function ChallanList({
                       <TableHead className="w-[90px]">Date</TableHead>
                       <TableHead className="w-[85px]">Created By</TableHead>
                       <TableHead className="w-[45px] text-center">Items</TableHead>
-                      <TableHead className="text-right w-[140px]">Total &amp; Profit</TableHead>
-                      {showFinancials && (
+                      <TableHead className="text-right w-[140px]">{canSeeFinancials ? 'Total & Profit' : 'Total (₹)'}</TableHead>
+                      {canSeeFinancials && (
                         <TableHead className="text-right w-[80px] text-amber-700">P.Cost</TableHead>
                       )}
                       <TableHead className="text-right w-[205px]">Files &amp; Actions</TableHead>
@@ -979,7 +989,7 @@ export function ChallanList({
                                 maximumFractionDigits: 2,
                               })}
                             </div>
-                            {showFinancials && (comm > 0 || profit !== 0) && (
+                            {canSeeFinancials && (comm > 0 || profit !== 0) && (
                               <div className="text-[10px] text-gray-500 flex items-center justify-end gap-1 mt-0.5 leading-tight">
                                 <span className="text-red-600 font-semibold" title="Commission (5.5%)">
                                   -₹{comm.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
@@ -993,7 +1003,7 @@ export function ChallanList({
                             )}
                           </TableCell>
 
-                          {showFinancials && (
+                          {canSeeFinancials && (
                             <TableCell className="py-2.5 text-right font-mono font-bold text-amber-800 tabular-nums text-xs">
                               ₹{pCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                             </TableCell>
@@ -1141,7 +1151,7 @@ export function ChallanList({
                   ₹{selectedTotalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                 </span>
               </div>
-              {showFinancials && selectedTotalPCost > 0 && (
+              {canSeeFinancials && selectedTotalPCost > 0 && (
                 <div className="text-[10px] text-gray-400 font-mono flex items-center gap-2">
                   <span>P.Cost: ₹{selectedTotalPCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                   <span className="text-emerald-400 font-bold">Profit: ₹{selectedTotalProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>

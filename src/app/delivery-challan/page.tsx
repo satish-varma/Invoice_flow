@@ -59,7 +59,8 @@ export default function DeliveryChallanPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
 
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isAdmin = role === 'admin' || role === 'superadmin';
   const challanPreviewRef = useRef<HTMLDivElement>(null);
 
   const fetchData = async () => {
@@ -359,7 +360,7 @@ export default function DeliveryChallanPage() {
                       year: 'numeric',
                     })}
                   </span>
-                  {showFinancials && (
+                  {isAdmin && showFinancials && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
                       <TrendingUp className="w-2.5 h-2.5" /> P.Cost Active
                     </span>
@@ -375,22 +376,24 @@ export default function DeliveryChallanPage() {
               </div>
 
               <div className="flex items-center gap-2 self-start lg:self-center flex-wrap pt-1 sm:pt-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setShowFinancials(!showFinancials);
-                  }}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all border ${
-                    showFinancials
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
-                      : 'bg-white/10 text-white/80 border-white/15'
-                  }`}
-                  title="Toggle Procurement Cost, Commission & Margin Visibility"
-                >
-                  {showFinancials ? <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-300" /> : <EyeOff className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400" />}
-                  <span>{showFinancials ? 'Financials: ON' : 'Financials: OFF'}</span>
-                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setShowFinancials(!showFinancials);
+                    }}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all border ${
+                      showFinancials
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                        : 'bg-white/10 text-white/80 border-white/15'
+                    }`}
+                    title="Toggle Procurement Cost, Commission & Margin Visibility"
+                  >
+                    {showFinancials ? <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-300" /> : <EyeOff className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400" />}
+                    <span>{showFinancials ? 'Financials: ON' : 'Financials: OFF'}</span>
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -455,41 +458,83 @@ export default function DeliveryChallanPage() {
               </p>
             </div>
 
-            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-50/90 via-white to-orange-50/40 border border-amber-200/80 shadow-xs">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wider">
-                  Procurement
-                </span>
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-xs">
-                  <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            {isAdmin ? (
+              <>
+                <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-50/90 via-white to-orange-50/40 border border-amber-200/80 shadow-xs">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wider">
+                      Procurement
+                    </span>
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-xs">
+                      <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </div>
+                  </div>
+                  <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Total P.Cost</p>
+                  <p className="text-lg sm:text-2xl font-black text-gray-900 font-mono tabular-nums mt-0.5 truncate">
+                    ₹{totalPCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium truncate mt-0.5">
+                    Purchase / buy-in
+                  </p>
                 </div>
-              </div>
-              <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Total P.Cost</p>
-              <p className="text-lg sm:text-2xl font-black text-gray-900 font-mono tabular-nums mt-0.5 truncate">
-                ₹{totalPCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-              </p>
-              <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium truncate mt-0.5">
-                Purchase / buy-in
-              </p>
-            </div>
 
-            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/40 border border-emerald-200/80 shadow-xs">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
-                  Margin / Profit
-                </span>
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                  <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/40 border border-emerald-200/80 shadow-xs">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
+                      Margin / Profit
+                    </span>
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                      <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </div>
+                  </div>
+                  <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Est. Net Profit</p>
+                  <p className="text-lg sm:text-2xl font-black text-emerald-700 font-mono tabular-nums mt-0.5 truncate">
+                    ₹{totalGrossProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] text-emerald-600 font-bold truncate mt-0.5">
+                    {overallMargin.toFixed(1)}% Gross Margin
+                  </p>
                 </div>
-              </div>
-              <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Est. Net Profit</p>
-              <p className="text-lg sm:text-2xl font-black text-emerald-700 font-mono tabular-nums mt-0.5 truncate">
-                ₹{totalGrossProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-              </p>
-              <p className="text-[10px] sm:text-[11px] text-emerald-600 font-bold truncate mt-0.5">
-                {overallMargin.toFixed(1)}% Gross Margin
-              </p>
-            </div>
+              </>
+            ) : (
+              <>
+                <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-50/90 via-white to-blue-50/40 border border-indigo-200/80 shadow-xs">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200 uppercase tracking-wider">
+                      Consignees
+                    </span>
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                      <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </div>
+                  </div>
+                  <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Active Destinations</p>
+                  <p className="text-lg sm:text-2xl font-black text-gray-900 font-mono tabular-nums mt-0.5 truncate">
+                    {uniqueClients}
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium truncate mt-0.5">
+                    Client delivery sites
+                  </p>
+                </div>
+
+                <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-purple-50/90 via-white to-pink-50/40 border border-purple-200/80 shadow-xs">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200 uppercase tracking-wider">
+                      Line Units
+                    </span>
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs">
+                      <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </div>
+                  </div>
+                  <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Dispatched Items</p>
+                  <p className="text-lg sm:text-2xl font-black text-purple-900 font-mono tabular-nums mt-0.5 truncate">
+                    {totalItems}
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] text-purple-600 font-medium truncate mt-0.5">
+                    Total consignment items
+                  </p>
+                </div>
+              </>
+            )}
           </div>
 
           {/* ── Mobile-Friendly Quick Navigation Switcher ── */}
@@ -559,7 +604,7 @@ export default function DeliveryChallanPage() {
           {/* ── OPTIONAL FINANCIAL & CONSIGNEE ANALYTICS SECTION ── */}
           {showAnalytics && (
             <div className="w-full space-y-6 animate-in fade-in duration-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className={`grid grid-cols-1 ${isAdmin ? 'md:grid-cols-2' : ''} gap-6`}>
                 {/* Top Consignees Card */}
                 <Card className="rounded-2xl border border-gray-200 shadow-sm bg-white overflow-hidden">
                   <CardHeader className="bg-gray-50/70 p-4 border-b border-gray-100">
@@ -586,9 +631,11 @@ export default function DeliveryChallanPage() {
                           </div>
                           <div className="flex items-center justify-between text-[11px] text-gray-400">
                             <span>{c.count} challan(s)</span>
-                            <span className="font-semibold text-emerald-600">
-                              Profit: ₹{c.profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                            </span>
+                            {isAdmin && (
+                              <span className="font-semibold text-emerald-600">
+                                Profit: ₹{c.profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                              </span>
+                            )}
                           </div>
                           <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
                             <div
@@ -602,50 +649,52 @@ export default function DeliveryChallanPage() {
                   </CardContent>
                 </Card>
 
-                {/* P.Cost vs Margin Breakdown Card */}
-                <Card className="rounded-2xl border border-gray-200 shadow-sm bg-white overflow-hidden">
-                  <CardHeader className="bg-gray-50/70 p-4 border-b border-gray-100">
-                    <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                      <TrendingUp className="w-4 h-4 text-emerald-600" />
-                      Dispatch Financial Breakdown &amp; Commission
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-5 space-y-4">
-                    <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-3">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-600 font-medium">Total MRP / Dispatch Value:</span>
-                        <span className="font-mono font-bold text-gray-900">₹{totalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                {/* P.Cost vs Margin Breakdown Card - Admins Only */}
+                {isAdmin && (
+                  <Card className="rounded-2xl border border-gray-200 shadow-sm bg-white overflow-hidden">
+                    <CardHeader className="bg-gray-50/70 p-4 border-b border-gray-100">
+                      <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                        <TrendingUp className="w-4 h-4 text-emerald-600" />
+                        Dispatch Financial Breakdown &amp; Commission
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-5 space-y-4">
+                      <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-3">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-600 font-medium">Total MRP / Dispatch Value:</span>
+                          <span className="font-mono font-bold text-gray-900">₹{totalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-600 font-medium">Procurement Cost (P.Cost):</span>
+                          <span className="font-mono font-bold text-amber-700">₹{totalPCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-600 font-medium">Commission Deductions (~5.5%):</span>
+                          <span className="font-mono font-bold text-red-600">-₹{totalCommission.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        </div>
+                        <div className="pt-2 border-t border-indigo-200 flex justify-between items-baseline text-sm">
+                          <span className="font-bold text-indigo-950">Aggregate Net Profit:</span>
+                          <span className="font-mono font-black text-emerald-700 text-base">₹{totalGrossProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        </div>
                       </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-600 font-medium">Procurement Cost (P.Cost):</span>
-                        <span className="font-mono font-bold text-amber-700">₹{totalPCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-600 font-medium">Commission Deductions (~5.5%):</span>
-                        <span className="font-mono font-bold text-red-600">-₹{totalCommission.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                      </div>
-                      <div className="pt-2 border-t border-indigo-200 flex justify-between items-baseline text-sm">
-                        <span className="font-bold text-indigo-950">Aggregate Net Profit:</span>
-                        <span className="font-mono font-black text-emerald-700 text-base">₹{totalGrossProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                      </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-3 text-center">
-                      <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-                        <span className="text-[11px] text-gray-400 font-semibold block">Avg. DC Value</span>
-                        <span className="font-mono font-black text-gray-900 text-base">
-                          ₹{challans.length > 0 ? Math.round(totalValue / challans.length).toLocaleString('en-IN') : 0}
-                        </span>
+                      <div className="grid grid-cols-2 gap-3 text-center">
+                        <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                          <span className="text-[11px] text-gray-400 font-semibold block">Avg. DC Value</span>
+                          <span className="font-mono font-black text-gray-900 text-base">
+                            ₹{challans.length > 0 ? Math.round(totalValue / challans.length).toLocaleString('en-IN') : 0}
+                          </span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                          <span className="text-[11px] text-emerald-700 font-semibold block">Overall Margin</span>
+                          <span className="font-mono font-black text-emerald-800 text-base">
+                            {overallMargin.toFixed(1)}%
+                          </span>
+                        </div>
                       </div>
-                      <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
-                        <span className="text-[11px] text-emerald-700 font-semibold block">Overall Margin</span>
-                        <span className="font-mono font-black text-emerald-800 text-base">
-                          {overallMargin.toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
           )}
@@ -702,7 +751,7 @@ export default function DeliveryChallanPage() {
                 onBulkDelete={handleBulkDelete}
                 onRefresh={fetchData}
                 isBulkDownloading={isBulkDownloading}
-                showFinancials={showFinancials}
+                showFinancials={isAdmin && showFinancials}
               />
             )}
           </div>

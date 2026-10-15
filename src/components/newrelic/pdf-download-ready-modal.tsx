@@ -134,7 +134,33 @@ export function PdfDownloadReadyModal({
         }
       }
 
-      // Priority 4: Browser Local Blob Download (Never navigates to external URLs, stays 100% on page)
+      // Priority 4: Web Share API with File (For Mobile Chrome / Android where blob anchors do not download)
+      if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function') {
+        try {
+          const file = new File([pdfData.blob], pdfData.fileName, { type: 'application/pdf' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: pdfData.fileName,
+              text: `Delivery Challan: ${pdfData.fileName}`,
+            });
+            toast({
+              title: 'Saved / Shared',
+              description: 'Select Save to Files or an app',
+            });
+            setTimeout(() => onClose(), 800);
+            setIsProcessing(false);
+            return;
+          }
+        } catch (shareErr: any) {
+          if (shareErr.name === 'AbortError') {
+            setIsProcessing(false);
+            return;
+          }
+        }
+      }
+
+      // Priority 5: Desktop Browser Local Blob Download
       const localUrl = URL.createObjectURL(pdfData.blob);
       const link = document.createElement('a');
       link.href = localUrl;
@@ -148,7 +174,7 @@ export function PdfDownloadReadyModal({
       }, 1000);
       toast({
         title: 'Download Started',
-        description: `Saved ${pdfData.fileName} to your device.`,
+        description: `Saved ${pdfData.fileName} to downloads.`,
       });
 
     } catch (err) {

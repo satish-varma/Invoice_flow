@@ -7,6 +7,7 @@ import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -64,17 +65,20 @@ public class MainActivity extends BridgeActivity {
             }
 
             Uri savedUri = null;
+            String savedFilePath = null;
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Android 10+ (API 29+) MediaStore.Downloads (Public Downloads folder, no special permission needed)
+                // Android 10+ (API 29+) MediaStore.Downloads
                 ContentValues values = new ContentValues();
-                values.put(MediaStore.Downloads.DISPLAY_NAME, safeName);
-                values.put(MediaStore.Downloads.MIME_TYPE, "application/pdf");
-                values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
-                values.put(MediaStore.Downloads.IS_PENDING, 1);
+                values.put(MediaStore.MediaColumns.DISPLAY_NAME, safeName);
+                values.put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf");
+                // Note: RELATIVE_PATH must end with a forward slash
+                values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/");
+                values.put(MediaStore.MediaColumns.IS_PENDING, 1);
 
                 ContentResolver resolver = getContentResolver();
-                savedUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                Uri collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+                savedUri = resolver.insert(collection, values);
 
                 if (savedUri != null) {
                     try (OutputStream os = resolver.openOutputStream(savedUri)) {
@@ -84,11 +88,13 @@ public class MainActivity extends BridgeActivity {
                         }
                     }
                     values.clear();
-                    values.put(MediaStore.Downloads.IS_PENDING, 0);
+                    values.put(MediaStore.MediaColumns.IS_PENDING, 0);
                     resolver.update(savedUri, values, null, null);
                 }
-            } else {
-                // Legacy Android < 10
+            }
+
+            // Fallback for Android < 10 or if MediaStore insert failed
+            if (savedUri == null) {
                 File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
                 if (!downloadsDir.exists()) downloadsDir.mkdirs();
                 File targetFile = new File(downloadsDir, safeName);
@@ -96,25 +102,39 @@ public class MainActivity extends BridgeActivity {
                     fos.write(pdfBytes);
                     fos.flush();
                 }
+                savedFilePath = targetFile.getAbsolutePath();
                 savedUri = Uri.fromFile(targetFile);
+                MediaScannerConnection.scanFile(
+                    this,
+                    new String[]{targetFile.getAbsolutePath()},
+                    new String[]{"application/pdf"},
+                    null
+                );
             }
 
             final Uri finalUri = savedUri;
             final String finalFileName = safeName;
 
             runOnUiThread(() -> {
-                Toast.makeText(MainActivity.this, "Saved " + finalFileName + " to Downloads", Toast.LENGTH_LONG).show();
+                Toast.makeText(
+                    MainActivity.this,
+                    "Saved to Downloads: " + finalFileName,
+                    Toast.LENGTH_LONG
+                ).show();
             });
 
             if (finalUri != null) {
                 showDownloadNotification(finalUri, finalFileName);
             }
 
+            // Immediately launch PDF viewer so the user sees the file directly
+            doOpenPdf(base64Data, finalFileName);
+
             return true;
         } catch (Exception e) {
             e.printStackTrace();
             runOnUiThread(() -> {
-                Toast.makeText(MainActivity.this, "Save failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Save error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             });
             return false;
         }

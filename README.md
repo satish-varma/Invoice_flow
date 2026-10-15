@@ -25,7 +25,7 @@ A dedicated module for managing NewRelic operations, featuring:
 - **Serverless-Optimized Architecture:** Specifically tuned for deployment on Firebase App Hosting, utilizing App Router API routes to safely bypass Next.js Server Action payload limits.
 
 ### 📱 Mobile PWA & Native Android (Capacitor)
-- **Native Android APK & Emulator:** Packaged with **Capacitor 8** (`com.gutguru.invoiceflow`) with full hardware access, camera permissions, and Chrome remote inspection support (`chrome://inspect`).
+- **Native Android APK & Emulator:** Packaged with **Capacitor 8** (`com.hungerbox.invoiceflow`) with full hardware access, camera permissions, and Chrome remote inspection support (`chrome://inspect`).
 - **Tactile Haptic Feedback Engine (`src/lib/haptics.ts`):** Micro-vibrations across tabs, quantity steppers, quick edits, camera shutter button, and confirmations.
 - **Offline & Weak Connection Toast:** Automatic network status banner alerting staff in basements/cold storages before form submissions or photo uploads.
 - **Single-Thumb Navigation:** Material 3 / iOS 18 style bottom capsule bar (`mobile-app-navigation.tsx`) optimized for cafeteria floor operators.

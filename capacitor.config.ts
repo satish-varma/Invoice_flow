@@ -10,7 +10,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  * If `server.url` is omitted or empty, Capacitor loads the static files from `webDir`.
  */
 const config: CapacitorConfig = {
-  appId: 'com.gutguru.invoiceflow',
+  appId: 'com.hungerbox.invoiceflow',
   appName: 'The Gut Guru Tracker',
   webDir: 'public',
   server: {

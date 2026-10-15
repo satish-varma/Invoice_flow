@@ -277,6 +277,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           {hasPermission(user, 'newrelic_dc') && (
             <Link
               href="/newrelic"
+              prefetch={false}
               className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                 pathname === '/newrelic'
                   ? 'border-[#3b2fc9] text-[#3b2fc9]'
@@ -369,7 +370,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                 )}
                 {hasPermission(user, 'newrelic_dc') && (
                   <DropdownMenuItem asChild>
-                    <Link href="/newrelic" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                    <Link href="/newrelic" prefetch={false} className="flex items-center gap-2 cursor-pointer font-medium text-xs">
                       <FileText className="h-3.5 w-3.5 text-purple-600" />
                       NewRelic DC Hub
                     </Link>

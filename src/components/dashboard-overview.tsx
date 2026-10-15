@@ -172,6 +172,7 @@ export function DashboardOverview({
           {/* Quick Switch to NewRelic DC Portal */}
           <Link
             href="/newrelic"
+            prefetch={false}
             onClick={() => triggerHaptic('light')}
             className="group relative flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-white/10 via-white/5 to-white/10 hover:from-white/15 hover:to-white/20 border border-white/20 backdrop-blur-xl transition-all shadow-lg active:scale-[0.98] shrink-0"
           >

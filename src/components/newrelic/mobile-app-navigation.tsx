@@ -309,6 +309,7 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
                 <Link
                   key={tab.href}
                   href={tab.href}
+                  prefetch={false}
                   onClick={() => triggerHaptic('light')}
                   className="flex-1 flex flex-col items-center justify-center py-1 transition-all active:scale-90 group"
                 >
@@ -431,6 +432,7 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
                       <Link
                         key={item.href}
                         href={item.href}
+                        prefetch={false}
                         onClick={() => {
                           triggerHaptic('light');
                           setShowMoreMenu(false);

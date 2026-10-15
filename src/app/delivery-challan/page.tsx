@@ -410,6 +410,7 @@ export default function DeliveryChallanPage() {
                 {hasPermission(user, 'newrelic_dc') && (
                   <Link
                     href="/newrelic"
+                    prefetch={false}
                     onClick={() => triggerHaptic('light')}
                     className="group flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 text-[11px] sm:text-xs font-black shadow-md active:scale-95 transition-all"
                     title="Switch to NewRelic Cafeteria DC Hub"

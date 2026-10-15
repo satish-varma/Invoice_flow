@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Home from './(app)/page';
 import { Loader2 } from 'lucide-react';
+import { hasPermission } from '@/types/permissions';
 
 export default function App() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, role, loading } = useAuth();
   const [redirecting, setRedirecting] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -19,34 +20,25 @@ export default function App() {
       return;
     }
 
-    const defaultPage = user.defaultLandingPage;
-    const isCapacitor =
-      typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
+    const isAdmin = role === 'admin' || role === 'superadmin';
+    const canAccessBilling = isAdmin || hasPermission(user, 'billing');
 
-    // If user has a configured default landing page and it's not root '/' or '/invoices'
-    if (defaultPage && defaultPage !== '/' && defaultPage !== '/invoices') {
-      setRedirecting(true);
-      router.replace(defaultPage);
+    // If user has permission to access billing/invoices dashboard, render Home directly!
+    if (canAccessBilling) {
+      setRedirecting(false);
       return;
     }
 
-    // Default site routing for non-newrelic sites (DSM, NTT Data)
-    if (user.assignedSite === 'dsm' || user.assignedSite === 'ntt_data') {
-      setRedirecting(true);
-      router.replace('/newrelic/tuckshop');
-      return;
-    }
+    // If user does NOT have permission for billing/invoices, redirect to their assigned module
+    const defaultPage =
+      user.defaultLandingPage ||
+      (user.assignedSite === 'dsm' || user.assignedSite === 'ntt_data'
+        ? '/newrelic/tuckshop'
+        : '/newrelic');
 
-    // If running inside Capacitor APK on mobile
-    if (isCapacitor) {
-      setRedirecting(true);
-      router.replace(defaultPage || '/newrelic');
-      return;
-    }
-
-    // If defaultLandingPage is '/' or user is admin/accountant stay on root Home
-    setRedirecting(false);
-  }, [user, loading, router]);
+    setRedirecting(true);
+    router.replace(defaultPage);
+  }, [user, role, loading, router]);
 
   if (loading || redirecting !== false) {
     return (

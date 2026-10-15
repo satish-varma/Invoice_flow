@@ -27,6 +27,7 @@ import {
   ChevronRight,
   Shield,
   FilePlus,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { triggerHaptic } from '@/lib/haptics';
@@ -90,13 +91,13 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
     });
   }
 
-  // 5. Invoices Hub (If user has billing and space available)
+  // 5. Invoices & Dashboard (If user has billing and space available)
   if (hasPermission(user, 'billing') && navTabs.length < 4) {
     navTabs.push({
       label: 'Invoices',
-      href: '/invoices',
-      icon: ListOrdered,
-      isActive: pathname === '/' || pathname.startsWith('/invoices'),
+      href: '/',
+      icon: LayoutDashboard,
+      isActive: pathname === '/',
     });
   }
 
@@ -127,6 +128,12 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
   // Group 1: Records & Masters
   const recordsItems: Array<{ label: string; href: string; icon: any; desc: string }> = [];
   if (hasPermission(user, 'billing')) {
+    recordsItems.push({
+      label: 'Invoice Dashboard & New',
+      href: '/',
+      icon: LayoutDashboard,
+      desc: 'Create invoices, revenue charts & billing metrics',
+    });
     recordsItems.push({
       label: 'Saved Invoices',
       href: '/invoices',

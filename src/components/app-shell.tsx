@@ -30,6 +30,7 @@ import {
   LogOut,
   Lock,
   Unlock,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { FinancialAuthProvider, useFinancialAuth } from '@/contexts/FinancialAuthContext';
@@ -302,18 +303,18 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             </Link>
           )}
 
-          {/* Direct Tab 5: Invoicing & Billing */}
+          {/* Direct Tab 5: Invoicing & Billing (Dashboard, Creator & Overview) */}
           {hasPermission(user, 'billing') && (
             <Link
-              href="/invoices"
+              href="/"
               className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
-                pathname === '/' || pathname === '/invoices'
+                pathname === '/'
                   ? 'border-[#3b2fc9] text-[#3b2fc9]'
                   : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
               }`}
             >
-              <ListOrdered className="h-4 w-4" />
-              Invoices Hub
+              <LayoutDashboard className="h-4 w-4" />
+              Invoices &amp; Dashboard
             </Link>
           )}
 
@@ -351,12 +352,20 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                   Master Records
                 </DropdownMenuLabel>
                 {hasPermission(user, 'billing') && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/invoices" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
-                      <ListOrdered className="h-3.5 w-3.5 text-indigo-600" />
-                      Saved Invoices
-                    </Link>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                        <LayoutDashboard className="h-3.5 w-3.5 text-indigo-600" />
+                        Invoice Dashboard &amp; New
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/invoices" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                        <ListOrdered className="h-3.5 w-3.5 text-blue-600" />
+                        Saved Invoices
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
                 )}
                 {hasPermission(user, 'general_dc') && (
                   <DropdownMenuItem asChild>

@@ -1064,6 +1064,10 @@ export default function NewRelicPage() {
           setPreviewChallan(null);
           handleDownload(c);
         }}
+        onEdit={(c) => {
+          setPreviewChallan(null);
+          handleEditChallan(c);
+        }}
       />
 
       <NewRelicAdminPreviewModal

@@ -3,7 +3,7 @@
 import { NewRelicChallan } from '@/types/challan';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, Download, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { Eye, Download, ZoomIn, ZoomOut, Maximize2, Edit2, FileCheck, Receipt, Paperclip, FileText } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-
+import { triggerHaptic } from '@/lib/haptics';
+import { NewRelicAttachmentModal } from '@/components/newrelic/newrelic-attachment-modal';
 import { NewRelicChallanPreview } from '@/components/newrelic/newrelic-challan-preview';
 
 interface NewRelicChallanViewModalProps {
@@ -19,17 +20,25 @@ interface NewRelicChallanViewModalProps {
   onClose: () => void;
   challan: NewRelicChallan | null;
   onDownload: (challan: NewRelicChallan) => void;
+  onEdit?: (challan: NewRelicChallan) => void;
 }
 
 export function NewRelicChallanViewModal({
   isOpen,
   onClose,
-  challan,
+  challan: initialChallan,
   onDownload,
+  onEdit,
 }: NewRelicChallanViewModalProps) {
+  const [challan, setChallan] = useState<NewRelicChallan | null>(initialChallan);
   const [zoomMode, setZoomMode] = useState<'fit' | '100%'>('fit');
   const [scale, setScale] = useState<number>(0.8);
+  const [activeAttachment, setActiveAttachment] = useState<'signed_copy' | 'goods_received' | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setChallan(initialChallan);
+  }, [initialChallan]);
 
   const allItems = challan?.lineItems ?? [];
   const pageCount = allItems.length <= 10 ? 1 : 1 + Math.ceil((allItems.length - 10) / 18);
@@ -72,7 +81,75 @@ export function NewRelicChallanViewModal({
             </DialogTitle>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap">
+            {/* Signed DC Attachment Button */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setActiveAttachment('signed_copy');
+              }}
+              className={`px-2 py-1 sm:px-2.5 sm:py-1 rounded-lg text-xs font-bold flex items-center gap-1 border transition-all ${
+                (challan.signedCopyUrls?.length ?? 0) > 0
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 shadow-2xs'
+                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+              }`}
+              title="Manage Signed Copies"
+            >
+              <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">Signed DC</span>
+              {(challan.signedCopyUrls?.length ?? 0) > 0 ? (
+                <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[9px] font-black">
+                  {challan.signedCopyUrls!.length}
+                </span>
+              ) : (
+                <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
+              )}
+            </button>
+
+            {/* Goods Received Invoice Attachment Button */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setActiveAttachment('goods_received');
+              }}
+              className={`px-2 py-1 sm:px-2.5 sm:py-1 rounded-lg text-xs font-bold flex items-center gap-1 border transition-all ${
+                (challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0
+                  ? 'bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100 shadow-2xs'
+                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+              }`}
+              title="Manage Goods Received Invoice"
+            >
+              <Receipt className="w-3.5 h-3.5 text-blue-600" />
+              <span className="hidden sm:inline">Invoice</span>
+              {(challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0 ? (
+                <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[9px] font-black">
+                  {challan.goodsReceivedInvoiceUrls!.length}
+                </span>
+              ) : (
+                <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
+              )}
+            </button>
+
+            {/* Edit Button (Takes directly to edit form) */}
+            {onEdit && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  triggerHaptic('light');
+                  onClose();
+                  onEdit(challan);
+                }}
+                className="h-8 sm:h-9 px-2 sm:px-3 gap-1 border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-xl text-xs font-bold shadow-2xs active:scale-95 transition-all"
+                title="Edit in Form"
+              >
+                <Edit2 className="h-3.5 w-3.5 text-amber-600" />
+                <span>Edit</span>
+              </Button>
+            )}
+
             {/* Zoom Mode Toggle */}
             <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200">
               <button
@@ -143,6 +220,27 @@ export function NewRelicChallanViewModal({
           </div>
         </div>
       </DialogContent>
+
+      {/* Attachment Modal for View Modal */}
+      {activeAttachment && (
+        <NewRelicAttachmentModal
+          isOpen={!!activeAttachment}
+          onClose={() => setActiveAttachment(null)}
+          challan={challan}
+          type={activeAttachment}
+          title={activeAttachment === 'signed_copy' ? 'Signed Copies' : 'Goods Received Invoice'}
+          onUpdate={(updatedUrls) => {
+            if (updatedUrls) {
+              setChallan((prev) => {
+                if (!prev) return prev;
+                return activeAttachment === 'signed_copy'
+                  ? { ...prev, signedCopyUrls: updatedUrls }
+                  : { ...prev, goodsReceivedInvoiceUrls: updatedUrls };
+              });
+            }
+          }}
+        />
+      )}
     </Dialog>
   );
 }

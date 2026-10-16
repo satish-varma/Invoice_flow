@@ -3,9 +3,10 @@ import { NewRelicChallan } from '@/types/challan';
 
 import React, { useState, useRef } from 'react';
 import { format } from 'date-fns';
-import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, ChevronDown, ChevronUp, FileCheck, Paperclip, Edit } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 import { useToast } from '@/hooks/use-toast';
+import { NewRelicAttachmentModal } from './newrelic-attachment-modal';
 import {
   Table,
   TableBody,
@@ -74,6 +75,10 @@ export function NewRelicChallanList({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteConfirmChallan, setDeleteConfirmChallan] = useState<NewRelicChallan | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [attachmentModal, setAttachmentModal] = useState<{
+    challan: NewRelicChallan;
+    type: 'signed_copy' | 'goods_received';
+  } | null>(null);
 
   // Swipe-to-action state on mobile cards
   const [swipedId, setSwipedId] = useState<string | null>(null);
@@ -432,6 +437,61 @@ export function NewRelicChallanList({
                 );
               })()}
 
+              {/* Mobile Attachment Buttons: Signed DC & Invoice */}
+              {!isTrashView && (
+                <div className="flex items-center gap-2 pt-2 border-t border-gray-200/60">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      triggerHaptic('light');
+                      setAttachmentModal({ challan, type: 'signed_copy' });
+                    }}
+                    className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 border transition-all ${
+                      (challan.signedCopyUrls?.length ?? 0) > 0
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-2xs'
+                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                    title="Upload or view Signed Delivery Challan copy"
+                  >
+                    <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Signed DC</span>
+                    {(challan.signedCopyUrls?.length ?? 0) > 0 ? (
+                      <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[9px] font-black">
+                        {challan.signedCopyUrls!.length}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      triggerHaptic('light');
+                      setAttachmentModal({ challan, type: 'goods_received' });
+                    }}
+                    className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 border transition-all ${
+                      (challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0
+                        ? 'bg-blue-50 border-blue-300 text-blue-800 shadow-2xs'
+                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                    title="Upload or view Goods Received / Purchase Invoice"
+                  >
+                    <Receipt className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Invoice</span>
+                    {(challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0 ? (
+                      <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[9px] font-black">
+                        {challan.goodsReceivedInvoiceUrls!.length}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
+                    )}
+                  </button>
+                </div>
+              )}
+
               {/* Mobile Actions: Primary View/PDF Button + Share + 3-Dot Overflow Menu */}
               <div className="flex items-center gap-1.5 sm:gap-2 pt-1 flex-wrap">
                 {isTrashView ? (
@@ -481,21 +541,19 @@ export function NewRelicChallanList({
                     )}
 
                     {/* Edit Challan (in main view) */}
-                    {role !== 'user' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-9 px-2.5 border-amber-200 bg-amber-50/90 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform shadow-2xs"
-                        onClick={() => {
-                          triggerHaptic('light');
-                          onSelectChallan(challan);
-                        }}
-                        title="Edit Challan"
-                      >
-                        <Edit2 className="h-3.5 w-3.5 text-amber-600" />
-                        <span>Edit</span>
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 px-2.5 border-amber-200 bg-amber-50/90 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform shadow-2xs"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        onSelectChallan(challan);
+                      }}
+                      title="Edit Challan"
+                    >
+                      <Edit2 className="h-3.5 w-3.5 text-amber-600" />
+                      <span>Edit</span>
+                    </Button>
 
                     {/* Quick PDF Download Button */}
                     <Button
@@ -741,17 +799,67 @@ export function NewRelicChallanList({
                       ) : null
                     ) : (
                       <>
-                        {role !== 'user' && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-gray-500 hover:text-[#3b2fc9]"
-                            onClick={() => onSelectChallan(challan)}
-                            title="Edit"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                        {/* Attachment: Signed DC */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setAttachmentModal({ challan, type: 'signed_copy' });
+                          }}
+                          className={`h-7 px-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 ${
+                            (challan.signedCopyUrls?.length ?? 0) > 0
+                              ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 shadow-2xs'
+                              : 'text-gray-400 hover:text-emerald-700 hover:bg-emerald-50'
+                          }`}
+                          title="Manage Signed Copies"
+                        >
+                          <Paperclip className="w-3 h-3 text-emerald-600" />
+                          <span className="hidden xl:inline">Signed</span>
+                          {(challan.signedCopyUrls?.length ?? 0) > 0 && (
+                            <span className="ml-0.5 px-1 py-0.2 rounded-full bg-emerald-600 text-white text-[8px] font-black">
+                              {challan.signedCopyUrls!.length}
+                            </span>
+                          )}
+                        </Button>
+
+                        {/* Attachment: Invoice */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setAttachmentModal({ challan, type: 'goods_received' });
+                          }}
+                          className={`h-7 px-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 ${
+                            (challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0
+                              ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/80 shadow-2xs'
+                              : 'text-gray-400 hover:text-blue-700 hover:bg-blue-50'
+                          }`}
+                          title="Goods Received Invoice"
+                        >
+                          <FileText className="w-3 h-3 text-blue-600" />
+                          <span className="hidden xl:inline">Invoice</span>
+                          {(challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0 && (
+                            <span className="ml-0.5 px-1 py-0.2 rounded-full bg-blue-600 text-white text-[8px] font-black">
+                              {challan.goodsReceivedInvoiceUrls!.length}
+                            </span>
+                          )}
+                        </Button>
+
+                        {/* Edit in Form */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-500 hover:text-[#3b2fc9] hover:bg-indigo-50"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            onSelectChallan(challan);
+                          }}
+                          title="Edit in Form"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -856,6 +964,26 @@ export function NewRelicChallanList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Attachment Modal (Signed DC / Invoice) ── */}
+      {attachmentModal && (
+        <NewRelicAttachmentModal
+          isOpen={!!attachmentModal}
+          onClose={() => setAttachmentModal(null)}
+          challan={attachmentModal.challan}
+          type={attachmentModal.type}
+          title={attachmentModal.type === 'signed_copy' ? 'Signed Copies' : 'Goods Received Invoice'}
+          onUpdate={(updatedUrls) => {
+            if (updatedUrls && attachmentModal.challan) {
+              if (attachmentModal.type === 'signed_copy') {
+                attachmentModal.challan.signedCopyUrls = updatedUrls;
+              } else {
+                attachmentModal.challan.goodsReceivedInvoiceUrls = updatedUrls;
+              }
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

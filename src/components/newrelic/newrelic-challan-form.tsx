@@ -5,7 +5,7 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { CalendarIcon, Plus, Trash2, FileDown, Save, Loader2, Sparkles, UploadCloud, FileText, Paperclip, AlertTriangle, MapPin, ChevronDown, ChevronUp, Calculator } from 'lucide-react';
+import { CalendarIcon, Plus, Trash2, FileDown, Save, Loader2, Sparkles, UploadCloud, FileText, Paperclip, AlertTriangle, MapPin, ChevronDown, ChevronUp, Calculator, FileCheck, Receipt } from 'lucide-react';
 import { MrpCalculatorModal } from '@/components/newrelic/mrp-calculator-modal';
 import { useAuth } from '@/contexts/AuthContext';
 import { triggerHaptic } from '@/lib/haptics';
@@ -559,20 +559,78 @@ export function NewRelicChallanForm({
             NewRelic · Returnable Items DC
           </p>
         </div>
-        {isAdmin && (
-          <button
-            type="button"
-            onClick={() => {
-              triggerHaptic('light');
-              setShowCalculator(true);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 border border-purple-200/80 text-[#3b2fc9] text-xs font-bold shadow-2xs transition-all active:scale-95 shrink-0"
-            title="Open MRP % Calculator"
-          >
-            <Calculator className="w-3.5 h-3.5" />
-            <span>% Calc</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {isEditing && currentData?.id && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowSignedCopyModal(true);
+                }}
+                className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
+                  (currentData.signedCopyUrls?.length ?? 0) > 0
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                }`}
+                title="Manage Signed Copies"
+              >
+                <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="hidden sm:inline">Signed DC</span>
+                {(currentData.signedCopyUrls?.length ?? 0) > 0 ? (
+                  <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[9px] font-black">
+                    {currentData.signedCopyUrls!.length}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
+                )}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowGoodsReceivedModal(true);
+                }}
+                className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
+                  (currentData.goodsReceivedInvoiceUrls?.length ?? 0) > 0
+                    ? 'bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100'
+                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                }`}
+                title="Manage Goods Received Invoice"
+              >
+                <Receipt className="w-3.5 h-3.5 text-blue-600" />
+                <span className="hidden sm:inline">Invoice</span>
+                {(currentData.goodsReceivedInvoiceUrls?.length ?? 0) > 0 ? (
+                  <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[9px] font-black">
+                    {currentData.goodsReceivedInvoiceUrls!.length}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
+                )}
+              </Button>
+            </>
+          )}
+
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setShowCalculator(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 border border-purple-200/80 text-[#3b2fc9] text-xs font-bold shadow-2xs transition-all active:scale-95 shrink-0"
+              title="Open MRP % Calculator"
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              <span>% Calc</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* DC Number + Location + Date row */}
@@ -843,27 +901,33 @@ export function NewRelicChallanForm({
         />
       </div>
 
-      {/* Signed Copies Management (Admin/Manager only, and only when editing) */}
-      {isEditing && currentData?.id && (role === 'admin' || role === 'superadmin' || role === 'manager') && (
+      {/* Signed Copies & Goods Received Management (Available when editing) */}
+      {isEditing && currentData?.id && (
         <div className="pt-2 flex flex-col sm:flex-row gap-2">
           <Button
             type="button"
             variant="outline"
-            className="w-full sm:flex-1 gap-2 border-gray-300 text-gray-700"
-            onClick={() => setShowSignedCopyModal(true)}
+            className="w-full sm:flex-1 gap-2 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+            onClick={() => {
+              triggerHaptic('light');
+              setShowSignedCopyModal(true);
+            }}
           >
-            <Paperclip className="h-4 w-4" />
-            Manage Signed Copies {(currentData?.signedCopyUrls || []).length > 0 && `(${currentData?.signedCopyUrls?.length})`}
+            <FileCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            Signed DC {(currentData?.signedCopyUrls || []).length > 0 ? `(${currentData.signedCopyUrls?.length})` : '(0)'}
           </Button>
           
           <Button
             type="button"
             variant="outline"
-            className="w-full sm:flex-1 gap-2 border-gray-300 text-gray-700"
-            onClick={() => setShowGoodsReceivedModal(true)}
+            className="w-full sm:flex-1 gap-2 border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+            onClick={() => {
+              triggerHaptic('light');
+              setShowGoodsReceivedModal(true);
+            }}
           >
-            <FileText className="h-4 w-4" />
-            Goods Received Invoice {(currentData?.goodsReceivedInvoiceUrls || []).length > 0 && `(${currentData?.goodsReceivedInvoiceUrls?.length})`}
+            <Receipt className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            Goods Received Invoice {(currentData?.goodsReceivedInvoiceUrls || []).length > 0 ? `(${currentData.goodsReceivedInvoiceUrls?.length})` : '(0)'}
           </Button>
         </div>
       )}
@@ -913,7 +977,11 @@ export function NewRelicChallanForm({
           challan={currentData}
           title="Signed Copies"
           type="signed_copy"
-          onUpdate={() => {}}
+          onUpdate={(updatedUrls) => {
+            if (updatedUrls) {
+              setCurrentData(prev => prev ? { ...prev, signedCopyUrls: updatedUrls } : prev);
+            }
+          }}
         />
       )}
 
@@ -925,7 +993,11 @@ export function NewRelicChallanForm({
           challan={currentData}
           title="Goods Received Invoice"
           type="goods_received"
-          onUpdate={() => {}}
+          onUpdate={(updatedUrls) => {
+            if (updatedUrls) {
+              setCurrentData(prev => prev ? { ...prev, goodsReceivedInvoiceUrls: updatedUrls } : prev);
+            }
+          }}
         />
       )}
 

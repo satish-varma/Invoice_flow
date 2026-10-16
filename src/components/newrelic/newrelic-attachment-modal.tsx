@@ -11,12 +11,13 @@ import {addSignedCopyUrl, removeSignedCopyUrl, addGoodsReceivedUrl, removeGoodsR
 import { uploadStorageFile, deleteStorageFile } from '@/services/storageService';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
+import { triggerHaptic } from '@/lib/haptics';
 
 interface NewRelicAttachmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   challan: NewRelicChallan;
-  onUpdate: () => void;
+  onUpdate?: (updatedUrls?: string[]) => void;
   title: string;
   type: 'signed_copy' | 'goods_received';
 }
@@ -27,6 +28,7 @@ export function NewRelicAttachmentModal({ isOpen, onClose, challan, onUpdate, ti
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [deletingUrl, setDeletingUrl] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   
@@ -34,56 +36,98 @@ export function NewRelicAttachmentModal({ isOpen, onClose, challan, onUpdate, ti
   const initialUrls = type === 'signed_copy' ? challan.signedCopyUrls : challan.goodsReceivedInvoiceUrls;
   const [localCopies, setLocalCopies] = useState<string[]>(initialUrls || []);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
+  React.useEffect(() => {
+    if (challan) {
+      const urls = type === 'signed_copy' ? challan.signedCopyUrls : challan.goodsReceivedInvoiceUrls;
+      setLocalCopies(urls || []);
+    }
+  }, [challan, type]);
+
+  const processFiles = async (fileList: FileList | File[]) => {
+    if (!challan.id || fileList.length === 0) return;
     
     setIsUploading(true);
+    triggerHaptic('medium');
     try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      const uploadedUrls: string[] = [];
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
         
         // Basic validation
-        if (file.size > 10 * 1024 * 1024) {
-          throw new Error(`File ${file.name} is too large (max 10MB)`);
+        if (file.size > 12 * 1024 * 1024) {
+          throw new Error(`File ${file.name} is too large (max 12MB)`);
         }
-        
         
         if (type === 'signed_copy') {
           const url = await uploadStorageFile(challan.dcNumber, file, 'newrelic-signed-dcs', 'signed_');
-          await addSignedCopyUrl(challan.id!, url, user?.email || null);
-          setLocalCopies(prev => [...prev, url]);
+          await addSignedCopyUrl(challan.id, url, user?.email || null);
+          uploadedUrls.push(url);
         } else {
           const url = await uploadStorageFile(challan.dcNumber, file, 'newrelic-goods-received-dcs', 'goods_');
-          await addGoodsReceivedUrl(challan.id!, url, user?.email || null);
-          setLocalCopies(prev => [...prev, url]);
+          await addGoodsReceivedUrl(challan.id, url, user?.email || null);
+          uploadedUrls.push(url);
         }
       }
       
+      const nextCopies = [...localCopies, ...uploadedUrls];
+      setLocalCopies(nextCopies);
+
+      // Mutate local challan object in place for instant reactivity
+      if (type === 'signed_copy') {
+        challan.signedCopyUrls = nextCopies;
+      } else {
+        challan.goodsReceivedInvoiceUrls = nextCopies;
+      }
+
       toast({ title: 'Success', description: `${title} uploaded successfully` });
-      onUpdate();
+      onUpdate?.(nextCopies);
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Upload failed', description: err.message });
+      toast({ variant: 'destructive', title: 'Upload failed', description: err.message || 'Could not upload attachment.' });
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    await processFiles(files);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await processFiles(e.dataTransfer.files);
+    }
+  };
+
   const handleDelete = async (url: string) => {
-    if (!confirm('Are you sure you want to delete this signed copy?')) return;
+    if (!challan.id) return;
+    if (!confirm(`Are you sure you want to delete this ${type === 'signed_copy' ? 'signed copy' : 'invoice'}?`)) return;
     
+    triggerHaptic('medium');
     setDeletingUrl(url);
     try {
       await deleteStorageFile(url);
       if (type === 'signed_copy') {
-        await removeSignedCopyUrl(challan.id!, url, user?.email || null);
+        await removeSignedCopyUrl(challan.id, url, user?.email || null);
       } else {
-        await removeGoodsReceivedUrl(challan.id!, url, user?.email || null);
+        await removeGoodsReceivedUrl(challan.id, url, user?.email || null);
       }
-      setLocalCopies(prev => prev.filter(u => u !== url));
+      const nextCopies = localCopies.filter(u => u !== url);
+      setLocalCopies(nextCopies);
+
+      // Mutate local challan object in place
+      if (type === 'signed_copy') {
+        challan.signedCopyUrls = nextCopies;
+      } else {
+        challan.goodsReceivedInvoiceUrls = nextCopies;
+      }
+
       toast({ title: 'Success', description: 'File deleted successfully' });
-      onUpdate();
+      onUpdate?.(nextCopies);
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Delete failed', description: err.message });
     } finally {
@@ -93,6 +137,7 @@ export function NewRelicAttachmentModal({ isOpen, onClose, challan, onUpdate, ti
 
   const handleDownload = (url: string, isPdf: boolean) => {
     try {
+      triggerHaptic('light');
       const prefix = type === 'signed_copy' ? 'signed_copy' : 'goods_received';
       const filename = `${prefix}_${challan.dcNumber}.${isPdf ? 'pdf' : 'jpg'}`;
       // Route the download through our Next.js API to bypass Firebase CORS restrictions
@@ -132,8 +177,21 @@ export function NewRelicAttachmentModal({ isOpen, onClose, challan, onUpdate, ti
 
           <div className="flex-1 overflow-y-auto p-6 bg-gray-50 flex flex-col gap-6">
             
-            {/* Upload Area */}
-            <div className="bg-white border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center text-center gap-4 transition-colors hover:border-[#3b2fc9] hover:bg-blue-50/50">
+            {/* Upload Area with Drag and Drop */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+              }}
+              onDrop={handleDrop}
+              className={`bg-white border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center gap-4 transition-colors ${
+                isDragging ? 'border-[#3b2fc9] bg-blue-50/70 scale-[1.01]' : 'border-gray-200 hover:border-[#3b2fc9] hover:bg-blue-50/50'
+              }`}
+            >
               <div className="bg-blue-100 p-3 rounded-full text-[#3b2fc9]">
                 <UploadCloud className="h-6 w-6" />
               </div>

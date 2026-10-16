@@ -4,8 +4,11 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { getNewRelicChallans } from '@/services/newrelicChallanService';
 import { getTuckshopRecords, NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { getEmployees, getAllSalaryPayments } from '@/services/newrelicEmployeeService';
+import { getStockRequests } from '@/services/newrelicStockRequestService';
+import { getAttendanceByDateRange } from '@/services/newrelicAttendanceService';
 import { NewRelicChallan } from '@/types/challan';
-import { NewRelicEmployee, NewRelicSalaryPayment } from '@/types/employee';
+import { NewRelicEmployee, NewRelicSalaryPayment, NewRelicAttendance } from '@/types/employee';
+import { StockRequest } from '@/types/stockRequest';
 import { SiteId, SITE_OPTIONS, resolveSiteId, COMPANY_SITES } from '@/types/site';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -34,7 +37,13 @@ import {
   Percent,
   Receipt,
   X,
-  ChevronRight,
+  Clock,
+  AlertTriangle,
+  ClipboardList,
+  CheckCircle2,
+  XCircle,
+  HelpCircle,
+  Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
@@ -63,7 +72,7 @@ const PALETTE = ['#3b2fc9', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4
 type DatePreset = 'all' | 'this_month' | 'last_month' | 'last_30_days' | 'last_90_days' | 'this_year' | 'custom';
 type CycleFilter = 'all' | 'cycle_1' | 'cycle_2';
 type LocationFilter = 'all' | 'hyderabad' | 'bangalore';
-type TabKey = 'overview' | 'brands' | 'comparison' | 'ledger';
+type TabKey = 'overview' | 'brands' | 'comparison' | 'inventory' | 'workforce' | 'ledger';
 type Granularity = 'daily' | 'weekly' | 'monthly';
 
 export default function AnalyticsDashboardPage() {
@@ -75,6 +84,8 @@ export default function AnalyticsDashboardPage() {
   const [tuckshopRecords, setTuckshopRecords] = useState<NewRelicTuckshopRecord[]>([]);
   const [employees, setEmployees] = useState<NewRelicEmployee[]>([]);
   const [salaryPayments, setSalaryPayments] = useState<NewRelicSalaryPayment[]>([]);
+  const [stockRequests, setStockRequests] = useState<StockRequest[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<NewRelicAttendance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Active navigation tab
@@ -95,16 +106,20 @@ export default function AnalyticsDashboardPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [dcData, tuckData, empData, payData] = await Promise.all([
+        const [dcData, tuckData, empData, payData, stockData, attData] = await Promise.all([
           getNewRelicChallans(),
           getTuckshopRecords().catch(() => []),
           getEmployees().catch(() => []),
           getAllSalaryPayments().catch(() => []),
+          getStockRequests().catch(() => []),
+          getAttendanceByDateRange('2024-01-01', '2099-12-31').catch(() => []),
         ]);
         setChallans(dcData);
         setTuckshopRecords(tuckData);
         setEmployees(empData);
         setSalaryPayments(payData);
+        setStockRequests(stockData);
+        setAttendanceRecords(attData);
       } catch (err) {
         console.error('Failed to load executive analytics data', err);
       } finally {
@@ -196,7 +211,6 @@ export default function AnalyticsDashboardPage() {
 
   // Filtered Challans
   const filteredChallans = useMemo(() => {
-    // Delivery challans are strictly for NewRelic. If DSM or NTT Data is filtered, challans are empty.
     if (selectedSite === 'dsm' || selectedSite === 'ntt_data') return [];
 
     return challans.filter((c) => {
@@ -247,6 +261,32 @@ export default function AnalyticsDashboardPage() {
     });
   }, [salaryPayments, filteredEmployees, selectedSite, computedDateRange, cycleFilter]);
 
+  // Filtered Stock Requests
+  const filteredStockRequests = useMemo(() => {
+    return stockRequests.filter((r) => {
+      if (selectedSite !== 'all' && resolveSiteId(r.siteId) !== selectedSite) return false;
+      if (locationFilter !== 'all' && r.location !== locationFilter) return false;
+      if (!matchesDateAndCycle(r.requestDate)) return false;
+      if (selectedBrand !== 'all') {
+        const hasBrand = (r.lineItems || []).some(
+          (item) => (item.brandName || '').trim().toLowerCase() === selectedBrand.toLowerCase()
+        );
+        if (!hasBrand) return false;
+      }
+      return true;
+    });
+  }, [stockRequests, selectedSite, locationFilter, selectedBrand, computedDateRange, cycleFilter]);
+
+  // Filtered Attendance Records
+  const filteredAttendance = useMemo(() => {
+    return attendanceRecords.filter((a) => {
+      if (selectedSite !== 'all' && resolveSiteId(a.siteId) !== selectedSite) return false;
+      if (locationFilter !== 'all' && a.location !== locationFilter) return false;
+      if (!matchesDateAndCycle(a.date)) return false;
+      return true;
+    });
+  }, [attendanceRecords, selectedSite, locationFilter, computedDateRange, cycleFilter]);
+
   // Count active filters for badge
   const activeFiltersCount = useMemo(() => {
     let count = 0;
@@ -269,7 +309,7 @@ export default function AnalyticsDashboardPage() {
   };
 
   /* ─────────────────────────────────────────────────────────────
-     1. BRAND & ITEM LEVEL INTELLIGENCE
+     1. BRAND & ITEM LEVEL INTELLIGENCE + EXPIRY RADAR
   ───────────────────────────────────────────────────────────── */
   const brandAnalytics = useMemo(() => {
     const map: Record<string, {
@@ -284,6 +324,21 @@ export default function AnalyticsDashboardPage() {
     let grandTotalUnits = 0;
     let grandTotalProcurement = 0;
     let grandTotalMrp = 0;
+
+    // Shelf-life Expiry Risk Tracking
+    const now = new Date().getTime();
+    let criticalExpiryCount = 0;
+    let criticalExpiryValue = 0;
+    let mediumExpiryCount = 0;
+    let safeExpiryCount = 0;
+    const expiringItemsList: Array<{
+      brand: string;
+      item: string;
+      quantity: number;
+      expiry: string;
+      daysRemaining: number;
+      mrp: number;
+    }> = [];
 
     filteredChallans.forEach((c) => {
       const seenInThisDc = new Set<string>();
@@ -323,6 +378,30 @@ export default function AnalyticsDashboardPage() {
         grandTotalUnits += qty;
         grandTotalProcurement += lineSpend;
         grandTotalMrp += lineMrp;
+
+        // Check Expiry Date
+        if (item.expiry) {
+          const expTime = new Date(item.expiry).getTime();
+          if (!isNaN(expTime)) {
+            const daysRemaining = Math.ceil((expTime - now) / (1000 * 60 * 60 * 24));
+            if (daysRemaining <= 30) {
+              criticalExpiryCount += qty;
+              criticalExpiryValue += lineMrp;
+              expiringItemsList.push({
+                brand,
+                item: item.itemName || 'Item',
+                quantity: qty,
+                expiry: item.expiry,
+                daysRemaining,
+                mrp,
+              });
+            } else if (daysRemaining <= 60) {
+              mediumExpiryCount += qty;
+            } else {
+              safeExpiryCount += qty;
+            }
+          }
+        }
       });
     });
 
@@ -342,7 +421,6 @@ export default function AnalyticsDashboardPage() {
       };
     });
 
-    // Sort by procurement spend desc
     list.sort((a, b) => b.procurementSpend - a.procurementSpend);
 
     const top10 = list.slice(0, 10);
@@ -354,6 +432,14 @@ export default function AnalyticsDashboardPage() {
       ...(otherSpend > 0 ? [{ name: 'Other Brands', value: otherSpend }] : []),
     ];
 
+    expiringItemsList.sort((a, b) => a.daysRemaining - b.daysRemaining);
+
+    const expiryBreakdownData = [
+      { name: 'Critical (≤30 Days)', value: criticalExpiryCount, color: '#ef4444' },
+      { name: 'Medium (31-60 Days)', value: mediumExpiryCount, color: '#f59e0b' },
+      { name: 'Fresh (>60 Days)', value: safeExpiryCount, color: '#10b981' },
+    ].filter((d) => d.value > 0);
+
     return {
       list,
       top10,
@@ -361,35 +447,255 @@ export default function AnalyticsDashboardPage() {
       grandTotalUnits,
       grandTotalProcurement,
       grandTotalMrp,
+      criticalExpiryCount,
+      criticalExpiryValue,
+      mediumExpiryCount,
+      safeExpiryCount,
+      expiringItemsList: expiringItemsList.slice(0, 10),
+      expiryBreakdownData,
     };
   }, [filteredChallans, selectedBrand]);
 
   /* ─────────────────────────────────────────────────────────────
-     2. TUCKSHOP CATEGORY EXPENSES BREAKDOWN
+     2. DAY-OF-THE-WEEK PATTERNS & PROJECTIONS
   ───────────────────────────────────────────────────────────── */
-  const tuckshopExpenseCategories = useMemo(() => {
-    const map: Record<string, number> = {};
-    let totalExpenses = 0;
+  const dayOfWeekPatterns = useMemo(() => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const map = days.map((dayName) => ({
+      day: dayName.slice(0, 3),
+      sales: 0,
+      units: 0,
+      dcCount: 0,
+    }));
+
     filteredTuckshop.forEach((t) => {
-      if (t.type === 'expense') {
-        const cat = (t.category || 'General Miscellaneous').trim();
-        const amt = Number(t.amount) || 0;
-        map[cat] = (map[cat] || 0) + amt;
-        totalExpenses += amt;
+      if (t.type === 'sale') {
+        const d = new Date(t.date);
+        if (!isNaN(d.getTime())) {
+          map[d.getDay()].sales += Number(t.amount) || 0;
+        }
       }
     });
 
-    const entries = Object.entries(map).map(([name, value]) => ({
-      name,
-      value,
-      share: totalExpenses > 0 ? (value / totalExpenses) * 100 : 0,
-    })).sort((a, b) => b.value - a.value);
+    filteredChallans.forEach((c) => {
+      const d = new Date(c.dcDate);
+      if (!isNaN(d.getTime())) {
+        const idx = d.getDay();
+        map[idx].dcCount += 1;
+        (c.lineItems || []).forEach((item) => {
+          map[idx].units += Number(item.quantity) || 0;
+        });
+      }
+    });
 
-    return { entries, totalExpenses };
-  }, [filteredTuckshop]);
+    // Reorder from Mon -> Sun
+    return [...map.slice(1), map[0]];
+  }, [filteredTuckshop, filteredChallans]);
 
   /* ─────────────────────────────────────────────────────────────
-     3. TIME-SERIES TRENDS (DAILY / WEEKLY / MONTHLY)
+     3. CYCLE 1 VS CYCLE 2 COMPARATIVE ANALYTICS
+  ───────────────────────────────────────────────────────────── */
+  const cycleComparison = useMemo(() => {
+    const c1 = { name: 'Cycle 1 (1st-15th)', revenue: 0, procurement: 0, units: 0, dcs: 0, expenses: 0 };
+    const c2 = { name: 'Cycle 2 (16th-End)', revenue: 0, procurement: 0, units: 0, dcs: 0, expenses: 0 };
+
+    filteredTuckshop.forEach((t) => {
+      const day = parseInt((t.date || '').substring(8, 10), 10);
+      const target = day <= 15 ? c1 : c2;
+      const amt = Number(t.amount) || 0;
+      if (t.type === 'sale') target.revenue += amt;
+      else target.expenses += amt;
+    });
+
+    filteredChallans.forEach((c) => {
+      const day = parseInt((c.dcDate || '').substring(8, 10), 10);
+      const target = day <= 15 ? c1 : c2;
+      target.dcs++;
+      let lineCost = 0;
+      (c.lineItems || []).forEach((item) => {
+        const q = Number(item.quantity) || 0;
+        target.units += q;
+        lineCost += (Number(item.procurementCost) || 0) * q;
+      });
+      target.procurement += (c.procurementCost !== undefined && c.procurementCost !== null ? Number(c.procurementCost) : lineCost)
+        + Number(c.transportCost || 0) + Number(c.otherCharges || 0);
+    });
+
+    return [
+      {
+        ...c1,
+        netProfit: c1.revenue - (c1.procurement + c1.expenses),
+        netMargin: c1.revenue > 0 ? ((c1.revenue - (c1.procurement + c1.expenses)) / c1.revenue) * 100 : 0,
+      },
+      {
+        ...c2,
+        netProfit: c2.revenue - (c2.procurement + c2.expenses),
+        netMargin: c2.revenue > 0 ? ((c2.revenue - (c2.procurement + c2.expenses)) / c2.revenue) * 100 : 0,
+      },
+    ];
+  }, [filteredTuckshop, filteredChallans]);
+
+  /* ─────────────────────────────────────────────────────────────
+     4. STOCK REQUESTS & ORDER FULFILLMENT INTELLIGENCE
+  ───────────────────────────────────────────────────────────── */
+  const stockFulfillmentAnalytics = useMemo(() => {
+    let totalRequests = filteredStockRequests.length;
+    let fulfilledCount = 0;
+    let partialCount = 0;
+    let pendingCount = 0;
+    let cancelledCount = 0;
+
+    let requestedUnitsTotal = 0;
+    let fulfilledUnitsTotal = 0;
+
+    const brandDemandMap: Record<string, number> = {};
+    const itemDemandMap: Record<string, { brand: string; item: string; requestedUnits: number; fulfilledUnits: number }> = {};
+
+    filteredStockRequests.forEach((r) => {
+      if (r.status === 'FULFILLED') fulfilledCount++;
+      else if (r.status === 'PARTIALLY_FULFILLED') partialCount++;
+      else if (r.status === 'PENDING') pendingCount++;
+      else if (r.status === 'CANCELLED') cancelledCount++;
+
+      (r.lineItems || []).forEach((item) => {
+        const brand = (item.brandName || 'General').trim();
+        const itemName = (item.itemName || 'Item').trim();
+        const qReq = Number(item.totalUnits || item.quantity) || 0;
+        const qFul = Number(item.fulfilledTotalUnits || item.fulfilledQuantity) || 0;
+
+        requestedUnitsTotal += qReq;
+        fulfilledUnitsTotal += qFul;
+
+        brandDemandMap[brand] = (brandDemandMap[brand] || 0) + qReq;
+
+        const key = `${brand}::${itemName}`;
+        if (!itemDemandMap[key]) {
+          itemDemandMap[key] = { brand, item: itemName, requestedUnits: 0, fulfilledUnits: 0 };
+        }
+        itemDemandMap[key].requestedUnits += qReq;
+        itemDemandMap[key].fulfilledUnits += qFul;
+      });
+    });
+
+    const statusDonutData = [
+      { name: 'Fulfilled', value: fulfilledCount, color: '#10b981' },
+      { name: 'Partially Fulfilled', value: partialCount, color: '#f59e0b' },
+      { name: 'Pending', value: pendingCount, color: '#3b2fc9' },
+      { name: 'Cancelled', value: cancelledCount, color: '#ef4444' },
+    ].filter((d) => d.value > 0);
+
+    const fulfillmentRate = requestedUnitsTotal > 0 ? (fulfilledUnitsTotal / requestedUnitsTotal) * 100 : 0;
+
+    const topRequestedItems = Object.values(itemDemandMap)
+      .sort((a, b) => b.requestedUnits - a.requestedUnits)
+      .slice(0, 8);
+
+    const topRequestedBrands = Object.entries(brandDemandMap)
+      .map(([brand, units]) => ({ brand, units }))
+      .sort((a, b) => b.units - a.units)
+      .slice(0, 8);
+
+    return {
+      totalRequests,
+      fulfilledCount,
+      partialCount,
+      pendingCount,
+      cancelledCount,
+      requestedUnitsTotal,
+      fulfilledUnitsTotal,
+      fulfillmentRate,
+      statusDonutData,
+      topRequestedItems,
+      topRequestedBrands,
+    };
+  }, [filteredStockRequests]);
+
+  /* ─────────────────────────────────────────────────────────────
+     5. WORKFORCE & ATTENDANCE PRODUCTIVITY INTELLIGENCE
+  ───────────────────────────────────────────────────────────── */
+  const workforceAnalytics = useMemo(() => {
+    let totalShifts = filteredAttendance.length;
+    let presentCount = 0;
+    let halfDayCount = 0;
+    let missedCount = 0;
+    let onTimeCount = 0;
+    let lateCount = 0;
+    let totalLateMinutes = 0;
+    let totalOvertimeMinutes = 0;
+
+    const staffShiftsMap: Record<string, {
+      name: string;
+      id: string;
+      location: string;
+      shifts: number;
+      onTimeCount: number;
+      lateCount: number;
+      overtimeMinutes: number;
+    }> = {};
+
+    filteredAttendance.forEach((a) => {
+      if (a.status === 'present') presentCount++;
+      else if (a.status === 'half-day') halfDayCount++;
+      else if (a.status === 'missed-checkout') missedCount++;
+
+      if (a.isLate) {
+        lateCount++;
+        totalLateMinutes += a.lateMinutes || 0;
+      } else {
+        onTimeCount++;
+      }
+
+      if (a.overtimeMinutes && a.overtimeMinutes > 0) {
+        totalOvertimeMinutes += a.overtimeMinutes;
+      }
+
+      const empId = a.employeeDocId || a.employeeId || 'unknown';
+      if (!staffShiftsMap[empId]) {
+        staffShiftsMap[empId] = {
+          name: a.employeeName || 'Staff',
+          id: a.employeeId || '',
+          location: a.location || 'hyderabad',
+          shifts: 0,
+          onTimeCount: 0,
+          lateCount: 0,
+          overtimeMinutes: 0,
+        };
+      }
+      staffShiftsMap[empId].shifts += 1;
+      if (a.isLate) staffShiftsMap[empId].lateCount += 1;
+      else staffShiftsMap[empId].onTimeCount += 1;
+      staffShiftsMap[empId].overtimeMinutes += (a.overtimeMinutes || 0);
+    });
+
+    const onTimeRate = totalShifts > 0 ? (onTimeCount / totalShifts) * 100 : 0;
+    const attendanceStatusDonut = [
+      { name: 'Full Day (Present)', value: presentCount, color: '#10b981' },
+      { name: 'Half Day', value: halfDayCount, color: '#f59e0b' },
+      { name: 'Pending Checkout', value: missedCount, color: '#ec4899' },
+    ].filter((d) => d.value > 0);
+
+    const staffLeaderboard = Object.values(staffShiftsMap)
+      .sort((a, b) => b.shifts - a.shifts)
+      .slice(0, 10);
+
+    return {
+      totalShifts,
+      presentCount,
+      halfDayCount,
+      missedCount,
+      onTimeCount,
+      lateCount,
+      totalLateMinutes,
+      avgLateMinutes: lateCount > 0 ? Math.round(totalLateMinutes / lateCount) : 0,
+      totalOvertimeHours: Math.round((totalOvertimeMinutes / 60) * 10) / 10,
+      onTimeRate,
+      attendanceStatusDonut,
+      staffLeaderboard,
+    };
+  }, [filteredAttendance]);
+
+  /* ─────────────────────────────────────────────────────────────
+     6. TIME-SERIES TRENDS & FINANCIAL LEDGER
   ───────────────────────────────────────────────────────────── */
   const timeSeriesData = useMemo(() => {
     const map: Record<string, {
@@ -446,7 +752,6 @@ export default function AnalyticsDashboardPage() {
       return map[key];
     };
 
-    // 1. Tally DC Procurement Costs & Units
     filteredChallans.forEach((c) => {
       const { key, label } = getKey(c.dcDate);
       if (key === 'unknown') return;
@@ -468,20 +773,15 @@ export default function AnalyticsDashboardPage() {
       row.procurement += totalDcCost;
     });
 
-    // 2. Tally Tuckshop Revenue & Expenses
     filteredTuckshop.forEach((t) => {
       const { key, label } = getKey(t.date);
       if (key === 'unknown') return;
       const row = getOrInit(key, label);
       const amt = Number(t.amount) || 0;
-      if (t.type === 'sale') {
-        row.revenue += amt;
-      } else {
-        row.expenses += amt;
-      }
+      if (t.type === 'sale') row.revenue += amt;
+      else row.expenses += amt;
     });
 
-    // 3. Tally Disbursed Payroll
     filteredSalaryPayments.forEach((p) => {
       const pDate = p.paymentDate || `${p.month}-01`;
       const { key, label } = getKey(pDate);
@@ -504,9 +804,7 @@ export default function AnalyticsDashboardPage() {
     return list.sort((a, b) => a.periodKey.localeCompare(b.periodKey));
   }, [filteredChallans, filteredTuckshop, filteredSalaryPayments, timeGranularity]);
 
-  /* ─────────────────────────────────────────────────────────────
-     4. OVERALL FINANCIAL TOTALS & METRICS
-  ───────────────────────────────────────────────────────────── */
+  // Overall Totals
   const overallTotals = useMemo(() => {
     let revenue = 0;
     let procurement = 0;
@@ -541,7 +839,6 @@ export default function AnalyticsDashboardPage() {
     const totalOperatingCost = procurement + expenses + payroll;
     const netProfit = revenue - totalOperatingCost;
     const netMarginPercent = revenue > 0 ? (netProfit / revenue) * 100 : 0;
-    const avgDcValue = dcCount > 0 ? procurement / dcCount : 0;
     const costPerUnit = units > 0 ? procurement / units : 0;
 
     return {
@@ -554,12 +851,10 @@ export default function AnalyticsDashboardPage() {
       netMarginPercent,
       units,
       dcCount,
-      avgDcValue,
       costPerUnit,
     };
   }, [filteredChallans, filteredTuckshop, filteredSalaryPayments]);
 
-  // Operating Cost Breakdown Donut Data
   const costBreakdownData = useMemo(() => {
     return [
       { name: 'DC Goods Procurement', value: overallTotals.procurement, color: '#3b2fc9' },
@@ -568,65 +863,45 @@ export default function AnalyticsDashboardPage() {
     ].filter((item) => item.value > 0);
   }, [overallTotals]);
 
-  /* ─────────────────────────────────────────────────────────────
-     5. LOCATION COMPARISON DASHBOARD (HYD vs BLR)
-  ───────────────────────────────────────────────────────────── */
-  const locationComparison = useMemo(() => {
-    const hyd = {
-      location: 'Hyderabad',
-      procurementCost: 0,
-      tuckshopSales: 0,
-      tuckshopExpenses: 0,
-      dcCount: 0,
-      unitsDelivered: 0,
-      activeEmployees: 0,
-      totalPayroll: 0,
-      vendors: {} as Record<string, number>,
-    };
+  // Running Ledger Report
+  const ledgerReport = useMemo(() => {
+    let runningNet = 0;
+    return timeSeriesData.map((row) => {
+      runningNet += row.netProfit;
+      return {
+        ...row,
+        runningNetProfit: runningNet,
+      };
+    });
+  }, [timeSeriesData]);
 
-    const blr = {
-      location: 'Bangalore',
-      procurementCost: 0,
-      tuckshopSales: 0,
-      tuckshopExpenses: 0,
-      dcCount: 0,
-      unitsDelivered: 0,
-      activeEmployees: 0,
-      totalPayroll: 0,
-      vendors: {} as Record<string, number>,
-    };
+  // Location Comparison (HYD vs BLR)
+  const locationComparison = useMemo(() => {
+    const hyd = { location: 'Hyderabad', procurementCost: 0, tuckshopSales: 0, tuckshopExpenses: 0, dcCount: 0, unitsDelivered: 0, activeEmployees: 0, totalPayroll: 0, vendors: {} as Record<string, number> };
+    const blr = { location: 'Bangalore', procurementCost: 0, tuckshopSales: 0, tuckshopExpenses: 0, dcCount: 0, unitsDelivered: 0, activeEmployees: 0, totalPayroll: 0, vendors: {} as Record<string, number> };
 
     filteredChallans.forEach((c) => {
       const loc = c.location === 'bangalore' ? blr : hyd;
       loc.dcCount++;
-
-      let lineItemsCost = 0;
+      let lineCost = 0;
       (c.lineItems || []).forEach((item) => {
         const qty = Number(item.quantity) || 0;
         loc.unitsDelivered += qty;
         const pCost = Number(item.procurementCost) || 0;
-        lineItemsCost += pCost * qty;
-
+        lineCost += pCost * qty;
         const brand = (item.brandName || 'Unspecified').trim();
         loc.vendors[brand] = (loc.vendors[brand] || 0) + (pCost > 0 ? pCost * qty : qty * 10);
       });
-
-      const totalDcCost = (c.procurementCost !== undefined && c.procurementCost !== null ? Number(c.procurementCost) : lineItemsCost)
-        + Number(c.transportCost || 0)
-        + Number(c.otherCharges || 0);
-
-      loc.procurementCost += totalDcCost;
+      loc.procurementCost += (c.procurementCost !== undefined && c.procurementCost !== null ? Number(c.procurementCost) : lineCost)
+        + Number(c.transportCost || 0) + Number(c.otherCharges || 0);
     });
 
     filteredTuckshop.forEach((t) => {
       const isBlr = (t.location || '').toLowerCase().includes('bangalore') || (t.location || '').toLowerCase().includes('blr');
       const loc = isBlr ? blr : hyd;
       const amt = Number(t.amount) || 0;
-      if (t.type === 'sale') {
-        loc.tuckshopSales += amt;
-      } else {
-        loc.tuckshopExpenses += amt;
-      }
+      if (t.type === 'sale') loc.tuckshopSales += amt;
+      else loc.tuckshopExpenses += amt;
     });
 
     filteredEmployees.forEach((e) => {
@@ -639,56 +914,19 @@ export default function AnalyticsDashboardPage() {
       }
     });
 
-    const hydTopVendors = Object.entries(hyd.vendors)
-      .map(([brand, spend]) => ({ brand, spend }))
-      .sort((a, b) => b.spend - a.spend)
-      .slice(0, 5);
+    const hydTopVendors = Object.entries(hyd.vendors).map(([brand, spend]) => ({ brand, spend })).sort((a, b) => b.spend - a.spend).slice(0, 5);
+    const blrTopVendors = Object.entries(blr.vendors).map(([brand, spend]) => ({ brand, spend })).sort((a, b) => b.spend - a.spend).slice(0, 5);
 
-    const blrTopVendors = Object.entries(blr.vendors)
-      .map(([brand, spend]) => ({ brand, spend }))
-      .sort((a, b) => b.spend - a.spend)
-      .slice(0, 5);
-
-    // Efficiency Metrics
     const hydCostPerUnit = hyd.unitsDelivered > 0 ? hyd.procurementCost / hyd.unitsDelivered : 0;
     const blrCostPerUnit = blr.unitsDelivered > 0 ? blr.procurementCost / blr.unitsDelivered : 0;
-
     const hydRevPerStaff = hyd.activeEmployees > 0 ? hyd.tuckshopSales / hyd.activeEmployees : 0;
     const blrRevPerStaff = blr.activeEmployees > 0 ? blr.tuckshopSales / blr.activeEmployees : 0;
 
-    const hydNet = hyd.tuckshopSales - (hyd.procurementCost + hyd.tuckshopExpenses + hyd.totalPayroll);
-    const blrNet = blr.tuckshopSales - (blr.procurementCost + blr.tuckshopExpenses + blr.totalPayroll);
-
-    return {
-      hyd,
-      blr,
-      hydTopVendors,
-      blrTopVendors,
-      hydCostPerUnit,
-      blrCostPerUnit,
-      hydRevPerStaff,
-      blrRevPerStaff,
-      hydNet,
-      blrNet,
-    };
+    return { hyd, blr, hydTopVendors, blrTopVendors, hydCostPerUnit, blrCostPerUnit, hydRevPerStaff, blrRevPerStaff };
   }, [filteredChallans, filteredTuckshop, filteredEmployees]);
 
   /* ─────────────────────────────────────────────────────────────
-     6. CUMULATIVE RUNNING CASH FLOW & MONTHLY P&L LEDGER
-  ───────────────────────────────────────────────────────────── */
-  const ledgerReport = useMemo(() => {
-    let runningNet = 0;
-    return timeSeriesData.map((row) => {
-      runningNet += row.netProfit;
-      return {
-        ...row,
-        runningNetProfit: runningNet,
-      };
-    });
-  }, [timeSeriesData]);
-
-  /* ─────────────────────────────────────────────────────────────
-     7. EXPORT COMPREHENSIVE ANALYTICS TO EXCEL
+     7. MULTI-SHEET COMPREHENSIVE EXCEL EXPORT
   ───────────────────────────────────────────────────────────── */
   const handleExportExcel = () => {
     try {
@@ -722,20 +960,52 @@ export default function AnalyticsDashboardPage() {
         'Product Varieties Count': b.productCount,
       }));
 
-      const wsLedger = XLSX.utils.json_to_sheet(ledgerRows);
-      const wsBrands = XLSX.utils.json_to_sheet(brandRows);
+      // Sheet 3: Stock Requests Fulfillment
+      const stockRows = filteredStockRequests.map((r) => ({
+        'Request Date': r.requestDate ? r.requestDate.substring(0, 10) : 'N/A',
+        'Location': r.location,
+        'Status': r.status,
+        'Items Count': (r.lineItems || []).length,
+        'Requested Total Units': (r.lineItems || []).reduce((s, i) => s + (Number(i.totalUnits || i.quantity) || 0), 0),
+        'Fulfilled Units': (r.lineItems || []).reduce((s, i) => s + (Number(i.fulfilledTotalUnits || i.fulfilledQuantity) || 0), 0),
+        'Notes': r.notes || '',
+      }));
 
-      XLSX.utils.book_append_sheet(wb, wsLedger, 'Monthly Ledger & PnL');
-      XLSX.utils.book_append_sheet(wb, wsBrands, 'Brand Intelligence');
+      // Sheet 4: Workforce & Attendance
+      const attendanceRows = workforceAnalytics.staffLeaderboard.map((s) => ({
+        'Staff Name': s.name,
+        'Employee ID': s.id,
+        'Location': s.location,
+        'Total Shifts Logged': s.shifts,
+        'On-Time Check-Ins': s.onTimeCount,
+        'Late Check-Ins': s.lateCount,
+        'Overtime (Hours)': Math.round((s.overtimeMinutes / 60) * 10) / 10,
+      }));
+
+      // Sheet 5: Shelf-Life Expiry Risk
+      const expiryRows = brandAnalytics.expiringItemsList.map((e) => ({
+        'Brand': e.brand,
+        'Item Name': e.item,
+        'Quantity in Units': e.quantity,
+        'Expiry Date': e.expiry,
+        'Days Remaining': e.daysRemaining,
+        'MRP per unit (INR)': e.mrp,
+        'Total Risk Value (INR)': e.quantity * e.mrp,
+      }));
+
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ledgerRows), 'Monthly Ledger & PnL');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(brandRows), 'Brand Intelligence');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(stockRows), 'Stock Requests');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(attendanceRows), 'Workforce Leaderboard');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expiryRows), 'Expiry Risk Items');
 
       const dateStr = new Date().toISOString().substring(0, 10);
-      XLSX.writeFile(wb, `TheGutGuru_Executive_Analytics_${dateStr}.xlsx`);
+      XLSX.writeFile(wb, `TheGutGuru_Executive_Analytics_Suite_${dateStr}.xlsx`);
     } catch (e: any) {
       alert(`Export failed: ${e.message}`);
     }
   };
 
-  // Filtered Brand List for Tab 2
   const searchedBrands = useMemo(() => {
     if (!brandSearch.trim()) return brandAnalytics.list;
     const q = brandSearch.toLowerCase();
@@ -785,7 +1055,7 @@ export default function AnalyticsDashboardPage() {
                     The Gut Guru Tracker
                   </span>
                   <span className="text-[10px] bg-white/15 px-2.5 py-0.5 rounded-full font-bold border border-white/20 text-white/90">
-                    Executive Analytics & BI
+                    Executive Analytics & BI Suite
                   </span>
                 </div>
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
@@ -793,7 +1063,7 @@ export default function AnalyticsDashboardPage() {
                   Executive Insights & P&L Reporting
                 </h1>
                 <p className="text-xs text-gray-300 mt-1 max-w-2xl leading-relaxed">
-                  Interactive multi-filter dashboard: HYD vs BLR head-to-head, brand procurement share, monthly P&L ledger, and operational unit throughput.
+                  Interactive multi-filter dashboard: Financial P&L, stock fulfillment, brand intelligence, expiry risk radar, and workforce analytics.
                 </p>
               </div>
             </div>
@@ -804,13 +1074,13 @@ export default function AnalyticsDashboardPage() {
                 type="button"
                 onClick={handleExportExcel}
                 className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition-all active:scale-98"
-                title="Download full analytics as Excel"
+                title="Download 5-Sheet Excel Suite"
               >
                 <FileSpreadsheet className="h-3.5 w-3.5" />
-                <span>Export Report</span>
+                <span>Export 5-Sheet Excel</span>
               </button>
 
-              <div className="flex items-center gap-1 p-1 bg-white/10 backdrop-blur-md border border-white/15 rounded-xl shadow-xs overflow-x-auto">
+              <div className="flex items-center gap-1 p-1 bg-white/10 backdrop-blur-md border border-white/15 rounded-xl shadow-xs overflow-x-auto max-w-full">
                 <button
                   onClick={() => setActiveTab('overview')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
@@ -831,7 +1101,29 @@ export default function AnalyticsDashboardPage() {
                   }`}
                 >
                   <Tag className="h-3.5 w-3.5" />
-                  Brands & Vendors
+                  Brands & Expiry
+                </button>
+                <button
+                  onClick={() => setActiveTab('inventory')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                    activeTab === 'inventory'
+                      ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
+                      : 'text-white/80 hover:bg-white/20'
+                  }`}
+                >
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  Stock Requests
+                </button>
+                <button
+                  onClick={() => setActiveTab('workforce')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                    activeTab === 'workforce'
+                      ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
+                      : 'text-white/80 hover:bg-white/20'
+                  }`}
+                >
+                  <Users className="h-3.5 w-3.5" />
+                  Workforce
                 </button>
                 <button
                   onClick={() => setActiveTab('comparison')}
@@ -842,7 +1134,7 @@ export default function AnalyticsDashboardPage() {
                   }`}
                 >
                   <MapPin className="h-3.5 w-3.5" />
-                  HYD vs BLR
+                  HYD vs BLR & Cycles
                 </button>
                 <button
                   onClick={() => setActiveTab('ledger')}
@@ -888,7 +1180,6 @@ export default function AnalyticsDashboardPage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-            {/* 1. Date Range Preset */}
             <div>
               <label className="block text-[11px] font-bold text-gray-600 mb-1">Timeframe</label>
               <select
@@ -906,7 +1197,6 @@ export default function AnalyticsDashboardPage() {
               </select>
             </div>
 
-            {/* 2. Billing Cycle Filter */}
             <div>
               <label className="block text-[11px] font-bold text-gray-600 mb-1">Invoice Cycle</label>
               <select
@@ -920,7 +1210,6 @@ export default function AnalyticsDashboardPage() {
               </select>
             </div>
 
-            {/* 3. Location Filter */}
             <div>
               <label className="block text-[11px] font-bold text-gray-600 mb-1">DC Hub Location</label>
               <select
@@ -934,7 +1223,6 @@ export default function AnalyticsDashboardPage() {
               </select>
             </div>
 
-            {/* 4. Company Site Filter */}
             <div>
               <label className="block text-[11px] font-bold text-gray-600 mb-1">Company Site</label>
               <select
@@ -951,7 +1239,6 @@ export default function AnalyticsDashboardPage() {
               </select>
             </div>
 
-            {/* 5. Brand / Vendor Filter */}
             <div>
               <label className="block text-[11px] font-bold text-gray-600 mb-1">Brand / Vendor</label>
               <select
@@ -969,7 +1256,6 @@ export default function AnalyticsDashboardPage() {
             </div>
           </div>
 
-          {/* Custom Date Inputs if selected */}
           {datePreset === 'custom' && (
             <div className="pt-2 flex flex-col sm:flex-row items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200/80 animate-in fade-in">
               <span className="text-xs font-bold text-gray-700">Custom Date Range:</span>
@@ -991,7 +1277,6 @@ export default function AnalyticsDashboardPage() {
             </div>
           )}
 
-          {/* Active Filter Chips Ribbon */}
           {activeFiltersCount > 0 && (
             <div className="flex items-center gap-1.5 flex-wrap pt-1 text-[11px]">
               <span className="text-gray-400 font-medium">Filtering by:</span>
@@ -1036,7 +1321,6 @@ export default function AnalyticsDashboardPage() {
         >
           {/* ── Executive KPI Metric Cards with Rich Gradients ── */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {/* 1. Tuckshop Revenue */}
             <div className="bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/50 p-4 rounded-2xl border border-emerald-200/80 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">Tuckshop Revenue</span>
@@ -1054,7 +1338,6 @@ export default function AnalyticsDashboardPage() {
               </div>
             </div>
 
-            {/* 2. DC Procurement Cost */}
             <div className="bg-gradient-to-br from-blue-50/90 via-white to-sky-50/50 p-4 rounded-2xl border border-blue-200/80 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-black uppercase tracking-wider text-blue-800">Procurement Cost</span>
@@ -1072,7 +1355,6 @@ export default function AnalyticsDashboardPage() {
               </div>
             </div>
 
-            {/* 3. Retail MRP Delivery Value */}
             <div className="bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/50 p-4 rounded-2xl border border-indigo-200/80 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-black uppercase tracking-wider text-indigo-800">Total MRP Value</span>
@@ -1090,7 +1372,6 @@ export default function AnalyticsDashboardPage() {
               </div>
             </div>
 
-            {/* 4. Units Delivered */}
             <div className="bg-gradient-to-br from-purple-50/90 via-white to-pink-50/50 p-4 rounded-2xl border border-purple-200/80 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-black uppercase tracking-wider text-purple-800">Units Delivered</span>
@@ -1108,7 +1389,6 @@ export default function AnalyticsDashboardPage() {
               </div>
             </div>
 
-            {/* 5. Staff Payroll */}
             <div className="bg-gradient-to-br from-amber-50/90 via-white to-orange-50/50 p-4 rounded-2xl border border-amber-200/80 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-black uppercase tracking-wider text-amber-800">Staff Payroll</span>
@@ -1126,7 +1406,6 @@ export default function AnalyticsDashboardPage() {
               </div>
             </div>
 
-            {/* 6. Net Cafeteria P&L */}
             <div className={`p-4 rounded-2xl border shadow-xs flex flex-col justify-between ${
               overallTotals.netProfit >= 0
                 ? 'bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/50 border-emerald-200/80'
@@ -1167,7 +1446,7 @@ export default function AnalyticsDashboardPage() {
           </div>
 
           {/* ─────────────────────────────────────────────────────────────
-              TAB 1: EXECUTIVE OVERVIEW & TREND CHARTS
+              TAB 1: EXECUTIVE OVERVIEW & DAY-OF-WEEK INTELLIGENCE
           ───────────────────────────────────────────────────────────── */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
@@ -1184,7 +1463,6 @@ export default function AnalyticsDashboardPage() {
                     </p>
                   </div>
 
-                  {/* Granularity Selector */}
                   <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl text-xs font-semibold self-start sm:self-auto">
                     {(['daily', 'weekly', 'monthly'] as const).map((g) => (
                       <button
@@ -1228,9 +1506,38 @@ export default function AnalyticsDashboardPage() {
                 </div>
               </div>
 
-              {/* Grid 2: Operating Cost Structure Donut + Delivery Volume Throughput */}
+              {/* Day-of-the-Week Traffic Pattern & Cost Structure Donut */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Donut Chart: Operating Cost Composition */}
+                {/* Day of Week Pattern */}
+                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-800 mb-1 flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-[#3b2fc9]" />
+                      Day-of-the-Week Sales & Stock Intake Velocity
+                    </h4>
+                    <p className="text-xs text-gray-500 mb-4">Identify peak tuckshop revenue days and heavy replenishment periods.</p>
+                  </div>
+
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={dayOfWeekPatterns} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                        <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
+                        <YAxis axisLine={false} tickLine={false} tickFormatter={formatCurrency} tick={{ fontSize: 11 }} />
+                        <Tooltip formatter={(val: number) => formatCurrency(val)} />
+                        <Legend />
+                        <Bar dataKey="sales" name="Tuckshop Sales (₹)" fill="#10b981" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="units" name="Stock Units Delivered" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="pt-2 text-center text-[11px] text-gray-500 border-t border-gray-100">
+                    Highest sales volume occurs mid-week; Friday-Monday represent core inventory restock windows.
+                  </div>
+                </div>
+
+                {/* Operating Cost Breakdown Donut */}
                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
                   <div>
                     <h4 className="text-sm font-bold text-gray-800 mb-1 flex items-center gap-2">
@@ -1278,49 +1585,86 @@ export default function AnalyticsDashboardPage() {
                     </div>
                   </div>
                 </div>
-
-                {/* Composed Chart: Delivered Units vs Total DCs */}
-                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
-                  <div>
-                    <h4 className="text-sm font-bold text-gray-800 mb-1 flex items-center gap-2">
-                      <Truck className="h-4 w-4 text-purple-600" />
-                      Delivery Units Throughput & DCs Filed
-                    </h4>
-                    <p className="text-xs text-gray-500 mb-4">Tracking aggregate pack volume and distribution challans delivered over time.</p>
-                  </div>
-
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={timeSeriesData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-                        <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-                        <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-                        <Tooltip />
-                        <Legend />
-                        <Bar yAxisId="left" dataKey="unitsDelivered" name="Units Delivered" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                        <Line yAxisId="right" type="monotone" dataKey="dcCount" name="DCs Filed" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 3 }} />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-100 text-xs text-gray-600">
-                    <span>Total Goods Consumed: <strong>{overallTotals.units.toLocaleString('en-IN')} units</strong></span>
-                    <span>Total Logistics Runs: <strong>{overallTotals.dcCount} DCs</strong></span>
-                  </div>
-                </div>
               </div>
             </div>
           )}
 
           {/* ─────────────────────────────────────────────────────────────
-              TAB 2: BRAND & PRODUCT CATEGORY INTELLIGENCE
+              TAB 2: BRANDS, VENDORS & EXPIRY RISK RADAR
           ───────────────────────────────────────────────────────────── */}
           {activeTab === 'brands' && (
             <div className="space-y-6">
+              {/* Product Expiry & Shelf-Life Risk Radar */}
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      Product Expiry & Shelf-Life Risk Radar
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      Monitor incoming goods nearing expiration to prevent shrinkage and optimize inventory turnover.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold px-3 py-1 bg-red-50 text-red-700 border border-red-200 rounded-full">
+                      {brandAnalytics.criticalExpiryCount.toLocaleString('en-IN')} Units at Risk ({formatCurrency(brandAnalytics.criticalExpiryValue)})
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Expiry Risk Donut */}
+                  <div className="h-56">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={brandAnalytics.expiryBreakdownData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={45}
+                          outerRadius={75}
+                          paddingAngle={3}
+                        >
+                          {brandAnalytics.expiryBreakdownData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(val: number) => `${val.toLocaleString('en-IN')} units`} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* High Risk Items List */}
+                  <div className="lg:col-span-2 divide-y divide-gray-100 text-xs max-h-56 overflow-y-auto">
+                    {brandAnalytics.expiringItemsList.length === 0 ? (
+                      <p className="text-xs text-gray-400 py-6 text-center">No immediate stock expiration risks detected.</p>
+                    ) : (
+                      brandAnalytics.expiringItemsList.map((item, idx) => (
+                        <div key={idx} className="py-2.5 flex items-center justify-between gap-2">
+                          <div>
+                            <span className="font-semibold text-gray-900">{item.item}</span>
+                            <span className="text-[11px] text-gray-500 ml-1.5 font-mono">({item.brand})</span>
+                            <span className="block text-[10px] text-gray-400">
+                              Expiry: {item.expiry} ({item.daysRemaining <= 0 ? 'Expired' : `${item.daysRemaining} days left`})
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-bold text-gray-800">{item.quantity} units</span>
+                            <span className="block text-[10px] text-red-600 font-semibold">{formatCurrency(item.quantity * item.mrp)} MRP</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Brand Top 10 Spending Chart + Share Donut */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Horizontal Bar Chart: Top 10 Brands by Spend */}
                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs">
                   <h4 className="text-sm font-bold text-gray-800 mb-1 flex items-center gap-2">
                     <Award className="h-4 w-4 text-amber-500" />
@@ -1349,7 +1693,6 @@ export default function AnalyticsDashboardPage() {
                   </div>
                 </div>
 
-                {/* Donut Chart: Brand Concentration Share */}
                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
                   <div>
                     <h4 className="text-sm font-bold text-gray-800 mb-1 flex items-center gap-2">
@@ -1388,8 +1731,7 @@ export default function AnalyticsDashboardPage() {
                       {brandAnalytics.grandTotalProcurement > 0
                         ? ((brandAnalytics.top10.reduce((s, b) => s + b.procurementSpend, 0) / brandAnalytics.grandTotalProcurement) * 100).toFixed(1)
                         : 0}%
-                    </strong>{' '}
-                    of all procurement.
+                    </strong> of all procurement.
                   </div>
                 </div>
               </div>
@@ -1474,33 +1816,60 @@ export default function AnalyticsDashboardPage() {
                   </table>
                 </div>
               </div>
-
-              {/* Tuckshop Expense Category Breakdown */}
-              {tuckshopExpenseCategories.entries.length > 0 && (
-                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-4">
-                  <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                    <Receipt className="h-4 w-4 text-pink-600" />
-                    Tuckshop Daily Operational Expense Categories ({formatCurrency(tuckshopExpenseCategories.totalExpenses)})
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                    {tuckshopExpenseCategories.entries.slice(0, 8).map((cat, idx) => (
-                      <div key={idx} className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                        <span className="text-gray-400 block text-[10px] uppercase font-bold truncate">{cat.name}</span>
-                        <span className="font-extrabold text-base text-gray-900 block mt-0.5">{formatCurrency(cat.value)}</span>
-                        <span className="text-[10px] text-pink-600 font-semibold">{cat.share.toFixed(1)}% of expenses</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
           {/* ─────────────────────────────────────────────────────────────
-              TAB 3: HYDERABAD VS BANGALORE LOCATION COMPARISON
+              TAB 3: HYD VS BLR & CYCLE 1 VS CYCLE 2 COMPARISONS
           ───────────────────────────────────────────────────────────── */}
           {activeTab === 'comparison' && (
             <div className="space-y-6">
+              {/* Cycle 1 vs Cycle 2 Direct Comparison Card */}
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                      <RefreshCw className="h-4 w-4 text-[#3b2fc9]" />
+                      Billing Cycle 1 vs Cycle 2 Performance Comparison
+                    </h3>
+                    <p className="text-xs text-gray-500">Comparing 1st-15th against 16th-End across sales volume and procurement spend.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {cycleComparison.map((cycle, idx) => (
+                    <div key={idx} className="bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-xs uppercase tracking-wider text-gray-800">{cycle.name}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cycle.netProfit >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                          {cycle.netMargin.toFixed(1)}% Margin
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-white p-2.5 rounded-lg border border-gray-100">
+                          <span className="text-[10px] text-gray-400 block font-medium">Tuckshop Revenue</span>
+                          <span className="font-bold text-emerald-700">{formatCurrency(cycle.revenue)}</span>
+                        </div>
+                        <div className="bg-white p-2.5 rounded-lg border border-gray-100">
+                          <span className="text-[10px] text-gray-400 block font-medium">Procurement Spend</span>
+                          <span className="font-bold text-blue-700">{formatCurrency(cycle.procurement)}</span>
+                        </div>
+                        <div className="bg-white p-2.5 rounded-lg border border-gray-100">
+                          <span className="text-[10px] text-gray-400 block font-medium">Units Delivered</span>
+                          <span className="font-bold text-purple-700">{cycle.units.toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="bg-white p-2.5 rounded-lg border border-gray-100">
+                          <span className="text-[10px] text-gray-400 block font-medium">Net Surplus</span>
+                          <span className={`font-bold ${cycle.netProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                            {formatCurrency(cycle.netProfit)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Side-by-Side KPI Matrix */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
                 <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">
@@ -1562,7 +1931,6 @@ export default function AnalyticsDashboardPage() {
                       </div>
                     </div>
 
-                    {/* Top Vendor Reliance HYD */}
                     <div className="pt-2">
                       <span className="text-[11px] font-bold text-gray-700 block mb-2">Top Brands in Hyderabad</span>
                       <div className="space-y-1.5">
@@ -1624,7 +1992,6 @@ export default function AnalyticsDashboardPage() {
                       </div>
                     </div>
 
-                    {/* Top Vendor Reliance BLR */}
                     <div className="pt-2">
                       <span className="text-[11px] font-bold text-gray-700 block mb-2">Top Brands in Bangalore</span>
                       <div className="space-y-1.5">
@@ -1640,9 +2007,8 @@ export default function AnalyticsDashboardPage() {
                 </div>
               </div>
 
-              {/* Side-by-Side Visual Charts */}
+              {/* Side-by-Side Charts */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Spend & Revenue Comparison */}
                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs">
                   <h4 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
                     <BarChart2 className="h-4 w-4 text-[#3b2fc9]" />
@@ -1669,7 +2035,6 @@ export default function AnalyticsDashboardPage() {
                   </div>
                 </div>
 
-                {/* Efficiency Indicators: Cost per Unit & Staff Productivity */}
                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs">
                   <h4 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
                     <Percent className="h-4 w-4 text-purple-600" />
@@ -1700,11 +2065,202 @@ export default function AnalyticsDashboardPage() {
           )}
 
           {/* ─────────────────────────────────────────────────────────────
-              TAB 4: MONTHLY FINANCIAL LEDGER & CASH FLOW
+              TAB 4: STOCK REQUESTS & ORDER FULFILLMENT INTELLIGENCE
+          ───────────────────────────────────────────────────────────── */}
+          {activeTab === 'inventory' && (
+            <div className="space-y-6">
+              {/* Stock Fulfillment Funnel Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase block">Total Requests</span>
+                  <span className="text-xl font-black text-gray-900 block mt-0.5">{stockFulfillmentAnalytics.totalRequests}</span>
+                  <span className="text-[10px] text-gray-500">{stockFulfillmentAnalytics.requestedUnitsTotal.toLocaleString('en-IN')} units requested</span>
+                </div>
+                <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-200 shadow-xs">
+                  <span className="text-[10px] font-bold text-emerald-800 uppercase block">Fulfillment Rate</span>
+                  <span className="text-xl font-black text-emerald-950 block mt-0.5">{stockFulfillmentAnalytics.fulfillmentRate.toFixed(1)}%</span>
+                  <span className="text-[10px] text-emerald-700">{stockFulfillmentAnalytics.fulfilledUnitsTotal.toLocaleString('en-IN')} units delivered</span>
+                </div>
+                <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-200 shadow-xs">
+                  <span className="text-[10px] font-bold text-amber-800 uppercase block">Pending / In-Flight</span>
+                  <span className="text-xl font-black text-amber-950 block mt-0.5">{stockFulfillmentAnalytics.pendingCount + stockFulfillmentAnalytics.partialCount}</span>
+                  <span className="text-[10px] text-amber-700">{stockFulfillmentAnalytics.partialCount} partially fulfilled</span>
+                </div>
+                <div className="bg-purple-50/70 p-4 rounded-2xl border border-purple-200 shadow-xs">
+                  <span className="text-[10px] font-bold text-purple-800 uppercase block">Completed Fulfilled</span>
+                  <span className="text-xl font-black text-purple-950 block mt-0.5">{stockFulfillmentAnalytics.fulfilledCount}</span>
+                  <span className="text-[10px] text-purple-700">100% order dispatch</span>
+                </div>
+              </div>
+
+              {/* Status Donut + Top Requested Items */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-800 mb-1 flex items-center gap-2">
+                      <PieChartIcon className="h-4 w-4 text-[#3b2fc9]" />
+                      Stock Request Status Distribution
+                    </h4>
+                    <p className="text-xs text-gray-500 mb-4">Breakdown of cafeteria stock orders across fulfillment stages.</p>
+                  </div>
+
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={stockFulfillmentAnalytics.statusDonutData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={85}
+                          paddingAngle={3}
+                        >
+                          {stockFulfillmentAnalytics.statusDonutData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(val: number) => `${val} orders`} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="pt-2 text-center text-xs text-gray-500 border-t border-gray-100">
+                    Active request pipeline tracking for automated warehouse fulfillment.
+                  </div>
+                </div>
+
+                {/* Top Requested Items by Staff */}
+                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs">
+                  <h4 className="text-sm font-bold text-gray-800 mb-1 flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-amber-500" />
+                    Top Stock Items in Demand by Cafeteria Staff
+                  </h4>
+                  <p className="text-xs text-gray-500 mb-4">Most frequently requisitioned inventory items.</p>
+
+                  <div className="divide-y divide-gray-100 text-xs max-h-72 overflow-y-auto">
+                    {stockFulfillmentAnalytics.topRequestedItems.map((item, idx) => (
+                      <div key={idx} className="py-2.5 flex items-center justify-between gap-2">
+                        <div>
+                          <span className="font-semibold text-gray-900">{item.item}</span>
+                          <span className="text-[10px] text-gray-500 ml-1.5 font-mono">({item.brand})</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-bold text-gray-800">{item.requestedUnits} requested</span>
+                          <span className="block text-[10px] text-emerald-600 font-medium">{item.fulfilledUnits} fulfilled</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+              TAB 5: WORKFORCE ATTENDANCE & LABOR PRODUCTIVITY
+          ───────────────────────────────────────────────────────────── */}
+          {activeTab === 'workforce' && (
+            <div className="space-y-6">
+              {/* Workforce Metrics Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase block">Total Shifts Logged</span>
+                  <span className="text-xl font-black text-gray-900 block mt-0.5">{workforceAnalytics.totalShifts}</span>
+                  <span className="text-[10px] text-gray-500">{filteredEmployees.length} active roster staff</span>
+                </div>
+                <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-200 shadow-xs">
+                  <span className="text-[10px] font-bold text-emerald-800 uppercase block">On-Time Check-In Rate</span>
+                  <span className="text-xl font-black text-emerald-950 block mt-0.5">{workforceAnalytics.onTimeRate.toFixed(1)}%</span>
+                  <span className="text-[10px] text-emerald-700">{workforceAnalytics.onTimeCount} on-time shifts</span>
+                </div>
+                <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-200 shadow-xs">
+                  <span className="text-[10px] font-bold text-amber-800 uppercase block">Late Check-Ins</span>
+                  <span className="text-xl font-black text-amber-950 block mt-0.5">{workforceAnalytics.lateCount}</span>
+                  <span className="text-[10px] text-amber-700">Avg {workforceAnalytics.avgLateMinutes}m after cutoff</span>
+                </div>
+                <div className="bg-purple-50/70 p-4 rounded-2xl border border-purple-200 shadow-xs">
+                  <span className="text-[10px] font-bold text-purple-800 uppercase block">Overtime Logged</span>
+                  <span className="text-xl font-black text-purple-950 block mt-0.5">{workforceAnalytics.totalOvertimeHours}h</span>
+                  <span className="text-[10px] text-purple-700">Tracked shift surplus</span>
+                </div>
+              </div>
+
+              {/* Attendance Status Donut + Staff Leaderboard */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-800 mb-1 flex items-center gap-2">
+                      <PieChartIcon className="h-4 w-4 text-[#3b2fc9]" />
+                      Shift Attendance Breakdown
+                    </h4>
+                    <p className="text-xs text-gray-500 mb-4">Proportion of full-day shifts vs half-days and pending check-outs.</p>
+                  </div>
+
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={workforceAnalytics.attendanceStatusDonut}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={85}
+                          paddingAngle={3}
+                        >
+                          {workforceAnalytics.attendanceStatusDonut.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(val: number) => `${val} shifts`} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="pt-2 text-center text-xs text-gray-500 border-t border-gray-100">
+                    Real-time biometric punch card monitoring across both hub locations.
+                  </div>
+                </div>
+
+                {/* Staff Attendance Leaderboard */}
+                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs">
+                  <h4 className="text-sm font-bold text-gray-800 mb-1 flex items-center gap-2">
+                    <Award className="h-4 w-4 text-amber-500" />
+                    Staff Attendance & Duty Leaderboard
+                  </h4>
+                  <p className="text-xs text-gray-500 mb-4">Top contributors by completed shifts and punctuality.</p>
+
+                  <div className="divide-y divide-gray-100 text-xs max-h-72 overflow-y-auto">
+                    {workforceAnalytics.staffLeaderboard.map((s, idx) => (
+                      <div key={idx} className="py-2.5 flex items-center justify-between gap-2">
+                        <div>
+                          <span className="font-semibold text-gray-900">{s.name}</span>
+                          <span className="text-[10px] text-gray-500 ml-1.5 uppercase font-mono">({s.location})</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-bold text-gray-800">{s.shifts} shifts</span>
+                          <span className="block text-[10px] text-emerald-600 font-medium">
+                            {s.onTimeCount} on-time · {s.lateCount} late
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+              TAB 6: MONTHLY FINANCIAL LEDGER & CASH FLOW
           ───────────────────────────────────────────────────────────── */}
           {activeTab === 'ledger' && (
             <div className="space-y-6">
-              {/* Cumulative Running Cash Flow Curve */}
               <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
@@ -1751,7 +2307,7 @@ export default function AnalyticsDashboardPage() {
                     className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors self-start sm:self-auto"
                   >
                     <FileSpreadsheet className="h-3.5 w-3.5" />
-                    Download Excel (.xlsx)
+                    Download 5-Sheet Excel (.xlsx)
                   </button>
                 </div>
 

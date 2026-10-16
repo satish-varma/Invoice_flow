@@ -1004,7 +1004,7 @@ export function NewRelicChallanForm({
 
 
       {/* ── Mobile Floating Quick Action Dock (2-Tier Non-Overlapping Layout) ── */}
-      <div className="sm:hidden fixed bottom-4 left-3 right-3 z-50 max-w-lg mx-auto">
+      <div className="sm:hidden fixed bottom-[80px] left-3 right-3 z-30 max-w-lg mx-auto">
         {isDockMinimized ? (
           <div className="flex items-center justify-end gap-2">
             {isAdmin && (

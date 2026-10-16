@@ -91,6 +91,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     const [signedCopyUrls, setSignedCopyUrls] = useState<string[]>(initialData?.signedCopyUrls || []);
     const [goodsReceivedInvoiceUrls, setGoodsReceivedInvoiceUrls] = useState<string[]>(initialData?.goodsReceivedInvoiceUrls || []);
     const [activeAttachmentModal, setActiveAttachmentModal] = useState<'signed_copy' | 'invoice' | null>(null);
+    const [isDockMinimized, setIsDockMinimized] = useState(false);
 
     const [isImportingExcel, setIsImportingExcel] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -1595,6 +1596,108 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 </CardFooter>
             </Card>
 
+            {/* ── Mobile Floating Quick Action Dock ── */}
+            <div className="sm:hidden fixed bottom-[80px] left-3 right-3 z-30 max-w-lg mx-auto">
+                {isDockMinimized ? (
+                    <div className="flex items-center justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                triggerHaptic('light');
+                                setIsDockMinimized(false);
+                            }}
+                            className="bg-gradient-to-r from-slate-950 via-[#181156] to-[#251b85] text-white shadow-[0_12px_36px_rgba(24,17,86,0.55)] backdrop-blur-xl px-5 py-3 rounded-full flex items-center gap-3 text-sm font-bold active:scale-95 transition-all border-2 border-indigo-400/40"
+                        >
+                            <span className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                            </span>
+                            <span>{lineItems.length} {lineItems.length === 1 ? 'Item' : 'Items'}</span>
+                            <span className="text-emerald-300 font-extrabold pl-2 border-l border-white/20">
+                                ₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                            </span>
+                            <ChevronUp className="w-4 h-4 text-indigo-200 ml-1" />
+                        </button>
+                    </div>
+                ) : (
+                    <div className="bg-gradient-to-r from-slate-950 via-[#181156] to-[#251b85] text-white backdrop-blur-2xl border-2 border-indigo-400/40 rounded-2xl p-3 shadow-[0_16px_45px_rgba(15,23,42,0.65)] space-y-2.5 transition-all">
+                        {/* Top Tier: Clean Stats & Dismiss Controls */}
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#3b2fc9] to-[#6366f1] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-indigo-900/50 border border-white/20">
+                                    {lineItems.length}
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-base font-black text-emerald-400 truncate leading-tight tracking-tight">
+                                            ₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                                        </p>
+                                        <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded bg-white/10 text-indigo-200 border border-white/10">
+                                            {lineItems.length} {lineItems.length === 1 ? 'Item' : 'Items'}
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] text-indigo-200 truncate font-medium pt-0.5">
+                                        {initialData ? `Editing DC ${dcNumber || ''}` : 'New Delivery Challan'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                {initialData && (
+                                    <button
+                                        type="button"
+                                        onClick={handleCancelEdit}
+                                        disabled={isSaving}
+                                        className="h-8 px-2.5 rounded-lg text-xs font-semibold text-rose-300 hover:text-white hover:bg-white/10 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        triggerHaptic('light');
+                                        setIsDockMinimized(true);
+                                    }}
+                                    className="h-8 w-8 rounded-lg bg-white/10 hover:bg-white/20 text-indigo-200 hover:text-white flex items-center justify-center shrink-0 transition-colors border border-white/10"
+                                    title="Minimize toolbar"
+                                >
+                                    <ChevronDown className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Bottom Tier: Full-Width Prominent Touch Action Buttons */}
+                        <div className="flex items-center gap-2 pt-0.5">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                disabled={isSaving}
+                                onClick={() => handleSaveChallan(false)}
+                                className="flex-1 h-11 rounded-xl bg-white/10 hover:bg-white/20 border-white/25 text-white hover:text-white font-bold text-xs gap-2 active:scale-95 transition-transform shadow-xs"
+                                title="Save without downloading"
+                            >
+                                <Save className="h-4 w-4 text-amber-300 shrink-0" />
+                                <span>{initialData ? 'Update Only' : 'Save Only'}</span>
+                            </Button>
+
+                            <Button
+                                type="button"
+                                disabled={isSaving}
+                                onClick={() => handleSaveChallan(true)}
+                                className="flex-1 h-11 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs gap-2 shadow-lg shadow-emerald-500/35 border border-emerald-400/30 active:scale-95 transition-transform"
+                            >
+                                {isSaving ? (
+                                    <Loader className="h-4 w-4 animate-spin shrink-0" />
+                                ) : (
+                                    <Save className="h-4 w-4 shrink-0" />
+                                )}
+                                <span>{initialData ? 'Update & PDF' : 'Save & Download'}</span>
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </div>
             {/* Attachment Modal for Form */}
             {activeAttachmentModal && initialData && (
                 <DeliveryChallanAttachmentModal

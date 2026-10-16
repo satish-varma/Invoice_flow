@@ -3,7 +3,7 @@ import { NewRelicChallan } from '@/types/challan';
 
 import React, { useState, useRef } from 'react';
 import { format } from 'date-fns';
-import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, ChevronDown, ChevronUp, FileCheck, Paperclip, Edit } from 'lucide-react';
+import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, ChevronDown, ChevronUp, FileCheck, Paperclip, Edit, Package, Calendar } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 import { useToast } from '@/hooks/use-toast';
 import { NewRelicAttachmentModal } from './newrelic-attachment-modal';
@@ -232,7 +232,7 @@ export function NewRelicChallanList({
       )}
 
       {/* Mobile Feed Style Card List (< sm) */}
-      <div className="block sm:hidden divide-y divide-gray-100 bg-gray-50/50 p-2.5 space-y-3">
+      <div className="block sm:hidden p-2.5 sm:p-3 space-y-3.5 bg-slate-100/70 dark:bg-slate-950/40">
         {challans.map((challan) => {
           const mrpTotal = (challan.lineItems || []).reduce((acc, item) => acc + ((item.mrp || 0) * (item.quantity || 1)), 0);
           const topItems = (challan.lineItems || []).slice(0, 2);
@@ -241,7 +241,7 @@ export function NewRelicChallanList({
           return (
             <div
               key={challan.id}
-              className="relative overflow-hidden rounded-2xl group"
+              className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] transition-all group"
             >
               {/* Swipe Action Reveal Rail (revealed behind card when swiped left) */}
               <div className="absolute inset-y-0 right-0 flex items-stretch z-0">
@@ -256,7 +256,7 @@ export function NewRelicChallanList({
                   title="Duplicate Challan"
                 >
                   <Copy className="h-5 w-5 stroke-[2.2]" />
-                  <span className="text-[10px] font-bold">Duplicate</span>
+                  <span className="text-[11px] font-bold">Duplicate</span>
                 </button>
                 <button
                   type="button"
@@ -269,16 +269,16 @@ export function NewRelicChallanList({
                   title="Download PDF"
                 >
                   <Download className="h-5 w-5 stroke-[2.2]" />
-                  <span className="text-[10px] font-bold">PDF</span>
+                  <span className="text-[11px] font-bold">PDF</span>
                 </button>
               </div>
 
               {/* The swipeable card surface */}
               <div
-                className={`relative z-10 bg-white rounded-2xl border p-4 shadow-2xs space-y-3 transition-transform duration-200 ease-out ${
+                className={`relative z-10 bg-white dark:bg-slate-900 rounded-3xl p-4 space-y-3 transition-transform duration-200 ease-out ${
                   challan.location === 'hyderabad'
-                    ? 'border-l-4 border-l-sky-500 border-gray-200/90'
-                    : 'border-l-4 border-l-emerald-500 border-gray-200/90'
+                    ? 'border-t-4 border-t-sky-500 bg-gradient-to-b from-sky-500/5 via-white to-white dark:from-sky-500/10 dark:via-slate-900 dark:to-slate-900'
+                    : 'border-t-4 border-t-emerald-500 bg-gradient-to-b from-emerald-500/5 via-white to-white dark:from-emerald-500/10 dark:via-slate-900 dark:to-slate-900'
                 } ${swipedId === challan.id ? '-translate-x-36 shadow-md' : 'translate-x-0'}`}
                 onTouchStart={handleCardTouchStart}
                 onTouchEnd={(e) => handleCardTouchEnd(e, challan)}
@@ -286,360 +286,300 @@ export function NewRelicChallanList({
                   if (swipedId === challan.id) setSwipedId(null);
                 }}
               >
-                {/* Card Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
+                {/* Card Header: Checkbox, DC Number, Date, Location Pill */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
                     <input
                       type="checkbox"
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                      className="rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 w-5 h-5 shrink-0"
                       checked={!!challan.id && selectedIds.has(challan.id)}
                       onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
                     />
-                    <div>
-                      <span className="font-mono font-black tabular-nums text-indigo-950 text-base leading-tight block">
+                    <div className="min-w-0">
+                      <span className="font-mono font-black tabular-nums text-slate-950 dark:text-white text-base sm:text-lg leading-tight block truncate">
                         {challan.dcNumber}
                       </span>
-                      <span className="text-[11px] text-gray-500 font-medium tabular-nums">
-                        📅 {challan.dcDate ? format(new Date(challan.dcDate), 'dd MMM yyyy') : '—'}
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold tabular-nums flex items-center gap-1 mt-0.5">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        {challan.dcDate ? format(new Date(challan.dcDate), 'dd MMM yyyy') : '—'}
                       </span>
                     </div>
                   </div>
 
-                  {/* Contextual Location Pill Badge: Sky Blue for HYD, Emerald for BLR */}
+                  {/* Contextual Location Pill Badge */}
                   <Badge
                     variant="outline"
                     className={
                       challan.location === 'hyderabad'
-                        ? 'border-sky-300 text-sky-800 bg-gradient-to-r from-sky-50 to-blue-50 text-xs px-2.5 py-1 rounded-full font-bold shadow-2xs flex items-center gap-1.5'
-                        : 'border-emerald-300 text-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 text-xs px-2.5 py-1 rounded-full font-bold shadow-2xs flex items-center gap-1.5'
+                        ? 'border-sky-300 text-sky-800 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/60 text-xs px-2.5 py-1 rounded-full font-black shadow-2xs flex items-center gap-1.5 shrink-0'
+                        : 'border-emerald-300 text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 text-xs px-2.5 py-1 rounded-full font-black shadow-2xs flex items-center gap-1.5 shrink-0'
                     }
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${
+                    <span className={`w-2 h-2 rounded-full ${
                       challan.location === 'hyderabad' ? 'bg-sky-500' : 'bg-emerald-500'
                     }`} />
                     <span>{NEWRELIC_LOCATIONS[challan.location]?.label ?? challan.location}</span>
                   </Badge>
                 </div>
 
-              {/* Items Preview Snippet with Tap-to-Expand */}
-              {(() => {
-                const isExpanded = challan.id ? expandedCards.has(challan.id) : false;
-                const items = challan.lineItems || [];
+                {/* Total Value & Item Count Inset Banner */}
+                <div className="flex items-center justify-between bg-slate-50/90 dark:bg-slate-800/60 rounded-2xl p-3 border border-slate-100 dark:border-slate-800">
+                  <div>
+                    <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400 block">
+                      Total Value
+                    </span>
+                    <span className="text-xl font-black font-mono tracking-tight text-indigo-950 dark:text-indigo-200 tabular-nums">
+                      ₹{mrpTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 shadow-2xs">
+                      <Package className="w-3.5 h-3.5 text-indigo-600" />
+                      {(challan.lineItems || []).length} Item{(challan.lineItems || []).length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
 
-                return (
-                  <div className="bg-gray-50/90 rounded-xl p-2.5 text-xs text-gray-600 space-y-1.5 transition-all">
-                    <div className="flex items-center justify-between font-medium text-gray-700">
-                      <span className="flex items-center gap-1.5">
-                        <FileText className="w-3.5 h-3.5 text-gray-400" />
-                        <span>{items.length} line item{items.length !== 1 ? 's' : ''}</span>
-                      </span>
-                      {mrpTotal > 0 && (
-                        <span className="font-black text-gray-900 tabular-nums tracking-tight">
-                          ₹{mrpTotal.toLocaleString('en-IN')}
-                        </span>
-                      )}
-                    </div>
+                {/* Items Preview Snippet with Tap-to-Expand */}
+                {(() => {
+                  const isExpanded = challan.id ? expandedCards.has(challan.id) : false;
+                  const items = challan.lineItems || [];
 
-                    {!isExpanded ? (
-                      <div>
-                        {topItems.length > 0 && (
-                          <p className="text-[11px] text-gray-500 truncate">
-                            {topItems.map(i => `${i.quantity}x ${i.itemName}`).join(', ')}
-                            {extraItemsCount > 0 ? ` +${extraItemsCount} more` : ''}
-                          </p>
-                        )}
-                        {items.length > 2 && (
+                  return (
+                    <div className="bg-slate-50/80 dark:bg-slate-800/40 rounded-2xl p-3 text-xs text-slate-700 dark:text-slate-300 space-y-1.5 border border-slate-100 dark:border-slate-800">
+                      {!isExpanded ? (
+                        <div>
+                          {topItems.length > 0 && (
+                            <p className="text-xs text-slate-600 dark:text-slate-400 truncate leading-relaxed">
+                              <span className="font-semibold text-slate-900 dark:text-slate-100">{topItems.map(i => `${i.quantity}x ${i.itemName}`).join(', ')}</span>
+                              {extraItemsCount > 0 ? ` +${extraItemsCount} more` : ''}
+                            </p>
+                          )}
+                          {items.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => challan.id && toggleCardExpand(challan.id)}
+                              className="text-xs text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1 mt-1.5 hover:underline cursor-pointer"
+                            >
+                              <span>Show all {items.length} items</span>
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5 pt-1 border-t border-slate-200/70 dark:border-slate-700 animate-in fade-in duration-200">
+                          <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                            {items.map((item, idx) => (
+                              <div key={idx} className="flex items-center justify-between text-xs py-1 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                                <span className="text-slate-800 dark:text-slate-200 truncate pr-2">
+                                  <span className="font-black tabular-nums text-slate-950 dark:text-white">{item.quantity}×</span> {item.itemName}
+                                </span>
+                                <span className="text-slate-700 dark:text-slate-300 font-bold tabular-nums shrink-0">
+                                  ₹{((item.mrp || 0) * (item.quantity || 1)).toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                           <button
                             type="button"
                             onClick={() => challan.id && toggleCardExpand(challan.id)}
-                            className="text-[11px] text-[#3b2fc9] font-semibold flex items-center gap-1 mt-1 hover:underline cursor-pointer"
+                            className="text-xs text-slate-500 font-bold flex items-center gap-1 pt-1.5 hover:text-slate-700 cursor-pointer"
                           >
-                            <span>Show all {items.length} items</span>
-                            <ChevronDown className="w-3 h-3" />
+                            <span>Collapse items</span>
+                            <ChevronUp className="w-3.5 h-3.5" />
                           </button>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5 pt-1 border-t border-gray-200/70 animate-in fade-in duration-200">
-                        <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
-                          {items.map((item, idx) => (
-                            <div key={idx} className="flex items-center justify-between text-[11px] py-0.5 border-b border-gray-100 last:border-0">
-                              <span className="text-gray-700 truncate pr-2">
-                                <span className="font-black text-gray-900 tabular-nums">{item.quantity}×</span> {item.itemName}
-                              </span>
-                              <span className="text-gray-600 font-bold tabular-nums shrink-0">
-                                ₹{((item.mrp || 0) * (item.quantity || 1)).toLocaleString('en-IN')}
-                              </span>
-                            </div>
-                          ))}
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => challan.id && toggleCardExpand(challan.id)}
-                          className="text-[11px] text-gray-500 font-semibold flex items-center gap-1 pt-1 hover:text-gray-700 cursor-pointer"
-                        >
-                          <span>Collapse items</span>
-                          <ChevronUp className="w-3 h-3" />
-                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Author & Audit Info (if admin or trash) */}
+                {role === 'admin' && (
+                  <div className="flex items-center justify-between text-xs text-slate-400 pt-0.5">
+                    <span>{isTrashView ? 'Deleted by' : 'Created by'}</span>
+                    <span className="font-semibold text-slate-600 dark:text-slate-300 truncate max-w-[190px]">
+                      {formatAuthorName((isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)))}
+                      {(isTrashView ? challan.deletedAt : challan.createdAt) && (
+                        <span className="text-slate-400 ml-1 font-normal">
+                          · {format(new Date(isTrashView ? challan.deletedAt! : challan.createdAt!), 'dd MMM')}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
+
+                {/* Admin Financials Snapshot */}
+                {role === 'admin' && showFinancials && (() => {
+                  const commission = mrpTotal * 0.055;
+                  const revenue = mrpTotal - commission;
+                  let pCost = 0;
+                  if (challan.procurementCost !== undefined && challan.procurementCost !== null) {
+                    pCost = Number(challan.procurementCost);
+                  } else {
+                    pCost = (challan.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+                  }
+                  const tCost = challan.transportCost || 0;
+                  const oCost = challan.otherCharges || 0;
+                  const totalCost = pCost + tCost + oCost;
+                  const profit = revenue - totalCost;
+
+                  return (
+                    <div className="bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/60 rounded-2xl p-3 text-xs space-y-1.5">
+                      <div className="flex justify-between text-slate-600 dark:text-slate-400 font-medium">
+                        <span>Net Revenue (less 5.5% comm):</span>
+                        <span className="font-bold font-mono text-slate-900 dark:text-slate-200">₹{revenue.toLocaleString('en-IN', { maximumFractionDigits: 1 })}</span>
                       </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Author & Audit Info (if admin or trash) */}
-              {role === 'admin' && (
-                <div className="flex items-center justify-between text-[11px] text-gray-400 pt-0.5">
-                  <span>{isTrashView ? 'Deleted by' : 'Created by'}</span>
-                  <span className="font-medium text-gray-600 truncate max-w-[170px]">
-                    {formatAuthorName((isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)))}
-                    {(isTrashView ? challan.deletedAt : challan.createdAt) && (
-                      <span className="text-gray-400 ml-1">
-                        · {format(new Date(isTrashView ? challan.deletedAt! : challan.createdAt!), 'dd MMM')}
-                      </span>
-                    )}
-                  </span>
-                </div>
-              )}
-
-              {/* Admin Financials Snapshot */}
-              {role === 'admin' && showFinancials && (() => {
-                const commission = mrpTotal * 0.055;
-                const revenue = mrpTotal - commission;
-                let pCost = 0;
-                if (challan.procurementCost !== undefined && challan.procurementCost !== null) {
-                  pCost = Number(challan.procurementCost);
-                } else {
-                  pCost = (challan.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
-                }
-                const tCost = challan.transportCost || 0;
-                const oCost = challan.otherCharges || 0;
-                const totalCost = pCost + tCost + oCost;
-                const profit = revenue - totalCost;
-
-                return (
-                  <div className="bg-indigo-50/50 border border-indigo-100/70 rounded-xl p-2.5 text-xs space-y-1">
-                    <div className="flex justify-between text-gray-600">
-                      <span>Net Revenue:</span>
-                      <span className="font-medium">₹{revenue.toLocaleString('en-IN', { maximumFractionDigits: 1 })}</span>
+                      <div className="flex justify-between text-slate-600 dark:text-slate-400 font-medium">
+                        <span>Total Cost (P.Cost + Transport):</span>
+                        <span className="font-bold font-mono text-slate-900 dark:text-slate-200">₹{totalCost.toLocaleString('en-IN', { maximumFractionDigits: 1 })}</span>
+                      </div>
+                      <div className="flex justify-between pt-1.5 border-t border-indigo-100 dark:border-indigo-900/60 font-black">
+                        <span className={profit >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}>Est. Profit:</span>
+                        <span className={`font-mono text-sm ${profit >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+                          ₹{profit.toLocaleString('en-IN', { maximumFractionDigits: 1 })}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Total Cost:</span>
-                      <span className="font-medium">₹{totalCost.toLocaleString('en-IN', { maximumFractionDigits: 1 })}</span>
-                    </div>
-                    <div className="flex justify-between pt-1 border-t border-indigo-100/80 font-bold">
-                      <span className={profit >= 0 ? 'text-emerald-700' : 'text-red-700'}>Est. Profit:</span>
-                      <span className={profit >= 0 ? 'text-emerald-700' : 'text-red-700'}>
-                        ₹{profit.toLocaleString('en-IN', { maximumFractionDigits: 1 })}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
 
-              {/* Mobile Attachment Buttons: Signed DC & Invoice */}
-              {!isTrashView && (
-                <div className="flex items-center gap-2 pt-2 border-t border-gray-200/60">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      triggerHaptic('light');
-                      setAttachmentModal({ challan, type: 'signed_copy' });
-                    }}
-                    className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 border transition-all ${
-                      (challan.signedCopyUrls?.length ?? 0) > 0
-                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-2xs'
-                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
-                    title="Upload or view Signed Delivery Challan copy"
-                  >
-                    <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Signed DC</span>
-                    {(challan.signedCopyUrls?.length ?? 0) > 0 ? (
-                      <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[9px] font-black">
-                        {challan.signedCopyUrls!.length}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      triggerHaptic('light');
-                      setAttachmentModal({ challan, type: 'goods_received' });
-                    }}
-                    className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 border transition-all ${
-                      (challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0
-                        ? 'bg-blue-50 border-blue-300 text-blue-800 shadow-2xs'
-                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
-                    title="Upload or view Goods Received / Purchase Invoice"
-                  >
-                    <Receipt className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Invoice</span>
-                    {(challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0 ? (
-                      <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[9px] font-black">
-                        {challan.goodsReceivedInvoiceUrls!.length}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {/* Mobile Actions: Primary View/PDF Button + Share + 3-Dot Overflow Menu */}
-              <div className="flex items-center gap-1.5 sm:gap-2 pt-1 flex-wrap">
-                {isTrashView ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 h-10 text-xs gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-xl font-semibold"
-                    onClick={() => {
-                      triggerHaptic('medium');
-                      onRestoreChallan && challan.id && onRestoreChallan(challan.id);
-                    }}
-                  >
-                    <RefreshCcw className="h-4 w-4" /> Restore Challan
-                  </Button>
-                ) : (
-                  <>
-                    {/* View Document */}
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="h-9 px-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs active:scale-95 transition-transform"
-                      onClick={() => {
+                {/* Mobile Attachment Buttons: Signed DC & Invoice */}
+                {!isTrashView && (
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
                         triggerHaptic('light');
-                        onPreviewChallan ? onPreviewChallan(challan) : onDownloadChallan(challan);
+                        setAttachmentModal({ challan, type: 'signed_copy' });
                       }}
-                      title="View Document"
+                      className={`h-10 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all active:scale-[0.98] ${
+                        (challan.signedCopyUrls?.length ?? 0) > 0
+                          ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 shadow-2xs'
+                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
+                      }`}
+                      title="Upload or view Signed Delivery Challan copy"
                     >
-                      <Eye className="h-3.5 w-3.5" />
-                      <span>View</span>
-                    </Button>
+                      <FileCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span className="truncate">Signed DC</span>
+                      {(challan.signedCopyUrls?.length ?? 0) > 0 ? (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black shrink-0">
+                          {challan.signedCopyUrls!.length}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 font-semibold shrink-0">+Upload</span>
+                      )}
+                    </button>
 
-                    {/* Admin Quick View (in main view) */}
-                    {role === 'admin' && onAdminPreviewChallan && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        triggerHaptic('light');
+                        setAttachmentModal({ challan, type: 'goods_received' });
+                      }}
+                      className={`h-10 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all active:scale-[0.98] ${
+                        (challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0
+                          ? 'bg-blue-50/90 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 text-blue-800 dark:text-blue-300 shadow-2xs'
+                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
+                      }`}
+                      title="Upload or view Goods Received / Purchase Invoice"
+                    >
+                      <Receipt className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                      <span className="truncate">Invoice</span>
+                      {(challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0 ? (
+                        <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-black shrink-0">
+                          {challan.goodsReceivedInvoiceUrls!.length}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 font-semibold shrink-0">+Upload</span>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Mobile Actions: View, PDF, Edit, Duplicate in the EXACT SAME LINE */}
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                  {isTrashView ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-11 text-xs gap-1.5 border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 rounded-2xl font-bold shadow-2xs"
+                      onClick={() => {
+                        triggerHaptic('medium');
+                        onRestoreChallan && challan.id && onRestoreChallan(challan.id);
+                      }}
+                    >
+                      <RefreshCcw className="h-4 w-4 text-emerald-600" /> Restore Challan
+                    </Button>
+                  ) : (
+                    <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+                      {/* View Document */}
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="h-10 px-1 bg-gradient-to-r from-indigo-600 to-[#3b2fc9] hover:from-indigo-700 hover:to-[#2d23a0] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-xs active:scale-95 transition-transform"
+                        onClick={() => {
+                          triggerHaptic('light');
+                          onPreviewChallan ? onPreviewChallan(challan) : onDownloadChallan(challan);
+                        }}
+                        title="View Challan"
+                      >
+                        <Eye className="h-4 w-4 shrink-0" />
+                        <span className="truncate">View</span>
+                      </Button>
+
+                      {/* PDF Download */}
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-9 px-2.5 border-indigo-200 bg-indigo-50/90 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform shadow-2xs"
+                        className="h-10 px-1 border-blue-200 dark:border-blue-800 bg-blue-50/90 dark:bg-blue-950/40 hover:bg-blue-100 text-blue-700 dark:text-blue-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform shadow-2xs"
+                        onClick={() => {
+                          triggerHaptic('medium');
+                          onDownloadChallan(challan);
+                        }}
+                        title="Download PDF"
+                      >
+                        <Download className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                        <span className="truncate">PDF</span>
+                      </Button>
+
+                      {/* Edit */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-10 px-1 border-amber-200 dark:border-amber-800 bg-amber-50/90 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform shadow-2xs"
                         onClick={() => {
                           triggerHaptic('light');
-                          onAdminPreviewChallan(challan);
+                          onSelectChallan(challan);
                         }}
-                        title="Admin Quick View"
+                        title="Edit Challan"
                       >
-                        <Receipt className="h-3.5 w-3.5" />
-                        <span>Quick View</span>
+                        <Edit2 className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                        <span className="truncate">Edit</span>
                       </Button>
-                    )}
 
-                    {/* Edit Challan (in main view) */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9 px-2.5 border-amber-200 bg-amber-50/90 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform shadow-2xs"
-                      onClick={() => {
-                        triggerHaptic('light');
-                        onSelectChallan(challan);
-                      }}
-                      title="Edit Challan"
-                    >
-                      <Edit2 className="h-3.5 w-3.5 text-amber-600" />
-                      <span>Edit</span>
-                    </Button>
-
-                    {/* Quick PDF Download Button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9 w-9 p-0 border-blue-200 bg-blue-50/80 hover:bg-blue-100 text-blue-700 rounded-xl active:scale-95 transition-transform shadow-2xs"
-                      onClick={() => {
-                        triggerHaptic('medium');
-                        onDownloadChallan(challan);
-                      }}
-                      title="Download PDF"
-                    >
-                      <Download className="h-3.5 w-3.5 text-blue-600" />
-                    </Button>
-
-                    {/* Duplicate Action Button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9 px-2.5 border-purple-200 bg-purple-50/90 hover:bg-purple-100 text-purple-800 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform shadow-2xs"
-                      onClick={() => {
-                        triggerHaptic('light');
-                        onDuplicateChallan(challan);
-                      }}
-                      title="Duplicate Challan"
-                    >
-                      <Copy className="h-3.5 w-3.5 text-purple-600" />
-                      <span>Duplicate</span>
-                    </Button>
-
-                    {/* Three-Dot Overflow Menu (History and Delete) - Admin only */}
-                    {(role === 'admin' || role === 'superadmin') && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-9 w-9 p-0 border-gray-200 text-gray-600 hover:text-gray-900 rounded-xl ml-auto active:scale-95 transition-transform"
-                            aria-label="More actions"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-lg">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              triggerHaptic('light');
-                              onDuplicateChallan(challan);
-                            }}
-                            className="cursor-pointer gap-2 py-2"
-                          >
-                            <Copy className="h-4 w-4 text-purple-600" />
-                            <span>Duplicate Challan</span>
-                          </DropdownMenuItem>
-                          {onViewHistory && (
-                            <DropdownMenuItem
-                              onClick={() => {
-                                triggerHaptic('light');
-                                onViewHistory(challan);
-                              }}
-                              className="cursor-pointer gap-2 py-2"
-                            >
-                              <History className="h-4 w-4 text-blue-500" />
-                              <span>Edit History</span>
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => {
-                              triggerHaptic('warning');
-                              setDeleteConfirmChallan(challan);
-                            }}
-                            className="cursor-pointer gap-2 py-2 text-red-600 focus:text-red-600 focus:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                            <span>{isTrashView ? 'Delete Permanently' : 'Delete Challan'}</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </>
-                )}
+                      {/* Duplicate */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-10 px-1 border-purple-200 dark:border-purple-800 bg-purple-50/90 dark:bg-purple-950/40 hover:bg-purple-100 text-purple-800 dark:text-purple-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform shadow-2xs"
+                        onClick={() => {
+                          triggerHaptic('light');
+                          onDuplicateChallan(challan);
+                        }}
+                        title="Duplicate Challan"
+                      >
+                        <Copy className="h-4 w-4 shrink-0 text-purple-600 dark:text-purple-400" />
+                        <span className="truncate">Copy</span>
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        );
+          );
         })}
       </div>
 

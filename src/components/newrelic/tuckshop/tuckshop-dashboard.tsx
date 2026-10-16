@@ -93,7 +93,7 @@ export function getCategoryBadge(category: string, type: 'expense' | 'sale') {
 }
 
 export function TuckshopDashboard({ records }: Props) {
-  const { totalSales, totalExpenses, netProfit, expensesByCategory } = useMemo(() => {
+  const { totalSales, commission, netSales, totalExpenses, netProfit, expensesByCategory } = useMemo(() => {
     let sales = 0;
     let expenses = 0;
     const byCategory: Record<string, number> = {};
@@ -112,6 +112,11 @@ export function TuckshopDashboard({ records }: Props) {
       }
     });
 
+    // 20% Tuckshop Sales Commission
+    const commission = sales * 0.20;
+    const netSales = sales - commission;
+    const netProfit = netSales - expenses;
+
     // Sort categories by highest expense first
     const sorted = Object.entries(byCategory)
       .filter(([_, amount]) => amount > 0)
@@ -119,26 +124,41 @@ export function TuckshopDashboard({ records }: Props) {
 
     return {
       totalSales: sales,
+      commission,
+      netSales,
       totalExpenses: expenses,
-      netProfit: sales - expenses,
+      netProfit,
       expensesByCategory: sorted,
     };
   }, [records]);
 
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-3 gap-2.5 sm:gap-6 mb-6 sm:mb-8">
-      {/* Total Sales */}
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-6 sm:mb-8">
+      {/* 1. Gross Sales */}
       <div className="bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/50 rounded-2xl p-3 sm:p-5 border border-emerald-200/80 shadow-2xs sm:shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 transition-all hover:shadow-md">
         <div className="bg-gradient-to-tr from-emerald-600 to-teal-600 text-white p-2 sm:p-3 rounded-xl sm:rounded-2xl shrink-0 shadow-xs">
           <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-base sm:text-2xl font-black text-emerald-950 tracking-tight truncate">₹{totalSales.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-          <p className="text-[11px] sm:text-xs font-bold text-emerald-700/80 mt-0.5 truncate">Total Sales</p>
+          <p className="text-[11px] sm:text-xs font-bold text-emerald-700/80 mt-0.5 truncate">Gross Sales</p>
+          <p className="text-[10px] text-emerald-600/70 font-medium">Counter receipts</p>
         </div>
       </div>
 
-      {/* Total Expenses */}
+      {/* 2. Net Sales (Less 20% Commission) */}
+      <div className="bg-gradient-to-br from-teal-50/90 via-white to-cyan-50/50 rounded-2xl p-3 sm:p-5 border border-teal-200/80 shadow-2xs sm:shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 transition-all hover:shadow-md">
+        <div className="bg-gradient-to-tr from-teal-600 to-cyan-600 text-white p-2 sm:p-3 rounded-xl sm:rounded-2xl shrink-0 shadow-xs">
+          <Wallet className="h-4 w-4 sm:h-5 sm:w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-base sm:text-2xl font-black text-teal-950 tracking-tight truncate">₹{netSales.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+          <p className="text-[11px] sm:text-xs font-bold text-teal-700/80 mt-0.5 truncate">Net Revenue (80%)</p>
+          <p className="text-[10px] text-rose-500 font-semibold truncate">-₹{commission.toLocaleString('en-IN', { maximumFractionDigits: 0 })} (20% comm)</p>
+        </div>
+      </div>
+
+      {/* 3. Total Expenses */}
       <div className="bg-gradient-to-br from-rose-50/90 via-white to-red-50/50 rounded-2xl p-3 sm:p-5 border border-rose-200/80 shadow-2xs sm:shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 transition-all hover:shadow-md">
         <div className="bg-gradient-to-tr from-rose-600 to-red-600 text-white p-2 sm:p-3 rounded-xl sm:rounded-2xl shrink-0 shadow-xs">
           <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -146,10 +166,11 @@ export function TuckshopDashboard({ records }: Props) {
         <div className="min-w-0 flex-1">
           <p className="text-base sm:text-2xl font-black text-rose-950 tracking-tight truncate">₹{totalExpenses.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
           <p className="text-[11px] sm:text-xs font-bold text-rose-700/80 mt-0.5 truncate">Total Expenses</p>
+          <p className="text-[10px] text-rose-600/70 font-medium truncate">Batter, bakery, supplies</p>
         </div>
       </div>
 
-      {/* Net Profit */}
+      {/* 4. Net Profit */}
       <div className={`rounded-2xl p-3 sm:p-5 border shadow-2xs sm:shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 transition-all hover:shadow-md ${
         netProfit >= 0
           ? 'bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/50 border-indigo-200/80'
@@ -171,11 +192,12 @@ export function TuckshopDashboard({ records }: Props) {
           <p className={`text-[11px] sm:text-xs font-bold mt-0.5 truncate ${
             netProfit >= 0 ? 'text-indigo-700/80' : 'text-amber-700/80'
           }`}>Net Profit</p>
+          <p className="text-[10px] text-gray-500 font-medium truncate">Net Rev − Expenses</p>
         </div>
       </div>
 
       {/* Categories Breakdown */}
-      <div className="col-span-3 bg-white rounded-2xl p-4 sm:p-5 border border-indigo-100/70 shadow-xs">
+      <div className="col-span-2 lg:col-span-4 bg-white rounded-2xl p-4 sm:p-5 border border-indigo-100/70 shadow-xs">
         <div className="flex items-center justify-between mb-3.5">
           <div className="flex items-center gap-2">
             <PieChart className="h-4 w-4 text-indigo-600" />

@@ -509,25 +509,34 @@ export default function AnalyticsDashboardPage() {
       label,
       dcs: 0,
       units: 0,
-      grossSales: 0,        // Total DC Value (MRP Sold)
-      commission: 0,        // ~5.5% Commission (Aggregator fee)
-      netRevenue: 0,        // grossSales - commission
-      procurementCost: 0,   // Goods purchase cost
-      transportCost: 0,     // Transportation & freight
-      otherCharges: 0,      // Incidental delivery charges
-      totalDcCosts: 0,      // procurementCost + transportCost + otherCharges
-      tuckshopSales: 0,     // Retail tuckshop sales (if any)
-      tuckshopExpenses: 0,  // Operational petty expenses (if any)
-      totalRevenue: 0,      // netRevenue + tuckshopSales
-      totalOperatingCost: 0,// totalDcCosts + tuckshopExpenses
-      netProfit: 0,         // totalRevenue - totalOperatingCost
-      netMargin: 0,         // (netProfit / totalRevenue) * 100
-      avgDcValue: 0,        // grossSales / dcs
-      costPerUnit: 0,       // totalOperatingCost / units
+      grossSales: 0,             // Total DC Value (MRP Sold)
+      commission: 0,             // ~5.5% Commission on DC (Aggregator fee)
+      netRevenue: 0,             // grossSales - commission (Net Billed DC Revenue)
+      procurementCost: 0,        // Goods purchase cost
+      transportCost: 0,          // Transportation & freight
+      otherCharges: 0,           // Incidental delivery charges
+      totalDcCosts: 0,           // procurementCost + transportCost + otherCharges
+      tuckshopGrossSales: 0,     // Gross Tuckshop retail sales
+      tuckshopCommission: 0,     // 20% Tuckshop Sales Commission
+      tuckshopNetRevenue: 0,     // tuckshopGrossSales - 20% commission
+      tuckshopExpenses: 0,       // Operational petty expenses (batter, bread, etc.)
+      staffPayroll: 0,           // Staff base salary allocation (50% of monthly base salary per cycle)
+      totalRevenue: 0,           // netRevenue (DC) + tuckshopNetRevenue
+      totalOperatingCost: 0,     // totalDcCosts + tuckshopExpenses + staffPayroll
+      netProfit: 0,              // totalRevenue - totalOperatingCost
+      netMargin: 0,              // (netProfit / totalRevenue) * 100
+      avgDcValue: 0,             // grossSales / dcs
+      costPerUnit: 0,            // totalOperatingCost / units
     });
 
     const c1 = initCycle('Cycle 1 (1st-15th)', '1st to 15th');
     const c2 = initCycle('Cycle 2 (16th-End)', '16th to End of Month');
+
+    // Calculate staff base salary for active scoped employees - do not wait for disbursement!
+    const monthlyBaseSalary = filteredEmployees.reduce((sum, e) => sum + (Number(e.monthlySalary) || 0), 0);
+    // Cycle 1 and Cycle 2 each represent half a month of base salary
+    c1.staffPayroll = Math.round(monthlyBaseSalary * 0.5);
+    c2.staffPayroll = Math.round(monthlyBaseSalary * 0.5);
 
     // Scoped challans for cycle comparison: respect date range, site, location, and brand filters
     // Deliberately keep both cycles accessible side-by-side even if top filter focuses on one cycle
@@ -570,8 +579,8 @@ export default function AnalyticsDashboardPage() {
         ? Number(c.commissionAmount)
         : (dcMrp * ((Number(c.commissionRate) || 5.5) / 100));
 
-      const dcTransport = Number(c.transportCost ?? (c as any).transportationExpense) || 0;
-      const dcOther = Number(c.otherCharges ?? (c as any).otherExpense) || 0;
+      const dcTransport = Number(c.transportCost ?? c.transportationExpense) || 0;
+      const dcOther = Number(c.otherCharges ?? c.otherExpense) || 0;
 
       target.units += dcUnits;
       target.grossSales += dcMrp;
@@ -583,18 +592,24 @@ export default function AnalyticsDashboardPage() {
       target.totalDcCosts += (dcProcurement + dcTransport + dcOther);
     });
 
-    // Scoped tuckshop petty transactions (if any)
+    // Scoped tuckshop transactions: apply 20% sales commission
     filteredTuckshop.forEach((t) => {
       const day = parseInt((t.date || '').substring(8, 10), 10);
       const target = day <= 15 ? c1 : c2;
       const amt = Number(t.amount) || 0;
-      if (t.type === 'sale') target.tuckshopSales += amt;
-      else target.tuckshopExpenses += amt;
+      if (t.type === 'sale') {
+        target.tuckshopGrossSales += amt;
+        const comm = amt * 0.20; // 20% Tuckshop Sales Commission
+        target.tuckshopCommission += comm;
+        target.tuckshopNetRevenue += (amt - comm);
+      } else {
+        target.tuckshopExpenses += amt;
+      }
     });
 
     [c1, c2].forEach((cycle) => {
-      cycle.totalRevenue = cycle.netRevenue + cycle.tuckshopSales;
-      cycle.totalOperatingCost = cycle.totalDcCosts + cycle.tuckshopExpenses;
+      cycle.totalRevenue = cycle.netRevenue + cycle.tuckshopNetRevenue;
+      cycle.totalOperatingCost = cycle.totalDcCosts + cycle.tuckshopExpenses + cycle.staffPayroll;
       cycle.netProfit = cycle.totalRevenue - cycle.totalOperatingCost;
       cycle.netMargin = cycle.totalRevenue > 0 ? (cycle.netProfit / cycle.totalRevenue) * 100 : 0;
       cycle.avgDcValue = cycle.dcs > 0 ? cycle.grossSales / cycle.dcs : 0;
@@ -602,7 +617,7 @@ export default function AnalyticsDashboardPage() {
     });
 
     return [c1, c2];
-  }, [challans, selectedSite, locationFilter, selectedBrand, computedDateRange, filteredTuckshop]);
+  }, [challans, selectedSite, locationFilter, selectedBrand, computedDateRange, filteredTuckshop, filteredEmployees]);
 
   /* ─────────────────────────────────────────────────────────────
      4. STOCK REQUESTS & ORDER FULFILLMENT INTELLIGENCE
@@ -807,8 +822,21 @@ export default function AnalyticsDashboardPage() {
       return { key, label };
     };
 
+    // Base salary of all active scoped employees - does not wait for disbursement
+    const monthlyBaseSalary = filteredEmployees.reduce((sum, e) => sum + (Number(e.monthlySalary) || 0), 0);
+
     const getOrInit = (key: string, label: string) => {
       if (!map[key]) {
+        let periodBaseSalary = monthlyBaseSalary;
+        if (timeGranularity === 'daily') {
+          periodBaseSalary = Math.round(monthlyBaseSalary / 30);
+        } else if (timeGranularity === 'weekly') {
+          periodBaseSalary = Math.round((monthlyBaseSalary * 7) / 30);
+        } else {
+          // monthly
+          periodBaseSalary = Math.round(monthlyBaseSalary * (cycleFilter !== 'all' ? 0.5 : 1));
+        }
+
         map[key] = {
           periodKey: key,
           label,
@@ -819,7 +847,7 @@ export default function AnalyticsDashboardPage() {
           transport: 0,
           otherCharges: 0,
           expenses: 0,
-          payroll: 0,
+          payroll: periodBaseSalary,
           totalCost: 0,
           netProfit: 0,
           unitsDelivered: 0,
@@ -845,8 +873,8 @@ export default function AnalyticsDashboardPage() {
       });
 
       const dcProcurement = (c.procurementCost !== undefined && c.procurementCost !== null ? Number(c.procurementCost) : lineItemsCost);
-      const dcTransport = Number(c.transportCost ?? (c as any).transportationExpense) || 0;
-      const dcOther = Number(c.otherCharges ?? (c as any).otherExpense) || 0;
+      const dcTransport = Number(c.transportCost ?? c.transportationExpense) || 0;
+      const dcOther = Number(c.otherCharges ?? c.otherExpense) || 0;
       const dcCommission = (c.commissionAmount !== undefined && c.commissionAmount !== null)
         ? Number(c.commissionAmount)
         : (dcMrp * ((Number(c.commissionRate) || 5.5) / 100));
@@ -867,16 +895,14 @@ export default function AnalyticsDashboardPage() {
       if (key === 'unknown') return;
       const row = getOrInit(key, label);
       const amt = Number(t.amount) || 0;
-      if (t.type === 'sale') row.revenue += amt;
-      else row.expenses += amt;
-    });
-
-    filteredSalaryPayments.forEach((p) => {
-      const pDate = p.paymentDate || `${p.month}-01`;
-      const { key, label } = getKey(pDate);
-      if (key === 'unknown') return;
-      const row = getOrInit(key, label);
-      row.payroll += Number(p.netPaidAmount || p.attendanceEarned || 0);
+      if (t.type === 'sale') {
+        const comm = amt * 0.20; // 20% Tuckshop Sales Commission
+        row.grossSales += amt;
+        row.commission += comm;
+        row.revenue += (amt - comm);
+      } else {
+        row.expenses += amt;
+      }
     });
 
     const list = Object.values(map).map((row) => {
@@ -891,7 +917,7 @@ export default function AnalyticsDashboardPage() {
     });
 
     return list.sort((a, b) => a.periodKey.localeCompare(b.periodKey));
-  }, [filteredChallans, filteredTuckshop, filteredSalaryPayments, timeGranularity]);
+  }, [filteredChallans, filteredTuckshop, filteredEmployees, timeGranularity, cycleFilter]);
 
   // Overall Totals
   const overallTotals = useMemo(() => {
@@ -902,7 +928,6 @@ export default function AnalyticsDashboardPage() {
     let transport = 0;
     let otherCharges = 0;
     let expenses = 0;
-    let payroll = 0;
     let units = 0;
     let dcCount = filteredChallans.length;
 
@@ -917,8 +942,8 @@ export default function AnalyticsDashboardPage() {
       });
 
       const dcProcurement = (c.procurementCost !== undefined && c.procurementCost !== null ? Number(c.procurementCost) : lineCost);
-      const dcTransport = Number(c.transportCost ?? (c as any).transportationExpense) || 0;
-      const dcOther = Number(c.otherCharges ?? (c as any).otherExpense) || 0;
+      const dcTransport = Number(c.transportCost ?? c.transportationExpense) || 0;
+      const dcOther = Number(c.otherCharges ?? c.otherExpense) || 0;
       const dcCommission = (c.commissionAmount !== undefined && c.commissionAmount !== null)
         ? Number(c.commissionAmount)
         : (dcMrp * ((Number(c.commissionRate) || 5.5) / 100));
@@ -934,13 +959,40 @@ export default function AnalyticsDashboardPage() {
 
     filteredTuckshop.forEach((t) => {
       const amt = Number(t.amount) || 0;
-      if (t.type === 'sale') revenue += amt;
-      else expenses += amt;
+      if (t.type === 'sale') {
+        const tuckComm = amt * 0.20; // 20% Tuckshop Sales Commission
+        grossSales += amt;
+        commission += tuckComm;
+        revenue += (amt - tuckComm);
+      } else {
+        expenses += amt;
+      }
     });
 
-    filteredSalaryPayments.forEach((p) => {
-      payroll += Number(p.netPaidAmount || p.attendanceEarned || 0);
-    });
+    // Calculate Staff Base Salary directly - do not wait for disbursement!
+    const monthlyBaseSalary = filteredEmployees.reduce((sum, e) => sum + (Number(e.monthlySalary) || 0), 0);
+    let salaryMultiplier = 1;
+    if (datePreset === 'this_month' || datePreset === 'last_month') {
+      salaryMultiplier = 1;
+    } else if (datePreset === 'last_30_days') {
+      salaryMultiplier = 1;
+    } else if (datePreset === 'last_90_days') {
+      salaryMultiplier = 3;
+    } else if (datePreset === 'this_year') {
+      salaryMultiplier = Math.max(1, new Date().getMonth() + 1);
+    } else if (datePreset === 'custom') {
+      const startD = new Date(computedDateRange.start);
+      const endD = new Date(computedDateRange.end);
+      const diffDays = Math.max(1, Math.round((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      salaryMultiplier = diffDays / 30;
+    } else {
+      // 'all' time: unique periods in timeSeriesData, minimum 1
+      salaryMultiplier = Math.max(1, timeSeriesData.length);
+    }
+    if (cycleFilter !== 'all') {
+      salaryMultiplier *= 0.5;
+    }
+    const payroll = Math.round(monthlyBaseSalary * salaryMultiplier);
 
     const totalOperatingCost = procurement + transport + otherCharges + expenses + payroll;
     const netProfit = revenue - totalOperatingCost;
@@ -963,13 +1015,13 @@ export default function AnalyticsDashboardPage() {
       dcCount,
       costPerUnit,
     };
-  }, [filteredChallans, filteredTuckshop, filteredSalaryPayments]);
+  }, [filteredChallans, filteredTuckshop, filteredEmployees, datePreset, cycleFilter, computedDateRange, timeSeriesData.length]);
 
   const costBreakdownData = useMemo(() => {
     return [
       { name: 'Goods Procurement', value: overallTotals.procurement, color: '#3b2fc9' },
       { name: 'Transportation & Logistics', value: overallTotals.transport, color: '#06b6d4' },
-      { name: 'Staff Payroll Disbursed', value: overallTotals.payroll, color: '#f59e0b' },
+      { name: 'Staff Base Salaries', value: overallTotals.payroll, color: '#f59e0b' },
       { name: 'Daily Tuckshop Expenses', value: overallTotals.expenses, color: '#ec4899' },
     ].filter((item) => item.value > 0);
   }, [overallTotals]);
@@ -1006,7 +1058,7 @@ export default function AnalyticsDashboardPage() {
         loc.vendors[brand] = (loc.vendors[brand] || 0) + (pCost > 0 ? pCost * qty : qty * 10);
       });
       const dcProcurement = (c.procurementCost !== undefined && c.procurementCost !== null ? Number(c.procurementCost) : lineCost);
-      const dcTransport = Number(c.transportCost ?? (c as any).transportationExpense) || 0;
+      const dcTransport = Number(c.transportCost ?? c.transportationExpense) || 0;
       const dcCommission = (c.commissionAmount !== undefined && c.commissionAmount !== null)
         ? Number(c.commissionAmount)
         : (dcMrp * ((Number(c.commissionRate) || 5.5) / 100));
@@ -1023,8 +1075,14 @@ export default function AnalyticsDashboardPage() {
       const isBlr = (t.location || '').toLowerCase().includes('bangalore') || (t.location || '').toLowerCase().includes('blr');
       const loc = isBlr ? blr : hyd;
       const amt = Number(t.amount) || 0;
-      if (t.type === 'sale') loc.tuckshopSales += amt;
-      else loc.tuckshopExpenses += amt;
+      if (t.type === 'sale') {
+        const comm = amt * 0.20; // 20% commission on tuckshop sales
+        loc.grossSales += amt;
+        loc.commission += comm;
+        loc.tuckshopSales += (amt - comm);
+      } else {
+        loc.tuckshopExpenses += amt;
+      }
     });
 
     filteredEmployees.forEach((e) => {
@@ -1036,6 +1094,11 @@ export default function AnalyticsDashboardPage() {
         hyd.totalPayroll += (Number(e.monthlySalary) || 0);
       }
     });
+
+    if (cycleFilter !== 'all') {
+      hyd.totalPayroll = Math.round(hyd.totalPayroll * 0.5);
+      blr.totalPayroll = Math.round(blr.totalPayroll * 0.5);
+    }
 
     const hydTotalRevenue = hyd.netRevenue + hyd.tuckshopSales;
     const blrTotalRevenue = blr.netRevenue + blr.tuckshopSales;
@@ -1062,10 +1125,13 @@ export default function AnalyticsDashboardPage() {
       const ledgerRows = ledgerReport.map((r) => ({
         Period: r.label,
         'Key (YYYY-MM)': r.periodKey,
-        'Tuckshop Sales (INR)': r.revenue,
+        'Gross Sales (INR)': r.grossSales,
+        'Commission Deducted (INR)': r.commission,
+        'Net Revenue (DC Net + Tuckshop Net) (INR)': r.revenue,
         'DC Procurement Spend (INR)': r.procurement,
+        'Transportation & Logistics (INR)': r.transport,
         'Tuckshop Daily Expenses (INR)': r.expenses,
-        'Disbursed Payroll (INR)': r.payroll,
+        'Staff Base Payroll (INR)': r.payroll,
         'Total Operating Cost (INR)': r.totalCost,
         'Net Profit / Deficit (INR)': r.netProfit,
         'Net Margin %': `${r.profitMargin}%`,
@@ -1124,12 +1190,19 @@ export default function AnalyticsDashboardPage() {
         'Billing Cycle': c.name,
         'Cycle Window': c.label,
         'Total DC Sold Value (MRP INR)': c.grossSales,
-        'Commission Deducted 5.5% (INR)': c.commission,
-        'Net Billed Revenue (INR)': c.netRevenue,
+        'DC Commission Deducted 5.5% (INR)': c.commission,
+        'Net Billed DC Revenue (INR)': c.netRevenue,
+        'Tuckshop Gross Sales (INR)': c.tuckshopGrossSales,
+        'Tuckshop Commission Deducted 20% (INR)': c.tuckshopCommission,
+        'Tuckshop Net Revenue (INR)': c.tuckshopNetRevenue,
+        'Total Combined Net Revenue (INR)': c.totalRevenue,
         'Goods Procurement Cost (INR)': c.procurementCost,
         'Transportation Cost (INR)': c.transportCost,
         'Other Incidental Charges (INR)': c.otherCharges,
         'Total Goods & Freight (INR)': c.totalDcCosts,
+        'Tuckshop Daily Expenses (INR)': c.tuckshopExpenses,
+        'Staff Base Salaries (INR)': c.staffPayroll,
+        'Total Operating Cost (INR)': c.totalOperatingCost,
         'Cycle Net Profit (INR)': c.netProfit,
         'Net Profit Margin %': `${c.netMargin.toFixed(1)}%`,
         'Total Units Sold': c.units,
@@ -1979,12 +2052,12 @@ export default function AnalyticsDashboardPage() {
                       Billing Cycle 1 vs Cycle 2 Performance Comparison
                     </h3>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      Comparing 1st–15th against 16th–End across sold DC value, commission, transport cost, and net profit.
+                      Comparing 1st–15th against 16th–End across sold DC value, commissions (5.5% DC, 20% tuckshop), transport, staff base pay, and net profit.
                     </p>
                   </div>
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100/80 text-[11px] font-semibold text-indigo-900">
                     <TrendingUp className="h-3.5 w-3.5 text-[#3b2fc9]" />
-                    <span>Net Profit = Billed Revenue − (Procurement + Freight)</span>
+                    <span>Net Profit = Combined Net Rev − (Procurement + Freight + Staff Base Pay + Tuckshop Exp)</span>
                   </div>
                 </div>
 
@@ -2038,7 +2111,7 @@ export default function AnalyticsDashboardPage() {
                         </div>
                       </div>
 
-                      {/* 6 Key Accounting Breakdown Tiles */}
+                      {/* 9 Key Accounting Breakdown Tiles */}
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
                         {/* 1. Total DC Value (MRP Sold) */}
                         <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-2xs">
@@ -2054,7 +2127,7 @@ export default function AnalyticsDashboardPage() {
                         {/* 2. Commission Deducted */}
                         <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-2xs">
                           <span className="text-[10px] text-gray-500 block font-bold uppercase tracking-wider">
-                            Commission (~5.5%)
+                            DC Comm (~5.5%)
                           </span>
                           <span className="font-black text-sm text-rose-600 block mt-0.5">
                             - {formatCurrency(cycle.commission)}
@@ -2065,15 +2138,28 @@ export default function AnalyticsDashboardPage() {
                         {/* 3. Net Billed Revenue */}
                         <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-2xs">
                           <span className="text-[10px] text-gray-500 block font-bold uppercase tracking-wider">
-                            Net Billed Revenue
+                            Net DC Revenue
                           </span>
                           <span className="font-black text-sm text-emerald-700 block mt-0.5">
                             {formatCurrency(cycle.netRevenue)}
                           </span>
-                          <span className="text-[10px] text-gray-400 mt-0.5 block">Gross less commission</span>
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">Gross less 5.5% comm</span>
                         </div>
 
-                        {/* 4. Procurement Spend (Goods) */}
+                        {/* 4. Tuckshop Net Sales (20% comm deducted) */}
+                        <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-2xs">
+                          <span className="text-[10px] text-gray-500 block font-bold uppercase tracking-wider">
+                            Tuckshop Net Sales
+                          </span>
+                          <span className="font-black text-sm text-teal-700 block mt-0.5">
+                            {formatCurrency(cycle.tuckshopNetRevenue)}
+                          </span>
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">
+                            Gross {formatCurrency(cycle.tuckshopGrossSales)} (-20% comm)
+                          </span>
+                        </div>
+
+                        {/* 5. Procurement Spend (Goods) */}
                         <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-2xs">
                           <span className="text-[10px] text-gray-500 block font-bold uppercase tracking-wider">
                             Procurement Cost
@@ -2084,7 +2170,7 @@ export default function AnalyticsDashboardPage() {
                           <span className="text-[10px] text-gray-400 mt-0.5 block">Cost of goods sold</span>
                         </div>
 
-                        {/* 5. Transportation Cost */}
+                        {/* 6. Transportation Cost */}
                         <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-2xs">
                           <span className="text-[10px] text-gray-500 block font-bold uppercase tracking-wider">
                             Transportation Cost
@@ -2095,15 +2181,37 @@ export default function AnalyticsDashboardPage() {
                           <span className="text-[10px] text-gray-400 mt-0.5 block">Delivery & logistics</span>
                         </div>
 
-                        {/* 6. Total Deductions & Costs */}
+                        {/* 7. Staff Base Salaries */}
                         <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-2xs">
                           <span className="text-[10px] text-gray-500 block font-bold uppercase tracking-wider">
-                            Total Goods & Freight
+                            Staff Base Salary
+                          </span>
+                          <span className="font-black text-sm text-purple-700 block mt-0.5">
+                            {formatCurrency(cycle.staffPayroll)}
+                          </span>
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">50% monthly base pay</span>
+                        </div>
+
+                        {/* 8. Tuckshop Expenses */}
+                        <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-2xs">
+                          <span className="text-[10px] text-gray-500 block font-bold uppercase tracking-wider">
+                            Tuckshop Expenses
+                          </span>
+                          <span className="font-black text-sm text-pink-700 block mt-0.5">
+                            {formatCurrency(cycle.tuckshopExpenses)}
+                          </span>
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">Daily operational items</span>
+                        </div>
+
+                        {/* 9. Total Cycle Operating Costs */}
+                        <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-2xs">
+                          <span className="text-[10px] text-gray-500 block font-bold uppercase tracking-wider">
+                            Total Operating Cost
                           </span>
                           <span className="font-black text-sm text-gray-900 block mt-0.5">
-                            {formatCurrency(cycle.totalDcCosts)}
+                            {formatCurrency(cycle.totalOperatingCost)}
                           </span>
-                          <span className="text-[10px] text-gray-400 mt-0.5 block">Procurement + Freight</span>
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">DC + Staff + Tuck costs</span>
                         </div>
                       </div>
                     </div>
@@ -2120,9 +2228,10 @@ export default function AnalyticsDashboardPage() {
                       <BarChart
                         data={[
                           { metric: 'DC Sold Value', Cycle1: cycleComparison[0].grossSales, Cycle2: cycleComparison[1].grossSales },
-                          { metric: 'Net Revenue', Cycle1: cycleComparison[0].netRevenue, Cycle2: cycleComparison[1].netRevenue },
+                          { metric: 'Combined Net Rev', Cycle1: cycleComparison[0].totalRevenue, Cycle2: cycleComparison[1].totalRevenue },
                           { metric: 'Procurement', Cycle1: cycleComparison[0].procurementCost, Cycle2: cycleComparison[1].procurementCost },
                           { metric: 'Transport', Cycle1: cycleComparison[0].transportCost, Cycle2: cycleComparison[1].transportCost },
+                          { metric: 'Staff Base Pay', Cycle1: cycleComparison[0].staffPayroll, Cycle2: cycleComparison[1].staffPayroll },
                           { metric: 'Net Profit', Cycle1: cycleComparison[0].netProfit, Cycle2: cycleComparison[1].netProfit },
                         ]}
                         margin={{ top: 10, right: 20, left: 0, bottom: 5 }}

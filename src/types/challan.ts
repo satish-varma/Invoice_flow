@@ -43,8 +43,12 @@ export interface NewRelicChallan {
   lineItems: NewRelicChallanItem[];
   note?: string;
   transportCost?: number;
+  transportationExpense?: number;
   otherCharges?: number;
+  otherExpense?: number;
   procurementCost?: number;
+  commissionRate?: number;
+  commissionAmount?: number;
   createdAt?: any;
   createdBy?: string | null;
   updatedAt?: any;

@@ -482,9 +482,16 @@ export default function AnalyticsDashboardPage() {
       if (!isNaN(d.getTime())) {
         const idx = d.getDay();
         map[idx].dcCount += 1;
+        let dcMrp = 0;
         (c.lineItems || []).forEach((item) => {
-          map[idx].units += Number(item.quantity) || 0;
+          const qty = Number(item.quantity) || 0;
+          map[idx].units += qty;
+          dcMrp += (Number(item.mrp) || 0) * qty;
         });
+        const comm = (c.commissionAmount !== undefined && c.commissionAmount !== null)
+          ? Number(c.commissionAmount)
+          : (dcMrp * ((Number(c.commissionRate) || 5.5) / 100));
+        map[idx].sales += (dcMrp - comm);
       }
     });
 
@@ -494,46 +501,108 @@ export default function AnalyticsDashboardPage() {
 
   /* ─────────────────────────────────────────────────────────────
      3. CYCLE 1 VS CYCLE 2 COMPARATIVE ANALYTICS
+     (Total DC Value = Sold Value. Profit = Net Billed - (Procurement + Transport))
   ───────────────────────────────────────────────────────────── */
   const cycleComparison = useMemo(() => {
-    const c1 = { name: 'Cycle 1 (1st-15th)', revenue: 0, procurement: 0, units: 0, dcs: 0, expenses: 0 };
-    const c2 = { name: 'Cycle 2 (16th-End)', revenue: 0, procurement: 0, units: 0, dcs: 0, expenses: 0 };
+    const initCycle = (name: string, label: string) => ({
+      name,
+      label,
+      dcs: 0,
+      units: 0,
+      grossSales: 0,        // Total DC Value (MRP Sold)
+      commission: 0,        // ~5.5% Commission (Aggregator fee)
+      netRevenue: 0,        // grossSales - commission
+      procurementCost: 0,   // Goods purchase cost
+      transportCost: 0,     // Transportation & freight
+      otherCharges: 0,      // Incidental delivery charges
+      totalDcCosts: 0,      // procurementCost + transportCost + otherCharges
+      tuckshopSales: 0,     // Retail tuckshop sales (if any)
+      tuckshopExpenses: 0,  // Operational petty expenses (if any)
+      totalRevenue: 0,      // netRevenue + tuckshopSales
+      totalOperatingCost: 0,// totalDcCosts + tuckshopExpenses
+      netProfit: 0,         // totalRevenue - totalOperatingCost
+      netMargin: 0,         // (netProfit / totalRevenue) * 100
+      avgDcValue: 0,        // grossSales / dcs
+      costPerUnit: 0,       // totalOperatingCost / units
+    });
 
+    const c1 = initCycle('Cycle 1 (1st-15th)', '1st to 15th');
+    const c2 = initCycle('Cycle 2 (16th-End)', '16th to End of Month');
+
+    // Scoped challans for cycle comparison: respect date range, site, location, and brand filters
+    // Deliberately keep both cycles accessible side-by-side even if top filter focuses on one cycle
+    const applicableChallans = challans.filter((c) => {
+      if (selectedSite === 'dsm' || selectedSite === 'ntt_data') return false;
+      if (locationFilter !== 'all' && c.location !== locationFilter) return false;
+      if (!c.dcDate) return false;
+      const dateOnly = c.dcDate.substring(0, 10);
+      if (dateOnly < computedDateRange.start || dateOnly > computedDateRange.end) return false;
+      if (selectedBrand !== 'all') {
+        const hasBrand = (c.lineItems || []).some(
+          (item) => (item.brandName || '').trim().toLowerCase() === selectedBrand.toLowerCase()
+        );
+        if (!hasBrand) return false;
+      }
+      return true;
+    });
+
+    applicableChallans.forEach((c) => {
+      const day = parseInt((c.dcDate || '').substring(8, 10), 10);
+      const target = day <= 15 ? c1 : c2;
+      target.dcs += 1;
+
+      let dcMrp = 0;
+      let dcLineCost = 0;
+      let dcUnits = 0;
+
+      (c.lineItems || []).forEach((item) => {
+        const q = Number(item.quantity) || 0;
+        dcUnits += q;
+        dcMrp += (Number(item.mrp) || 0) * q;
+        dcLineCost += (Number(item.procurementCost) || 0) * q;
+      });
+
+      const dcProcurement = (c.procurementCost !== undefined && c.procurementCost !== null)
+        ? Number(c.procurementCost)
+        : dcLineCost;
+      
+      const dcCommission = (c.commissionAmount !== undefined && c.commissionAmount !== null)
+        ? Number(c.commissionAmount)
+        : (dcMrp * ((Number(c.commissionRate) || 5.5) / 100));
+
+      const dcTransport = Number(c.transportCost ?? (c as any).transportationExpense) || 0;
+      const dcOther = Number(c.otherCharges ?? (c as any).otherExpense) || 0;
+
+      target.units += dcUnits;
+      target.grossSales += dcMrp;
+      target.commission += dcCommission;
+      target.netRevenue += (dcMrp - dcCommission);
+      target.procurementCost += dcProcurement;
+      target.transportCost += dcTransport;
+      target.otherCharges += dcOther;
+      target.totalDcCosts += (dcProcurement + dcTransport + dcOther);
+    });
+
+    // Scoped tuckshop petty transactions (if any)
     filteredTuckshop.forEach((t) => {
       const day = parseInt((t.date || '').substring(8, 10), 10);
       const target = day <= 15 ? c1 : c2;
       const amt = Number(t.amount) || 0;
-      if (t.type === 'sale') target.revenue += amt;
-      else target.expenses += amt;
+      if (t.type === 'sale') target.tuckshopSales += amt;
+      else target.tuckshopExpenses += amt;
     });
 
-    filteredChallans.forEach((c) => {
-      const day = parseInt((c.dcDate || '').substring(8, 10), 10);
-      const target = day <= 15 ? c1 : c2;
-      target.dcs++;
-      let lineCost = 0;
-      (c.lineItems || []).forEach((item) => {
-        const q = Number(item.quantity) || 0;
-        target.units += q;
-        lineCost += (Number(item.procurementCost) || 0) * q;
-      });
-      target.procurement += (c.procurementCost !== undefined && c.procurementCost !== null ? Number(c.procurementCost) : lineCost)
-        + Number(c.transportCost || 0) + Number(c.otherCharges || 0);
+    [c1, c2].forEach((cycle) => {
+      cycle.totalRevenue = cycle.netRevenue + cycle.tuckshopSales;
+      cycle.totalOperatingCost = cycle.totalDcCosts + cycle.tuckshopExpenses;
+      cycle.netProfit = cycle.totalRevenue - cycle.totalOperatingCost;
+      cycle.netMargin = cycle.totalRevenue > 0 ? (cycle.netProfit / cycle.totalRevenue) * 100 : 0;
+      cycle.avgDcValue = cycle.dcs > 0 ? cycle.grossSales / cycle.dcs : 0;
+      cycle.costPerUnit = cycle.units > 0 ? cycle.totalOperatingCost / cycle.units : 0;
     });
 
-    return [
-      {
-        ...c1,
-        netProfit: c1.revenue - (c1.procurement + c1.expenses),
-        netMargin: c1.revenue > 0 ? ((c1.revenue - (c1.procurement + c1.expenses)) / c1.revenue) * 100 : 0,
-      },
-      {
-        ...c2,
-        netProfit: c2.revenue - (c2.procurement + c2.expenses),
-        netMargin: c2.revenue > 0 ? ((c2.revenue - (c2.procurement + c2.expenses)) / c2.revenue) * 100 : 0,
-      },
-    ];
-  }, [filteredTuckshop, filteredChallans]);
+    return [c1, c2];
+  }, [challans, selectedSite, locationFilter, selectedBrand, computedDateRange, filteredTuckshop]);
 
   /* ─────────────────────────────────────────────────────────────
      4. STOCK REQUESTS & ORDER FULFILLMENT INTELLIGENCE
@@ -701,8 +770,12 @@ export default function AnalyticsDashboardPage() {
     const map: Record<string, {
       periodKey: string;
       label: string;
+      grossSales: number;
+      commission: number;
       revenue: number;
       procurement: number;
+      transport: number;
+      otherCharges: number;
       expenses: number;
       payroll: number;
       totalCost: number;
@@ -739,8 +812,12 @@ export default function AnalyticsDashboardPage() {
         map[key] = {
           periodKey: key,
           label,
+          grossSales: 0,
+          commission: 0,
           revenue: 0,
           procurement: 0,
+          transport: 0,
+          otherCharges: 0,
           expenses: 0,
           payroll: 0,
           totalCost: 0,
@@ -759,18 +836,30 @@ export default function AnalyticsDashboardPage() {
       row.dcCount += 1;
 
       let lineItemsCost = 0;
+      let dcMrp = 0;
       (c.lineItems || []).forEach((item) => {
         const qty = Number(item.quantity) || 0;
-        const pCost = Number(item.procurementCost) || 0;
         row.unitsDelivered += qty;
-        lineItemsCost += pCost * qty;
+        lineItemsCost += (Number(item.procurementCost) || 0) * qty;
+        dcMrp += (Number(item.mrp) || 0) * qty;
       });
 
-      const totalDcCost = (c.procurementCost !== undefined && c.procurementCost !== null ? Number(c.procurementCost) : lineItemsCost)
-        + Number(c.transportCost || 0)
-        + Number(c.otherCharges || 0);
+      const dcProcurement = (c.procurementCost !== undefined && c.procurementCost !== null ? Number(c.procurementCost) : lineItemsCost);
+      const dcTransport = Number(c.transportCost ?? (c as any).transportationExpense) || 0;
+      const dcOther = Number(c.otherCharges ?? (c as any).otherExpense) || 0;
+      const dcCommission = (c.commissionAmount !== undefined && c.commissionAmount !== null)
+        ? Number(c.commissionAmount)
+        : (dcMrp * ((Number(c.commissionRate) || 5.5) / 100));
 
-      row.procurement += totalDcCost;
+      const dcNetRevenue = dcMrp - dcCommission;
+      const totalDcCost = dcProcurement + dcTransport + dcOther;
+
+      row.grossSales += dcMrp;
+      row.commission += dcCommission;
+      row.revenue += dcNetRevenue;
+      row.procurement += dcProcurement;
+      row.transport += dcTransport;
+      row.otherCharges += dcOther;
     });
 
     filteredTuckshop.forEach((t) => {
@@ -791,7 +880,7 @@ export default function AnalyticsDashboardPage() {
     });
 
     const list = Object.values(map).map((row) => {
-      const totalCost = row.procurement + row.expenses + row.payroll;
+      const totalCost = row.procurement + row.transport + row.otherCharges + row.expenses + row.payroll;
       const netProfit = row.revenue - totalCost;
       return {
         ...row,
@@ -806,12 +895,42 @@ export default function AnalyticsDashboardPage() {
 
   // Overall Totals
   const overallTotals = useMemo(() => {
+    let grossSales = 0;
+    let commission = 0;
     let revenue = 0;
     let procurement = 0;
+    let transport = 0;
+    let otherCharges = 0;
     let expenses = 0;
     let payroll = 0;
     let units = 0;
     let dcCount = filteredChallans.length;
+
+    filteredChallans.forEach((c) => {
+      let lineCost = 0;
+      let dcMrp = 0;
+      (c.lineItems || []).forEach((item) => {
+        const qty = Number(item.quantity) || 0;
+        units += qty;
+        lineCost += (Number(item.procurementCost) || 0) * qty;
+        dcMrp += (Number(item.mrp) || 0) * qty;
+      });
+
+      const dcProcurement = (c.procurementCost !== undefined && c.procurementCost !== null ? Number(c.procurementCost) : lineCost);
+      const dcTransport = Number(c.transportCost ?? (c as any).transportationExpense) || 0;
+      const dcOther = Number(c.otherCharges ?? (c as any).otherExpense) || 0;
+      const dcCommission = (c.commissionAmount !== undefined && c.commissionAmount !== null)
+        ? Number(c.commissionAmount)
+        : (dcMrp * ((Number(c.commissionRate) || 5.5) / 100));
+      const dcNetRevenue = dcMrp - dcCommission;
+
+      grossSales += dcMrp;
+      commission += dcCommission;
+      revenue += dcNetRevenue;
+      procurement += dcProcurement;
+      transport += dcTransport;
+      otherCharges += dcOther;
+    });
 
     filteredTuckshop.forEach((t) => {
       const amt = Number(t.amount) || 0;
@@ -819,31 +938,22 @@ export default function AnalyticsDashboardPage() {
       else expenses += amt;
     });
 
-    filteredChallans.forEach((c) => {
-      let lineCost = 0;
-      (c.lineItems || []).forEach((item) => {
-        const qty = Number(item.quantity) || 0;
-        units += qty;
-        lineCost += (Number(item.procurementCost) || 0) * qty;
-      });
-      const dcTotal = (c.procurementCost !== undefined && c.procurementCost !== null ? Number(c.procurementCost) : lineCost)
-        + Number(c.transportCost || 0)
-        + Number(c.otherCharges || 0);
-      procurement += dcTotal;
-    });
-
     filteredSalaryPayments.forEach((p) => {
       payroll += Number(p.netPaidAmount || p.attendanceEarned || 0);
     });
 
-    const totalOperatingCost = procurement + expenses + payroll;
+    const totalOperatingCost = procurement + transport + otherCharges + expenses + payroll;
     const netProfit = revenue - totalOperatingCost;
     const netMarginPercent = revenue > 0 ? (netProfit / revenue) * 100 : 0;
-    const costPerUnit = units > 0 ? procurement / units : 0;
+    const costPerUnit = units > 0 ? (procurement + transport) / units : 0;
 
     return {
+      grossSales,
+      commission,
       revenue,
       procurement,
+      transport,
+      otherCharges,
       expenses,
       payroll,
       totalOperatingCost,
@@ -857,7 +967,8 @@ export default function AnalyticsDashboardPage() {
 
   const costBreakdownData = useMemo(() => {
     return [
-      { name: 'DC Goods Procurement', value: overallTotals.procurement, color: '#3b2fc9' },
+      { name: 'Goods Procurement', value: overallTotals.procurement, color: '#3b2fc9' },
+      { name: 'Transportation & Logistics', value: overallTotals.transport, color: '#06b6d4' },
       { name: 'Staff Payroll Disbursed', value: overallTotals.payroll, color: '#f59e0b' },
       { name: 'Daily Tuckshop Expenses', value: overallTotals.expenses, color: '#ec4899' },
     ].filter((item) => item.value > 0);
@@ -877,23 +988,35 @@ export default function AnalyticsDashboardPage() {
 
   // Location Comparison (HYD vs BLR)
   const locationComparison = useMemo(() => {
-    const hyd = { location: 'Hyderabad', procurementCost: 0, tuckshopSales: 0, tuckshopExpenses: 0, dcCount: 0, unitsDelivered: 0, activeEmployees: 0, totalPayroll: 0, vendors: {} as Record<string, number> };
-    const blr = { location: 'Bangalore', procurementCost: 0, tuckshopSales: 0, tuckshopExpenses: 0, dcCount: 0, unitsDelivered: 0, activeEmployees: 0, totalPayroll: 0, vendors: {} as Record<string, number> };
+    const hyd = { location: 'Hyderabad', grossSales: 0, commission: 0, netRevenue: 0, procurementCost: 0, transportCost: 0, tuckshopSales: 0, tuckshopExpenses: 0, dcCount: 0, unitsDelivered: 0, activeEmployees: 0, totalPayroll: 0, vendors: {} as Record<string, number> };
+    const blr = { location: 'Bangalore', grossSales: 0, commission: 0, netRevenue: 0, procurementCost: 0, transportCost: 0, tuckshopSales: 0, tuckshopExpenses: 0, dcCount: 0, unitsDelivered: 0, activeEmployees: 0, totalPayroll: 0, vendors: {} as Record<string, number> };
 
     filteredChallans.forEach((c) => {
       const loc = c.location === 'bangalore' ? blr : hyd;
       loc.dcCount++;
       let lineCost = 0;
+      let dcMrp = 0;
       (c.lineItems || []).forEach((item) => {
         const qty = Number(item.quantity) || 0;
         loc.unitsDelivered += qty;
         const pCost = Number(item.procurementCost) || 0;
         lineCost += pCost * qty;
+        dcMrp += (Number(item.mrp) || 0) * qty;
         const brand = (item.brandName || 'Unspecified').trim();
         loc.vendors[brand] = (loc.vendors[brand] || 0) + (pCost > 0 ? pCost * qty : qty * 10);
       });
-      loc.procurementCost += (c.procurementCost !== undefined && c.procurementCost !== null ? Number(c.procurementCost) : lineCost)
-        + Number(c.transportCost || 0) + Number(c.otherCharges || 0);
+      const dcProcurement = (c.procurementCost !== undefined && c.procurementCost !== null ? Number(c.procurementCost) : lineCost);
+      const dcTransport = Number(c.transportCost ?? (c as any).transportationExpense) || 0;
+      const dcCommission = (c.commissionAmount !== undefined && c.commissionAmount !== null)
+        ? Number(c.commissionAmount)
+        : (dcMrp * ((Number(c.commissionRate) || 5.5) / 100));
+      const dcNetRevenue = dcMrp - dcCommission;
+
+      loc.grossSales += dcMrp;
+      loc.commission += dcCommission;
+      loc.netRevenue += dcNetRevenue;
+      loc.procurementCost += dcProcurement;
+      loc.transportCost += dcTransport;
     });
 
     filteredTuckshop.forEach((t) => {
@@ -914,15 +1037,18 @@ export default function AnalyticsDashboardPage() {
       }
     });
 
+    const hydTotalRevenue = hyd.netRevenue + hyd.tuckshopSales;
+    const blrTotalRevenue = blr.netRevenue + blr.tuckshopSales;
+
     const hydTopVendors = Object.entries(hyd.vendors).map(([brand, spend]) => ({ brand, spend })).sort((a, b) => b.spend - a.spend).slice(0, 5);
     const blrTopVendors = Object.entries(blr.vendors).map(([brand, spend]) => ({ brand, spend })).sort((a, b) => b.spend - a.spend).slice(0, 5);
 
-    const hydCostPerUnit = hyd.unitsDelivered > 0 ? hyd.procurementCost / hyd.unitsDelivered : 0;
-    const blrCostPerUnit = blr.unitsDelivered > 0 ? blr.procurementCost / blr.unitsDelivered : 0;
-    const hydRevPerStaff = hyd.activeEmployees > 0 ? hyd.tuckshopSales / hyd.activeEmployees : 0;
-    const blrRevPerStaff = blr.activeEmployees > 0 ? blr.tuckshopSales / blr.activeEmployees : 0;
+    const hydCostPerUnit = hyd.unitsDelivered > 0 ? (hyd.procurementCost + hyd.transportCost) / hyd.unitsDelivered : 0;
+    const blrCostPerUnit = blr.unitsDelivered > 0 ? (blr.procurementCost + blr.transportCost) / blr.unitsDelivered : 0;
+    const hydRevPerStaff = hyd.activeEmployees > 0 ? hydTotalRevenue / hyd.activeEmployees : 0;
+    const blrRevPerStaff = blr.activeEmployees > 0 ? blrTotalRevenue / blr.activeEmployees : 0;
 
-    return { hyd, blr, hydTopVendors, blrTopVendors, hydCostPerUnit, blrCostPerUnit, hydRevPerStaff, blrRevPerStaff };
+    return { hyd, blr, hydTopVendors, blrTopVendors, hydCostPerUnit, blrCostPerUnit, hydRevPerStaff, blrRevPerStaff, hydTotalRevenue, blrTotalRevenue };
   }, [filteredChallans, filteredTuckshop, filteredEmployees]);
 
   /* ─────────────────────────────────────────────────────────────
@@ -993,7 +1119,27 @@ export default function AnalyticsDashboardPage() {
         'Total Risk Value (INR)': e.quantity * e.mrp,
       }));
 
+      // Sheet 6: Billing Cycles 1 vs 2 Comparison
+      const cycleRows = cycleComparison.map((c) => ({
+        'Billing Cycle': c.name,
+        'Cycle Window': c.label,
+        'Total DC Sold Value (MRP INR)': c.grossSales,
+        'Commission Deducted 5.5% (INR)': c.commission,
+        'Net Billed Revenue (INR)': c.netRevenue,
+        'Goods Procurement Cost (INR)': c.procurementCost,
+        'Transportation Cost (INR)': c.transportCost,
+        'Other Incidental Charges (INR)': c.otherCharges,
+        'Total Goods & Freight (INR)': c.totalDcCosts,
+        'Cycle Net Profit (INR)': c.netProfit,
+        'Net Profit Margin %': `${c.netMargin.toFixed(1)}%`,
+        'Total Units Sold': c.units,
+        'Delivery Challans Filed': c.dcs,
+        'Avg Ticket Value / DC (INR)': Math.round(c.avgDcValue),
+        'Cost / Unit (INR)': Math.round(c.costPerUnit * 10) / 10,
+      }));
+
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ledgerRows), 'Monthly Ledger & PnL');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cycleRows), 'Cycle 1 vs Cycle 2');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(brandRows), 'Brand Intelligence');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(stockRows), 'Stock Requests');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(attendanceRows), 'Workforce Leaderboard');
@@ -1323,7 +1469,7 @@ export default function AnalyticsDashboardPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <div className="bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/50 p-4 rounded-2xl border border-emerald-200/80 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">Tuckshop Revenue</span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">Net Billed Revenue</span>
                 <div className="p-1.5 rounded-lg bg-emerald-600 text-white shadow-xs">
                   <Store className="h-3.5 w-3.5" />
                 </div>
@@ -1332,17 +1478,17 @@ export default function AnalyticsDashboardPage() {
                 <span className="text-lg sm:text-xl font-black text-emerald-950 tracking-tight block">
                   {formatCurrency(overallTotals.revenue)}
                 </span>
-                <span className="text-[10px] font-bold text-emerald-700/80 mt-0.5 block">
-                  Total Sales
+                <span className="text-[10px] font-bold text-emerald-700/80 mt-0.5 block truncate" title={`Gross: ${formatCurrency(overallTotals.grossSales)} less ~5.5% comm`}>
+                  Gross: {formatCurrency(overallTotals.grossSales)}
                 </span>
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-blue-50/90 via-white to-sky-50/50 p-4 rounded-2xl border border-blue-200/80 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-blue-800">Procurement Cost</span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-blue-800">Goods Procurement</span>
                 <div className="p-1.5 rounded-lg bg-blue-600 text-white shadow-xs">
-                  <Truck className="h-3.5 w-3.5" />
+                  <Package className="h-3.5 w-3.5" />
                 </div>
               </div>
               <div>
@@ -1355,19 +1501,19 @@ export default function AnalyticsDashboardPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/50 p-4 rounded-2xl border border-indigo-200/80 shadow-xs flex flex-col justify-between">
+            <div className="bg-gradient-to-br from-cyan-50/90 via-white to-sky-50/50 p-4 rounded-2xl border border-cyan-200/80 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-indigo-800">Total MRP Value</span>
-                <div className="p-1.5 rounded-lg bg-[#3b2fc9] text-white shadow-xs">
-                  <Receipt className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-black uppercase tracking-wider text-cyan-800">Transportation Cost</span>
+                <div className="p-1.5 rounded-lg bg-cyan-600 text-white shadow-xs">
+                  <Truck className="h-3.5 w-3.5" />
                 </div>
               </div>
               <div>
-                <span className="text-lg sm:text-xl font-black text-indigo-950 tracking-tight block">
-                  {formatCurrency(brandAnalytics.grandTotalMrp)}
+                <span className="text-lg sm:text-xl font-black text-cyan-950 tracking-tight block">
+                  {formatCurrency(overallTotals.transport)}
                 </span>
-                <span className="text-[10px] font-bold text-indigo-700/80 mt-0.5 block">
-                  Goods Retail Worth
+                <span className="text-[10px] font-bold text-cyan-700/80 mt-0.5 block">
+                  Freight & Logistics
                 </span>
               </div>
             </div>
@@ -1825,48 +1971,175 @@ export default function AnalyticsDashboardPage() {
           {activeTab === 'comparison' && (
             <div className="space-y-6">
               {/* Cycle 1 vs Cycle 2 Direct Comparison Card */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
                   <div>
-                    <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                    <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
                       <RefreshCw className="h-4 w-4 text-[#3b2fc9]" />
                       Billing Cycle 1 vs Cycle 2 Performance Comparison
                     </h3>
-                    <p className="text-xs text-gray-500">Comparing 1st-15th against 16th-End across sales volume and procurement spend.</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Comparing 1st–15th against 16th–End across sold DC value, commission, transport cost, and net profit.
+                    </p>
+                  </div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100/80 text-[11px] font-semibold text-indigo-900">
+                    <TrendingUp className="h-3.5 w-3.5 text-[#3b2fc9]" />
+                    <span>Net Profit = Billed Revenue − (Procurement + Freight)</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Direct Side-by-Side Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {cycleComparison.map((cycle, idx) => (
-                    <div key={idx} className="bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
+                    <div
+                      key={idx}
+                      className="bg-gradient-to-br from-gray-50/80 via-white to-gray-50/50 p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-4"
+                    >
+                      {/* Cycle Title & Margin Tag */}
                       <div className="flex items-center justify-between">
-                        <span className="font-extrabold text-xs uppercase tracking-wider text-gray-800">{cycle.name}</span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cycle.netProfit >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                        <div>
+                          <span className="font-black text-sm uppercase tracking-wider text-gray-900 block">
+                            {cycle.name}
+                          </span>
+                          <span className="text-[11px] font-medium text-gray-500">
+                            {cycle.label} · {cycle.dcs} DCs filed · {cycle.units.toLocaleString('en-IN')} units
+                          </span>
+                        </div>
+                        <span
+                          className={`text-xs font-black px-2.5 py-1 rounded-full shadow-2xs ${
+                            cycle.netProfit >= 0
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              : 'bg-rose-100 text-rose-800 border border-rose-200'
+                          }`}
+                        >
                           {cycle.netMargin.toFixed(1)}% Margin
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="bg-white p-2.5 rounded-lg border border-gray-100">
-                          <span className="text-[10px] text-gray-400 block font-medium">Tuckshop Revenue</span>
-                          <span className="font-bold text-emerald-700">{formatCurrency(cycle.revenue)}</span>
-                        </div>
-                        <div className="bg-white p-2.5 rounded-lg border border-gray-100">
-                          <span className="text-[10px] text-gray-400 block font-medium">Procurement Spend</span>
-                          <span className="font-bold text-blue-700">{formatCurrency(cycle.procurement)}</span>
-                        </div>
-                        <div className="bg-white p-2.5 rounded-lg border border-gray-100">
-                          <span className="text-[10px] text-gray-400 block font-medium">Units Delivered</span>
-                          <span className="font-bold text-purple-700">{cycle.units.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="bg-white p-2.5 rounded-lg border border-gray-100">
-                          <span className="text-[10px] text-gray-400 block font-medium">Net Surplus</span>
-                          <span className={`font-bold ${cycle.netProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+
+                      {/* Prominent Net Profit Hero Banner */}
+                      <div
+                        className={`p-3.5 rounded-xl border flex items-center justify-between ${
+                          cycle.netProfit >= 0
+                            ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+                            : 'bg-rose-50/70 border-rose-200 text-rose-950'
+                        }`}
+                      >
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider block opacity-75">
+                            Cycle Net Profit / Surplus
+                          </span>
+                          <span className="text-xl sm:text-2xl font-black tabular-nums tracking-tight">
                             {formatCurrency(cycle.netProfit)}
                           </span>
+                        </div>
+                        <div className="text-right text-[11px] font-semibold opacity-80">
+                          <div>Avg {formatCurrency(cycle.avgDcValue)} / DC</div>
+                          <div>Cost {formatCurrency(cycle.costPerUnit)} / Unit</div>
+                        </div>
+                      </div>
+
+                      {/* 6 Key Accounting Breakdown Tiles */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+                        {/* 1. Total DC Value (MRP Sold) */}
+                        <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-2xs">
+                          <span className="text-[10px] text-gray-500 block font-bold uppercase tracking-wider">
+                            Total DC Sold Value
+                          </span>
+                          <span className="font-black text-sm text-gray-900 block mt-0.5">
+                            {formatCurrency(cycle.grossSales)}
+                          </span>
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">Total MRP delivered</span>
+                        </div>
+
+                        {/* 2. Commission Deducted */}
+                        <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-2xs">
+                          <span className="text-[10px] text-gray-500 block font-bold uppercase tracking-wider">
+                            Commission (~5.5%)
+                          </span>
+                          <span className="font-black text-sm text-rose-600 block mt-0.5">
+                            - {formatCurrency(cycle.commission)}
+                          </span>
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">Aggregator deduction</span>
+                        </div>
+
+                        {/* 3. Net Billed Revenue */}
+                        <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-2xs">
+                          <span className="text-[10px] text-gray-500 block font-bold uppercase tracking-wider">
+                            Net Billed Revenue
+                          </span>
+                          <span className="font-black text-sm text-emerald-700 block mt-0.5">
+                            {formatCurrency(cycle.netRevenue)}
+                          </span>
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">Gross less commission</span>
+                        </div>
+
+                        {/* 4. Procurement Spend (Goods) */}
+                        <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-2xs">
+                          <span className="text-[10px] text-gray-500 block font-bold uppercase tracking-wider">
+                            Procurement Cost
+                          </span>
+                          <span className="font-black text-sm text-blue-700 block mt-0.5">
+                            {formatCurrency(cycle.procurementCost)}
+                          </span>
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">Cost of goods sold</span>
+                        </div>
+
+                        {/* 5. Transportation Cost */}
+                        <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-2xs">
+                          <span className="text-[10px] text-gray-500 block font-bold uppercase tracking-wider">
+                            Transportation Cost
+                          </span>
+                          <span className="font-black text-sm text-amber-700 block mt-0.5">
+                            {formatCurrency(cycle.transportCost)}
+                          </span>
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">Delivery & logistics</span>
+                        </div>
+
+                        {/* 6. Total Deductions & Costs */}
+                        <div className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-2xs">
+                          <span className="text-[10px] text-gray-500 block font-bold uppercase tracking-wider">
+                            Total Goods & Freight
+                          </span>
+                          <span className="font-black text-sm text-gray-900 block mt-0.5">
+                            {formatCurrency(cycle.totalDcCosts)}
+                          </span>
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">Procurement + Freight</span>
                         </div>
                       </div>
                     </div>
                   ))}
+                </div>
+
+                {/* Comparative Financial Barometer: Cycle 1 vs Cycle 2 */}
+                <div className="bg-gray-50/70 rounded-xl p-4 border border-gray-100">
+                  <span className="text-xs font-bold text-gray-700 block mb-3">
+                    Comparative Financial Barometer: Cycle 1 vs Cycle 2
+                  </span>
+                  <div className="h-56 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={[
+                          { metric: 'DC Sold Value', Cycle1: cycleComparison[0].grossSales, Cycle2: cycleComparison[1].grossSales },
+                          { metric: 'Net Revenue', Cycle1: cycleComparison[0].netRevenue, Cycle2: cycleComparison[1].netRevenue },
+                          { metric: 'Procurement', Cycle1: cycleComparison[0].procurementCost, Cycle2: cycleComparison[1].procurementCost },
+                          { metric: 'Transport', Cycle1: cycleComparison[0].transportCost, Cycle2: cycleComparison[1].transportCost },
+                          { metric: 'Net Profit', Cycle1: cycleComparison[0].netProfit, Cycle2: cycleComparison[1].netProfit },
+                        ]}
+                        margin={{ top: 10, right: 20, left: 0, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                        <XAxis dataKey="metric" tick={{ fontSize: 11, fill: '#6b7280' }} />
+                        <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                        <Tooltip
+                          formatter={(v: any) => [`₹${Number(v).toLocaleString('en-IN')}`, '']}
+                          contentStyle={{ backgroundColor: '#111827', color: '#fff', borderRadius: '12px', fontSize: '12px' }}
+                        />
+                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Bar dataKey="Cycle1" name="Cycle 1 (1st-15th)" fill="#3b2fc9" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Cycle2" name="Cycle 2 (16th-End)" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
 
@@ -1907,11 +2180,11 @@ export default function AnalyticsDashboardPage() {
                       </div>
 
                       <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                        <span className="text-gray-400 block text-[10px] uppercase font-bold">Tuckshop Revenue</span>
+                        <span className="text-gray-400 block text-[10px] uppercase font-bold">Total Net Revenue</span>
                         <span className="font-extrabold text-base text-emerald-600 block mt-0.5">
-                          {formatCurrency(locationComparison.hyd.tuckshopSales)}
+                          {formatCurrency(locationComparison.hydTotalRevenue)}
                         </span>
-                        <span className="text-[10px] text-gray-500">Sales recorded</span>
+                        <span className="text-[10px] text-gray-500">DC Net + Retail</span>
                       </div>
 
                       <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
@@ -1968,11 +2241,11 @@ export default function AnalyticsDashboardPage() {
                       </div>
 
                       <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                        <span className="text-gray-400 block text-[10px] uppercase font-bold">Tuckshop Revenue</span>
+                        <span className="text-gray-400 block text-[10px] uppercase font-bold">Total Net Revenue</span>
                         <span className="font-extrabold text-base text-emerald-600 block mt-0.5">
-                          {formatCurrency(locationComparison.blr.tuckshopSales)}
+                          {formatCurrency(locationComparison.blrTotalRevenue)}
                         </span>
-                        <span className="text-[10px] text-gray-500">Sales recorded</span>
+                        <span className="text-[10px] text-gray-500">DC Net + Retail</span>
                       </div>
 
                       <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
@@ -2012,14 +2285,14 @@ export default function AnalyticsDashboardPage() {
                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs">
                   <h4 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
                     <BarChart2 className="h-4 w-4 text-[#3b2fc9]" />
-                    Procurement Cost vs Tuckshop Revenue by Hub
+                    Procurement Cost vs Net Revenue by Hub
                   </h4>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={[
-                          { name: 'Hyderabad', Cost: locationComparison.hyd.procurementCost, Revenue: locationComparison.hyd.tuckshopSales },
-                          { name: 'Bangalore', Cost: locationComparison.blr.procurementCost, Revenue: locationComparison.blr.tuckshopSales },
+                          { name: 'Hyderabad', Cost: locationComparison.hyd.procurementCost + locationComparison.hyd.transportCost, Revenue: locationComparison.hydTotalRevenue },
+                          { name: 'Bangalore', Cost: locationComparison.blr.procurementCost + locationComparison.blr.transportCost, Revenue: locationComparison.blrTotalRevenue },
                         ]}
                         margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
                       >

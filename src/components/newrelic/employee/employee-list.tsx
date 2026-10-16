@@ -3,7 +3,7 @@
 import React from 'react';
 import { NewRelicEmployee } from '@/types/employee';
 import { resolveSiteId, COMPANY_SITES } from '@/types/site';
-import { Edit2, Trash2, MapPin, IndianRupee, Calendar, UserCheck, UserX } from 'lucide-react';
+import { Edit2, Trash2, MapPin, IndianRupee, Calendar, UserCheck, UserX, Clock } from 'lucide-react';
 
 interface EmployeeListProps {
   employees: NewRelicEmployee[];
@@ -88,6 +88,15 @@ export function EmployeeList({ employees, onEdit, onDelete, isAdmin }: EmployeeL
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               Joined {new Date(emp.joinDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </span>
+            <span className="flex items-center gap-1 bg-indigo-50/70 border border-indigo-100/70 text-indigo-800 px-2 py-0.5 rounded-md font-medium text-[11px]">
+              <Clock className="h-3 w-3 text-indigo-600" />
+              <span>
+                {emp.shiftTiming?.expectedStart || (emp.location === 'bangalore' ? '09:00' : '06:00')} – {emp.shiftTiming?.expectedEnd || (emp.location === 'bangalore' ? '21:00' : '18:00')}
+              </span>
+              <span className="text-gray-400 text-[10px]">
+                (Cutoff: {emp.shiftTiming?.cutoff || (emp.location === 'bangalore' ? '09:30' : '06:30')})
+              </span>
             </span>
           </div>
 

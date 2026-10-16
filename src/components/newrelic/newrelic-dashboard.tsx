@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { NewRelicChallan } from '@/types/challan';
-import { TrendingUp, TrendingDown, DollarSign, Package, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Package, Activity, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -15,7 +15,8 @@ const formatCurrency = (val: number) =>
   `₹${val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export function NewRelicDashboard({ challans, showFinancials }: NewRelicDashboardProps) {
-  if (!showFinancials) return null;
+  if (challans.length === 0) return null;
+
   const calculateMetrics = (items: NewRelicChallan[]) => {
     let totalMrp = 0;
     let totalPCost = 0;
@@ -46,7 +47,7 @@ export function NewRelicDashboard({ challans, showFinancials }: NewRelicDashboar
     const profit = revenue - cost;
     const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
-    return { volume: items.length, revenue, cost, profit, margin };
+    return { volume: items.length, totalMrp, revenue, cost, profit, margin };
   };
 
   const allMetrics = calculateMetrics(challans);
@@ -68,7 +69,42 @@ export function NewRelicDashboard({ challans, showFinancials }: NewRelicDashboar
     </Card>
   );
 
-  if (challans.length === 0) return null;
+  // If financials are locked / off: Always show Volume and Total Value for cycle to admin
+  if (!showFinancials) {
+    return (
+      <div className="space-y-4 mb-6">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard
+            title="Total Volume"
+            value={allMetrics.volume.toString()}
+            subtext={`${blrMetrics.volume} BLR · ${hydMetrics.volume} HYD`}
+            icon={Package}
+            cardBg="bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/50 border-indigo-200/80"
+            iconBg="bg-gradient-to-tr from-indigo-600 to-violet-600 text-white shadow-indigo-200"
+            valueClass="text-indigo-950"
+          />
+          <StatCard
+            title="Total Cycle Value (MRP)"
+            value={formatCurrency(allMetrics.totalMrp)}
+            subtext={`${formatCurrency(blrMetrics.totalMrp)} BLR · ${formatCurrency(hydMetrics.totalMrp)} HYD`}
+            icon={DollarSign}
+            cardBg="bg-gradient-to-br from-blue-50/90 via-white to-cyan-50/50 border-blue-200/80"
+            iconBg="bg-gradient-to-tr from-blue-600 to-cyan-600 text-white shadow-blue-200"
+            valueClass="text-blue-900"
+          />
+          <Card className="shadow-xs border border-dashed border-gray-300 bg-gray-50/60 flex flex-col justify-center p-4">
+            <div className="flex items-center gap-2 text-xs font-semibold text-gray-600">
+              <Lock className="w-4 h-4 text-gray-400" />
+              <span>Financials Protected</span>
+            </div>
+            <p className="text-[11px] text-gray-500 mt-1">
+              Unlock financials above to view Net Revenue, Cost Breakdown, and Estimated Profit.
+            </p>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 mb-6">

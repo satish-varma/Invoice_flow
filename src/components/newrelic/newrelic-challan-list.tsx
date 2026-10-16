@@ -143,7 +143,7 @@ export function NewRelicChallanList({
         <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Saved Challans</h3>
         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-gray-500">
           <span>{challans.length} document{challans.length !== 1 ? 's' : ''}</span>
-          {role === 'admin' && showFinancials && (
+          {(role === 'admin' || role === 'superadmin') && (
             <>
               <span className="hidden sm:inline text-gray-300">|</span>
               {(() => {
@@ -173,13 +173,19 @@ export function NewRelicChallanList({
 
                 return (
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className="text-gray-600">MRP: ₹{totals.mrp.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    <span className="text-red-500/80">Comm: -₹{totals.commission.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    <span className="text-gray-600">Goods: ₹{totals.goods.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    <span className="text-gray-600">Trans: ₹{totals.transport.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    <span className={`font-semibold ${profit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                      Profit: ₹{profit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <span className="font-extrabold text-[#3b2fc9]">
+                      Total Value: ₹{totals.mrp.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
+                    {showFinancials && (
+                      <>
+                        <span className="text-red-500/80">Comm: -₹{totals.commission.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="text-gray-600">Goods: ₹{totals.goods.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="text-gray-600">Trans: ₹{totals.transport.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className={`font-semibold ${profit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                          Profit: ₹{profit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </>
+                    )}
                   </div>
                 );
               })()}
@@ -596,9 +602,10 @@ export function NewRelicChallanList({
               <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider">Date</TableHead>
               <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider">Location</TableHead>
               <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider text-center">Items</TableHead>
-              {role === 'admin' && (
+              {(role === 'admin' || role === 'superadmin') && (
                 <>
                   <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider">{isTrashView ? 'Deleted By' : 'Author'}</TableHead>
+                  <TableHead className="font-bold text-[#3b2fc9] text-xs uppercase tracking-wider text-right">Value (MRP)</TableHead>
                   {showFinancials && (
                     <>
                       <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider text-right">Rev</TableHead>
@@ -648,7 +655,7 @@ export function NewRelicChallanList({
                 <TableCell className="text-center text-gray-700 font-bold tabular-nums">
                   {challan.lineItems?.length ?? 0}
                 </TableCell>
-                {role === 'admin' && (
+                {(role === 'admin' || role === 'superadmin') && (
                   <>
                     <TableCell>
                       <div className="flex flex-col text-[11px]">
@@ -662,55 +669,60 @@ export function NewRelicChallanList({
                         )}
                       </div>
                     </TableCell>
-                    {showFinancials && (() => {
-                        const mrpTotal = (challan.lineItems || []).reduce((acc, item) => acc + ((item.mrp || 0) * (item.quantity || 1)), 0);
-                        const commission = mrpTotal * 0.055;
-                        const revenue = mrpTotal - commission;
-                        
-                        let pCost = 0;
-                        if (challan.procurementCost !== undefined && challan.procurementCost !== null) {
-                          pCost = Number(challan.procurementCost);
-                        } else {
-                          pCost = (challan.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
-                        }
-                        
-                        const tCost = challan.transportCost || 0;
-                        const oCost = challan.otherCharges || 0;
-                        const totalCost = pCost + tCost + oCost;
-                        
-                        const profit = revenue - totalCost;
+                    {(() => {
+                      const mrpTotal = (challan.lineItems || []).reduce((acc, item) => acc + ((item.mrp || 0) * (item.quantity || 1)), 0);
+                      const commission = mrpTotal * 0.055;
+                      const revenue = mrpTotal - commission;
+                      
+                      let pCost = 0;
+                      if (challan.procurementCost !== undefined && challan.procurementCost !== null) {
+                        pCost = Number(challan.procurementCost);
+                      } else {
+                        pCost = (challan.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+                      }
+                      
+                      const tCost = challan.transportCost || 0;
+                      const oCost = challan.otherCharges || 0;
+                      const totalCost = pCost + tCost + oCost;
+                      const profit = revenue - totalCost;
 
-                        return (
-                          <>
-                            <TableCell className="text-right whitespace-nowrap align-top pt-3">
-                              <div className="flex flex-col text-[11px] items-end leading-tight tabular-nums">
-                                <span className="text-gray-600" title="Total MRP">₹{mrpTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                <span className="text-gray-400" title="5.5% Commission">- ₹{commission.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                <span className="font-bold text-[13px] text-gray-900 border-t border-gray-200 mt-1 pt-1 w-full text-right">
-                                   ₹{revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right whitespace-nowrap align-top pt-3">
-                              <div className="flex flex-col text-[11px] items-end leading-tight text-gray-500 tabular-nums">
-                                <span>Goods: ₹{pCost.toLocaleString('en-IN')}</span>
-                                <span>Trans: ₹{tCost.toLocaleString('en-IN')}</span>
-                                <span>Other: ₹{oCost.toLocaleString('en-IN')}</span>
-                                <span className="font-bold text-[13px] text-gray-900 border-t border-gray-200 mt-1 pt-1 w-full text-right">
-                                   ₹{totalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right font-medium whitespace-nowrap align-top pt-3">
-                              <div className="flex flex-col items-end w-full h-full justify-end pb-[2px] tabular-nums font-bold">
-                                <span className={profit >= 0 ? "text-emerald-700" : "text-red-700"}>
-                                  ₹{profit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                              </div>
-                            </TableCell>
-                          </>
-                        );
-                      })()}
+                      return (
+                        <>
+                          <TableCell className="text-right whitespace-nowrap align-top pt-3 tabular-nums font-mono font-bold text-[#3b2fc9] text-xs">
+                            ₹{mrpTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </TableCell>
+                          {showFinancials && (
+                            <>
+                              <TableCell className="text-right whitespace-nowrap align-top pt-3">
+                                <div className="flex flex-col text-[11px] items-end leading-tight tabular-nums">
+                                  <span className="text-gray-400" title="5.5% Commission">- ₹{commission.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  <span className="font-bold text-[13px] text-gray-900 border-t border-gray-200 mt-1 pt-1 w-full text-right">
+                                     ₹{revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right whitespace-nowrap align-top pt-3">
+                                <div className="flex flex-col text-[11px] items-end leading-tight text-gray-500 tabular-nums">
+                                  <span>Goods: ₹{pCost.toLocaleString('en-IN')}</span>
+                                  <span>Trans: ₹{tCost.toLocaleString('en-IN')}</span>
+                                  <span>Other: ₹{oCost.toLocaleString('en-IN')}</span>
+                                  <span className="font-bold text-[13px] text-gray-900 border-t border-gray-200 mt-1 pt-1 w-full text-right">
+                                     ₹{totalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-medium whitespace-nowrap align-top pt-3">
+                                <div className="flex flex-col items-end w-full h-full justify-end pb-[2px] tabular-nums font-bold">
+                                  <span className={profit >= 0 ? "text-emerald-700" : "text-red-700"}>
+                                    ₹{profit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                              </TableCell>
+                            </>
+                          )}
+                        </>
+                      );
+                    })()}
                   </>
                 )}
                 <TableCell>

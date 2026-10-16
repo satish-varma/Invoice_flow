@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { NewRelicEmployee } from '@/types/employee';
 import { SiteId, SITE_OPTIONS, resolveSiteId, COMPANY_SITES } from '@/types/site';
 import { generateEmployeeId } from '@/services/newrelicEmployeeService';
-import { X, UserCheck, UserPlus, ChevronDown } from 'lucide-react';
+import { X, UserCheck, UserPlus, ChevronDown, Clock } from 'lucide-react';
 import { collection, getDocs, query, orderBy, doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { hashPassword } from '@/lib/hash';
@@ -51,6 +51,10 @@ export function EmployeeForm({ initialData, onSave, onCancel, isSaving }: Employ
         ? initialData.joinDate.substring(0, 10)
         : new Date().toISOString().substring(0, 10),
       isActive: initialData?.isActive !== undefined ? initialData.isActive : true,
+      expectedStart: initialData?.shiftTiming?.expectedStart || (initialData?.location === 'bangalore' ? '09:00' : '06:00'),
+      cutoff: initialData?.shiftTiming?.cutoff || (initialData?.location === 'bangalore' ? '09:30' : '06:30'),
+      expectedEnd: initialData?.shiftTiming?.expectedEnd || (initialData?.location === 'bangalore' ? '21:00' : '18:00'),
+      minWorkHours: initialData?.shiftTiming?.minWorkHours ?? 4,
     },
   });
 
@@ -132,6 +136,13 @@ export function EmployeeForm({ initialData, onSave, onCancel, isSaving }: Employ
       }
     }
 
+    const shiftTiming = {
+      expectedStart: values.expectedStart || '06:00',
+      cutoff: values.cutoff || '06:30',
+      expectedEnd: values.expectedEnd || '18:00',
+      minWorkHours: Number(values.minWorkHours) || 4,
+    };
+
     await onSave({
       ...values,
       siteId,
@@ -140,6 +151,7 @@ export function EmployeeForm({ initialData, onSave, onCancel, isSaving }: Employ
       monthlySalary: Number(values.monthlySalary),
       joinDate: new Date(values.joinDate).toISOString(),
       isActive: values.isActive === true || values.isActive === 'true',
+      shiftTiming,
     });
   };
 
@@ -398,6 +410,113 @@ export function EmployeeForm({ initialData, onSave, onCancel, isSaving }: Employ
               </label>
             </div>
           )}
+        </div>
+
+        {/* ── Shift & Timings Section (Admin Provision) ── */}
+        <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-4 space-y-3.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-[#3b2fc9]" />
+              <p className="text-xs font-bold text-gray-800 uppercase tracking-wider">
+                Staff Timings & Shift Hours
+              </p>
+            </div>
+            <span className="text-[11px] text-gray-500 font-medium">Per-staff timing rules</span>
+          </div>
+
+          {/* Quick Timing Presets */}
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="text-[11px] font-semibold text-gray-500 mr-1">Presets:</span>
+            <button
+              type="button"
+              onClick={() => {
+                setValue('expectedStart', '06:00');
+                setValue('cutoff', '06:30');
+                setValue('expectedEnd', '18:00');
+                setValue('minWorkHours', 4);
+              }}
+              className="px-2.5 py-1 rounded-lg bg-white border border-gray-200 hover:border-[#3b2fc9] hover:text-[#3b2fc9] text-gray-600 font-medium shadow-2xs transition-colors cursor-pointer"
+            >
+              Early Shift (6 AM – 6 PM, Cutoff 6:30 AM)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setValue('expectedStart', '09:00');
+                setValue('cutoff', '09:30');
+                setValue('expectedEnd', '18:00');
+                setValue('minWorkHours', 4);
+              }}
+              className="px-2.5 py-1 rounded-lg bg-white border border-gray-200 hover:border-[#3b2fc9] hover:text-[#3b2fc9] text-gray-600 font-medium shadow-2xs transition-colors cursor-pointer"
+            >
+              General Shift (9 AM – 6 PM, Cutoff 9:30 AM)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setValue('expectedStart', '09:00');
+                setValue('cutoff', '09:30');
+                setValue('expectedEnd', '21:00');
+                setValue('minWorkHours', 4);
+              }}
+              className="px-2.5 py-1 rounded-lg bg-white border border-gray-200 hover:border-[#3b2fc9] hover:text-[#3b2fc9] text-gray-600 font-medium shadow-2xs transition-colors cursor-pointer"
+            >
+              12-Hr Shift (9 AM – 9 PM)
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Check-in Start Time
+              </label>
+              <input
+                type="time"
+                {...register('expectedStart')}
+                className={inputCls}
+              />
+              <span className="text-[10px] text-gray-400 mt-0.5 block">Expected shift start</span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Check-in Cutoff (Deadline)
+              </label>
+              <input
+                type="time"
+                {...register('cutoff')}
+                className={inputCls}
+              />
+              <span className="text-[10px] text-gray-400 mt-0.5 block">Marked late after this</span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Expected Check-out Time
+              </label>
+              <input
+                type="time"
+                {...register('expectedEnd')}
+                className={inputCls}
+              />
+              <span className="text-[10px] text-gray-400 mt-0.5 block">Shift departure time</span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Min Shift Hours for Check-out
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={12}
+                step={0.5}
+                {...register('minWorkHours')}
+                className={inputCls}
+              />
+              <span className="text-[10px] text-gray-400 mt-0.5 block">Blocks early checkout (default 4h)</span>
+            </div>
+          </div>
         </div>
 
         <div className="flex gap-3 pt-2">

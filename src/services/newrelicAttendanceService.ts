@@ -64,25 +64,95 @@ export async function getTodayAttendance(
 }
 
 // Shift configuration: Hyderabad starts at 6:00 AM with cutoff at 6:30 AM; 12-hour shift (720 mins)
-export const LOCATION_SHIFT_RULES: Record<string, { expectedStart: string; cutoff: string; expectedMinutes: number }> = {
+export interface ShiftRule {
+  expectedStart: string; // e.g. '06:00'
+  cutoff: string;        // e.g. '06:30' (late deadline)
+  expectedEnd: string;   // e.g. '18:00'
+  expectedMinutes: number; // e.g. 720
+  minWorkHours: number;  // e.g. 4 (minimum hours required before checkout is allowed)
+}
+
+export const LOCATION_SHIFT_RULES: Record<string, ShiftRule> = {
   hyderabad: {
     expectedStart: '06:00',
     cutoff: '06:30', // 6:30 AM deadline
+    expectedEnd: '18:00',
     expectedMinutes: 720, // 12 hours standard shift
+    minWorkHours: 4,      // 4 hours minimum before checkout
   },
   bangalore: {
     expectedStart: '09:00',
     cutoff: '09:30',
+    expectedEnd: '21:00',
     expectedMinutes: 720, // 12 hours standard shift
+    minWorkHours: 4,      // 4 hours minimum before checkout
   },
 };
 
+/** Get global shift rules stored in Firestore, falling back to LOCATION_SHIFT_RULES */
+export async function getGlobalShiftRules(): Promise<Record<string, ShiftRule>> {
+  try {
+    const snap = await getDoc(doc(db, 'site_settings', 'attendance_rules'));
+    if (snap.exists()) {
+      return { ...LOCATION_SHIFT_RULES, ...snap.data() };
+    }
+  } catch (err) {
+    console.warn('Error fetching global shift rules:', err);
+  }
+  return LOCATION_SHIFT_RULES;
+}
+
+/** Save global shift rules to Firestore */
+export async function saveGlobalShiftRules(rules: Record<string, ShiftRule>): Promise<void> {
+  const { setDoc } = await import('firebase/firestore');
+  await setDoc(doc(db, 'site_settings', 'attendance_rules'), rules, { merge: true });
+}
+
 /**
- * Calculates whether an employee is late based on their check-in time and location.
+ * Calculates the effective shift rule for an employee, combining global location rules with any per-employee overrides
+ */
+export function getEffectiveShiftRule(
+  employee?: { location?: string; shiftTiming?: import('@/types/employee').EmployeeShiftTiming } | null,
+  globalRules?: Record<string, ShiftRule>
+): ShiftRule {
+  const loc = (employee?.location || 'hyderabad').toLowerCase();
+  const baseRule = (globalRules && globalRules[loc]) || LOCATION_SHIFT_RULES[loc] || LOCATION_SHIFT_RULES.hyderabad;
+
+  const expectedStart = employee?.shiftTiming?.expectedStart || baseRule.expectedStart || '06:00';
+  const cutoff = employee?.shiftTiming?.cutoff || baseRule.cutoff || '06:30';
+  const expectedEnd = employee?.shiftTiming?.expectedEnd || baseRule.expectedEnd || '18:00';
+  const minWorkHours = employee?.shiftTiming?.minWorkHours ?? baseRule.minWorkHours ?? 4;
+
+  let expectedMinutes = baseRule.expectedMinutes || 720;
+  try {
+    const [sH, sM] = expectedStart.split(':').map(Number);
+    const [eH, eM] = expectedEnd.split(':').map(Number);
+    let diffMins = (eH * 60 + eM) - (sH * 60 + sM);
+    if (diffMins <= 0) diffMins += 24 * 60;
+    if (diffMins > 0) expectedMinutes = diffMins;
+  } catch (e) {
+    // Keep fallback
+  }
+
+  return {
+    expectedStart,
+    cutoff,
+    expectedEnd,
+    expectedMinutes,
+    minWorkHours,
+  };
+}
+
+/**
+ * Calculates whether an employee is late based on their check-in time and location/cutoff.
  * Converts timestamp to IST (Asia/Kolkata).
  */
-export function evaluateCheckInLate(timeIso: string, location: string): { isLate: boolean; lateMinutes: number; cutoff: string } {
-  const rule = LOCATION_SHIFT_RULES[location.toLowerCase()] || LOCATION_SHIFT_RULES.hyderabad;
+export function evaluateCheckInLate(
+  timeIso: string,
+  location: string,
+  cutoffTime?: string
+): { isLate: boolean; lateMinutes: number; cutoff: string } {
+  const cutoffStr = cutoffTime || (LOCATION_SHIFT_RULES[location.toLowerCase()] || LOCATION_SHIFT_RULES.hyderabad).cutoff;
   
   // Format checkIn in Asia/Kolkata to extract HH:MM
   const istFormatter = new Intl.DateTimeFormat('en-GB', {
@@ -96,34 +166,42 @@ export function evaluateCheckInLate(timeIso: string, location: string): { isLate
   const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
   const checkInMinutes = hour * 60 + minute;
 
-  const [cutoffH, cutoffM] = rule.cutoff.split(':').map(Number);
+  const [cutoffH, cutoffM] = cutoffStr.split(':').map(Number);
   const cutoffMinutes = cutoffH * 60 + cutoffM;
 
   if (checkInMinutes > cutoffMinutes) {
     return {
       isLate: true,
       lateMinutes: checkInMinutes - cutoffMinutes,
-      cutoff: rule.cutoff,
+      cutoff: cutoffStr,
     };
   }
 
   return {
     isLate: false,
     lateMinutes: 0,
-    cutoff: rule.cutoff,
+    cutoff: cutoffStr,
   };
 }
 
 /** Check in an employee */
 export async function checkInEmployee(
-  employee: { id: string; employeeId: string; name: string; location: string; siteId?: string },
+  employee: {
+    id: string;
+    employeeId: string;
+    name: string;
+    location: string;
+    siteId?: string;
+    shiftTiming?: import('@/types/employee').EmployeeShiftTiming;
+  },
   selfieUrl: string,
   coordinates: { lat: number; lng: number; accuracy?: number } | null,
-  date: string
-): Promise<{ id: string; isLate: boolean; lateMinutes: number }> {
+  date: string,
+  globalRules?: Record<string, ShiftRule>
+): Promise<{ id: string; isLate: boolean; lateMinutes: number; cutoff: string }> {
   const now = new Date().toISOString();
-  const { isLate, lateMinutes, cutoff } = evaluateCheckInLate(now, employee.location);
-  const rule = LOCATION_SHIFT_RULES[employee.location.toLowerCase()] || LOCATION_SHIFT_RULES.hyderabad;
+  const rule = getEffectiveShiftRule(employee, globalRules);
+  const { isLate, lateMinutes, cutoff } = evaluateCheckInLate(now, employee.location, rule.cutoff);
 
   const data: Omit<NewRelicAttendance, 'id'> = {
     employeeId: employee.employeeId,
@@ -145,26 +223,47 @@ export async function checkInEmployee(
     updatedAt: serverTimestamp() as any,
   };
   const docRef = await addDoc(collection(db, ATTENDANCE_COLLECTION), data);
-  return { id: docRef.id, isLate, lateMinutes };
+  return { id: docRef.id, isLate, lateMinutes, cutoff };
 }
 
-/** Check out an employee — updates existing record & calculates duration and overtime */
+/** Check out an employee — updates existing record, validates minimum work hours, & calculates duration and overtime */
 export async function checkOutEmployee(
   attendanceId: string,
   selfieUrl: string,
   coordinates: { lat: number; lng: number; accuracy?: number } | null,
   checkInTime: string,
-  location?: string
+  location?: string,
+  options?: {
+    minWorkHours?: number;
+    allowEarlyCheckout?: boolean;
+    adminOverrideReason?: string;
+    expectedMinutes?: number;
+  }
 ): Promise<{ durationMinutes: number; overtimeMinutes: number; status: NewRelicAttendance['status'] }> {
   const now = new Date().toISOString();
   const durationMinutes = Math.round(
     (new Date(now).getTime() - new Date(checkInTime).getTime()) / 60000
   );
-  const rule = location ? (LOCATION_SHIFT_RULES[location.toLowerCase()] || LOCATION_SHIFT_RULES.hyderabad) : LOCATION_SHIFT_RULES.hyderabad;
+
+  const minWorkHours = options?.minWorkHours ?? 4; // Default: 4 hours
+  const minRequiredMinutes = Math.round(minWorkHours * 60);
+
+  // Enforce minimum 4 hours of shift unless admin authorized early checkout
+  if (durationMinutes < minRequiredMinutes && !options?.allowEarlyCheckout) {
+    const remainingMins = minRequiredMinutes - durationMinutes;
+    const remainingH = Math.floor(remainingMins / 60);
+    const remainingM = remainingMins % 60;
+    const remStr = remainingH > 0 ? `${remainingH}h ${remainingM}m` : `${remainingM}m`;
+    throw new Error(
+      `Early check-out is restricted. A minimum shift of ${minWorkHours} hours is required before check-out is allowed. (Elapsed: ${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}m. Remaining: ${remStr})`
+    );
+  }
+
+  const expectedMinutes = options?.expectedMinutes ?? (location ? (LOCATION_SHIFT_RULES[location.toLowerCase()] || LOCATION_SHIFT_RULES.hyderabad).expectedMinutes : 720);
   
   // For 12-hour shift (720 min): half-day threshold is 360 min (6 hrs), full-day is >= 360 min
   const status: NewRelicAttendance['status'] = durationMinutes >= 360 ? 'present' : 'half-day';
-  const overtimeMinutes = Math.max(0, durationMinutes - rule.expectedMinutes);
+  const overtimeMinutes = Math.max(0, durationMinutes - expectedMinutes);
 
   await updateDoc(doc(db, ATTENDANCE_COLLECTION, attendanceId), {
     checkOut: {
@@ -176,6 +275,7 @@ export async function checkOutEmployee(
     overtimeMinutes,
     isMissedCheckOut: false,
     status,
+    ...(options?.allowEarlyCheckout ? { earlyCheckoutApproved: true, earlyCheckoutReason: options.adminOverrideReason || 'Admin Override' } : {}),
     updatedAt: serverTimestamp(),
   });
 

@@ -2,7 +2,9 @@
 
 import React, { useEffect, useState, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Loader2, Camera, LogIn, LogOut, MapPin, Clock, CheckCircle, AlertCircle, Calendar, Users, IndianRupee, Phone, Mail, CalendarDays, ChevronDown, ChevronUp, User, FileSpreadsheet, Calculator } from 'lucide-react';
+import { Loader2, Camera, LogIn, LogOut, MapPin, Clock, CheckCircle, AlertCircle, Calendar, Users, IndianRupee, Phone, Mail, CalendarDays, ChevronDown, ChevronUp, User, FileSpreadsheet, Calculator, Lock, ShieldAlert, Settings, Sparkles } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +28,10 @@ import {
   getEmployeeMonthlyAttendance,
   checkAndFlagMissedCheckouts,
   LOCATION_SHIFT_RULES,
+  getGlobalShiftRules,
+  saveGlobalShiftRules,
+  getEffectiveShiftRule,
+  ShiftRule,
 } from '@/services/newrelicAttendanceService';
 import { SelfieCapture } from '@/components/newrelic/attendance/selfie-capture';
 import { triggerHaptic } from '@/lib/haptics';
@@ -90,12 +96,43 @@ function AttendancePageContent() {
   // --- Admin state ---
   const [todayAll, setTodayAll] = useState<NewRelicAttendance[]>([]);
   const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
-  const [adminTab, setAdminTab] = useState<'today' | 'history' | 'payroll'>(() => {
+  const [adminTab, setAdminTab] = useState<'today' | 'history' | 'payroll' | 'timing'>(() => {
     const tabParam = searchParams?.get('tab');
     if (isOwnerOrAdmin && (tabParam === 'payroll' || tabParam === 'salaries')) return 'payroll';
     if (tabParam === 'history') return 'history';
+    if (tabParam === 'timing' || tabParam === 'shifts') return 'timing';
     return 'today';
   });
+
+  // Global Shift Rules & Early Checkout State
+  const [globalShiftRules, setGlobalShiftRules] = useState<Record<string, ShiftRule>>(LOCATION_SHIFT_RULES);
+  const [editingRules, setEditingRules] = useState<Record<string, ShiftRule>>(LOCATION_SHIFT_RULES);
+  const [isSavingShiftRules, setIsSavingShiftRules] = useState(false);
+  const [showEarlyCheckoutModal, setShowEarlyCheckoutModal] = useState(false);
+  const [earlyCheckoutReason, setEarlyCheckoutReason] = useState('');
+  const [authorizedEarlyCheckout, setAuthorizedEarlyCheckout] = useState(false);
+  const [employeeTimingModal, setEmployeeTimingModal] = useState<NewRelicEmployee | null>(null);
+  const [isSavingEmpTiming, setIsSavingEmpTiming] = useState(false);
+  const [empTimingForm, setEmpTimingForm] = useState<{
+    expectedStart: string;
+    cutoff: string;
+    expectedEnd: string;
+    minWorkHours: number;
+    useHubDefault: boolean;
+  }>({
+    expectedStart: '06:00',
+    cutoff: '06:30',
+    expectedEnd: '18:00',
+    minWorkHours: 4,
+    useHubDefault: true,
+  });
+
+  useEffect(() => {
+    getGlobalShiftRules().then((rules) => {
+      setGlobalShiftRules(rules);
+      setEditingRules(rules);
+    });
+  }, []);
 
   useEffect(() => {
     const tabParam = searchParams?.get('tab');
@@ -103,7 +140,9 @@ function AttendancePageContent() {
       setAdminTab('payroll');
     } else if (tabParam === 'history') {
       setAdminTab('history');
-    } else if (!isOwnerOrAdmin && adminTab === 'payroll') {
+    } else if (tabParam === 'timing' || tabParam === 'shifts') {
+      setAdminTab('timing');
+    } else if (!isOwnerOrAdmin && (adminTab === 'payroll' || adminTab === 'timing')) {
       setAdminTab('today');
     }
   }, [searchParams, isOwnerOrAdmin, adminTab]);
@@ -563,8 +602,36 @@ function AttendancePageContent() {
      (selectedEmployee.email && selectedEmployee.email.toLowerCase().trim() === user.email.toLowerCase().trim()))
   );
 
-  const handleOpenCamera = (action: AttendanceAction) => {
+  const effectiveRule = useMemo(() => {
+    return getEffectiveShiftRule(selectedEmployee, globalShiftRules);
+  }, [selectedEmployee, globalShiftRules]);
+
+  const inTimeMs = todayRecord?.checkIn?.time ? new Date(todayRecord.checkIn.time).getTime() : 0;
+  const elapsedMinutes = inTimeMs > 0 ? Math.floor(Math.max(0, Date.now() - inTimeMs) / 60000) : 0;
+  const minWorkHours = effectiveRule.minWorkHours || 4;
+  const minWorkMinutes = minWorkHours * 60;
+  const isMinShiftCompleted = elapsedMinutes >= minWorkMinutes;
+  const remainingMinutesToUnlock = Math.max(0, minWorkMinutes - elapsedMinutes);
+  const unlockTime = inTimeMs > 0 ? new Date(inTimeMs + minWorkMinutes * 60000) : null;
+
+  const handleOpenCamera = (action: AttendanceAction, forceAdminOverride: boolean = false) => {
     triggerHaptic('medium');
+    if (action === 'check-out' && todayRecord?.checkIn?.time && !forceAdminOverride) {
+      if (!isMinShiftCompleted) {
+        if (!isAdmin) {
+          triggerHaptic('warning');
+          toast({
+            variant: 'destructive',
+            title: `🔒 Minimum Shift Required (${minWorkHours} Hours)`,
+            description: `Check-out is restricted until completing at least ${minWorkHours} hours of shift. Remaining time: ${formatDuration(remainingMinutesToUnlock)} (Unlocks at ${unlockTime ? formatTime(unlockTime.toISOString()) : ''}).`,
+          });
+          return;
+        } else {
+          setShowEarlyCheckoutModal(true);
+          return;
+        }
+      }
+    }
     setCameraAction(action);
     setShowCamera(true);
   };
@@ -588,17 +655,19 @@ function AttendancePageContent() {
             name: selectedEmployee.name,
             location: selectedEmployee.location,
             siteId: selectedEmployee.siteId,
+            shiftTiming: selectedEmployee.shiftTiming,
           },
           selfieUrl,
           coordinates,
-          getTodayDate()
+          getTodayDate(),
+          globalShiftRules
         );
         triggerHaptic('success');
         if (res.isLate) {
           toast({
             variant: 'destructive',
             title: `⚠️ Checked In (Late by ${res.lateMinutes} mins)`,
-            description: `Shift deadline was ${LOCATION_SHIFT_RULES[selectedEmployee.location.toLowerCase()]?.cutoff || '06:30'} AM. Redirecting to DC Hub...`,
+            description: `Shift deadline was ${res.cutoff || effectiveRule.cutoff} AM. Redirecting to DC Hub...`,
           });
         } else {
           toast({ title: `✅ Checked in on time — Redirecting to DC Hub...` });
@@ -613,13 +682,23 @@ function AttendancePageContent() {
           toast({ variant: 'destructive', title: 'No check-in record found' });
           return;
         }
+        const isEarlyAuth = isAdmin && (authorizedEarlyCheckout || showEarlyCheckoutModal || !!earlyCheckoutReason);
         const outRes = await checkOutEmployee(
           todayRecord.id,
           selfieUrl,
           coordinates,
           todayRecord.checkIn.time,
-          selectedEmployee.location
+          selectedEmployee.location,
+          {
+            minWorkHours: effectiveRule.minWorkHours,
+            allowEarlyCheckout: isEarlyAuth,
+            adminOverrideReason: earlyCheckoutReason || (isEarlyAuth ? 'Admin Authorized' : undefined),
+            expectedMinutes: effectiveRule.expectedMinutes,
+          }
         );
+        setEarlyCheckoutReason('');
+        setShowEarlyCheckoutModal(false);
+        setAuthorizedEarlyCheckout(false);
         triggerHaptic('success');
         if (outRes.overtimeMinutes > 0) {
           toast({
@@ -829,7 +908,7 @@ function AttendancePageContent() {
                     Tap Shutter to Check In
                   </span>
                   <span className="text-[10px] text-white/60 mt-0.5">
-                    Shift deadline: {LOCATION_SHIFT_RULES[selectedEmployee.location.toLowerCase()]?.cutoff || '06:30'} AM
+                    Shift deadline: {effectiveRule.cutoff} AM
                   </span>
                 </div>
               )}
@@ -837,22 +916,52 @@ function AttendancePageContent() {
               {todayRecord && !todayRecord.checkOut && (
                 <div className="flex flex-col items-center z-10 w-full max-w-xs">
                   {/* Real-time live shift stopwatch card */}
-                  <div className="bg-white/15 backdrop-blur-md border border-white/25 rounded-2xl p-3 mb-4 w-full flex items-center justify-between shadow-lg">
-                    <div className="flex items-center gap-2">
-                      <div className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-300"></span>
+                  <div className="bg-white/15 backdrop-blur-md border border-white/25 rounded-2xl p-3 mb-4 w-full shadow-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-300"></span>
+                        </div>
+                        <div className="text-left">
+                          <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-200 block">Shift Elapsed</span>
+                          <span className="text-xs text-white/90 font-medium">In at {formatTime(todayRecord.checkIn!.time)}</span>
+                        </div>
                       </div>
-                      <div className="text-left">
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-200 block">Shift Elapsed</span>
-                        <span className="text-xs text-white/90 font-medium">In at {formatTime(todayRecord.checkIn!.time)}</span>
+                      <div className="text-right">
+                        <span className="text-lg font-black font-mono tracking-tight text-white block">
+                          {shiftElapsed.formatted}
+                        </span>
+                        <span className="text-[10px] text-emerald-200 font-semibold">Active Stopwatch</span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-lg font-black font-mono tracking-tight text-white block">
-                        {shiftElapsed.formatted}
-                      </span>
-                      <span className="text-[10px] text-emerald-200 font-semibold">Active Stopwatch</span>
+
+                    {/* Progress to 4-hour check-out unlock */}
+                    <div className="pt-2 border-t border-white/20">
+                      <div className="flex items-center justify-between text-[10px] text-white/80 mb-1">
+                        <span>
+                          {isMinShiftCompleted ? (
+                            <span className="text-emerald-300 font-bold flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3" /> Min {minWorkHours}h Shift Completed
+                            </span>
+                          ) : (
+                            <span className="text-amber-200 font-medium flex items-center gap-1">
+                              <Lock className="h-3 w-3" /> Check-out unlocks in {formatDuration(remainingMinutesToUnlock)}
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-mono font-bold text-white">
+                          {Math.min(100, Math.round((elapsedMinutes / minWorkMinutes) * 100))}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-white/20 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-500 ${
+                            isMinShiftCompleted ? 'bg-emerald-400' : 'bg-amber-400'
+                          }`}
+                          style={{ width: `${Math.min(100, (elapsedMinutes / minWorkMinutes) * 100)}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -860,22 +969,39 @@ function AttendancePageContent() {
                     type="button"
                     disabled={isSubmitting}
                     onClick={() => handleOpenCamera('check-out')}
-                    className="w-24 h-24 rounded-full border-4 border-white/60 bg-white/20 hover:bg-white/30 backdrop-blur-md flex items-center justify-center p-2.5 shadow-2xl active:scale-95 transition-all group"
+                    className={`w-24 h-24 rounded-full border-4 backdrop-blur-md flex items-center justify-center p-2.5 shadow-2xl active:scale-95 transition-all group ${
+                      isMinShiftCompleted
+                        ? 'border-white/60 bg-white/20 hover:bg-white/30'
+                        : 'border-amber-300/40 bg-black/25 hover:bg-black/35 opacity-95'
+                    }`}
                     aria-label="Capture check-out selfie"
                   >
-                    <div className="w-full h-full rounded-full bg-amber-400 flex flex-col items-center justify-center text-amber-950 shadow-md group-hover:scale-105 transition-transform">
+                    <div className={`w-full h-full rounded-full flex flex-col items-center justify-center shadow-md group-hover:scale-105 transition-transform ${
+                      isMinShiftCompleted ? 'bg-amber-400 text-amber-950' : 'bg-amber-600/90 text-white'
+                    }`}>
                       {isSubmitting ? (
-                        <Loader2 className="w-8 h-8 animate-spin text-amber-950" />
+                        <Loader2 className="w-8 h-8 animate-spin" />
+                      ) : isMinShiftCompleted ? (
+                        <Camera className="w-8 h-8" />
                       ) : (
-                        <Camera className="w-8 h-8 text-amber-950" />
+                        <Lock className="w-7 h-7" />
                       )}
                     </div>
                   </button>
-                  <span className="mt-3 text-xs font-bold text-white tracking-wide">
-                    Tap Shutter to Check Out
+                  <span className="mt-3 text-xs font-bold text-white tracking-wide flex items-center gap-1.5">
+                    {isMinShiftCompleted ? (
+                      'Tap Shutter to Check Out'
+                    ) : (
+                      <>
+                        <Lock className="h-3.5 w-3.5 text-amber-300" />
+                        Check Out Locked (Min {minWorkHours}h)
+                      </>
+                    )}
                   </span>
                   <span className="text-[10px] text-white/80 mt-0.5">
-                    Checked in {shiftElapsed.formatted} ago
+                    {isMinShiftCompleted
+                      ? `Shift elapsed: ${shiftElapsed.formatted}`
+                      : `Unlocks at ${unlockTime ? formatTime(unlockTime.toISOString()) : ''} (${formatDuration(remainingMinutesToUnlock)} remaining)`}
                   </span>
                 </div>
               )}
@@ -1066,9 +1192,9 @@ function AttendancePageContent() {
                     <div>
                       <p className="text-sm font-bold text-gray-800">Not Checked In Yet Today</p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        Shift starts at {LOCATION_SHIFT_RULES[selectedEmployee.location.toLowerCase()]?.expectedStart || '06:00'} AM ·
+                        Shift starts at {effectiveRule.expectedStart} ·
                         <span className="font-semibold text-amber-700 ml-1">
-                          Deadline: {LOCATION_SHIFT_RULES[selectedEmployee.location.toLowerCase()]?.cutoff || '06:30'} AM
+                          Deadline: {effectiveRule.cutoff}
                         </span>
                       </p>
                     </div>
@@ -1124,7 +1250,7 @@ function AttendancePageContent() {
                       {/* Late Tag */}
                       {todayRecord.isLate ? (
                         <span className="px-2.5 py-0.5 bg-red-100 text-red-700 rounded-md text-xs font-bold flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> Late ({todayRecord.lateMinutes || 0}m after {LOCATION_SHIFT_RULES[selectedEmployee.location.toLowerCase()]?.cutoff || '06:30'})
+                          <Clock className="h-3 w-3" /> Late ({todayRecord.lateMinutes || 0}m after {effectiveRule.cutoff})
                         </span>
                       ) : (
                         <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-md text-xs font-bold flex items-center gap-1">
@@ -1186,14 +1312,42 @@ function AttendancePageContent() {
                   </button>
                 )}
                 {todayRecord && !todayRecord.checkOut && (
-                  <button
-                    onClick={() => handleOpenCamera('check-out')}
-                    disabled={isSubmitting}
-                    className="flex-1 py-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/20 active:scale-98 transition-all"
-                  >
-                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin text-emerald-200" /> : <LogOut className="h-4 w-4 text-emerald-200" />}
-                    <span>Check Out Shift</span>
-                  </button>
+                  <div className="flex-1 flex flex-col gap-1.5">
+                    <button
+                      onClick={() => handleOpenCamera('check-out')}
+                      disabled={isSubmitting}
+                      className={`w-full py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all ${
+                        isMinShiftCompleted
+                          ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-600 text-white shadow-emerald-950/20'
+                          : isAdmin
+                          ? 'bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 hover:from-amber-500 hover:to-amber-700 text-white shadow-amber-950/20'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 shadow-xs'
+                      }`}
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-emerald-200" />
+                      ) : !isMinShiftCompleted ? (
+                        <Lock className="h-4 w-4 text-amber-500" />
+                      ) : (
+                        <LogOut className="h-4 w-4 text-emerald-200" />
+                      )}
+                      <span>
+                        {isMinShiftCompleted
+                          ? 'Check Out Shift'
+                          : isAdmin
+                          ? `Early Check-Out (Admin Override • ${formatDuration(remainingMinutesToUnlock)} left)`
+                          : `Check Out Locked (${formatDuration(remainingMinutesToUnlock)} remaining)`}
+                      </span>
+                    </button>
+                    {!isMinShiftCompleted && (
+                      <p className="text-[11px] text-center text-gray-500 flex items-center justify-center gap-1">
+                        <Clock className="h-3 w-3 text-amber-500" />
+                        Min shift: {minWorkHours} hrs · Check-out unlocks at{' '}
+                        <span className="font-semibold text-gray-700">{unlockTime ? formatTime(unlockTime.toISOString()) : ''}</span>
+                        {isAdmin && <span className="text-[#3b2fc9] font-semibold ml-1">(Admin can authorize early)</span>}
+                      </p>
+                    )}
+                  </div>
                 )}
                 {todayRecord?.checkOut && (
                   <div className="flex-1 py-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl text-sm font-bold text-emerald-800 flex items-center justify-center gap-2 shadow-xs">
@@ -1407,6 +1561,17 @@ function AttendancePageContent() {
                 >
                   <Calculator className="h-4 w-4" />
                   Staff Salaries & Advances
+                </button>
+              )}
+              {isOwnerOrAdmin && (
+                <button
+                  onClick={() => setAdminTab('timing')}
+                  className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                    adminTab === 'timing' ? 'text-[#3b2fc9] border-b-2 border-[#3b2fc9]' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Clock className="h-4 w-4" />
+                  Shift Timings
                 </button>
               )}
             </div>
@@ -1937,6 +2102,293 @@ function AttendancePageContent() {
                 )}
               </div>
             )}
+
+            {adminTab === 'timing' && isOwnerOrAdmin && (
+              <div className="p-4 sm:p-6 space-y-6">
+                {/* Header intro */}
+                <div className="bg-gradient-to-r from-indigo-50/60 via-purple-50/40 to-blue-50/50 p-4 rounded-2xl border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-[#3b2fc9]" />
+                      Shift Timings & Working Hours Policy
+                    </h3>
+                    <p className="text-xs text-gray-600 mt-1 max-w-2xl">
+                      Configure standard check-in time, late arrival cutoff deadline, shift hours, and minimum work duration required before check-out is permitted. Timings apply to all staff by default, with custom overrides allowed per employee.
+                    </p>
+                  </div>
+                  <div className="shrink-0 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setIsSavingShiftRules(true);
+                        try {
+                          await saveGlobalShiftRules(editingRules);
+                          setGlobalShiftRules(editingRules);
+                          toast({ title: '✅ Hub shift timings saved successfully' });
+                          triggerHaptic('success');
+                        } catch (err: any) {
+                          toast({ variant: 'destructive', title: 'Failed to save shift rules', description: err.message });
+                        } finally {
+                          setIsSavingShiftRules(false);
+                        }
+                      }}
+                      disabled={isSavingShiftRules}
+                      className="px-4 py-2 bg-[#3b2fc9] hover:bg-[#3228a8] text-white rounded-xl text-xs font-bold disabled:opacity-50 flex items-center gap-2 shadow-sm transition-all"
+                    >
+                      {isSavingShiftRules ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                      <span>Save All Hub Rules</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Hub Locations Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(['hyderabad', 'bangalore'] as const).map((loc) => {
+                    const rule = editingRules[loc] || LOCATION_SHIFT_RULES[loc];
+                    const locLabel = loc === 'hyderabad' ? 'Hyderabad Hub' : 'Bangalore Hub';
+                    return (
+                      <div key={loc} className="border border-gray-200 rounded-2xl p-4 bg-white shadow-xs space-y-4">
+                        <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-[#3b2fc9]" />
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-800">{locLabel}</h4>
+                          </div>
+                          <span className="text-[10px] font-semibold bg-gray-100 text-gray-700 px-2 py-0.5 rounded-md">
+                            Location Default
+                          </span>
+                        </div>
+
+                        {/* Presets */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] text-gray-400 font-medium mr-1">Presets:</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingRules(prev => ({
+                                ...prev,
+                                [loc]: {
+                                  ...prev[loc],
+                                  expectedStart: '06:00',
+                                  cutoff: '06:30',
+                                  expectedEnd: '18:00',
+                                  expectedMinutes: 720,
+                                  minWorkHours: 4,
+                                }
+                              }));
+                            }}
+                            className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                          >
+                            6:00 - 6:30 AM (12h)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingRules(prev => ({
+                                ...prev,
+                                [loc]: {
+                                  ...prev[loc],
+                                  expectedStart: '09:00',
+                                  cutoff: '09:30',
+                                  expectedEnd: '18:00',
+                                  expectedMinutes: 540,
+                                  minWorkHours: 4,
+                                }
+                              }));
+                            }}
+                            className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                          >
+                            9:00 - 9:30 AM (8h)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingRules(prev => ({
+                                ...prev,
+                                [loc]: {
+                                  ...prev[loc],
+                                  expectedStart: '09:00',
+                                  cutoff: '09:30',
+                                  expectedEnd: '21:00',
+                                  expectedMinutes: 720,
+                                  minWorkHours: 4,
+                                }
+                              }));
+                            }}
+                            className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                          >
+                            9:00 - 9:30 AM (12h)
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <label className="block text-gray-600 font-medium mb-1">Check-In Starts</label>
+                            <input
+                              type="time"
+                              value={rule.expectedStart || '06:00'}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setEditingRules(prev => ({
+                                  ...prev,
+                                  [loc]: { ...prev[loc], expectedStart: val }
+                                }));
+                              }}
+                              className="w-full h-9 px-2.5 border border-gray-200 rounded-lg bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] text-xs font-semibold"
+                            />
+                            <span className="text-[10px] text-gray-400 mt-0.5 block">Official start time</span>
+                          </div>
+
+                          <div>
+                            <label className="block text-gray-600 font-medium mb-1">Cutoff Deadline (Late)</label>
+                            <input
+                              type="time"
+                              value={rule.cutoff || '06:30'}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setEditingRules(prev => ({
+                                  ...prev,
+                                  [loc]: { ...prev[loc], cutoff: val }
+                                }));
+                              }}
+                              className="w-full h-9 px-2.5 border border-gray-200 rounded-lg bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] text-xs font-semibold text-amber-700"
+                            />
+                            <span className="text-[10px] text-gray-400 mt-0.5 block">After this is marked late</span>
+                          </div>
+
+                          <div>
+                            <label className="block text-gray-600 font-medium mb-1">Expected Check-Out</label>
+                            <input
+                              type="time"
+                              value={rule.expectedEnd || '18:00'}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setEditingRules(prev => ({
+                                  ...prev,
+                                  [loc]: { ...prev[loc], expectedEnd: val }
+                                }));
+                              }}
+                              className="w-full h-9 px-2.5 border border-gray-200 rounded-lg bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] text-xs font-semibold"
+                            />
+                            <span className="text-[10px] text-gray-400 mt-0.5 block">Target shift finish time</span>
+                          </div>
+
+                          <div>
+                            <label className="block text-gray-600 font-medium mb-1">Min Hours for Check-Out</label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="12"
+                              step="0.5"
+                              value={rule.minWorkHours ?? 4}
+                              onChange={(e) => {
+                                const val = Number(e.target.value) || 4;
+                                setEditingRules(prev => ({
+                                  ...prev,
+                                  [loc]: { ...prev[loc], minWorkHours: val }
+                                }));
+                              }}
+                              className="w-full h-9 px-2.5 border border-gray-200 rounded-lg bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] text-xs font-semibold"
+                            />
+                            <span className="text-[10px] text-gray-400 mt-0.5 block">Locked before this duration</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Individual Staff Overrides Table */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-gray-800 flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5 text-[#3b2fc9]" />
+                        Staff Shift Timings & Individual Overrides ({employees.filter(e => e.isActive).length})
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        View effective working hours per staff member or customize specific shift hours for individual employees.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="divide-y divide-gray-100 overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-[11px] text-gray-400 font-semibold border-b border-gray-100">
+                          <th className="py-2 pr-3">Employee</th>
+                          <th className="py-2 px-3">Location & Site</th>
+                          <th className="py-2 px-3">Shift Timing</th>
+                          <th className="py-2 px-3">Check-In Deadline</th>
+                          <th className="py-2 px-3">Min Work Duration</th>
+                          <th className="py-2 pl-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {employees.filter(e => e.isActive).map((emp) => {
+                          const eff = getEffectiveShiftRule(emp, globalShiftRules);
+                          const hasOverride = !!emp.shiftTiming?.expectedStart;
+                          return (
+                            <tr key={emp.id} className="hover:bg-gray-50/60 transition-colors">
+                              <td className="py-2.5 pr-3 font-semibold text-gray-900">
+                                {emp.name}
+                                <span className="block text-[10px] font-mono text-gray-400 font-normal">
+                                  {emp.employeeId} · {emp.designation}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className="capitalize font-medium text-gray-700">{emp.location}</span>
+                                <span className="text-[10px] text-gray-400 block uppercase">{emp.siteId || 'newrelic'}</span>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className="font-mono text-gray-800 font-medium">
+                                  {eff.expectedStart} - {eff.expectedEnd}
+                                </span>
+                                {hasOverride ? (
+                                  <span className="block text-[10px] text-purple-700 font-semibold bg-purple-50 px-1 rounded w-fit mt-0.5">
+                                    Custom Override
+                                  </span>
+                                ) : (
+                                  <span className="block text-[10px] text-gray-400">Hub Default</span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className="font-semibold text-amber-700 font-mono">
+                                  {eff.cutoff} AM
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className="font-medium text-gray-700">
+                                  {eff.minWorkHours || 4} Hours
+                                </span>
+                                <span className="block text-[10px] text-gray-400">Locked before checkout</span>
+                              </td>
+                              <td className="py-2.5 pl-3 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEmployeeTimingModal(emp);
+                                    setEmpTimingForm({
+                                      expectedStart: emp.shiftTiming?.expectedStart || eff.expectedStart,
+                                      cutoff: emp.shiftTiming?.cutoff || eff.cutoff,
+                                      expectedEnd: emp.shiftTiming?.expectedEnd || eff.expectedEnd,
+                                      minWorkHours: emp.shiftTiming?.minWorkHours ?? eff.minWorkHours ?? 4,
+                                      useHubDefault: !emp.shiftTiming?.expectedStart,
+                                    });
+                                  }}
+                                  className="px-2.5 py-1 text-xs font-semibold text-[#3b2fc9] bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                                >
+                                  {hasOverride ? 'Edit Timing' : 'Customize'}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -2114,6 +2566,253 @@ function AttendancePageContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Early Check-Out Admin Override Modal ─── */}
+      {showEarlyCheckoutModal && selectedEmployee && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-amber-50/50">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="h-5 w-5 text-amber-600" />
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm">Early Check-Out Authorization</h3>
+                  <p className="text-xs text-gray-500">{selectedEmployee.name} ({selectedEmployee.employeeId})</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEarlyCheckoutModal(false);
+                  setEarlyCheckoutReason('');
+                }}
+                className="text-gray-400 hover:text-gray-600 text-sm p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4 text-xs">
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1.5 text-amber-900">
+                <div className="flex justify-between font-medium">
+                  <span>Shift Checked In:</span>
+                  <span>{todayRecord?.checkIn ? formatTime(todayRecord.checkIn.time) : 'N/A'}</span>
+                </div>
+                <div className="flex justify-between font-medium">
+                  <span>Elapsed Shift Time:</span>
+                  <span className="font-bold text-amber-950">{shiftElapsed.formatted}</span>
+                </div>
+                <div className="flex justify-between font-medium">
+                  <span>Minimum Shift Required:</span>
+                  <span>{minWorkHours} Hours</span>
+                </div>
+                <div className="flex justify-between font-bold pt-1 border-t border-amber-200">
+                  <span>Remaining to Unlock:</span>
+                  <span className="text-red-700">{formatDuration(remainingMinutesToUnlock)}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-medium text-gray-700 mb-1">
+                  Reason for Early Check-Out Authorization *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={earlyCheckoutReason}
+                  onChange={(e) => setEarlyCheckoutReason(e.target.value)}
+                  placeholder="e.g. Medical emergency / Approved personal leave / Client duty"
+                  className="w-full h-9 px-3 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEarlyCheckoutModal(false);
+                    setEarlyCheckoutReason('');
+                  }}
+                  className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!earlyCheckoutReason.trim()) {
+                      toast({ variant: 'destructive', title: 'Please enter a reason for early check-out' });
+                      return;
+                    }
+                    setAuthorizedEarlyCheckout(true);
+                    setShowEarlyCheckoutModal(false);
+                    setCameraAction('check-out');
+                    setShowCamera(true);
+                  }}
+                  className="flex-1 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-xl font-bold shadow-xs flex items-center justify-center gap-1.5"
+                >
+                  <Camera className="h-4 w-4" />
+                  <span>Authorize & Take Selfie</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Individual Employee Shift Timing Modal ─── */}
+      {employeeTimingModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <div>
+                <h3 className="font-bold text-gray-900 text-sm">Staff Shift Timing</h3>
+                <p className="text-xs text-gray-500">{employeeTimingModal.name} ({employeeTimingModal.employeeId}) · {employeeTimingModal.location}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEmployeeTimingModal(null)}
+                className="text-gray-400 hover:text-gray-600 text-sm p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4 text-xs">
+              {/* Option: Hub Default vs Custom */}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEmpTimingForm(prev => ({ ...prev, useHubDefault: true }))}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                    empTimingForm.useHubDefault
+                      ? 'bg-indigo-50 border-[#3b2fc9] text-[#3b2fc9]'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  Use Hub Default
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEmpTimingForm(prev => ({ ...prev, useHubDefault: false }))}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                    !empTimingForm.useHubDefault
+                      ? 'bg-indigo-50 border-[#3b2fc9] text-[#3b2fc9]'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  Custom Shift Hours
+                </button>
+              </div>
+
+              {empTimingForm.useHubDefault ? (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-gray-600 space-y-1">
+                  <p className="font-semibold text-gray-800">
+                    Inheriting {employeeTimingModal.location} Hub Defaults:
+                  </p>
+                  <p className="text-[11px]">
+                    Shift: {editingRules[employeeTimingModal.location.toLowerCase()]?.expectedStart || '06:00'} - {editingRules[employeeTimingModal.location.toLowerCase()]?.expectedEnd || '18:00'}
+                  </p>
+                  <p className="text-[11px]">
+                    Cutoff Deadline: {editingRules[employeeTimingModal.location.toLowerCase()]?.cutoff || '06:30'} AM
+                  </p>
+                  <p className="text-[11px]">
+                    Min Work Duration: {editingRules[employeeTimingModal.location.toLowerCase()]?.minWorkHours || 4} Hours
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-gray-600 font-medium mb-1">Shift Start</label>
+                      <input
+                        type="time"
+                        value={empTimingForm.expectedStart}
+                        onChange={(e) => setEmpTimingForm(prev => ({ ...prev, expectedStart: e.target.value }))}
+                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-600 font-medium mb-1">Cutoff Deadline (Late)</label>
+                      <input
+                        type="time"
+                        value={empTimingForm.cutoff}
+                        onChange={(e) => setEmpTimingForm(prev => ({ ...prev, cutoff: e.target.value }))}
+                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs font-semibold text-amber-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-600 font-medium mb-1">Shift End</label>
+                      <input
+                        type="time"
+                        value={empTimingForm.expectedEnd}
+                        onChange={(e) => setEmpTimingForm(prev => ({ ...prev, expectedEnd: e.target.value }))}
+                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-600 font-medium mb-1">Min Work Hours</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="12"
+                        step="0.5"
+                        value={empTimingForm.minWorkHours}
+                        onChange={(e) => setEmpTimingForm(prev => ({ ...prev, minWorkHours: Number(e.target.value) || 4 }))}
+                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs font-semibold"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEmployeeTimingModal(null)}
+                  className="flex-1 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingEmpTiming}
+                  onClick={async () => {
+                    setIsSavingEmpTiming(true);
+                    try {
+                      const payloadTiming = empTimingForm.useHubDefault
+                        ? null
+                        : {
+                            expectedStart: empTimingForm.expectedStart || '06:00',
+                            cutoff: empTimingForm.cutoff || '06:30',
+                            expectedEnd: empTimingForm.expectedEnd || '18:00',
+                            minWorkHours: Number(empTimingForm.minWorkHours) || 4,
+                          };
+
+                      await updateDoc(doc(db, 'newrelic_employees', employeeTimingModal.id!), {
+                        shiftTiming: payloadTiming,
+                        updatedAt: new Date().toISOString(),
+                      });
+
+                      // Update local state
+                      setEmployees(prev => prev.map(e => e.id === employeeTimingModal.id ? { ...e, shiftTiming: payloadTiming || undefined } : e));
+                      toast({ title: `Shift timing saved for ${employeeTimingModal.name}` });
+                      setEmployeeTimingModal(null);
+                      triggerHaptic('success');
+                    } catch (err: any) {
+                      toast({ variant: 'destructive', title: 'Failed to update employee timing', description: err.message });
+                    } finally {
+                      setIsSavingEmpTiming(false);
+                    }
+                  }}
+                  className="flex-1 py-2 bg-[#3b2fc9] hover:bg-[#3228a8] disabled:opacity-50 text-white rounded-lg font-bold"
+                >
+                  {isSavingEmpTiming ? 'Saving…' : 'Save Timing'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

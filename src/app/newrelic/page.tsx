@@ -423,6 +423,16 @@ export default function NewRelicPage() {
     return Array.from(new Set(challans.map(c => new Date(c.dcDate).getFullYear()))).sort((a, b) => b - a);
   }, [challans]);
 
+  const cycleTotalValue = useMemo(() => {
+    return displayChallans.reduce((sum, c) => {
+      const mrp = (c.lineItems || []).reduce(
+        (acc, item) => acc + (Number(item.mrp || 0) * Number(item.quantity || 1)),
+        0
+      );
+      return sum + mrp;
+    }, 0);
+  }, [displayChallans]);
+
   const hydCount = activeChallans.filter((c) => c.location === 'hyderabad').length;
   const blrCount = activeChallans.filter((c) => c.location === 'bangalore').length;
 
@@ -887,6 +897,16 @@ export default function NewRelicPage() {
                   >
                     Cycle 2 (16–End)
                   </button>
+
+                  {/* Total Value for Cycle (Always visible for admin, irrespective of show financials check) */}
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200/80 text-xs shrink-0 shadow-2xs ml-1">
+                    <span className="text-[10px] uppercase font-bold text-gray-500">
+                      {filterCycle === '1-15' ? 'Cycle 1' : filterCycle === '16-31' ? 'Cycle 2' : 'Cycle'} Value:
+                    </span>
+                    <span className="font-extrabold text-[#3b2fc9] font-mono text-xs sm:text-sm">
+                      ₹{cycleTotalValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
                 </div>
               ) : (
                 <div className="text-xs font-medium text-gray-400 flex items-center gap-1">

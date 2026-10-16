@@ -2,6 +2,13 @@ import { SiteId } from './site';
 
 export type NewRelicLocation = 'hyderabad' | 'bangalore';
 
+export interface EmployeeShiftTiming {
+  expectedStart?: string; // e.g. "06:00"
+  cutoff?: string;        // e.g. "06:30" (check-in deadline)
+  expectedEnd?: string;   // e.g. "18:00"
+  minWorkHours?: number;  // e.g. 4 (minimum hours required before checkout is allowed)
+}
+
 export interface NewRelicEmployee {
   id?: string;
   siteId?: SiteId;          // defaults to 'newrelic'
@@ -16,6 +23,7 @@ export interface NewRelicEmployee {
   joinDate: string;         // ISO date string
   isActive: boolean;
   profilePhotoUrl?: string;
+  shiftTiming?: EmployeeShiftTiming;
   createdAt?: any;
   updatedAt?: any;
   createdBy?: string | null;

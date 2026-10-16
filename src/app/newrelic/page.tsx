@@ -498,23 +498,23 @@ export default function NewRelicPage() {
           </div>
         )}
 
-        {/* DC Page Header - Heading & Sync Data on Same Line */}
-        <div className="flex items-center justify-between gap-2.5 pt-1">
+        {/* DC Page Header - Large Title on Mobile */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight">
+              <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
                 Delivery Challans
               </h1>
-              <span className="text-[10px] font-black bg-indigo-50 text-[#3b2fc9] border border-indigo-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+              <span className="text-xs font-black bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
                 DC Hub
               </span>
             </div>
-            <p className="text-[11px] sm:text-xs text-gray-500 font-medium truncate mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
               Cafeteria stock, inward challans &amp; dispatch management
             </p>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
             {(role === 'admin' || role === 'superadmin') && (
               <button
                 type="button"
@@ -522,10 +522,10 @@ export default function NewRelicPage() {
                   triggerHaptic('light');
                   setShowCalculator(true);
                 }}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#3b2fc9] text-xs font-bold transition-all border border-purple-200/80 shadow-2xs active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#3b2fc9] text-xs font-bold transition-all border border-purple-200/80 shadow-2xs active:scale-95"
                 title="Open MRP % Calculator"
               >
-                <Calculator className="w-3.5 h-3.5" />
+                <Calculator className="w-4 h-4" />
                 <span>% Calc</span>
               </button>
             )}
@@ -533,9 +533,9 @@ export default function NewRelicPage() {
               type="button"
               onClick={handlePullRefresh}
               disabled={isRefreshing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 text-xs font-semibold text-gray-700 transition-all border border-gray-200 shadow-2xs cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 active:scale-95 text-xs font-bold text-slate-700 transition-all border border-slate-200 shadow-2xs cursor-pointer"
             >
-              <RefreshCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-indigo-600' : 'text-slate-500'}`} />
               <span>{isRefreshing ? 'Syncing...' : 'Sync Data'}</span>
             </button>
           </div>
@@ -545,7 +545,7 @@ export default function NewRelicPage() {
         {role === 'admin' || role === 'superadmin' ? (
           <NewRelicDashboard challans={displayChallans} showFinancials={isUnlocked && showFinancials} />
         ) : (
-          <div className="hidden sm:grid sm:grid-cols-3 gap-2.5 sm:gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <StatCard
               icon={<FileText className="h-4 sm:h-5 w-4 sm:w-5 text-white" />}
               label="Total Challans"
@@ -724,7 +724,7 @@ export default function NewRelicPage() {
         )}
 
         {/* Instant Search Bar & Filter Controls */}
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {/* Instant Search Input */}
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-500 pointer-events-none" />
@@ -733,13 +733,13 @@ export default function NewRelicPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search challans by DC#, brand, or item name..."
-              className="w-full h-11 sm:h-10 pl-10 pr-9 bg-white border border-indigo-100 rounded-2xl text-xs sm:text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 shadow-2xs transition-all"
+              className="w-full h-12 sm:h-11 pl-10 pr-10 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 shadow-sm transition-all"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
                 aria-label="Clear search"
               >
                 <X className="w-4 h-4" />
@@ -748,21 +748,21 @@ export default function NewRelicPage() {
           </div>
 
           {/* Filters Section: Segmented Location Switcher + Quick Presets + More Filters */}
-          <div className="bg-white p-3 sm:p-4 rounded-2xl border border-indigo-100/70 shadow-xs space-y-2.5">
+          <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] space-y-3">
             {/* Top Row: Segmented Location Switcher (Mobile & Desktop) */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              {/* Responsive Segmented Switcher (Single line, zero horizontal scroll on mobile) */}
-              <div className="flex items-center p-1 bg-gray-100/90 rounded-xl w-full sm:w-auto gap-1">
+              {/* Responsive Segmented Switcher (Fluid pill container) */}
+              <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl w-full sm:w-auto gap-1 border border-slate-200/70 dark:border-slate-700">
                 <button
                   type="button"
                   onClick={() => {
                     triggerHaptic('light');
                     setFilterLocation('all');
                   }}
-                  className={`flex-1 sm:flex-initial flex items-center justify-center text-center px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex-1 sm:flex-initial flex items-center justify-center text-center px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                     filterLocation === 'all'
-                      ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-xs'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                      ? 'bg-gradient-to-r from-indigo-600 to-[#3b2fc9] text-white shadow-xs font-black'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60'
                   }`}
                 >
                   All Hubs ({activeChallans.length})
@@ -772,8 +772,8 @@ export default function NewRelicPage() {
                   const isSelected = filterLocation === key;
                   const activeColor =
                     key === 'hyderabad'
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs'
-                      : 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs';
+                      ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-xs font-black'
+                      : 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-xs font-black';
 
                   return (
                     <button
@@ -783,8 +783,8 @@ export default function NewRelicPage() {
                         triggerHaptic('light');
                         setFilterLocation(key);
                       }}
-                      className={`flex-1 sm:flex-initial flex items-center justify-center text-center px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                        isSelected ? activeColor : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                      className={`flex-1 sm:flex-initial flex items-center justify-center text-center px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                        isSelected ? activeColor : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60'
                       }`}
                     >
                       {loc.label} <span className="text-[10px] opacity-80 ml-1">({count})</span>
@@ -797,15 +797,15 @@ export default function NewRelicPage() {
               {(role === 'admin' || role === 'superadmin') && (
                 <div className="flex items-center gap-2 sm:ml-auto">
                   {isUnlocked ? (
-                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg w-full sm:w-auto justify-between sm:justify-start">
-                      <label className="text-xs text-emerald-800 cursor-pointer flex items-center gap-1.5 font-semibold">
+                    <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-3 py-1.5 rounded-xl w-full sm:w-auto justify-between sm:justify-start">
+                      <label className="text-xs text-emerald-800 dark:text-emerald-300 cursor-pointer flex items-center gap-1.5 font-bold">
                         <input
                           type="checkbox"
                           checked={showFinancials}
                           onChange={(e) => setShowFinancials(e.target.checked)}
-                          className="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5"
+                          className="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4"
                         />
-                        <Unlock className="h-3.5 w-3.5 text-emerald-600" />
+                        <Unlock className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                         Financials Visible ({remainingMinutes}m)
                       </label>
                       <button
@@ -813,7 +813,7 @@ export default function NewRelicPage() {
                           lockFinancials();
                           setShowFinancials(false);
                         }}
-                        className="text-[10px] text-red-600 hover:text-red-800 underline font-medium ml-1"
+                        className="text-xs text-red-600 hover:text-red-800 underline font-semibold ml-1.5"
                         title="Lock now"
                       >
                         Lock
@@ -823,9 +823,9 @@ export default function NewRelicPage() {
                     <button
                       type="button"
                       onClick={() => setShowFinancialModal(true)}
-                      className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 shadow-xs transition-colors"
+                      className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors"
                     >
-                      <Lock className="h-3.5 w-3.5 text-gray-500" />
+                      <Lock className="h-4 w-4 text-slate-500" />
                       Unlock Financials
                     </button>
                   )}
@@ -840,31 +840,31 @@ export default function NewRelicPage() {
                     triggerHaptic('light');
                     setShowCalculator(true);
                   }}
-                  className="flex items-center gap-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 text-[#3b2fc9] text-xs font-bold px-3 py-1.5 rounded-lg border border-purple-200/80 shadow-2xs transition-colors shrink-0 ml-auto sm:ml-0"
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 text-[#3b2fc9] text-xs font-bold px-3.5 py-2 rounded-xl border border-purple-200/80 shadow-2xs transition-colors shrink-0 ml-auto sm:ml-0 active:scale-95"
                   title="MRP % Calculator"
                 >
-                  <Calculator className="h-3.5 w-3.5" />
+                  <Calculator className="h-4 w-4" />
                   <span>MRP % Calc</span>
                 </button>
               )}
             </div>
 
-            {/* Bottom Row: Date Presets & Filter Reset (Cycle only shown for admin/superadmin) */}
-            <div className="pt-2 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2">
+            {/* Bottom Row: Date Presets & Filter Reset */}
+            <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
               {/* Cycle Presets: Only visible to Admin / Superadmin */}
               {(role === 'admin' || role === 'superadmin') ? (
                 <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar py-0.5">
-                  <span className="text-[11px] font-bold text-gray-400 mr-1 hidden sm:inline">Cycle:</span>
+                  <span className="text-xs font-bold text-slate-400 mr-1 hidden sm:inline">Cycle:</span>
                   <button
                     type="button"
                     onClick={() => {
                       triggerHaptic('light');
                       setFilterCycle('all');
                     }}
-                    className={`h-7 px-2.5 rounded-full text-xs font-medium transition-all ${
+                    className={`h-9 sm:h-8 px-3.5 rounded-full text-xs font-bold transition-all active:scale-95 ${
                       filterCycle === 'all'
-                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-bold border border-[#3b2fc9]/30'
-                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200/70'
+                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-black border border-[#3b2fc9]/30 shadow-2xs'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 border border-slate-200/80 dark:border-slate-700'
                     }`}
                   >
                     All Dates
@@ -875,10 +875,10 @@ export default function NewRelicPage() {
                       triggerHaptic('light');
                       setFilterCycle('1-15');
                     }}
-                    className={`h-7 px-2.5 rounded-full text-xs font-medium transition-all ${
+                    className={`h-9 sm:h-8 px-3.5 rounded-full text-xs font-bold transition-all active:scale-95 ${
                       filterCycle === '1-15'
-                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-bold border border-[#3b2fc9]/30'
-                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200/70'
+                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-black border border-[#3b2fc9]/30 shadow-2xs'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 border border-slate-200/80 dark:border-slate-700'
                     }`}
                   >
                     Cycle 1 (1–15)
@@ -889,27 +889,27 @@ export default function NewRelicPage() {
                       triggerHaptic('light');
                       setFilterCycle('16-31');
                     }}
-                    className={`h-7 px-2.5 rounded-full text-xs font-medium transition-all ${
+                    className={`h-9 sm:h-8 px-3.5 rounded-full text-xs font-bold transition-all active:scale-95 ${
                       filterCycle === '16-31'
-                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-bold border border-[#3b2fc9]/30'
-                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200/70'
+                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-black border border-[#3b2fc9]/30 shadow-2xs'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 border border-slate-200/80 dark:border-slate-700'
                     }`}
                   >
                     Cycle 2 (16–End)
                   </button>
 
-                  {/* Total Value for Cycle (Always visible for admin, irrespective of show financials check) */}
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200/80 text-xs shrink-0 shadow-2xs ml-1">
-                    <span className="text-[10px] uppercase font-bold text-gray-500">
+                  {/* Total Value for Cycle */}
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/40 dark:to-purple-950/40 border border-indigo-200/80 dark:border-indigo-800 text-xs shrink-0 shadow-2xs ml-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
                       {filterCycle === '1-15' ? 'Cycle 1' : filterCycle === '16-31' ? 'Cycle 2' : 'Cycle'} Value:
                     </span>
-                    <span className="font-extrabold text-[#3b2fc9] font-mono text-xs sm:text-sm">
+                    <span className="font-black text-[#3b2fc9] dark:text-indigo-400 font-mono text-xs sm:text-sm">
                       ₹{cycleTotalValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
               ) : (
-                <div className="text-xs font-medium text-gray-400 flex items-center gap-1">
+                <div className="text-xs font-bold text-slate-400 flex items-center gap-1">
                   <span>📅 Filter by Date:</span>
                 </div>
               )}
@@ -924,10 +924,10 @@ export default function NewRelicPage() {
                       triggerHaptic('light');
                       setFilterMonth(e.target.value);
                     }}
-                    className={`h-7 pl-2.5 pr-6 rounded-full text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] appearance-none cursor-pointer border transition-colors ${
+                    className={`h-9 sm:h-8 pl-3 pr-7 rounded-full text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 appearance-none cursor-pointer border transition-all ${
                       filterMonth !== 'all'
                         ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] border-[#3b2fc9]/30'
-                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                     }`}
                   >
                     <option value="all">📅 All Months</option>
@@ -936,7 +936,7 @@ export default function NewRelicPage() {
                       return <option key={i} value={i}>{date.toLocaleString('default', { month: 'short' })}</option>;
                     })}
                   </select>
-                  <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[8px] text-gray-400">▼</span>
+                  <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-slate-400">▼</span>
                 </div>
 
                 {/* Year Pill */}
@@ -947,10 +947,10 @@ export default function NewRelicPage() {
                       triggerHaptic('light');
                       setFilterYear(e.target.value);
                     }}
-                    className={`h-7 pl-2.5 pr-6 rounded-full text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#3b2fc9] appearance-none cursor-pointer border transition-colors ${
+                    className={`h-9 sm:h-8 pl-3 pr-7 rounded-full text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 appearance-none cursor-pointer border transition-all ${
                       filterYear !== 'all'
                         ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] border-[#3b2fc9]/30'
-                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                     }`}
                   >
                     <option value="all">🗓️ All Years</option>
@@ -958,7 +958,7 @@ export default function NewRelicPage() {
                       <option key={year} value={year}>{year}</option>
                     ))}
                   </select>
-                  <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[8px] text-gray-400">▼</span>
+                  <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-slate-400">▼</span>
                 </div>
 
                 {/* Clear Active Filters Button */}
@@ -974,10 +974,10 @@ export default function NewRelicPage() {
                       setFilterCycle('all');
                       setSearchQuery('');
                     }}
-                    className="h-7 px-2 rounded-full text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center gap-1"
+                    className="h-9 sm:h-8 px-3 rounded-full text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center gap-1 active:scale-95"
                     title="Reset all filters"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-3.5 h-3.5" />
                     <span>Reset</span>
                   </button>
                 )}
@@ -1128,12 +1128,12 @@ function StatCard({
   subtext?: string;
 }) {
   return (
-    <div className={`rounded-xl sm:rounded-2xl border ${cardBg || 'border-gray-200 bg-white'} shadow-2xs sm:shadow-sm p-3 sm:p-5 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-2 sm:gap-4 transition-all hover:shadow-md`}>
-      <div className={`${bg} p-2.5 sm:p-3 rounded-xl sm:rounded-2xl shrink-0 shadow-xs`}>{icon}</div>
-      <div className="min-w-0">
-        <p className="text-lg sm:text-2xl font-black text-gray-900 leading-tight">{value}</p>
-        <p className="text-[11px] sm:text-xs text-gray-600 font-bold truncate">{label}</p>
-        {subtext && <p className="text-[10px] text-gray-400 font-medium hidden sm:block truncate">{subtext}</p>}
+    <div className={`rounded-2xl sm:rounded-3xl border ${cardBg || 'border-slate-200 bg-white'} shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] p-2.5 sm:p-5 flex flex-col sm:flex-row items-center text-center sm:text-left gap-1.5 sm:gap-4 transition-all hover:shadow-md`}>
+      <div className={`${bg} p-2 sm:p-3 rounded-xl sm:rounded-2xl shrink-0 shadow-xs`}>{icon}</div>
+      <div className="min-w-0 w-full">
+        <p className="text-base sm:text-2xl font-black text-slate-900 dark:text-white leading-tight font-mono tabular-nums">{value}</p>
+        <p className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 font-bold truncate mt-0.5">{label}</p>
+        {subtext && <p className="text-[10px] text-slate-400 font-medium hidden sm:block truncate">{subtext}</p>}
       </div>
     </div>
   );

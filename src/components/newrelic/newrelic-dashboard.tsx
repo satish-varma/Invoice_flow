@@ -55,16 +55,16 @@ export function NewRelicDashboard({ challans, showFinancials }: NewRelicDashboar
   const hydMetrics = calculateMetrics(challans.filter((c) => c.location === 'hyderabad'));
 
   const StatCard = ({ title, value, subtext, icon: Icon, cardBg, iconBg, valueClass }: any) => (
-    <Card className={cn("shadow-xs hover:shadow-md transition-shadow border overflow-hidden relative", cardBg || "bg-white border-gray-200")}>
-      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-        <CardTitle className="text-xs font-bold text-gray-600 uppercase tracking-wider">{title}</CardTitle>
-        <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shadow-xs", iconBg || "bg-gray-100 text-gray-600")}>
-          <Icon className="w-4 h-4" />
+    <Card className={cn("shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] hover:shadow-md transition-shadow border overflow-hidden relative rounded-2xl sm:rounded-3xl", cardBg || "bg-white border-slate-200")}>
+      <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3 sm:p-5 space-y-0">
+        <CardTitle className="text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-wider truncate">{title}</CardTitle>
+        <div className={cn("w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center shadow-xs shrink-0", iconBg || "bg-slate-100 text-slate-600")}>
+          <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </div>
       </CardHeader>
-      <CardContent>
-        <div className={cn("text-lg sm:text-2xl font-black tracking-tight truncate", valueClass)}>{value}</div>
-        <p className="text-[11px] font-semibold text-gray-500 mt-1 flex items-center gap-1.5">{subtext}</p>
+      <CardContent className="p-3 sm:p-5 pt-0 sm:pt-0">
+        <div className={cn("text-base sm:text-2xl font-black font-mono tracking-tight truncate", valueClass)}>{value}</div>
+        <p className="text-[10px] sm:text-xs font-semibold text-slate-500 mt-0.5 sm:mt-1 flex items-center gap-1 truncate">{subtext}</p>
       </CardContent>
     </Card>
   );
@@ -72,8 +72,8 @@ export function NewRelicDashboard({ challans, showFinancials }: NewRelicDashboar
   // If financials are locked / off: Always show Volume and Total Value for cycle to admin
   if (!showFinancials) {
     return (
-      <div className="space-y-4 mb-6">
-        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-4 mb-4 sm:mb-6">
+        <div className="grid gap-2.5 sm:gap-4 grid-cols-2 lg:grid-cols-3">
           <StatCard
             title="Total Volume"
             value={allMetrics.volume.toString()}
@@ -84,7 +84,7 @@ export function NewRelicDashboard({ challans, showFinancials }: NewRelicDashboar
             valueClass="text-indigo-950"
           />
           <StatCard
-            title="Total Cycle Value (MRP)"
+            title="Total Cycle Value"
             value={formatCurrency(allMetrics.totalMrp)}
             subtext={`${formatCurrency(blrMetrics.totalMrp)} BLR · ${formatCurrency(hydMetrics.totalMrp)} HYD`}
             icon={DollarSign}
@@ -92,13 +92,13 @@ export function NewRelicDashboard({ challans, showFinancials }: NewRelicDashboar
             iconBg="bg-gradient-to-tr from-blue-600 to-cyan-600 text-white shadow-blue-200"
             valueClass="text-blue-900"
           />
-          <Card className="shadow-xs border border-dashed border-gray-300 bg-gray-50/60 flex flex-col justify-center p-4">
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-600">
-              <Lock className="w-4 h-4 text-gray-400" />
+          <Card className="col-span-2 lg:col-span-1 shadow-xs border border-dashed border-slate-300 bg-slate-50/80 rounded-2xl sm:rounded-3xl flex flex-col justify-center p-3.5 sm:p-5">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+              <Lock className="w-4 h-4 text-slate-400" />
               <span>Financials Protected</span>
             </div>
-            <p className="text-[11px] text-gray-500 mt-1">
-              Unlock financials above to view Net Revenue, Cost Breakdown, and Estimated Profit.
+            <p className="text-[11px] text-slate-500 mt-1 font-medium leading-snug">
+              Unlock financials above to view Net Revenue, Cost Breakdown, and Profit.
             </p>
           </Card>
         </div>
@@ -107,8 +107,8 @@ export function NewRelicDashboard({ challans, showFinancials }: NewRelicDashboar
   }
 
   return (
-    <div className="space-y-4 mb-6">
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-4 mb-4 sm:mb-6">
+      <div className="grid gap-2.5 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Volume"
           value={allMetrics.volume.toString()}

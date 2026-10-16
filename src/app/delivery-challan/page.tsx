@@ -345,27 +345,27 @@ export default function DeliveryChallanPage() {
       <main className="min-h-screen bg-transparent flex flex-col items-center p-2.5 sm:p-6 lg:p-8 w-full max-w-full overflow-x-hidden">
         <div className="w-full max-w-7xl mx-auto space-y-4 sm:space-y-8">
           {/* ── Single Merged Page Header: Title, Financials Toggle & Sync Data ── */}
-          <div className="flex items-center justify-between gap-2.5 pt-1">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight">
+                <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
                   Delivery Challans
                 </h1>
-                <span className="text-[10px] font-black bg-indigo-50 text-[#3b2fc9] border border-indigo-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+                <span className="text-xs font-black bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
                   General DC
                 </span>
                 {isAdmin && showFinancials && (
-                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <TrendingUp className="w-2.5 h-2.5 text-emerald-600" /> P.Cost Active
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                    <TrendingUp className="w-3 h-3 text-emerald-600" /> Financials Active
                   </span>
                 )}
               </div>
-              <p className="text-[11px] sm:text-xs text-gray-500 font-medium truncate mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
                 Material dispatches for HungerBox &amp; corporate clients
               </p>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
               {isAdmin && (
                 <button
                   type="button"
@@ -373,14 +373,14 @@ export default function DeliveryChallanPage() {
                     triggerHaptic('light');
                     setShowFinancials(!showFinancials);
                   }}
-                  className={`hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-2xs ${
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border shadow-2xs active:scale-95 ${
                     showFinancials
                       ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                   }`}
                   title="Toggle Procurement Cost & Margin Visibility"
                 >
-                  {showFinancials ? <Eye className="w-3.5 h-3.5 text-emerald-600" /> : <EyeOff className="w-3.5 h-3.5 text-gray-400" />}
+                  {showFinancials ? <Eye className="w-3.5 h-3.5 text-emerald-600" /> : <EyeOff className="w-3.5 h-3.5 text-slate-400" />}
                   <span>{showFinancials ? 'Financials: ON' : 'Financials: OFF'}</span>
                 </button>
               )}
@@ -389,9 +389,9 @@ export default function DeliveryChallanPage() {
                 type="button"
                 onClick={handleRefresh}
                 disabled={isRefreshing}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 text-xs font-semibold text-gray-700 transition-all border border-gray-200 shadow-2xs cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 active:scale-95 text-xs font-bold text-slate-700 transition-all border border-slate-200 shadow-2xs cursor-pointer"
               >
-                <RefreshCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-indigo-600' : 'text-slate-500'}`} />
                 <span>{isRefreshing ? 'Syncing...' : 'Sync Data'}</span>
               </button>
 
@@ -401,7 +401,7 @@ export default function DeliveryChallanPage() {
                   href="/newrelic"
                   prefetch={false}
                   onClick={() => triggerHaptic('light')}
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 text-xs font-black shadow-xs active:scale-95 transition-all"
+                  className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 text-xs font-black shadow-xs active:scale-95 transition-all"
                   title="Switch to NewRelic Cafeteria DC Hub"
                 >
                   <Layers className="w-3.5 h-3.5 text-slate-950" />
@@ -414,74 +414,74 @@ export default function DeliveryChallanPage() {
           {/* ── Stat Metric Cards (Admin only) ── */}
           {isAdmin && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-              <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/40 border border-indigo-200/80 shadow-xs">
+              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/40 border border-indigo-200/80 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)]">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200 uppercase tracking-wider">
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200 uppercase tracking-wider">
                     Challans
                   </span>
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
                     <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                 </div>
-                <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Total Issued</p>
-                <p className="text-lg sm:text-2xl font-black text-gray-900 font-mono tabular-nums mt-0.5">
+                <p className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Total Issued</p>
+                <p className="text-base sm:text-2xl font-black text-slate-900 font-mono tabular-nums mt-0.5">
                   {challans.length}
                 </p>
-                <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium truncate mt-0.5">
+                <p className="text-[10px] sm:text-xs text-slate-400 font-semibold truncate mt-0.5">
                   Across {uniqueClients} consignees
                 </p>
               </div>
 
-              <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-50/90 via-white to-sky-50/40 border border-blue-200/80 shadow-xs">
+              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-blue-50/90 via-white to-sky-50/40 border border-blue-200/80 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)]">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 uppercase tracking-wider">
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 uppercase tracking-wider">
                     Gross Value
                   </span>
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
                     <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                 </div>
-                <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Total Dispatched</p>
-                <p className="text-lg sm:text-2xl font-black text-gray-900 font-mono tabular-nums mt-0.5 truncate">
+                <p className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Total Dispatched</p>
+                <p className="text-base sm:text-2xl font-black text-slate-900 font-mono tabular-nums mt-0.5 truncate">
                   ₹{totalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                 </p>
-                <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium truncate mt-0.5">
+                <p className="text-[10px] sm:text-xs text-slate-400 font-semibold truncate mt-0.5">
                   {totalItems} total line units
                 </p>
               </div>
 
-              <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-50/90 via-white to-orange-50/40 border border-amber-200/80 shadow-xs">
+              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-amber-50/90 via-white to-orange-50/40 border border-amber-200/80 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)]">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wider">
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wider">
                     Procurement
                   </span>
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-xs">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-xs">
                     <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                 </div>
-                <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Total P.Cost</p>
-                <p className="text-lg sm:text-2xl font-black text-gray-900 font-mono tabular-nums mt-0.5 truncate">
+                <p className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Total P.Cost</p>
+                <p className="text-base sm:text-2xl font-black text-slate-900 font-mono tabular-nums mt-0.5 truncate">
                   ₹{totalPCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                 </p>
-                <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium truncate mt-0.5">
+                <p className="text-[10px] sm:text-xs text-slate-400 font-semibold truncate mt-0.5">
                   Purchase / buy-in
                 </p>
               </div>
 
-              <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/40 border border-emerald-200/80 shadow-xs">
+              <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/40 border border-emerald-200/80 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)]">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
                     Margin / Profit
                   </span>
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
                     <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                 </div>
-                <p className="text-[11px] sm:text-xs font-semibold text-gray-500 truncate">Est. Net Profit</p>
-                <p className="text-lg sm:text-2xl font-black text-emerald-700 font-mono tabular-nums mt-0.5 truncate">
+                <p className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Est. Net Profit</p>
+                <p className="text-base sm:text-2xl font-black text-emerald-700 font-mono tabular-nums mt-0.5 truncate">
                   ₹{totalGrossProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                 </p>
-                <p className="text-[10px] sm:text-[11px] text-emerald-600 font-bold truncate mt-0.5">
+                <p className="text-[10px] sm:text-xs text-emerald-600 font-bold truncate mt-0.5">
                   {overallMargin.toFixed(1)}% Gross Margin
                 </p>
               </div>
@@ -489,7 +489,7 @@ export default function DeliveryChallanPage() {
           )}
 
           {/* ── Mobile-Friendly Quick Navigation Switcher ── */}
-          <div className="flex items-center justify-between gap-2 flex-wrap bg-white/80 backdrop-blur-md p-2 sm:p-3 rounded-2xl border border-gray-200/80 shadow-2xs">
+          <div className="flex items-center justify-between gap-2 flex-wrap bg-white/90 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
             <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
               <button
                 type="button"
@@ -498,9 +498,9 @@ export default function DeliveryChallanPage() {
                   const el = document.getElementById('challan-form-section');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] sm:text-xs font-bold transition-all shadow-2xs active:scale-95"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-2xs active:scale-95"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-4 h-4" />
                 <span>{selectedChallan ? 'Edit Form' : 'New Form'}</span>
               </button>
 
@@ -511,9 +511,9 @@ export default function DeliveryChallanPage() {
                   const el = document.getElementById('saved-challans-section');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] sm:text-xs font-bold border border-indigo-200/80 transition-all shadow-2xs active:scale-95"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200/80 transition-all shadow-2xs active:scale-95"
               >
-                <ListOrdered className="w-3.5 h-3.5" />
+                <ListOrdered className="w-4 h-4" />
                 <span>Saved List ({challans.length}) &darr;</span>
               </button>
 

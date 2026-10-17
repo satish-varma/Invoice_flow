@@ -5,6 +5,7 @@ import { Invoice, getInvoices, deleteInvoice, deleteInvoices } from "@/services/
 import { InvoicesDataTable } from "./data-table";
 import { getColumns } from "./columns";
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader, Plus, Receipt } from "lucide-react";
 import React, { useRef, useEffect, useState } from "react";
@@ -204,7 +205,17 @@ export default function InvoicesPage() {
     }
   }
 
-  const columns = React.useMemo(() => getColumns(handlePreview, handleDownload, handleDeleteRequest), []);
+  const router = useRouter();
+
+  const handleEdit = (invoice: Invoice) => {
+    triggerHaptic('light');
+    router.push(`/?edit=${invoice.id}`);
+  };
+
+  const columns = React.useMemo(
+    () => getColumns(handlePreview, handleDownload, handleDeleteRequest, handleEdit),
+    []
+  );
 
   if (isLoading || isBulkDownloading) {
     return (
@@ -271,6 +282,7 @@ export default function InvoicesPage() {
             onPreview={handlePreview}
             onDownloadSingle={handleDownload}
             onDeleteSingle={handleDeleteRequest}
+            onEditSingle={handleEdit}
           />
         </div>
       </main>

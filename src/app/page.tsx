@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { InvoiceForm } from '@/components/invoice-form';
 import { InvoiceList } from '@/components/invoice-list';
-import { getInvoices, Invoice } from '@/services/invoiceService';
+import { getInvoices, deleteInvoice, Invoice } from '@/services/invoiceService';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Loader, ListOrdered, FilePlus, ArrowLeft, Plus, RefreshCcw } from 'lucide-react';
 import { InvoicePreview } from '@/components/invoice-preview';
+import { InvoicePreviewDialog } from '@/components/invoice-preview-dialog';
 import { getSettings, Settings } from '@/services/settingsService';
 import { generateAndSavePdf } from '@/lib/pdf';
 import { AppShell } from '@/components/app-shell';
@@ -35,7 +36,11 @@ export default function RootHomePage() {
   const [activeTab, setActiveTab] = useState<'list' | 'form'>('list');
   const { toast } = useToast();
   const invoicePreviewRef = useRef<HTMLDivElement>(null);
-  const [invoiceToDownload, setInvoiceToDownload] = useState<Invoice | null>(null);
+  const [invoiceToGenerate, setInvoiceToGenerate] = useState<Invoice | null>(null);
+  const [pdfAction, setPdfAction] = useState<'preview' | 'save' | null>(null);
+  const [previewingInvoice, setPreviewingInvoice] = useState<Invoice | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [settings, setSettings] = useState<Settings | null>(null);
 
   useEffect(() => {
@@ -118,6 +123,21 @@ export default function RootHomePage() {
     }
   }, [redirecting]);
 
+  // Support navigating directly to edit invoice via ?edit=ID
+  useEffect(() => {
+    if (typeof window !== 'undefined' && invoices.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const editId = params.get('edit');
+      if (editId) {
+        const found = invoices.find((inv) => inv.id === editId);
+        if (found) {
+          setSelectedInvoice(found);
+          setActiveTab('form');
+        }
+      }
+    }
+  }, [invoices]);
+
   const handleInvoiceSave = (savedInvoice?: Invoice) => {
     fetchData();
     setSelectedInvoice(null);
@@ -143,36 +163,92 @@ export default function RootHomePage() {
   };
 
   const handleDownload = (invoice: Invoice) => {
-    setInvoiceToDownload(invoice);
+    setPreviewingInvoice(null);
+    setInvoiceToGenerate(invoice);
+    setPdfAction('save');
+  };
+
+  const handlePreviewInvoice = (invoice: Invoice) => {
+    setPreviewingInvoice(invoice);
+    setPdfUrl(null);
+    setIsGeneratingPdf(true);
+    setInvoiceToGenerate(invoice);
+    setPdfAction('preview');
+  };
+
+  const handleDeleteInvoice = async (invoice: Invoice) => {
+    if (!invoice.id) return;
+    try {
+      await deleteInvoice(invoice.id);
+      toast({
+        title: 'Invoice Deleted',
+        description: `Invoice ${invoice.invoiceNumber} has been removed.`,
+      });
+      setInvoices((prev) => prev.filter((i) => i.id !== invoice.id));
+      if (selectedInvoice?.id === invoice.id) {
+        setSelectedInvoice(null);
+        setActiveTab('list');
+      }
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: 'Failed to delete the invoice. Please try again.',
+      });
+    }
   };
 
   useEffect(() => {
-    if (invoiceToDownload && settings) {
+    if (invoiceToGenerate && settings && pdfAction) {
       const timer = setTimeout(async () => {
         if (invoicePreviewRef.current) {
           const element = invoicePreviewRef.current;
           const fileName = `invoice-${
-            invoiceToDownload.invoiceNumber || 'untitled'
+            invoiceToGenerate.invoiceNumber || 'untitled'
           }.pdf`;
 
-          try {
-            await generateAndSavePdf(element, fileName);
-          } catch (error) {
-            console.error('Error generating PDF:', error);
-            toast({
-              variant: 'destructive',
-              title: 'Download Failed',
-              description: 'There was an error generating the PDF for download.',
-            });
-          } finally {
-            setInvoiceToDownload(null);
+          if (pdfAction === 'save') {
+            try {
+              await generateAndSavePdf(element, fileName);
+            } catch (error) {
+              console.error('Error generating PDF:', error);
+              toast({
+                variant: 'destructive',
+                title: 'Download Failed',
+                description: 'There was an error generating the PDF for download.',
+              });
+            } finally {
+              setInvoiceToGenerate(null);
+              setPdfAction(null);
+            }
+          } else {
+            // 'preview'
+            setIsGeneratingPdf(true);
+            try {
+              const url = await generateAndSavePdf(element, '', 'preview');
+              if (url) {
+                setPdfUrl(url as string);
+              }
+            } catch (error) {
+              console.error('Error generating PDF preview:', error);
+              toast({
+                variant: 'destructive',
+                title: 'Preview Failed',
+                description: 'There was an error generating the PDF preview.',
+              });
+            } finally {
+              setIsGeneratingPdf(false);
+              setInvoiceToGenerate(null);
+              setPdfAction(null);
+            }
           }
         }
-      }, 1000);
+      }, 150);
 
       return () => clearTimeout(timer);
     }
-  }, [invoiceToDownload, settings, toast]);
+  }, [invoiceToGenerate, pdfAction, settings, toast]);
 
   if (loading || redirecting !== false) {
     return (
@@ -300,6 +376,8 @@ export default function RootHomePage() {
                     invoices={invoices}
                     onSelectInvoice={handleSelectInvoice}
                     onDownloadInvoice={handleDownload}
+                    onViewInvoice={handlePreviewInvoice}
+                    onDeleteInvoice={handleDeleteInvoice}
                   />
                 )}
               </div>
@@ -307,7 +385,7 @@ export default function RootHomePage() {
           </div>
 
           {/* Off-screen PDF generation target */}
-          {invoiceToDownload && settings && (
+          {invoiceToGenerate && settings && (
             <div
               id="pdf-capture-container"
               style={{
@@ -322,10 +400,28 @@ export default function RootHomePage() {
             >
               <InvoicePreview
                 ref={invoicePreviewRef}
-                invoice={invoiceToDownload}
+                invoice={invoiceToGenerate}
                 settings={settings}
               />
             </div>
+          )}
+
+          {/* Invoice Preview Dialog */}
+          {previewingInvoice && settings && (
+            <InvoicePreviewDialog
+              invoice={previewingInvoice}
+              settings={settings}
+              isOpen={!!previewingInvoice}
+              onOpenChange={(isOpen) => {
+                if (!isOpen) {
+                  setPreviewingInvoice(null);
+                  setPdfUrl(null);
+                  setIsGeneratingPdf(false);
+                }
+              }}
+              pdfUrl={pdfUrl}
+              isGeneratingPdf={isGeneratingPdf}
+            />
           )}
         </div>
       </div>

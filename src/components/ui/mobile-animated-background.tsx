@@ -32,7 +32,7 @@ export function MobileAnimatedBackground() {
   return (
     <div 
       aria-hidden="true" 
-      className="fixed inset-0 pointer-events-none -z-10 overflow-hidden select-none transition-colors duration-700"
+      className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none transition-colors duration-700"
       suppressHydrationWarning
     >
       {/* ════════════════════════════════════════════════════════════════════

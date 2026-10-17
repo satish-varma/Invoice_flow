@@ -37,7 +37,6 @@ import { FinancialAuthProvider, useFinancialAuth } from '@/contexts/FinancialAut
 import { FinancialPasswordModal } from '@/components/newrelic/financial-password-modal';
 import { MobileAppNavigation } from '@/components/newrelic/mobile-app-navigation';
 import { MobileAppBar } from '@/components/newrelic/mobile-app-bar';
-import { MobileAnimatedBackground } from '@/components/ui/mobile-animated-background';
 import { NetworkStatusIndicator } from '@/components/newrelic/network-status-indicator';
 import { getStockRequests } from '@/services/newrelicStockRequestService';
 import { COMPANY_SITES } from '@/types/site';
@@ -151,9 +150,6 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-transparent flex flex-col relative overflow-x-hidden">
-      {/* ── Native Mobile & Desktop Ambient Animated Lighting ── */}
-      <MobileAnimatedBackground />
-
       {/* Network offline/restored indicator */}
       <NetworkStatusIndicator />
 

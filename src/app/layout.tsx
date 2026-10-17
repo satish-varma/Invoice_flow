@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { FirebaseProvider } from '@/firebase';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeBackdropProvider } from '@/contexts/ThemeBackdropContext';
+import { MobileAnimatedBackground } from '@/components/ui/mobile-animated-background';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -46,11 +47,14 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={inter.variable}>
       <head>
       </head>
-      <body className="font-body antialiased">
+      <body className="font-body antialiased bg-transparent min-h-screen">
         <FirebaseProvider>
           <AuthProvider>
             <ThemeBackdropProvider>
-              {children}
+              <MobileAnimatedBackground />
+              <div className="relative z-10 min-h-screen">
+                {children}
+              </div>
             </ThemeBackdropProvider>
           </AuthProvider>
         </FirebaseProvider>

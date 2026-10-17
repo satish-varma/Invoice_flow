@@ -462,7 +462,7 @@ export default function NewRelicPage() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Loader2 className="h-6 w-6 animate-spin text-[#3b2fc9]" />
           Loading Delivery Challans...
@@ -473,7 +473,7 @@ export default function NewRelicPage() {
 
   return (
     <div
-      className="min-h-screen bg-gray-50"
+      className="min-h-screen bg-transparent"
       suppressHydrationWarning
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}

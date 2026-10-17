@@ -383,14 +383,14 @@ export default function ReconcilePage() {
 
   if (role !== 'admin' && role !== 'superadmin') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <p className="text-gray-500">Access Denied</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 pb-28">
+    <div className="min-h-screen bg-transparent pb-28">
       <div className="max-w-6xl mx-auto px-3 sm:px-8 py-4 sm:py-8 space-y-5 sm:space-y-6">
         
         {/* Header */}

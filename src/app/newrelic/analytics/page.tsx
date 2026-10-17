@@ -1246,7 +1246,7 @@ export default function AnalyticsDashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-transparent">
         <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
           <Loader2 className="h-6 w-6 animate-spin text-[#3b2fc9]" />
           Loading analytics & insights...
@@ -1256,7 +1256,7 @@ export default function AnalyticsDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pb-20">
+    <div className="min-h-screen bg-transparent pb-20">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
 
         {/* ── Brand Hero Header ── */}

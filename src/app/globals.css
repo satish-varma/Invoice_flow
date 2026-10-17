@@ -117,3 +117,135 @@ button, a, nav, header {
   0% { background-position: 100% 50%; }
   100% { background-position: -100% 50%; }
 }
+
+/* ── Ambient Background Animated Lighting ── */
+@keyframes ambientDrift1 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate3d(50px, -60px, 0) scale(1.15) rotate(12deg);
+  }
+  66% {
+    transform: translate3d(-40px, 40px, 0) scale(0.9) rotate(-10deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes ambientDrift2 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate3d(-50px, 45px, 0) scale(1.18) rotate(-15deg);
+  }
+  66% {
+    transform: translate3d(40px, -35px, 0) scale(0.88) rotate(12deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes ambientDrift3 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate3d(45px, 35px, 0) scale(0.92) rotate(-8deg);
+  }
+  66% {
+    transform: translate3d(-35px, -50px, 0) scale(1.12) rotate(14deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes ambientDrift4 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.22;
+  }
+  50% {
+    transform: translate3d(30px, -40px, 0) scale(1.22);
+    opacity: 0.38;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.22;
+  }
+}
+
+@keyframes ambientSweep {
+  0%, 100% {
+    opacity: 0.08;
+    transform: translate3d(-20%, -20%, 0) rotate(18deg);
+  }
+  50% {
+    opacity: 0.22;
+    transform: translate3d(20%, 20%, 0) rotate(28deg);
+  }
+}
+
+@keyframes ambientParticleFloat {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.6);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.8;
+  }
+  75% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate3d(var(--p-dx, 25px), -140px, 0) scale(1.1);
+    opacity: 0;
+  }
+}
+
+.animate-ambient-1 {
+  animation: ambientDrift1 22s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-ambient-2 {
+  animation: ambientDrift2 26s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-ambient-3 {
+  animation: ambientDrift3 30s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-ambient-4 {
+  animation: ambientDrift4 18s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-ambient-sweep {
+  animation: ambientSweep 16s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-ambient-particle {
+  animation: ambientParticleFloat var(--p-dur, 7s) ease-in-out infinite;
+  animation-delay: var(--p-delay, 0s);
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ambient-1,
+  .animate-ambient-2,
+  .animate-ambient-3,
+  .animate-ambient-4,
+  .animate-ambient-sweep,
+  .animate-ambient-particle {
+    animation: none !important;
+  }
+}
+

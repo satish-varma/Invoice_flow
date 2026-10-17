@@ -158,7 +158,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
     <div className="flex flex-col gap-6 h-full w-full">
       {showDashboard && <TuckshopDashboard records={filteredRecords} />}
       
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden h-full flex flex-col">
       <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col gap-3.5 bg-gray-50/50">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -358,7 +358,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
             return (
               <div
                 key={record.id}
-                className={`p-4 rounded-2xl sm:rounded-3xl border shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] bg-white space-y-3 transition-all ${
+                className={`p-4 rounded-2xl sm:rounded-3xl border shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] bg-white/85 dark:bg-slate-900/85 backdrop-blur-md space-y-3 transition-all ${
                   isExp ? 'border-rose-100 hover:border-rose-200' : 'border-emerald-100 hover:border-emerald-200'
                 }`}
               >

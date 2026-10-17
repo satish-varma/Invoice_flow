@@ -122,7 +122,7 @@ export default function ProfilePage() {
   const isCheckedOut = Boolean(todayAttendance?.checkOut?.time);
 
   return (
-    <div className="min-h-screen bg-slate-50/60 dark:bg-slate-950 p-3 sm:p-8 pb-[max(6rem,env(safe-area-inset-bottom))]">
+    <div className="min-h-screen bg-transparent p-3 sm:p-8 pb-[max(6rem,env(safe-area-inset-bottom))]">
       <div className="max-w-3xl mx-auto space-y-5">
         {/* Top Navigation / Back Bar with Category Badge */}
         <div className="flex items-center justify-between gap-2">
@@ -225,7 +225,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Today's Attendance Quick Status Card */}
-      <div className="bg-white rounded-2xl border border-gray-150 p-4 sm:p-5 shadow-xs space-y-3">
+      <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md rounded-2xl border border-white/80 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-[#3b2fc9]" />
@@ -329,7 +329,7 @@ export default function ProfilePage() {
 
       {/* Staff Roster Details (If linked) */}
       {employee && (
-        <div className="bg-white rounded-2xl border border-gray-150 p-4 sm:p-5 shadow-xs space-y-3">
+        <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md rounded-2xl border border-white/80 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs space-y-3">
           <div className="flex items-center gap-2">
             <Briefcase className="w-4 h-4 text-[#3b2fc9]" />
             <h2 className="text-sm font-bold text-gray-900">Employment Details</h2>
@@ -389,7 +389,7 @@ export default function ProfilePage() {
       )}
 
       {/* Account & Security Information */}
-      <div className="bg-white rounded-2xl border border-gray-150 p-4 sm:p-5 shadow-xs space-y-3">
+      <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md rounded-2xl border border-white/80 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs space-y-3">
         <div className="flex items-center gap-2">
           <Shield className="w-4 h-4 text-[#3b2fc9]" />
           <h2 className="text-sm font-bold text-gray-900">Account & Security</h2>

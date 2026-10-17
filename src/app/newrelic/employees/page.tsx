@@ -104,7 +104,7 @@ export default function EmployeesPage() {
   const totalSalary = siteScopedEmployees.filter(e => e.isActive).reduce((s, e) => s + (e.monthlySalary || 0), 0);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen bg-transparent">
       <div className="max-w-4xl mx-auto px-4 sm:px-8 py-5 sm:py-8 space-y-6">
 
         {/* Large Title Mobile Header */}

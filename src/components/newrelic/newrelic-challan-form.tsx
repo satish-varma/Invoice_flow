@@ -556,7 +556,7 @@ export function NewRelicChallanForm({
     <form
       id={`${formId}-form`}
       onSubmit={handleSubmit((v) => onSubmit(v, true), onValidationError)}
-      className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6 space-y-5 sm:space-y-6 pb-32 sm:pb-6"
+      className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 sm:p-6 space-y-5 sm:space-y-6 pb-32 sm:pb-6"
     >
       {/* Autocomplete Datalists */}
       <datalist id="newrelic-brand-list">

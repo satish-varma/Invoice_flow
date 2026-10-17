@@ -252,7 +252,7 @@ export default function RootHomePage() {
 
   if (loading || redirecting !== false) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 gap-3">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-transparent gap-3">
         <Loader2 className="h-8 w-8 text-[#3b2fc9] animate-spin" />
         <p className="text-xs text-gray-500 font-medium">Loading workspace…</p>
       </div>

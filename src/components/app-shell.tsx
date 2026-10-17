@@ -37,6 +37,7 @@ import { FinancialAuthProvider, useFinancialAuth } from '@/contexts/FinancialAut
 import { FinancialPasswordModal } from '@/components/newrelic/financial-password-modal';
 import { MobileAppNavigation } from '@/components/newrelic/mobile-app-navigation';
 import { MobileAppBar } from '@/components/newrelic/mobile-app-bar';
+import { MobileAnimatedBackground } from '@/components/ui/mobile-animated-background';
 import { NetworkStatusIndicator } from '@/components/newrelic/network-status-indicator';
 import { getStockRequests } from '@/services/newrelicStockRequestService';
 import { COMPANY_SITES } from '@/types/site';
@@ -149,7 +150,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     pathname === '/settings';
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-transparent flex flex-col relative overflow-x-hidden">
+      {/* ── Native Mobile & Desktop Ambient Animated Lighting ── */}
+      <MobileAnimatedBackground />
+
       {/* Network offline/restored indicator */}
       <NetworkStatusIndicator />
 
@@ -161,7 +165,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Desktop Top Header (hidden sm:block) */}
-      <header className="hidden sm:block border-b border-gray-100 bg-white sticky top-0 z-30 shadow-xs">
+      <header className="hidden sm:block border-b border-gray-200/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 h-14 flex items-center justify-between gap-3">
           {/* Brand & Site Scoping */}
           <div className="flex items-center gap-3 shrink-0">
@@ -249,7 +253,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Desktop Secondary Navigation Bar with Categorized Dropdowns */}
-      <div className="hidden sm:block bg-white border-b border-gray-200 sticky top-14 z-20 shadow-2xs">
+      <div className="hidden sm:block bg-white/75 dark:bg-slate-900/75 backdrop-blur-md border-b border-gray-200/80 sticky top-14 z-20 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center gap-2 overflow-x-auto">
           {/* Direct Tab 1: Tuckshop (Counter sales & ledger for assigned site) */}
           {hasPermission(user, 'tuckshop') && (

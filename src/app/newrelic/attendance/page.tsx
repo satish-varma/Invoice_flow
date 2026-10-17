@@ -766,7 +766,7 @@ function AttendancePageContent() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Loader2 className="h-5 w-5 animate-spin text-[#3b2fc9]" />
           Loading attendance...
@@ -776,7 +776,7 @@ function AttendancePageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-transparent">
       <div className="max-w-4xl mx-auto px-3 sm:px-8 py-4 sm:py-8 space-y-6">
 
         {/* Brand Hero Banner */}

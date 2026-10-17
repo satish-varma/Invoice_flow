@@ -136,14 +136,14 @@ export function NewRelicChallanList({
 
   if (challans.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-10 text-center">
+      <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-10 text-center">
         <p className="text-gray-400 text-sm">No challans yet. Create your first one above.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
       <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Saved Challans</h3>
         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-gray-500">
@@ -232,7 +232,7 @@ export function NewRelicChallanList({
       )}
 
       {/* Mobile Feed Style Card List (< sm) */}
-      <div className="block sm:hidden p-2.5 sm:p-3 space-y-3.5 bg-slate-100/70 dark:bg-slate-950/40">
+      <div className="block sm:hidden p-2.5 sm:p-3 space-y-3.5 bg-transparent">
         {challans.map((challan) => {
           const mrpTotal = (challan.lineItems || []).reduce((acc, item) => acc + ((item.mrp || 0) * (item.quantity || 1)), 0);
           const topItems = (challan.lineItems || []).slice(0, 2);
@@ -241,7 +241,7 @@ export function NewRelicChallanList({
           return (
             <div
               key={challan.id}
-              className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] transition-all group"
+              className="relative overflow-hidden rounded-3xl bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border border-white/80 dark:border-slate-800/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] transition-all group"
             >
               {/* Swipe Action Reveal Rail (revealed behind card when swiped left) */}
               <div className="absolute inset-y-0 right-0 flex items-stretch z-0">

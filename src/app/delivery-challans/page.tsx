@@ -208,7 +208,7 @@ export default function DeliveryChallansPage() {
 
     return (
         <AppShell>
-            <main className="min-h-screen bg-slate-50/60 dark:bg-slate-950 flex flex-col items-center p-3 sm:p-8">
+            <main className="min-h-screen bg-transparent flex flex-col items-center p-3 sm:p-8">
                 <div className="w-full max-w-7xl mx-auto space-y-6">
                     {/* Mobile Large Title Header */}
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

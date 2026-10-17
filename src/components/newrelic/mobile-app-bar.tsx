@@ -26,7 +26,7 @@ export function MobileAppBar({ children }: MobileAppBarProps) {
   return (
     <>
       {/* ── Native Top App Bar ── */}
-      <header className="border-b border-gray-100 bg-white/95 backdrop-blur-md sticky top-0 z-30 shadow-xs safe-top">
+      <header className="border-b border-slate-200/70 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl sticky top-0 z-30 shadow-xs safe-top">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
           {/* Brand Logo & Name */}
           <Link

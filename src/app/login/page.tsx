@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Lock, Sparkles } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
+import { MobileAnimatedBackground } from '@/components/ui/mobile-animated-background';
 
 import { checkUserCheckedInToday } from '@/services/newrelicAttendanceService';
 
@@ -82,8 +83,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/20 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 py-10 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-6 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl p-6 sm:p-8 rounded-3xl shadow-[0_12px_40px_-10px_rgba(0,0,0,0.1)] border border-slate-200/80 dark:border-slate-800">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-transparent py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      <MobileAnimatedBackground />
+      <div className="w-full max-w-md space-y-6 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-6 sm:p-8 rounded-3xl shadow-[0_12px_40px_-10px_rgba(0,0,0,0.1)] border border-slate-200/80 dark:border-slate-800">
         <div className="text-center space-y-3">
           <div className="relative inline-block">
             {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Operational assets: selfies, signed delivery challans, tuckshop vendor bills, receipts
+    match /{allPaths=**} {
+      // Allow read access for application assets (challans, bills, photos)
+      allow read: if true;
+
+      // Allow write access with payload size safety check (max 25MB per file)
+      allow write: if request.resource == null || request.resource.size < 25 * 1024 * 1024;
+
+      // Allow deletion of old/replaced attachment files
+      allow delete: if true;
+    }
+  }
+}

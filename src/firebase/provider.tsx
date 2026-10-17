@@ -1,15 +1,9 @@
 
 'use client';
 import { createContext, useContext, ReactNode, useMemo } from 'react';
-import {
-  initializeApp,
-  getApps,
-  getApp,
-  FirebaseApp,
-} from 'firebase/app';
+import { FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { firebaseConfig } from './config';
+import { Firestore } from 'firebase/firestore';
 
 // Define the shape of the context value
 interface FirebaseContextValue {
@@ -36,12 +30,12 @@ export const useFirebaseApp = (): FirebaseApp => useFirebase().app;
 export const useAuth = (): Auth => useFirebase().auth;
 export const useFirestore = (): Firestore => useFirebase().db;
 
+import { app, db } from '@/lib/firebase';
+
 // Provider component
 export const FirebaseProvider = ({ children }: { children: ReactNode }) => {
   const value = useMemo(() => {
-    const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     const auth = getAuth(app);
-    const db = getFirestore(app);
     return { app, auth, db };
   }, []);
 

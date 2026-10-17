@@ -400,8 +400,23 @@ export function NewRelicChallanForm({
         .map((item, idx) => {
           const originalItem = initialData?.lineItems?.[idx] || ({} as any);
           // z.coerce.number() already coerced strings to numbers. "" becomes 0.
-          const mrp = item.mrp ?? originalItem.mrp;
-          const procurementCost = item.procurementCost ?? originalItem.procurementCost ?? originalItem.pCost ?? 0;
+          const mrp = (item.mrp !== undefined && item.mrp !== null && Number(item.mrp) > 0)
+            ? Number(item.mrp)
+            : (originalItem.mrp ? Number(originalItem.mrp) : undefined);
+
+          let procurementCost = (item.procurementCost !== undefined && item.procurementCost !== null && Number(item.procurementCost) > 0)
+            ? Number(item.procurementCost)
+            : (Number(originalItem.procurementCost) || Number(originalItem.pCost) || 0);
+
+          if (procurementCost === 0) {
+            const brand = (item.brandName || '').trim().toLowerCase();
+            const name = (item.itemName || '').trim().toLowerCase();
+            const key = `${brand}__${name}`;
+            const mapCost = pricingMap.get(key) || pricingMap.get(name);
+            if (mapCost !== undefined && mapCost > 0) {
+              procurementCost = mapCost;
+            }
+          }
 
           return {
             ...item,

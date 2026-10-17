@@ -166,6 +166,16 @@ export async function saveNewRelicChallan(challan: SaveInput, userEmail: string 
       // Update existing
       const { id, ...data } = challan;
       const cleanData = deepCleanUndefined(data);
+
+      // Recalculate root procurementCost if missing or 0 but lineItems have costs
+      if (cleanData.lineItems?.length) {
+        const itemsPCost = cleanData.lineItems.reduce((acc: number, it: any) => 
+          acc + ((Number(it.procurementCost) || 0) * (Number(it.quantity) || 1)), 0);
+        if ((cleanData.procurementCost === undefined || cleanData.procurementCost === 0) && itemsPCost > 0) {
+          cleanData.procurementCost = itemsPCost;
+        }
+      }
+
       const updatePayload = { 
         ...cleanData,
         pCost: deleteField(),
@@ -181,6 +191,15 @@ export async function saveNewRelicChallan(challan: SaveInput, userEmail: string 
         challan.dcNumber?.trim() || (await getSuggestedDcNumber(challan.location));
       const { id, ...data } = challan;
       const cleanData = deepCleanUndefined(data);
+
+      if (cleanData.lineItems?.length) {
+        const itemsPCost = cleanData.lineItems.reduce((acc: number, it: any) => 
+          acc + ((Number(it.procurementCost) || 0) * (Number(it.quantity) || 1)), 0);
+        if ((cleanData.procurementCost === undefined || cleanData.procurementCost === 0) && itemsPCost > 0) {
+          cleanData.procurementCost = itemsPCost;
+        }
+      }
+
       const completeData = {
         ...cleanData,
         dcNumber,
@@ -376,33 +395,91 @@ export async function restoreNewRelicChallans(ids: string[], userEmail: string |
 export async function getNewRelicChallanHistory(id: string): Promise<NewRelicChallanHistory[]> {
   try {
     const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, id);
-    const historyRef = collection(docRef, 'history');
-    const q = query(historyRef, orderBy('editedAt', 'desc'));
-    const snapshot = await getDocs(q);
-    
-    const history: NewRelicChallanHistory[] = [];
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      
-      let editedAt: string | undefined;
-      try {
-        if (data.editedAt instanceof Timestamp) {
-          editedAt = data.editedAt.toDate().toISOString();
-        } else if (data.editedAt) {
-          editedAt = new Date(data.editedAt).toISOString();
-        }
-      } catch {}
+    const mainSnap = await getDoc(docRef);
+    const dcNumber = mainSnap.exists() ? mainSnap.data().dcNumber?.trim() : undefined;
 
-      history.push({
-        id: docSnap.id,
-        editedAt,
-        action: data.action || 'UPDATED',
-        editedBy: data.editedBy || 'Unknown',
-        previousData: {
-          ...data.previousData,
-          id: data.previousData?.id || id,
-        } as NewRelicChallan,
+    // Collect all documents sharing this dcNumber to ensure no history is lost across duplicate/recreated docs
+    const docIds = new Set<string>([id]);
+    if (dcNumber) {
+      const qDocs = query(
+        collection(db, NEWRELIC_CHALLANS_COLLECTION),
+        where('dcNumber', '==', dcNumber)
+      );
+      const snapDocs = await getDocs(qDocs);
+      snapDocs.forEach((d) => docIds.add(d.id));
+    }
+
+    const historyMap = new Map<string, NewRelicChallanHistory>();
+
+    for (const docId of docIds) {
+      const historyRef = collection(doc(db, NEWRELIC_CHALLANS_COLLECTION, docId), 'history');
+      const q = query(historyRef, orderBy('editedAt', 'desc'));
+      const snapshot = await getDocs(q);
+
+      snapshot.forEach((docSnap) => {
+        if (historyMap.has(docSnap.id)) return;
+        const data = docSnap.data();
+
+        let editedAt: string | undefined;
+        try {
+          if (data.editedAt instanceof Timestamp) {
+            editedAt = data.editedAt.toDate().toISOString();
+          } else if (data.editedAt) {
+            editedAt = new Date(data.editedAt).toISOString();
+          }
+        } catch {}
+
+        const prev = data.previousData || {};
+
+        // Normalize lineItems with robust procurementCost resolution
+        const rawItems = prev.lineItems || [];
+        const normalizedItems = rawItems.map((item: any) => {
+          const cost = (item.procurementCost === 0 && item.pCost > 0)
+            ? item.pCost
+            : (item.procurementCost ?? item.pCost ?? 0);
+          return {
+            ...item,
+            procurementCost: Number(cost) || 0,
+            mrp: Number(item.mrp) || 0,
+            quantity: Number(item.quantity) || 1,
+          };
+        });
+
+        // Recalculate or normalize root procurementCost
+        const rawRootPCost = prev.procurementCost;
+        const legacyRootPCost = prev.pCost;
+        let resolvedRootPCost = (rawRootPCost === 0 && legacyRootPCost > 0)
+          ? legacyRootPCost
+          : (rawRootPCost ?? legacyRootPCost);
+
+        const sumItemsCost = normalizedItems.reduce(
+          (acc: number, it: any) => acc + (it.procurementCost * it.quantity),
+          0
+        );
+
+        if ((!resolvedRootPCost || resolvedRootPCost === 0) && sumItemsCost > 0) {
+          resolvedRootPCost = sumItemsCost;
+        }
+
+        historyMap.set(docSnap.id, {
+          id: docSnap.id,
+          editedAt,
+          action: data.action || 'UPDATED',
+          editedBy: data.editedBy || 'Unknown',
+          previousData: {
+            ...prev,
+            id: prev.id || id,
+            procurementCost: Number(resolvedRootPCost) || 0,
+            lineItems: normalizedItems,
+          } as NewRelicChallan,
+        });
       });
+    }
+
+    const history = Array.from(historyMap.values()).sort((a, b) => {
+      const timeA = a.editedAt ? new Date(a.editedAt).getTime() : 0;
+      const timeB = b.editedAt ? new Date(b.editedAt).getTime() : 0;
+      return timeB - timeA;
     });
 
     return JSON.parse(JSON.stringify(history));
@@ -459,12 +536,95 @@ export async function revertNewRelicChallanVersion(
     }
   }
 
-  // 3. Prepare payload from versionData without system fields
+  // 3. Resolve pricing map for fallback if any items are missing procurementCost
+  const loc = (versionData.location || currentData.location || 'hyderabad') as NewRelicLocation;
+  const targetDateStr = versionData.dcDate ? versionData.dcDate.substring(0, 10) : undefined;
+  let pricingMap = new Map<string, number>();
+  try {
+    const { getPricingItems, buildPricingMap } = await import('@/services/newrelicPricingService');
+    const pricingItems = await getPricingItems(loc);
+    pricingMap = buildPricingMap(pricingItems, targetDateStr);
+  } catch (e) {
+    console.warn('Could not load pricing map during revert:', e);
+  }
+
+  // 4. Also fetch known item costs from all history versions of this challan
+  const historyItemCosts = new Map<string, number>();
+  try {
+    const allHistory = await getNewRelicChallanHistory(targetId);
+    for (const h of allHistory) {
+      for (const item of (h.previousData?.lineItems || [])) {
+        const cost = Number(item.procurementCost) || 0;
+        if (cost > 0) {
+          const brandKey = `${(item.brandName || '').trim().toLowerCase()}__${(item.itemName || '').trim().toLowerCase()}`;
+          if (!historyItemCosts.has(brandKey)) {
+            historyItemCosts.set(brandKey, cost);
+          }
+          const itemOnlyKey = (item.itemName || '').trim().toLowerCase();
+          if (!historyItemCosts.has(itemOnlyKey)) {
+            historyItemCosts.set(itemOnlyKey, cost);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Could not inspect history item costs during revert:', e);
+  }
+
+  // 5. Prepare and normalize lineItems
+  const rawItems = versionData.lineItems || [];
+  const normalizedItems = rawItems.map((item: any) => {
+    let cost = (item.procurementCost === 0 && item.pCost > 0)
+      ? Number(item.pCost)
+      : (Number(item.procurementCost) || Number(item.pCost) || 0);
+
+    // If cost is 0, attempt fallback from history records, then from pricing map
+    if (cost === 0) {
+      const brand = (item.brandName || '').trim().toLowerCase();
+      const name = (item.itemName || '').trim().toLowerCase();
+      const brandKey = `${brand}__${name}`;
+
+      if (historyItemCosts.has(brandKey)) {
+        cost = historyItemCosts.get(brandKey)!;
+      } else if (historyItemCosts.has(name)) {
+        cost = historyItemCosts.get(name)!;
+      } else if (pricingMap.has(brandKey)) {
+        cost = pricingMap.get(brandKey)!;
+      } else if (pricingMap.has(name)) {
+        cost = pricingMap.get(name)!;
+      }
+    }
+
+    const { pCost, ...itemClean } = item;
+    return {
+      ...itemClean,
+      brandName: item.brandName || '',
+      itemName: item.itemName || '',
+      quantity: Number(item.quantity) || 1,
+      mrp: Number(item.mrp) || 0,
+      procurementCost: cost,
+    };
+  });
+
+  // 6. Calculate total procurement cost from normalized items
+  const totalCalculatedPCost = normalizedItems.reduce(
+    (acc: number, it: any) => acc + (it.procurementCost * it.quantity),
+    0
+  );
+
+  let finalProcurementCost = totalCalculatedPCost;
+  if (finalProcurementCost === 0 && versionData.procurementCost) {
+    finalProcurementCost = Number(versionData.procurementCost) || 0;
+  }
+
+  // 7. Prepare payload from versionData without system fields
   const { id, createdAt, createdBy, updatedAt, updatedBy, history, ...rest } = versionData as any;
   const cleanData = deepCleanUndefined(rest);
 
   const updatePayload: Record<string, any> = {
     ...cleanData,
+    lineItems: normalizedItems,
+    procurementCost: finalProcurementCost,
     pCost: deleteField(),
     updatedAt: serverTimestamp(),
     updatedBy: userEmail,
@@ -472,7 +632,7 @@ export async function revertNewRelicChallanVersion(
 
   await updateDoc(docRef, updatePayload);
   const snap = await getDoc(docRef);
-  const finalData = { id: challanId, ...snap.data() } as any;
+  const finalData = { id: targetId, ...snap.data() } as any;
 
   return {
     ...finalData,

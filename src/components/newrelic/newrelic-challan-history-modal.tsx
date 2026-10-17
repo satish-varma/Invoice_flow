@@ -57,8 +57,13 @@ export function NewRelicChallanHistoryModal({
     if ((oldState.otherCharges || 0) !== (newState.otherCharges || 0)) {
       diffs.push(`Other: ₹${oldState.otherCharges || 0} → ₹${newState.otherCharges || 0}`);
     }
-    if ((oldState.procurementCost || 0) !== (newState.procurementCost || 0)) {
-      diffs.push(`Procurement: ₹${oldState.procurementCost || 0} → ₹${newState.procurementCost || 0}`);
+    const oldPCost = oldState.procurementCost ?? 
+      (oldState.lineItems || []).reduce((acc, item) => acc + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+    const newPCost = newState.procurementCost ?? 
+      (newState.lineItems || []).reduce((acc, item) => acc + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+
+    if (Math.round(oldPCost) !== Math.round(newPCost)) {
+      diffs.push(`Procurement: ₹${oldPCost.toFixed(2)} → ₹${newPCost.toFixed(2)}`);
     }
     if ((oldState.lineItems?.length || 0) !== (newState.lineItems?.length || 0)) {
       diffs.push(`Items count: ${oldState.lineItems?.length || 0} → ${newState.lineItems?.length || 0}`);
@@ -186,6 +191,10 @@ export function NewRelicChallanHistoryModal({
                 const nextState = idx === 0 ? currentChallan : history[idx - 1].previousData;
                 const diffs = version.action === 'UPDATED' ? getDiffs(version.previousData, nextState) : null;
                 
+                const vPCost = version.previousData.procurementCost ?? 
+                  (version.previousData.lineItems || []).reduce((acc, item) => acc + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+                const vMrpVal = (version.previousData.lineItems || []).reduce((acc, item) => acc + ((Number(item.mrp) || 0) * (Number(item.quantity) || 1)), 0);
+
                 return (
                 <div key={version.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                   <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-blue-100 text-[#3b2fc9] shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
@@ -211,10 +220,51 @@ export function NewRelicChallanHistoryModal({
                       </div>
                       {idx === 0 && <Badge variant="secondary" className="bg-gray-100 text-gray-700">Latest Backup</Badge>}
                     </div>
-                    <div className="text-sm text-gray-700 mb-3 space-y-1">
-                      <p><span className="font-medium text-gray-900">User:</span> {formatAuthorName(version.editedBy)}</p>
-                      
-                      {diffs ? (
+
+                    <div className="text-sm text-gray-700 mb-3 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <p><span className="font-medium text-gray-900">User:</span> {formatAuthorName(version.editedBy)}</p>
+                        <p><span className="font-medium text-gray-900">Location:</span> <span className="capitalize">{version.previousData.location}</span></p>
+                      </div>
+
+                      {/* Financial Value Snapshot */}
+                      <div className="grid grid-cols-2 gap-2 text-xs py-1.5 px-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                        <div>
+                          <span className="text-gray-500 block text-[10px] uppercase font-bold tracking-wider">MRP Total</span>
+                          <span className="font-semibold text-gray-800">₹{vMrpVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 block text-[10px] uppercase font-bold tracking-wider">P.Cost (Procurement)</span>
+                          <span className="font-bold text-emerald-700">₹{vPCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                      </div>
+
+                      {/* Expandable Line Items Preview */}
+                      {(version.previousData.lineItems?.length || 0) > 0 && (
+                        <details className="text-xs group pt-1">
+                          <summary className="cursor-pointer text-[#3b2fc9] hover:underline font-medium list-none flex items-center justify-between text-[11px] select-none">
+                            <span>View Line Items ({version.previousData.lineItems?.length})</span>
+                            <span className="text-[10px] text-gray-400 group-open:rotate-180 transition-transform">▾</span>
+                          </summary>
+                          <div className="mt-1.5 max-h-36 overflow-y-auto border border-gray-100 rounded-md bg-white p-1 text-[11px] divide-y divide-gray-50">
+                            {version.previousData.lineItems?.map((item, i) => {
+                              const itemPCost = Number(item.procurementCost) || 0;
+                              return (
+                                <div key={i} className="py-1 px-1.5 flex justify-between items-center gap-1">
+                                  <span className="truncate max-w-[150px] text-gray-700">
+                                    {item.brandName ? `${item.brandName} - ` : ''}{item.itemName} <span className="text-gray-400">×{item.quantity}</span>
+                                  </span>
+                                  <span className="font-mono text-emerald-700 text-[10px] shrink-0 font-semibold">
+                                    ₹{itemPCost > 0 ? (itemPCost * item.quantity).toFixed(2) : '0.00'}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </details>
+                      )}
+
+                      {diffs && (
                         <div className="mt-2 bg-blue-50 border border-blue-100 p-2 rounded text-xs space-y-1">
                           <p className="font-medium text-blue-800 mb-1">Changes made in this version:</p>
                           {diffs.map((d, i) => (
@@ -223,20 +273,16 @@ export function NewRelicChallanHistoryModal({
                             </p>
                           ))}
                         </div>
-                      ) : (
-                        <>
-                          <p><span className="font-medium text-gray-900">Total Items:</span> {version.previousData.lineItems?.length || 0}</p>
-                          <p><span className="font-medium text-gray-900">Location:</span> <span className="capitalize">{version.previousData.location}</span></p>
-                        </>
                       )}
                     </div>
+
                     {version.previousData && (
                       <Button
                         onClick={() => handleRestore(version.previousData, version.id)}
                         variant="outline"
                         size="sm"
                         disabled={!!revertingVersionId}
-                        className="w-full h-8 text-xs gap-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                        className="w-full h-8 text-xs gap-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 font-semibold"
                       >
                         {revertingVersionId === version.id ? (
                           <>
@@ -244,7 +290,7 @@ export function NewRelicChallanHistoryModal({
                           </>
                         ) : (
                           <>
-                            <RotateCcw className="h-3 w-3" /> Revert to this state
+                            <RotateCcw className="h-3 w-3" /> Revert to this state (₹{vPCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })} P.Cost)
                           </>
                         )}
                       </Button>

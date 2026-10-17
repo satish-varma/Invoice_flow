@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 
 import { COMPANY_SITES, SiteId } from '@/types/site';
+import { triggerHaptic } from '@/lib/haptics';
 
 export default function StockRequestsAdminPage() {
   const { role } = useAuth();
@@ -219,46 +220,63 @@ export default function StockRequestsAdminPage() {
   });
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="p-3 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-6">
+      {/* Large Title Mobile Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Stock Requests (Admin)</h1>
-          <p className="text-gray-500 text-sm mt-1">Review and fulfill stock requirements from location managers.</p>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200/60 px-2 py-0.5 rounded-full">
+              Administration • Hub
+            </span>
+            <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+              Fulfillment Control
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight">Stock Requests (Admin)</h1>
+          <p className="text-slate-500 text-xs sm:text-sm font-medium mt-0.5">Review, approve, and fulfill stock indent requirements from location managers.</p>
         </div>
         <button
-          onClick={handleExport}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors"
+          onClick={() => {
+            triggerHaptic('medium');
+            handleExport();
+          }}
+          className="w-full sm:w-auto h-12 sm:h-10 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-5 rounded-2xl font-black text-xs sm:text-sm shadow-md transition-all active:scale-95"
         >
           <Download className="h-4 w-4" /> Export CSV
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-500 mb-1">Total Pending Budget (MRP)</p>
-            <p className="text-2xl font-bold text-gray-900">₹{totalPendingMrp.toFixed(2)}</p>
+      {/* 2-Column Squircle Stat Cards */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="bg-gradient-to-br from-blue-50/90 via-white to-sky-50/50 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-blue-200/70 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] sm:text-xs font-bold text-blue-700 uppercase tracking-wider mb-1 truncate">Pending Budget (MRP)</p>
+            <p className="text-lg sm:text-3xl font-mono font-black text-blue-950 tracking-tight truncate">₹{totalPendingMrp.toFixed(2)}</p>
           </div>
-          <div className="bg-blue-100 p-3 rounded-full text-blue-700">
-            <IndianRupee className="h-6 w-6" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-md shadow-blue-950/20 shrink-0">
+            <IndianRupee className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-500 mb-1">Total Pending Cost (P.Cost)</p>
-            <p className="text-2xl font-bold text-[#3b2fc9]">₹{totalPendingCost.toFixed(2)}</p>
+        <div className="bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/50 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-indigo-200/70 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] sm:text-xs font-bold text-indigo-700 uppercase tracking-wider mb-1 truncate">Pending Cost (P.Cost)</p>
+            <p className="text-lg sm:text-3xl font-mono font-black text-indigo-950 tracking-tight truncate">₹{totalPendingCost.toFixed(2)}</p>
           </div>
-          <div className="bg-indigo-100 p-3 rounded-full text-[#3b2fc9]">
-            <IndianRupee className="h-6 w-6" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#3b2fc9] text-white rounded-2xl flex items-center justify-center shadow-md shadow-indigo-950/20 shrink-0">
+            <IndianRupee className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap gap-4">
+      {/* Tactile Filter Bar */}
+      <div className="bg-white p-3 sm:p-4 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.04)] grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
         <select
           value={filterSite}
-          onChange={(e) => setFilterSite(e.target.value as any)}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
+          onChange={(e) => {
+            triggerHaptic('light');
+            setFilterSite(e.target.value as any);
+          }}
+          className="w-full h-11 sm:h-10 px-3 rounded-2xl border border-slate-200 text-xs sm:text-sm font-semibold bg-white text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20"
         >
           <option value="all">All Company Sites</option>
           <option value="newrelic">NewRelic</option>
@@ -268,8 +286,11 @@ export default function StockRequestsAdminPage() {
 
         <select
           value={filterLocation}
-          onChange={(e) => setFilterLocation(e.target.value as any)}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
+          onChange={(e) => {
+            triggerHaptic('light');
+            setFilterLocation(e.target.value as any);
+          }}
+          className="w-full h-11 sm:h-10 px-3 rounded-2xl border border-slate-200 text-xs sm:text-sm font-semibold bg-white text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20"
         >
           <option value="all">All Locations</option>
           <option value="hyderabad">Hyderabad</option>
@@ -278,8 +299,11 @@ export default function StockRequestsAdminPage() {
         
         <select
           value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as any)}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
+          onChange={(e) => {
+            triggerHaptic('light');
+            setFilterStatus(e.target.value as any);
+          }}
+          className="w-full h-11 sm:h-10 px-3 rounded-2xl border border-slate-200 text-xs sm:text-sm font-semibold bg-white text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20"
         >
           <option value="all">All Statuses</option>
           <option value="PENDING">Pending</option>
@@ -298,29 +322,29 @@ export default function StockRequestsAdminPage() {
       ) : (
         <div className="space-y-4">
           {filteredRequests.map(req => (
-            <div key={req.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:text-sm">
-                  <div className="flex items-center gap-1.5 text-gray-600">
-                    <Calendar className="h-4 w-4 shrink-0" />
-                    <span className="font-medium text-gray-900">{format(new Date(req.requestDate), 'dd MMM yyyy, hh:mm a')}</span>
+            <div key={req.id} className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] overflow-hidden">
+              <div className="bg-slate-50/80 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs sm:text-sm">
+                  <div className="flex items-center gap-1.5 text-slate-600">
+                    <Calendar className="h-4 w-4 shrink-0 text-slate-400" />
+                    <span className="font-bold text-slate-900">{format(new Date(req.requestDate), 'dd MMM yyyy, hh:mm a')}</span>
                   </div>
-                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                  <span className={`px-2 py-0.5 rounded-md text-xs font-bold border ${
                     (req.siteId || 'newrelic') === 'dsm'
-                      ? 'bg-cyan-100 text-cyan-800 border border-cyan-200'
+                      ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
                       : (req.siteId || 'newrelic') === 'ntt_data'
-                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                      : 'bg-indigo-100 text-[#3b2fc9] border border-indigo-200'
+                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                      : 'bg-indigo-50 text-[#3b2fc9] border-indigo-200'
                   }`}>
                     📍 {COMPANY_SITES[req.siteId || 'newrelic']?.name || 'NewRelic'}
                   </span>
-                  <div className="flex items-center gap-1.5 text-gray-600">
-                    <User className="h-4 w-4 shrink-0" />
-                    <span className="truncate max-w-[150px]">{req.createdBy}</span>
+                  <div className="flex items-center gap-1 text-slate-600">
+                    <User className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <span className="truncate max-w-[150px] font-medium">{req.createdBy}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-gray-600">
-                    <MapPin className="h-4 w-4 shrink-0" />
-                    <span className="capitalize font-medium">{req.location}</span>
+                  <div className="flex items-center gap-1 text-slate-600">
+                    <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <span className="capitalize font-bold text-slate-800">{req.location}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     {req.status === 'PENDING' && (
@@ -339,11 +363,7 @@ export default function StockRequestsAdminPage() {
                     )}
                     {req.status === 'FULFILLED' && (
                       <span className="bg-gradient-to-r from-emerald-500/15 via-emerald-400/20 to-teal-500/15 text-emerald-950 border border-emerald-400/60 px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1.5 shadow-2xs">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                        <CheckCircle className="h-3 w-3 text-emerald-600"/> FULFILLED
+                        <CheckCircle className="h-3.5 w-3.5 text-emerald-600"/> FULFILLED
                       </span>
                     )}
                     {req.status === 'CANCELLED' && (
@@ -353,15 +373,18 @@ export default function StockRequestsAdminPage() {
                     )}
                   </div>
                   {req.notes && (
-                    <div className="text-gray-500 italic w-full sm:w-auto">" {req.notes} "</div>
+                    <div className="text-slate-500 italic w-full sm:w-auto font-medium">" {req.notes} "</div>
                   )}
                 </div>
                 
                 <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                   {(req.status === 'PENDING' || req.status === 'PARTIALLY_FULFILLED') && activeFulfillId !== req.id && (
                     <button
-                      onClick={() => handleStartFulfill(req)}
-                      className="bg-[#3b2fc9] text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-[#2f25a8] transition-colors flex items-center gap-1"
+                      onClick={() => {
+                        triggerHaptic('medium');
+                        handleStartFulfill(req);
+                      }}
+                      className="bg-[#3b2fc9] hover:bg-[#2f25a8] text-white px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-1.5 shadow-xs active:scale-95"
                     >
                       <Check className="h-4 w-4" /> Fulfill
                     </button>
@@ -369,14 +392,20 @@ export default function StockRequestsAdminPage() {
                   {activeFulfillId === req.id && (
                     <>
                       <button
-                        onClick={() => setActiveFulfillId(null)}
-                        className="bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-gray-200 transition-colors"
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setActiveFulfillId(null);
+                        }}
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95"
                       >
                         Cancel
                       </button>
                       <button
-                        onClick={() => handleSaveFulfill(req)}
-                        className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-green-700 transition-colors"
+                        onClick={() => {
+                          triggerHaptic('success');
+                          handleSaveFulfill(req);
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-black transition-all active:scale-95 shadow-xs"
                       >
                         Save & Mark
                       </button>
@@ -384,24 +413,33 @@ export default function StockRequestsAdminPage() {
                   )}
                   {req.status === 'FULFILLED' && (
                     <button
-                      onClick={() => handleStatusChange(req.id!, 'PENDING')}
-                      className="bg-gray-100 text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-gray-200 transition-colors"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        handleStatusChange(req.id!, 'PENDING');
+                      }}
+                      className="bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold hover:bg-slate-200 transition-all active:scale-95"
                     >
                       Undo Fulfill
                     </button>
                   )}
                   {(req.status === 'FULFILLED' || req.status === 'PARTIALLY_FULFILLED') && (req.siteId || 'newrelic') === 'newrelic' && (
                     <button
-                      onClick={() => handleCreateChallan(req)}
-                      className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-200 transition-colors flex items-center gap-1"
+                      onClick={() => {
+                        triggerHaptic('medium');
+                        handleCreateChallan(req);
+                      }}
+                      className="bg-indigo-50 border border-indigo-200 text-[#3b2fc9] hover:bg-indigo-100 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-1.5 active:scale-95 shadow-2xs"
                       title="Convert to Delivery Challan"
                     >
                       <FileText className="h-4 w-4" /> Create Challan
                     </button>
                   )}
                   <button
-                    onClick={() => handleDelete(req.id!)}
-                    className="text-gray-400 hover:text-red-600 p-1.5 bg-gray-100 hover:bg-red-50 rounded-lg transition-colors"
+                    onClick={() => {
+                      triggerHaptic('medium');
+                      handleDelete(req.id!);
+                    }}
+                    className="text-slate-400 hover:text-rose-600 p-2 bg-slate-100 hover:bg-rose-50 rounded-xl transition-all active:scale-95"
                     title="Delete Request"
                   >
                     <Trash2 className="h-4 w-4" />

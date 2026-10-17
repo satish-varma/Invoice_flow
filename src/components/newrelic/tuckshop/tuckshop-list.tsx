@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Trash2, Filter, FileText, Search, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, IndianRupee, Pencil, FileSpreadsheet } from 'lucide-react';
+import { Trash2, Filter, FileText, Search, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, IndianRupee, Pencil, FileSpreadsheet, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { NewRelicTuckshopRecord, deleteTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { TuckshopDashboard, getCategoryBadge } from './tuckshop-dashboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { SiteId, resolveSiteId, SITE_OPTIONS } from '@/types/site';
+import { triggerHaptic } from '@/lib/haptics';
 
 interface Props {
   records: NewRelicTuckshopRecord[];
@@ -168,22 +169,37 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search items or notes..."
+              placeholder="Search items, notes, or descriptions..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 sm:py-1.5 text-xs sm:text-sm border border-gray-200 rounded-xl sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white"
+              className="w-full h-12 sm:h-10 pl-10 pr-9 text-sm border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white shadow-2xs font-medium placeholder:text-slate-400"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setSearchQuery('');
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-full"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
             {isOwnerOrAdmin && (
               <select
                 value={filterSite}
-                onChange={(e) => setFilterSite(e.target.value)}
-                className="w-full px-2.5 py-2 sm:py-1.5 text-xs sm:text-sm border border-gray-200 rounded-xl sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white"
+                onChange={(e) => {
+                  triggerHaptic('light');
+                  setFilterSite(e.target.value);
+                }}
+                className="w-full h-11 sm:h-10 px-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
               >
                 <option value="all">All Sites</option>
                 {SITE_OPTIONS.map(opt => (
@@ -193,11 +209,14 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
             )}
 
             <div className="relative">
-              <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <select
                 value={filterLocation}
-                onChange={(e) => setFilterLocation(e.target.value as any)}
-                className="w-full pl-8 pr-2 py-2 sm:py-1.5 text-xs sm:text-sm border border-gray-200 rounded-xl sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white"
+                onChange={(e) => {
+                  triggerHaptic('light');
+                  setFilterLocation(e.target.value as any);
+                }}
+                className="w-full h-11 sm:h-10 pl-8 pr-2.5 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
               >
                 <option value="all">All Locations</option>
                 <option value="BLR">Bangalore (BLR)</option>
@@ -207,8 +226,11 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
             
             <select
               value={filterType}
-              onChange={(e) => setFilterType(e.target.value as any)}
-              className="w-full px-2.5 py-2 sm:py-1.5 text-xs sm:text-sm border border-gray-200 rounded-xl sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white"
+              onChange={(e) => {
+                triggerHaptic('light');
+                setFilterType(e.target.value as any);
+              }}
+              className="w-full h-11 sm:h-10 px-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
             >
               <option value="all">All Types</option>
               <option value="expense">Expenses Only</option>
@@ -217,8 +239,11 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
 
             <select
               value={filterMonth}
-              onChange={(e) => setFilterMonth(e.target.value)}
-              className="w-full px-2.5 py-2 sm:py-1.5 text-xs sm:text-sm border border-gray-200 rounded-xl sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white"
+              onChange={(e) => {
+                triggerHaptic('light');
+                setFilterMonth(e.target.value);
+              }}
+              className="w-full h-11 sm:h-10 px-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
             >
               <option value="all">All Months</option>
               {Array.from({ length: 12 }, (_, i) => {
@@ -229,8 +254,11 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
 
             <select
               value={filterYear}
-              onChange={(e) => setFilterYear(e.target.value)}
-              className="w-full px-2.5 py-2 sm:py-1.5 text-xs sm:text-sm border border-gray-200 rounded-xl sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white"
+              onChange={(e) => {
+                triggerHaptic('light');
+                setFilterYear(e.target.value);
+              }}
+              className="w-full h-11 sm:h-10 px-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
             >
               <option value="all">All Years</option>
               {availableYears.map(year => (
@@ -241,12 +269,10 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
         </div>
       </div>
 
-
-
       {/* Mobile Card List View (md:hidden) */}
-      <div className="md:hidden divide-y divide-gray-100 flex-1 overflow-y-auto">
+      <div className="md:hidden p-3 space-y-3 flex-1 overflow-y-auto bg-slate-50/50">
         {paginatedRecords.length === 0 ? (
-          <div className="p-8 text-center text-sm text-gray-500">
+          <div className="p-8 text-center text-sm font-semibold text-slate-500 bg-white rounded-2xl border border-dashed border-slate-200">
             No records found.
           </div>
         ) : (
@@ -256,19 +282,17 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
             return (
               <div
                 key={record.id}
-                className={`p-4 transition-colors space-y-2.5 border-l-4 ${
-                  isExp
-                    ? 'border-l-rose-500 bg-linear-to-r from-rose-50/20 via-transparent to-transparent hover:bg-rose-50/30'
-                    : 'border-l-emerald-500 bg-linear-to-r from-emerald-50/20 via-transparent to-transparent hover:bg-emerald-50/30'
+                className={`p-4 rounded-2xl sm:rounded-3xl border shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] bg-white space-y-3 transition-all ${
+                  isExp ? 'border-rose-100 hover:border-rose-200' : 'border-emerald-100 hover:border-emerald-200'
                 }`}
               >
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start justify-between gap-2.5">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                    <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                         isExp
-                          ? 'bg-rose-100/80 text-rose-800 border border-rose-200'
-                          : 'bg-emerald-100/80 text-emerald-800 border border-emerald-200'
+                          ? 'bg-rose-50 text-rose-700 border border-rose-200/70'
+                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200/70'
                       }`}>
                         {isExp ? <TrendingDown className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
                         {record.type.toUpperCase()}
@@ -276,7 +300,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                       {(() => {
                         const sId = resolveSiteId(record.siteId);
                         return (
-                          <span className={`inline-block px-1.5 py-0.5 rounded-md text-[10px] font-semibold border ${
+                          <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold border ${
                             sId === 'dsm'
                               ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
                               : sId === 'ntt_data'
@@ -287,79 +311,83 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                           </span>
                         );
                       })()}
-                      <span className={`inline-block px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                      <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-black ${
                         record.location === 'HYD'
-                          ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                          : 'bg-teal-100 text-teal-800 border border-teal-200'
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          : 'bg-teal-50 text-teal-700 border border-teal-200'
                       }`}>
                         {record.location}
                       </span>
-                      <span className="text-[11px] text-gray-400 font-medium">
-                        {new Date(record.date).toLocaleDateString()}
+                      <span className="text-[11px] text-slate-400 font-semibold">
+                        {new Date(record.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
                       </span>
                     </div>
                     
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-semibold border ${catBadge.color}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold border ${catBadge.color}`}>
                         <span>{catBadge.emoji}</span>
                         <span>{catBadge.label}</span>
                       </span>
                     </div>
 
                     {record.description && (
-                      <p className="text-xs text-gray-600 mt-1 line-clamp-2 bg-gray-50/80 px-2 py-1 rounded-md border border-gray-100">
+                      <p className="text-xs text-slate-600 mt-2 line-clamp-2 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-100 font-medium">
                         {record.description}
                       </p>
                     )}
                   </div>
 
                   <div className="text-right shrink-0">
-                    <div className={`inline-flex items-center px-2.5 py-1 rounded-xl text-sm font-extrabold shadow-2xs border ${
+                    <div className={`inline-flex items-center px-3 py-1.5 rounded-2xl text-base font-mono font-black shadow-xs border ${
                       isExp
                         ? 'bg-rose-50 border-rose-200 text-rose-700'
                         : 'bg-emerald-50 border-emerald-200 text-emerald-700'
                     }`}>
                       {isExp ? '-' : '+'}₹{record.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </div>
-                    {record.billUrl && (
-                      <div className="mt-1.5">
-                        <a
-                          href={record.billUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 hover:bg-blue-100 transition-colors shadow-2xs"
-                        >
-                          <FileText className="h-3 w-3" /> View Bill
-                        </a>
-                      </div>
-                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-gray-100">
-                  <span className="truncate max-w-[200px]">By: <span className="font-medium text-gray-600">{record.createdBy || 'Unknown'}</span></span>
-                  {(canEditRecord(record) || canDeleteRecord(record)) && (
-                    <div className="flex items-center gap-2">
-                      {onEdit && canEditRecord(record) && (
-                        <button
-                          onClick={() => onEdit(record)}
-                          className="text-[#3b2fc9] hover:bg-[#3b2fc9]/10 px-2 py-1 rounded-md flex items-center gap-1 font-semibold text-xs transition-colors"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          <span>Edit</span>
-                        </button>
-                      )}
-                      {canDeleteRecord(record) && (
-                        <button
-                          onClick={() => handleDelete(record.id!)}
-                          className="text-rose-500 hover:bg-rose-50 px-2 py-1 rounded-md flex items-center gap-1 font-semibold text-xs transition-colors"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          <span>Delete</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-100">
+                  <span className="truncate max-w-[140px] font-medium">By: <span className="font-bold text-slate-700">{record.createdBy || 'Unknown'}</span></span>
+                  <div className="flex items-center gap-1.5">
+                    {record.billUrl && (
+                      <a
+                        href={record.billUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() => triggerHaptic('light')}
+                        className="h-8 px-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold flex items-center gap-1 hover:bg-blue-100 transition-colors"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        <span>Bill</span>
+                      </a>
+                    )}
+                    {onEdit && canEditRecord(record) && (
+                      <button
+                        onClick={() => {
+                          triggerHaptic('light');
+                          onEdit(record);
+                        }}
+                        className="h-8 px-2.5 rounded-xl bg-indigo-50 border border-indigo-100 text-[#3b2fc9] text-xs font-bold flex items-center gap-1 hover:bg-indigo-100 transition-colors"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        <span>Edit</span>
+                      </button>
+                    )}
+                    {canDeleteRecord(record) && (
+                      <button
+                        onClick={() => {
+                          triggerHaptic('medium');
+                          handleDelete(record.id!);
+                        }}
+                        className="h-8 px-2 rounded-xl text-rose-500 hover:bg-rose-50 flex items-center justify-center transition-colors"
+                        title="Delete record"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );

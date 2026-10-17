@@ -1534,40 +1534,64 @@ function AttendancePageContent() {
         {/* ─── Admin Panel ─── */}
         {isAdmin && (
           <div id="admin-management-panel" className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden scroll-mt-20">
-            {/* Admin tabs */}
-            <div className="flex border-b border-gray-100">
+            {/* Admin tactile tabs */}
+            <div className="p-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2 overflow-x-auto no-scrollbar">
               <button
-                onClick={() => setAdminTab('today')}
-                className={`flex-1 py-3 text-sm font-medium transition-colors ${
-                  adminTab === 'today' ? 'text-[#3b2fc9] border-b-2 border-[#3b2fc9]' : 'text-gray-500 hover:text-gray-700'
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setAdminTab('today');
+                }}
+                className={`h-10 px-4 rounded-2xl text-xs sm:text-sm font-black whitespace-nowrap transition-all active:scale-95 flex items-center gap-1.5 ${
+                  adminTab === 'today'
+                    ? 'bg-[#3b2fc9] text-white shadow-md shadow-indigo-950/20'
+                    : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 shadow-2xs'
                 }`}
               >
                 Today ({displayTodayAll.length})
               </button>
               <button
-                onClick={() => setAdminTab('history')}
-                className={`flex-1 py-3 text-sm font-medium transition-colors ${
-                  adminTab === 'history' ? 'text-[#3b2fc9] border-b-2 border-[#3b2fc9]' : 'text-gray-500 hover:text-gray-700'
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setAdminTab('history');
+                }}
+                className={`h-10 px-4 rounded-2xl text-xs sm:text-sm font-black whitespace-nowrap transition-all active:scale-95 flex items-center gap-1.5 ${
+                  adminTab === 'history'
+                    ? 'bg-[#3b2fc9] text-white shadow-md shadow-indigo-950/20'
+                    : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 shadow-2xs'
                 }`}
               >
                 History Logs
               </button>
               {isOwnerOrAdmin && (
                 <button
-                  onClick={() => setAdminTab('payroll')}
-                  className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
-                    adminTab === 'payroll' ? 'text-[#3b2fc9] border-b-2 border-[#3b2fc9]' : 'text-gray-500 hover:text-gray-700'
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setAdminTab('payroll');
+                  }}
+                  className={`h-10 px-4 rounded-2xl text-xs sm:text-sm font-black whitespace-nowrap transition-all active:scale-95 flex items-center gap-1.5 ${
+                    adminTab === 'payroll'
+                      ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md shadow-amber-950/20'
+                      : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 shadow-2xs'
                   }`}
                 >
                   <Calculator className="h-4 w-4" />
-                  Staff Salaries & Advances
+                  Salaries & Advances
                 </button>
               )}
               {isOwnerOrAdmin && (
                 <button
-                  onClick={() => setAdminTab('timing')}
-                  className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
-                    adminTab === 'timing' ? 'text-[#3b2fc9] border-b-2 border-[#3b2fc9]' : 'text-gray-500 hover:text-gray-700'
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setAdminTab('timing');
+                  }}
+                  className={`h-10 px-4 rounded-2xl text-xs sm:text-sm font-black whitespace-nowrap transition-all active:scale-95 flex items-center gap-1.5 ${
+                    adminTab === 'timing'
+                      ? 'bg-[#3b2fc9] text-white shadow-md shadow-indigo-950/20'
+                      : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 shadow-2xs'
                   }`}
                 >
                   <Clock className="h-4 w-4" />
@@ -2395,46 +2419,49 @@ function AttendancePageContent() {
 
       {/* ─── Record Advance Modal ─── */}
       {isOwnerOrAdmin && advanceModalEmployee && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md overflow-hidden animate-in fade-in slide-in-from-bottom sm:zoom-in-95 max-h-[92vh] sm:max-h-[85vh] flex flex-col">
+            {/* Mobile Drag Handle */}
+            <div className="sm:hidden w-12 h-1.5 bg-slate-300 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+            
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100 shrink-0">
               <div>
-                <h3 className="font-bold text-gray-900 text-sm">Record Salary Advance</h3>
-                <p className="text-xs text-gray-500">{advanceModalEmployee.name} ({advanceModalEmployee.employeeId})</p>
+                <h3 className="font-black text-slate-900 text-base sm:text-lg tracking-tight">Record Salary Advance</h3>
+                <p className="text-xs text-slate-500 font-semibold">{advanceModalEmployee.name} ({advanceModalEmployee.employeeId})</p>
               </div>
               <button
                 type="button"
                 onClick={() => setAdvanceModalEmployee(null)}
-                className="text-gray-400 hover:text-gray-600 text-sm p-1"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-sm font-bold"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSaveAdvance} className="p-4 space-y-3.5 text-xs">
+            <form onSubmit={handleSaveAdvance} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block font-medium text-gray-700 mb-1">Advance Amount (INR) *</label>
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">Advance Amount (INR) *</label>
                 <div className="relative">
-                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                  <IndianRupee className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <input
                     type="number"
                     min="1"
                     required
                     value={advanceAmount || ''}
                     onChange={(e) => setAdvanceAmount(Number(e.target.value))}
-                    className="w-full h-9 pl-8 pr-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
+                    className="w-full h-12 sm:h-10 pl-9 pr-3 border border-slate-200 rounded-2xl font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white shadow-2xs"
                     placeholder="e.g. 5000"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-medium text-gray-700 mb-1">Payment Mode</label>
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">Payment Mode</label>
                 <select
                   value={advancePaymentMode}
                   onChange={(e) => setAdvancePaymentMode(e.target.value as any)}
                   suppressHydrationWarning
-                  className="w-full h-9 px-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
+                  className="w-full h-12 sm:h-10 px-3 border border-slate-200 rounded-2xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white shadow-2xs"
                 >
                   <option value="upi">UPI / GPay</option>
                   <option value="bank_transfer">Bank Transfer / NEFT</option>
@@ -2443,32 +2470,32 @@ function AttendancePageContent() {
               </div>
 
               <div>
-                <label className="block font-medium text-gray-700 mb-1">Reason / Note (Optional)</label>
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">Reason / Note (Optional)</label>
                 <input
                   type="text"
                   value={advanceReason}
                   onChange={(e) => setAdvanceReason(e.target.value)}
-                  className="w-full h-9 px-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
+                  className="w-full h-12 sm:h-10 px-3 border border-slate-200 rounded-2xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white shadow-2xs"
                   placeholder="e.g. Medical emergency advance"
                 />
               </div>
 
-              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-amber-800 text-[11px]">
+              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-amber-800 text-xs font-medium">
                 ℹ️ This advance will be automatically deducted from the employee's {adminPayrollMonth} salary calculation.
               </div>
 
-              <div className="pt-2 flex gap-2">
+              <div className="pt-2 flex gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 <button
                   type="button"
                   onClick={() => setAdvanceModalEmployee(null)}
-                  className="flex-1 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 font-medium"
+                  className="flex-1 h-12 sm:h-10 border border-slate-200 rounded-2xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition-all active:scale-95"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingAdvance}
-                  className="flex-1 py-2 bg-[#3b2fc9] hover:bg-[#2d23a0] disabled:opacity-50 text-white rounded-lg font-bold"
+                  className="flex-1 h-12 sm:h-10 bg-[#3b2fc9] hover:bg-[#2d23a0] disabled:opacity-50 text-white rounded-2xl font-black text-sm shadow-md transition-all active:scale-95"
                 >
                   {isSubmittingAdvance ? 'Saving…' : 'Record Advance'}
                 </button>
@@ -2480,56 +2507,59 @@ function AttendancePageContent() {
 
       {/* ─── Pay Salary Modal ─── */}
       {isOwnerOrAdmin && payModalData && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md overflow-hidden animate-in fade-in slide-in-from-bottom sm:zoom-in-95 max-h-[92vh] sm:max-h-[85vh] flex flex-col">
+            {/* Mobile Drag Handle */}
+            <div className="sm:hidden w-12 h-1.5 bg-slate-300 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100 shrink-0">
               <div>
-                <h3 className="font-bold text-gray-900 text-sm">Disburse Salary Payment</h3>
-                <p className="text-xs text-gray-500">{payModalData.employee.name} · {adminPayrollMonth}</p>
+                <h3 className="font-black text-slate-900 text-base sm:text-lg tracking-tight">Disburse Salary Payment</h3>
+                <p className="text-xs text-slate-500 font-semibold">{payModalData.employee.name} · {adminPayrollMonth}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setPayModalData(null)}
-                className="text-gray-400 hover:text-gray-600 text-sm p-1"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-sm font-bold"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSaveSalaryPayment} className="p-4 space-y-3.5 text-xs">
+            <form onSubmit={handleSaveSalaryPayment} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
               {/* Computation Breakdown */}
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
-                <div className="flex justify-between text-gray-600">
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2 text-xs">
+                <div className="flex justify-between text-slate-600 font-medium">
                   <span>Monthly Gross:</span>
-                  <span className="font-medium">₹{(payModalData.employee.monthlySalary || 0).toLocaleString('en-IN')}</span>
+                  <span className="font-mono font-bold text-slate-800">₹{(payModalData.employee.monthlySalary || 0).toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between text-gray-600">
+                <div className="flex justify-between text-slate-600 font-medium">
                   <span>Attendance Credit:</span>
-                  <span>{payModalData.summary.effectivePaidDays} / {payModalData.summary.totalDaysInMonth} days</span>
+                  <span className="font-bold text-slate-800">{payModalData.summary.effectivePaidDays} / {payModalData.summary.totalDaysInMonth} days</span>
                 </div>
-                <div className="flex justify-between text-gray-600">
+                <div className="flex justify-between text-slate-600 font-medium">
                   <span>Earned by Attendance:</span>
-                  <span className="font-medium">₹{payModalData.summary.attendanceEarned.toLocaleString('en-IN')}</span>
+                  <span className="font-mono font-bold text-slate-800">₹{payModalData.summary.attendanceEarned.toLocaleString('en-IN')}</span>
                 </div>
                 {payModalData.summary.advancesTotal > 0 && (
-                  <div className="flex justify-between text-red-600">
+                  <div className="flex justify-between text-rose-600 font-medium">
                     <span>Less Advances Deducted:</span>
-                    <span className="font-medium">-₹{payModalData.summary.advancesTotal.toLocaleString('en-IN')}</span>
+                    <span className="font-mono font-bold">-₹{payModalData.summary.advancesTotal.toLocaleString('en-IN')}</span>
                   </div>
                 )}
-                <div className="pt-2 border-t border-gray-200 flex justify-between font-bold text-sm text-gray-900">
+                <div className="pt-2 border-t border-slate-200 flex justify-between font-black text-sm text-slate-900">
                   <span>Net Payable Amount:</span>
-                  <span className="text-[#3b2fc9]">₹{payModalData.summary.netPayable.toLocaleString('en-IN')}</span>
+                  <span className="text-emerald-600 font-mono text-base font-black">₹{payModalData.summary.netPayable.toLocaleString('en-IN')}</span>
                 </div>
               </div>
 
               <div>
-                <label className="block font-medium text-gray-700 mb-1">Disbursement Mode</label>
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">Disbursement Mode</label>
                 <select
                   value={payPaymentMode}
                   onChange={(e) => setPayPaymentMode(e.target.value as any)}
                   suppressHydrationWarning
-                  className="w-full h-9 px-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
+                  className="w-full h-12 sm:h-10 px-3 border border-slate-200 rounded-2xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white shadow-2xs"
                 >
                   <option value="bank_transfer">Bank Transfer / NEFT</option>
                   <option value="upi">UPI / GPay / PhonePe</option>
@@ -2539,28 +2569,28 @@ function AttendancePageContent() {
               </div>
 
               <div>
-                <label className="block font-medium text-gray-700 mb-1">UTR / Transaction Reference (Optional)</label>
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">UTR / Transaction Reference (Optional)</label>
                 <input
                   type="text"
                   value={payReferenceNote}
                   onChange={(e) => setPayReferenceNote(e.target.value)}
-                  className="w-full h-9 px-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
+                  className="w-full h-12 sm:h-10 px-3 border border-slate-200 rounded-2xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white shadow-2xs"
                   placeholder="e.g. UTR #1234567890"
                 />
               </div>
 
-              <div className="pt-2 flex gap-2">
+              <div className="pt-2 flex gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 <button
                   type="button"
                   onClick={() => setPayModalData(null)}
-                  className="flex-1 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 font-medium"
+                  className="flex-1 h-12 sm:h-10 border border-slate-200 rounded-2xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition-all active:scale-95"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingPayment}
-                  className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg font-bold"
+                  className="flex-1 h-12 sm:h-10 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-2xl font-black text-sm shadow-md transition-all active:scale-95"
                 >
                   {isSubmittingPayment ? 'Processing…' : `Confirm Pay ₹${payModalData.summary.netPayable.toLocaleString('en-IN')}`}
                 </button>
@@ -2572,14 +2602,17 @@ function AttendancePageContent() {
 
       {/* ─── Early Check-Out Admin Override Modal ─── */}
       {showEarlyCheckoutModal && selectedEmployee && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-amber-50/50">
-              <div className="flex items-center gap-2">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md overflow-hidden animate-in fade-in slide-in-from-bottom sm:zoom-in-95 max-h-[92vh] sm:max-h-[85vh] flex flex-col">
+            {/* Mobile Drag Handle */}
+            <div className="sm:hidden w-12 h-1.5 bg-slate-300 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100 bg-amber-50/70 shrink-0">
+              <div className="flex items-center gap-2.5">
                 <ShieldAlert className="h-5 w-5 text-amber-600" />
                 <div>
-                  <h3 className="font-bold text-gray-900 text-sm">Early Check-Out Authorization</h3>
-                  <p className="text-xs text-gray-500">{selectedEmployee.name} ({selectedEmployee.employeeId})</p>
+                  <h3 className="font-black text-slate-900 text-base sm:text-lg tracking-tight">Early Check-Out Auth</h3>
+                  <p className="text-xs text-slate-500 font-semibold">{selectedEmployee.name} ({selectedEmployee.employeeId})</p>
                 </div>
               </div>
               <button
@@ -2588,17 +2621,17 @@ function AttendancePageContent() {
                   setShowEarlyCheckoutModal(false);
                   setEarlyCheckoutReason('');
                 }}
-                className="text-gray-400 hover:text-gray-600 text-sm p-1"
+                className="w-8 h-8 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-800 flex items-center justify-center text-sm font-bold"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-4 space-y-4 text-xs">
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1.5 text-amber-900">
+            <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
+              <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3.5 space-y-2 text-xs text-amber-900">
                 <div className="flex justify-between font-medium">
                   <span>Shift Checked In:</span>
-                  <span>{todayRecord?.checkIn ? formatTime(todayRecord.checkIn.time) : 'N/A'}</span>
+                  <span className="font-bold">{todayRecord?.checkIn ? formatTime(todayRecord.checkIn.time) : 'N/A'}</span>
                 </div>
                 <div className="flex justify-between font-medium">
                   <span>Elapsed Shift Time:</span>
@@ -2608,14 +2641,14 @@ function AttendancePageContent() {
                   <span>Minimum Shift Required:</span>
                   <span>{minWorkHours} Hours</span>
                 </div>
-                <div className="flex justify-between font-bold pt-1 border-t border-amber-200">
+                <div className="flex justify-between font-bold pt-1.5 border-t border-amber-200">
                   <span>Remaining to Unlock:</span>
-                  <span className="text-red-700">{formatDuration(remainingMinutesToUnlock)}</span>
+                  <span className="text-rose-700 font-black">{formatDuration(remainingMinutesToUnlock)}</span>
                 </div>
               </div>
 
               <div>
-                <label className="block font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
                   Reason for Early Check-Out Authorization *
                 </label>
                 <input
@@ -2623,19 +2656,19 @@ function AttendancePageContent() {
                   required
                   value={earlyCheckoutReason}
                   onChange={(e) => setEarlyCheckoutReason(e.target.value)}
-                  placeholder="e.g. Medical emergency / Approved personal leave / Client duty"
-                  className="w-full h-9 px-3 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
+                  placeholder="e.g. Medical emergency / Personal leave / Client duty"
+                  className="w-full h-12 sm:h-10 px-3 border border-slate-200 rounded-2xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white shadow-2xs"
                 />
               </div>
 
-              <div className="pt-2 flex gap-2">
+              <div className="pt-2 flex gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 <button
                   type="button"
                   onClick={() => {
                     setShowEarlyCheckoutModal(false);
                     setEarlyCheckoutReason('');
                   }}
-                  className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 font-medium"
+                  className="flex-1 h-12 sm:h-10 border border-slate-200 rounded-2xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition-all active:scale-95"
                 >
                   Cancel
                 </button>
@@ -2651,7 +2684,7 @@ function AttendancePageContent() {
                     setCameraAction('check-out');
                     setShowCamera(true);
                   }}
-                  className="flex-1 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-xl font-bold shadow-xs flex items-center justify-center gap-1.5"
+                  className="flex-1 h-12 sm:h-10 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-2xl font-black text-sm shadow-md flex items-center justify-center gap-1.5 transition-all active:scale-95"
                 >
                   <Camera className="h-4 w-4" />
                   <span>Authorize & Take Selfie</span>
@@ -2664,43 +2697,52 @@ function AttendancePageContent() {
 
       {/* ─── Individual Employee Shift Timing Modal ─── */}
       {employeeTimingModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md overflow-hidden animate-in fade-in slide-in-from-bottom sm:zoom-in-95 max-h-[92vh] sm:max-h-[85vh] flex flex-col">
+            {/* Mobile Drag Handle */}
+            <div className="sm:hidden w-12 h-1.5 bg-slate-300 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100 shrink-0">
               <div>
-                <h3 className="font-bold text-gray-900 text-sm">Staff Shift Timing</h3>
-                <p className="text-xs text-gray-500">{employeeTimingModal.name} ({employeeTimingModal.employeeId}) · {employeeTimingModal.location}</p>
+                <h3 className="font-black text-slate-900 text-base sm:text-lg tracking-tight">Staff Shift Timing</h3>
+                <p className="text-xs text-slate-500 font-semibold">{employeeTimingModal.name} ({employeeTimingModal.employeeId}) · {employeeTimingModal.location}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setEmployeeTimingModal(null)}
-                className="text-gray-400 hover:text-gray-600 text-sm p-1"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-sm font-bold"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-4 space-y-4 text-xs">
+            <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
               {/* Option: Hub Default vs Custom */}
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setEmpTimingForm(prev => ({ ...prev, useHubDefault: true }))}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setEmpTimingForm(prev => ({ ...prev, useHubDefault: true }));
+                  }}
+                  className={`flex-1 h-11 rounded-2xl text-xs font-black border transition-all active:scale-95 ${
                     empTimingForm.useHubDefault
-                      ? 'bg-indigo-50 border-[#3b2fc9] text-[#3b2fc9]'
-                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      ? 'bg-indigo-50 border-[#3b2fc9] text-[#3b2fc9] shadow-xs'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
                   Use Hub Default
                 </button>
                 <button
                   type="button"
-                  onClick={() => setEmpTimingForm(prev => ({ ...prev, useHubDefault: false }))}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setEmpTimingForm(prev => ({ ...prev, useHubDefault: false }));
+                  }}
+                  className={`flex-1 h-11 rounded-2xl text-xs font-black border transition-all active:scale-95 ${
                     !empTimingForm.useHubDefault
-                      ? 'bg-indigo-50 border-[#3b2fc9] text-[#3b2fc9]'
-                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      ? 'bg-indigo-50 border-[#3b2fc9] text-[#3b2fc9] shadow-xs'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
                   Custom Shift Hours
@@ -2708,17 +2750,17 @@ function AttendancePageContent() {
               </div>
 
               {empTimingForm.useHubDefault ? (
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-gray-600 space-y-1">
-                  <p className="font-semibold text-gray-800">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-slate-600 space-y-1.5 text-xs">
+                  <p className="font-black text-slate-800">
                     Inheriting {employeeTimingModal.location} Hub Defaults:
                   </p>
-                  <p className="text-[11px]">
+                  <p className="text-[11px] font-medium">
                     Shift: {editingRules[employeeTimingModal.location.toLowerCase()]?.expectedStart || '06:00'} - {editingRules[employeeTimingModal.location.toLowerCase()]?.expectedEnd || '18:00'}
                   </p>
-                  <p className="text-[11px]">
+                  <p className="text-[11px] font-medium">
                     Cutoff Deadline: {editingRules[employeeTimingModal.location.toLowerCase()]?.cutoff || '06:30'} AM
                   </p>
-                  <p className="text-[11px]">
+                  <p className="text-[11px] font-medium">
                     Min Work Duration: {editingRules[employeeTimingModal.location.toLowerCase()]?.minWorkHours || 4} Hours
                   </p>
                 </div>
@@ -2726,34 +2768,34 @@ function AttendancePageContent() {
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-gray-600 font-medium mb-1">Shift Start</label>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Shift Start</label>
                       <input
                         type="time"
                         value={empTimingForm.expectedStart}
                         onChange={(e) => setEmpTimingForm(prev => ({ ...prev, expectedStart: e.target.value }))}
-                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs font-semibold"
+                        className="w-full h-11 px-2.5 border border-slate-200 rounded-2xl text-xs font-semibold bg-white shadow-2xs"
                       />
                     </div>
                     <div>
-                      <label className="block text-gray-600 font-medium mb-1">Cutoff Deadline (Late)</label>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Cutoff Deadline</label>
                       <input
                         type="time"
                         value={empTimingForm.cutoff}
                         onChange={(e) => setEmpTimingForm(prev => ({ ...prev, cutoff: e.target.value }))}
-                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs font-semibold text-amber-700"
+                        className="w-full h-11 px-2.5 border border-slate-200 rounded-2xl text-xs font-semibold text-amber-700 bg-white shadow-2xs"
                       />
                     </div>
                     <div>
-                      <label className="block text-gray-600 font-medium mb-1">Shift End</label>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Shift End</label>
                       <input
                         type="time"
                         value={empTimingForm.expectedEnd}
                         onChange={(e) => setEmpTimingForm(prev => ({ ...prev, expectedEnd: e.target.value }))}
-                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs font-semibold"
+                        className="w-full h-11 px-2.5 border border-slate-200 rounded-2xl text-xs font-semibold bg-white shadow-2xs"
                       />
                     </div>
                     <div>
-                      <label className="block text-gray-600 font-medium mb-1">Min Work Hours</label>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Min Work Hours</label>
                       <input
                         type="number"
                         min="1"
@@ -2761,18 +2803,18 @@ function AttendancePageContent() {
                         step="0.5"
                         value={empTimingForm.minWorkHours}
                         onChange={(e) => setEmpTimingForm(prev => ({ ...prev, minWorkHours: Number(e.target.value) || 4 }))}
-                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs font-semibold"
+                        className="w-full h-11 px-2.5 border border-slate-200 rounded-2xl text-xs font-semibold bg-white shadow-2xs"
                       />
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="pt-2 flex gap-2">
+              <div className="pt-2 flex gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 <button
                   type="button"
                   onClick={() => setEmployeeTimingModal(null)}
-                  className="flex-1 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 font-medium"
+                  className="flex-1 h-12 sm:h-10 border border-slate-200 rounded-2xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition-all active:scale-95"
                 >
                   Cancel
                 </button>
@@ -2807,7 +2849,7 @@ function AttendancePageContent() {
                       setIsSavingEmpTiming(false);
                     }
                   }}
-                  className="flex-1 py-2 bg-[#3b2fc9] hover:bg-[#3228a8] disabled:opacity-50 text-white rounded-lg font-bold"
+                  className="flex-1 h-12 sm:h-10 bg-[#3b2fc9] hover:bg-[#3228a8] disabled:opacity-50 text-white rounded-2xl font-black text-sm shadow-md transition-all active:scale-95"
                 >
                   {isSavingEmpTiming ? 'Saving…' : 'Save Timing'}
                 </button>

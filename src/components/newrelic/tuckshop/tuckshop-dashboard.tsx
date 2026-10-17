@@ -133,83 +133,83 @@ export function TuckshopDashboard({ records }: Props) {
   }, [records]);
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-6 sm:mb-8">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-8">
       {/* 1. Gross Sales */}
-      <div className="bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/50 rounded-2xl p-3 sm:p-5 border border-emerald-200/80 shadow-2xs sm:shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 transition-all hover:shadow-md">
-        <div className="bg-gradient-to-tr from-emerald-600 to-teal-600 text-white p-2 sm:p-3 rounded-xl sm:rounded-2xl shrink-0 shadow-xs">
-          <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
+      <div className="bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-emerald-200/80 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 transition-all hover:shadow-md">
+        <div className="bg-gradient-to-tr from-emerald-600 to-teal-600 text-white w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-md shadow-emerald-950/20">
+          <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-base sm:text-2xl font-black text-emerald-950 tracking-tight truncate">₹{totalSales.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-          <p className="text-[11px] sm:text-xs font-bold text-emerald-700/80 mt-0.5 truncate">Gross Sales</p>
-          <p className="text-[10px] text-emerald-600/70 font-medium">Counter receipts</p>
+          <p className="text-lg sm:text-2xl font-mono font-black text-emerald-950 tracking-tight truncate">₹{totalSales.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+          <p className="text-[11px] sm:text-xs font-bold text-emerald-700 mt-0.5 truncate uppercase tracking-wider">Gross Sales</p>
+          <p className="text-[10px] text-emerald-600/80 font-medium">Counter receipts</p>
         </div>
       </div>
 
       {/* 2. Net Sales (Less 20% Commission) */}
-      <div className="bg-gradient-to-br from-teal-50/90 via-white to-cyan-50/50 rounded-2xl p-3 sm:p-5 border border-teal-200/80 shadow-2xs sm:shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 transition-all hover:shadow-md">
-        <div className="bg-gradient-to-tr from-teal-600 to-cyan-600 text-white p-2 sm:p-3 rounded-xl sm:rounded-2xl shrink-0 shadow-xs">
-          <Wallet className="h-4 w-4 sm:h-5 sm:w-5" />
+      <div className="bg-gradient-to-br from-teal-50/90 via-white to-cyan-50/50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-teal-200/80 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 transition-all hover:shadow-md">
+        <div className="bg-gradient-to-tr from-teal-600 to-cyan-600 text-white w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-md shadow-teal-950/20">
+          <Wallet className="h-5 w-5 sm:h-6 sm:w-6" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-base sm:text-2xl font-black text-teal-950 tracking-tight truncate">₹{netSales.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-          <p className="text-[11px] sm:text-xs font-bold text-teal-700/80 mt-0.5 truncate">Net Revenue (80%)</p>
-          <p className="text-[10px] text-rose-500 font-semibold truncate">-₹{commission.toLocaleString('en-IN', { maximumFractionDigits: 0 })} (20% comm)</p>
+          <p className="text-lg sm:text-2xl font-mono font-black text-teal-950 tracking-tight truncate">₹{netSales.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+          <p className="text-[11px] sm:text-xs font-bold text-teal-700 mt-0.5 truncate uppercase tracking-wider">Net Rev (80%)</p>
+          <p className="text-[10px] text-rose-500 font-bold truncate">-₹{commission.toLocaleString('en-IN', { maximumFractionDigits: 0 })} (20% comm)</p>
         </div>
       </div>
 
       {/* 3. Total Expenses */}
-      <div className="bg-gradient-to-br from-rose-50/90 via-white to-red-50/50 rounded-2xl p-3 sm:p-5 border border-rose-200/80 shadow-2xs sm:shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 transition-all hover:shadow-md">
-        <div className="bg-gradient-to-tr from-rose-600 to-red-600 text-white p-2 sm:p-3 rounded-xl sm:rounded-2xl shrink-0 shadow-xs">
-          <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5" />
+      <div className="bg-gradient-to-br from-rose-50/90 via-white to-red-50/50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-rose-200/80 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 transition-all hover:shadow-md">
+        <div className="bg-gradient-to-tr from-rose-600 to-red-600 text-white w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-md shadow-rose-950/20">
+          <TrendingDown className="h-5 w-5 sm:h-6 sm:w-6" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-base sm:text-2xl font-black text-rose-950 tracking-tight truncate">₹{totalExpenses.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-          <p className="text-[11px] sm:text-xs font-bold text-rose-700/80 mt-0.5 truncate">Total Expenses</p>
-          <p className="text-[10px] text-rose-600/70 font-medium truncate">Batter, bakery, supplies</p>
+          <p className="text-lg sm:text-2xl font-mono font-black text-rose-950 tracking-tight truncate">₹{totalExpenses.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+          <p className="text-[11px] sm:text-xs font-bold text-rose-700 mt-0.5 truncate uppercase tracking-wider">Total Expenses</p>
+          <p className="text-[10px] text-rose-600/80 font-medium truncate">Supplies & stock</p>
         </div>
       </div>
 
       {/* 4. Net Profit */}
-      <div className={`rounded-2xl p-3 sm:p-5 border shadow-2xs sm:shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 transition-all hover:shadow-md ${
+      <div className={`rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 transition-all hover:shadow-md ${
         netProfit >= 0
           ? 'bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/50 border-indigo-200/80'
           : 'bg-gradient-to-br from-amber-50/90 via-white to-orange-50/50 border-amber-200/80'
       }`}>
-        <div className={`p-2 sm:p-3 rounded-xl sm:rounded-2xl shrink-0 shadow-xs text-white ${
+        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-md text-white ${
           netProfit >= 0
-            ? 'bg-gradient-to-tr from-indigo-600 to-violet-600'
-            : 'bg-gradient-to-tr from-amber-500 to-orange-500'
+            ? 'bg-gradient-to-tr from-indigo-600 to-violet-600 shadow-indigo-950/20'
+            : 'bg-gradient-to-tr from-amber-500 to-orange-500 shadow-amber-950/20'
         }`}>
-          <Wallet className="h-4 w-4 sm:h-5 sm:w-5" />
+          <Wallet className="h-5 w-5 sm:h-6 sm:w-6" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className={`text-base sm:text-2xl font-black tracking-tight truncate ${
+          <p className={`text-lg sm:text-2xl font-mono font-black tracking-tight truncate ${
             netProfit >= 0 ? 'text-indigo-950' : 'text-amber-950'
           }`}>
             {netProfit >= 0 ? '+' : ''}₹{netProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
           </p>
-          <p className={`text-[11px] sm:text-xs font-bold mt-0.5 truncate ${
-            netProfit >= 0 ? 'text-indigo-700/80' : 'text-amber-700/80'
+          <p className={`text-[11px] sm:text-xs font-bold mt-0.5 truncate uppercase tracking-wider ${
+            netProfit >= 0 ? 'text-indigo-700' : 'text-amber-700'
           }`}>Net Profit</p>
-          <p className="text-[10px] text-gray-500 font-medium truncate">Net Rev − Expenses</p>
+          <p className="text-[10px] text-slate-500 font-medium truncate">Net Rev − Expenses</p>
         </div>
       </div>
 
       {/* Categories Breakdown */}
-      <div className="col-span-2 lg:col-span-4 bg-white rounded-2xl p-4 sm:p-5 border border-indigo-100/70 shadow-xs">
+      <div className="col-span-2 lg:col-span-4 bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-indigo-100 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.04)]">
         <div className="flex items-center justify-between mb-3.5">
           <div className="flex items-center gap-2">
             <PieChart className="h-4 w-4 text-indigo-600" />
-            <h3 className="text-xs sm:text-sm font-bold text-gray-800 uppercase tracking-wider">Expense Breakdown by Category</h3>
+            <h3 className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider">Expense Breakdown by Category</h3>
           </div>
-          <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+          <span className="text-[11px] font-black text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
             {expensesByCategory.length} {expensesByCategory.length === 1 ? 'category' : 'categories'}
           </span>
         </div>
 
         {expensesByCategory.length === 0 ? (
-          <p className="text-xs text-gray-400 py-2">No expenses recorded for the selected period.</p>
+          <p className="text-xs text-slate-400 py-2">No expenses recorded for the selected period.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
             {expensesByCategory.map(([cat, amount]) => {

@@ -73,13 +73,30 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
     return isOwnerOrAdmin;
   };
 
+  const locCounts = React.useMemo(() => {
+    let blr = 0;
+    let hyd = 0;
+    records.forEach(r => {
+      const loc = (r.location || '').toUpperCase();
+      if (loc === 'BLR' || loc === 'BANGALORE') blr++;
+      else if (loc === 'HYD' || loc === 'HYDERABAD') hyd++;
+    });
+    return { blr, hyd, all: records.length };
+  }, [records]);
+
   const availableYears = React.useMemo(() => {
     return Array.from(new Set(records.map(r => new Date(r.date).getFullYear()))).sort((a, b) => b - a);
   }, [records]);
 
   const filteredRecords = records.filter(record => {
     if (filterType !== 'all' && record.type !== filterType) return false;
-    if (filterLocation !== 'all' && record.location !== filterLocation) return false;
+    if (filterLocation !== 'all') {
+      const loc = (record.location || '').toUpperCase();
+      const isBlr = loc === 'BLR' || loc === 'BANGALORE';
+      const isHyd = loc === 'HYD' || loc === 'HYDERABAD';
+      if (filterLocation === 'BLR' && !isBlr) return false;
+      if (filterLocation === 'HYD' && !isHyd) return false;
+    }
     if (filterSite !== 'all') {
       const recSite = resolveSiteId(record.siteId);
       if (recSite !== filterSite) return false;
@@ -142,23 +159,82 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
       {showDashboard && <TuckshopDashboard records={filteredRecords} />}
       
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
-      <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col gap-3 bg-gray-50/50">
-        <div className="flex items-center justify-between">
+      <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col gap-3.5 bg-gray-50/50">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-gray-800 text-base sm:text-lg">Transaction Ledger</h3>
-            <span className="text-xs text-gray-500 font-medium hidden sm:inline">
+            <span className="text-xs text-gray-500 font-medium">
               ({filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''})
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 font-medium sm:hidden">
-              {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''}
-            </span>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Prominent Segmented Location Filter Switcher */}
+            <div className="flex items-center p-1 bg-slate-200/80 rounded-2xl gap-1 border border-slate-300/70 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setFilterLocation('all');
+                }}
+                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  filterLocation === 'all'
+                    ? 'bg-gradient-to-r from-indigo-600 to-[#3b2fc9] text-white shadow-xs font-black'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <span>All Locations</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                  filterLocation === 'all' ? 'bg-white/20 text-white' : 'bg-slate-300/80 text-slate-700'
+                }`}>
+                  {locCounts.all}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setFilterLocation('BLR');
+                }}
+                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  filterLocation === 'BLR'
+                    ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-xs font-black'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <span>Bangalore</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                  filterLocation === 'BLR' ? 'bg-white/20 text-white' : 'bg-slate-300/80 text-slate-700'
+                }`}>
+                  {locCounts.blr}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setFilterLocation('HYD');
+                }}
+                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  filterLocation === 'HYD'
+                    ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-xs font-black'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <span>Hyderabad</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                  filterLocation === 'HYD' ? 'bg-white/20 text-white' : 'bg-slate-300/80 text-slate-700'
+                }`}>
+                  {locCounts.hyd}
+                </span>
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={exportToExcel}
               disabled={filteredRecords.length === 0}
-              className="h-8 px-2.5 sm:px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors"
+              className="h-8 px-2.5 sm:px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
               title="Download Excel report"
             >
               <FileSpreadsheet className="h-3.5 w-3.5" />
@@ -191,7 +267,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
             )}
           </div>
 
-          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 flex-wrap">
             {isOwnerOrAdmin && (
               <select
                 value={filterSite}
@@ -199,7 +275,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                   triggerHaptic('light');
                   setFilterSite(e.target.value);
                 }}
-                className="w-full h-11 sm:h-10 px-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
+                className="w-full sm:w-auto h-11 sm:h-10 px-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
               >
                 <option value="all">All Sites</option>
                 {SITE_OPTIONS.map(opt => (
@@ -208,7 +284,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
               </select>
             )}
 
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <select
                 value={filterLocation}
@@ -216,7 +292,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                   triggerHaptic('light');
                   setFilterLocation(e.target.value as any);
                 }}
-                className="w-full h-11 sm:h-10 pl-8 pr-2.5 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
+                className="w-full sm:w-auto h-11 sm:h-10 pl-8 pr-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
               >
                 <option value="all">All Locations</option>
                 <option value="BLR">Bangalore (BLR)</option>
@@ -230,7 +306,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                 triggerHaptic('light');
                 setFilterType(e.target.value as any);
               }}
-              className="w-full h-11 sm:h-10 px-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
+              className="w-full sm:w-auto h-11 sm:h-10 px-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
             >
               <option value="all">All Types</option>
               <option value="expense">Expenses Only</option>
@@ -243,7 +319,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                 triggerHaptic('light');
                 setFilterMonth(e.target.value);
               }}
-              className="w-full h-11 sm:h-10 px-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
+              className="w-full sm:w-auto h-11 sm:h-10 px-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
             >
               <option value="all">All Months</option>
               {Array.from({ length: 12 }, (_, i) => {
@@ -258,7 +334,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                 triggerHaptic('light');
                 setFilterYear(e.target.value);
               }}
-              className="w-full h-11 sm:h-10 px-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
+              className="w-full sm:w-auto h-11 sm:h-10 px-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
             >
               <option value="all">All Years</option>
               {availableYears.map(year => (

@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Upload, CheckCircle2, FileSpreadsheet, ArrowLeft, Filter } from 'lucide-react';
+import { Upload, CheckCircle2, FileSpreadsheet, ArrowLeft, Filter, Sparkles, X, BookOpen } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import { NewRelicChallan } from '@/types/challan';
 import { getNewRelicChallans, NEWRELIC_LOCATIONS } from '@/services/newrelicChallanService';
 import { getAliases, saveAlias, deleteAlias, AliasMapping } from '@/services/aliasMappingService';
 import { useAuth } from '@/contexts/AuthContext';
+import { triggerHaptic } from '@/lib/haptics';
 
 interface Difference {
   dcs: string[];
@@ -389,48 +390,68 @@ export default function ReconcilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
-      <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 space-y-6">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 pb-28">
+      <div className="max-w-6xl mx-auto px-3 sm:px-8 py-4 sm:py-8 space-y-5 sm:space-y-6">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => router.push('/newrelic')}
-              className="p-2 bg-white border border-gray-200 text-gray-500 rounded-xl hover:bg-gray-50 transition-colors shadow-xs shrink-0"
-              aria-label="Back to dashboard"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Reconcile Invoice</h1>
-              <p className="text-xs sm:text-sm text-gray-500">Upload aggregator sheet to compare against our internal system.</p>
+          <div>
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <button 
+                onClick={() => {
+                  triggerHaptic('light');
+                  router.push('/newrelic');
+                }}
+                className="h-9 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 font-bold text-xs inline-flex items-center gap-1.5 active:scale-95 transition-all shadow-xs"
+                aria-label="Back to dashboard"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Back
+              </button>
+              <span className="uppercase text-[10px] sm:text-xs font-black tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-full border border-indigo-200/60 dark:border-indigo-800/60 inline-flex items-center gap-1.5 shadow-xs">
+                <Sparkles className="w-3 h-3 text-indigo-500" />
+                Audit • Reconciliation
+              </span>
             </div>
+            <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+              Reconcile Invoice
+            </h1>
+            <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
+              Upload aggregator Excel to audit and match against internal DC ledger.
+            </p>
           </div>
+
           <div className="flex justify-end">
             <button
-              onClick={() => setIsAliasModalOpen(true)}
-              className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 text-[#3b2fc9] font-semibold text-xs sm:text-sm rounded-xl shadow-xs hover:bg-gray-50 transition-colors text-center"
+              onClick={() => {
+                triggerHaptic('light');
+                setIsAliasModalOpen(true);
+              }}
+              className="w-full sm:w-auto h-11 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-indigo-600 dark:text-indigo-400 font-black text-xs sm:text-sm rounded-2xl shadow-xs hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 active:scale-95 transition-all inline-flex items-center justify-center gap-2"
             >
+              <BookOpen className="h-4 w-4" />
               SKU Alias Dictionary
             </button>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-4">
-          <div className="flex items-center gap-2 text-gray-700 font-medium pb-2 border-b border-gray-100">
-            <Filter className="h-5 w-5 text-[#3b2fc9]" />
-            <h3>Step 1: Select Invoice Details</h3>
+        <div className="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] space-y-4">
+          <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200 font-bold pb-2 border-b border-slate-100 dark:border-slate-800 text-sm">
+            <Filter className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+            <span>Step 1: Select Billing Cycle & Location</span>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-500 uppercase">Location</label>
+              <label className="text-[11px] font-black uppercase text-slate-400 tracking-wider">Location</label>
               <select
                 value={filterLocation}
-                onChange={(e) => setFilterLocation(e.target.value)}
-                className="h-10 w-full px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white capitalize"
+                onChange={(e) => {
+                  triggerHaptic('light');
+                  setFilterLocation(e.target.value);
+                }}
+                className="h-12 sm:h-10 w-full px-3 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 bg-white dark:bg-slate-800 capitalize shadow-xs"
               >
                 <option value="all" disabled>Select Location</option>
                 {user?.preferredLocations && user.preferredLocations.length > 0 && (
@@ -443,11 +464,14 @@ export default function ReconcilePage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-500 uppercase">Year</label>
+              <label className="text-[11px] font-black uppercase text-slate-400 tracking-wider">Year</label>
               <select
                 value={filterYear}
-                onChange={(e) => setFilterYear(e.target.value)}
-                className="h-10 w-full px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
+                onChange={(e) => {
+                  triggerHaptic('light');
+                  setFilterYear(e.target.value);
+                }}
+                className="h-12 sm:h-10 w-full px-3 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 bg-white dark:bg-slate-800 shadow-xs"
               >
                 <option value="all" disabled>Select Year</option>
                 {availableYears.map(year => (
@@ -457,11 +481,14 @@ export default function ReconcilePage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-500 uppercase">Month</label>
+              <label className="text-[11px] font-black uppercase text-slate-400 tracking-wider">Month</label>
               <select
                 value={filterMonth}
-                onChange={(e) => setFilterMonth(e.target.value)}
-                className="h-10 w-full px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
+                onChange={(e) => {
+                  triggerHaptic('light');
+                  setFilterMonth(e.target.value);
+                }}
+                className="h-12 sm:h-10 w-full px-3 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 bg-white dark:bg-slate-800 shadow-xs"
               >
                 <option value="all" disabled>Select Month</option>
                 {Array.from({ length: 12 }, (_, i) => {
@@ -472,11 +499,14 @@ export default function ReconcilePage() {
             </div>
             
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-500 uppercase">Cycle</label>
+              <label className="text-[11px] font-black uppercase text-slate-400 tracking-wider">Cycle</label>
               <select
                 value={filterCycle}
-                onChange={(e) => setFilterCycle(e.target.value)}
-                className="h-10 w-full px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
+                onChange={(e) => {
+                  triggerHaptic('light');
+                  setFilterCycle(e.target.value);
+                }}
+                className="h-12 sm:h-10 w-full px-3 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 bg-white dark:bg-slate-800 shadow-xs"
               >
                 <option value="all" disabled>Select Cycle</option>
                 <option value="1-15">1st - 15th</option>
@@ -485,17 +515,17 @@ export default function ReconcilePage() {
             </div>
           </div>
 
-          <div className="pt-2 text-sm text-gray-500 flex items-center justify-between">
-            <span>The system found <strong className="text-gray-900">{displayChallans.length} challans</strong> matching these filters.</span>
+          <div className="pt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400 flex items-center justify-between">
+            <span>Found <strong className="text-slate-900 dark:text-white font-mono font-bold">{displayChallans.length} challans</strong> matching current filters.</span>
           </div>
         </div>
 
         {/* Upload & Results */}
         {!differences ? (
-          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-4">
-            <div className="flex items-center gap-2 text-gray-700 font-medium pb-2 border-b border-gray-100">
-              <FileSpreadsheet className="h-5 w-5 text-[#3b2fc9]" />
-              <h3>Step 2: Upload Excel File</h3>
+          <div className="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] space-y-4">
+            <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200 font-bold pb-2 border-b border-slate-100 dark:border-slate-800 text-sm">
+              <FileSpreadsheet className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              <span>Step 2: Upload Excel File</span>
             </div>
             
             <input
@@ -507,116 +537,142 @@ export default function ReconcilePage() {
             />
             
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                triggerHaptic('medium');
+                fileInputRef.current?.click();
+              }}
               disabled={isProcessing || isLoading || filterLocation === 'all' || filterMonth === 'all' || filterYear === 'all' || filterCycle === 'all'}
-              className="w-full py-16 border-2 border-dashed border-[#3b2fc9]/30 bg-[#3b2fc9]/5 hover:bg-[#3b2fc9]/10 rounded-xl flex flex-col items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-12 sm:py-16 border-2 border-dashed border-indigo-300 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20 hover:bg-indigo-100/50 dark:hover:bg-indigo-950/40 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center gap-3 transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isProcessing ? (
-                <div className="h-8 w-8 border-4 border-[#3b2fc9]/30 border-t-[#3b2fc9] rounded-full animate-spin" />
+                <div className="h-9 w-9 border-4 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
               ) : (
                 <>
-                  <div className="p-4 bg-white shadow-sm rounded-full text-[#3b2fc9]">
-                    <Upload className="h-8 w-8" />
+                  <div className="p-4 bg-white dark:bg-slate-800 shadow-md rounded-2xl text-indigo-600 dark:text-indigo-400">
+                    <Upload className="h-8 w-8 stroke-[2.2]" />
                   </div>
-                  <div className="text-center">
-                    <span className="block font-semibold text-[#3b2fc9] text-lg">Select Excel or CSV File</span>
-                    <span className="block text-sm text-[#3b2fc9]/70 mt-1">Make sure you selected filters above first.</span>
+                  <div className="text-center px-4">
+                    <span className="block font-black text-indigo-950 dark:text-indigo-200 text-base sm:text-lg">Select Excel or CSV File</span>
+                    <span className="block text-xs sm:text-sm text-indigo-600/70 dark:text-indigo-400/70 mt-1">Make sure you selected cycle and location above first.</span>
                   </div>
                 </>
               )}
             </button>
           </div>
         ) : (
-          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-6">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-              <h3 className="font-medium text-gray-900">Reconciliation Results</h3>
+          <div className="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] space-y-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="font-black text-slate-900 dark:text-white text-base">Reconciliation Results</h3>
               <button
                 onClick={() => {
+                  triggerHaptic('light');
                   setDifferences(null);
                   setFileName('');
                 }}
-                className="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="h-9 px-3.5 text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors active:scale-95"
               >
                 Start Over
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl">
-                <p className="text-sm text-gray-500">Aggregator Total Value</p>
-                <p className="text-2xl font-bold text-gray-900">₹{summary.aggVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+              <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 p-4 rounded-2xl shadow-xs">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Aggregator Total Value</p>
+                <p className="text-xl sm:text-2xl font-mono font-black text-slate-900 dark:text-white mt-1">₹{summary.aggVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
               </div>
-              <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl">
-                <p className="text-sm text-gray-500">Our System Total</p>
-                <p className="text-2xl font-bold text-gray-900">₹{summary.ourVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+              <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 p-4 rounded-2xl shadow-xs">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Our System Total</p>
+                <p className="text-xl sm:text-2xl font-mono font-black text-slate-900 dark:text-white mt-1">₹{summary.ourVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
               </div>
-              <div className={`p-4 rounded-xl border ${summary.diff === 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'}`}>
-                <p className="text-sm opacity-80">Difference</p>
-                <p className="text-2xl font-bold">₹{Math.abs(summary.diff).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
-                <p className="text-xs mt-1">{summary.diff > 0 ? "Aggregator is charging MORE" : summary.diff < 0 ? "Aggregator is charging LESS" : "Perfect Match"}</p>
+              <div className={`p-4 rounded-2xl border shadow-xs ${summary.diff === 0 ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200' : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200'}`}>
+                <p className="text-xs font-semibold opacity-80">Difference</p>
+                <p className="text-xl sm:text-2xl font-mono font-black mt-1">₹{Math.abs(summary.diff).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                <p className="text-[11px] font-bold mt-1">{summary.diff > 0 ? "Aggregator is charging MORE" : summary.diff < 0 ? "Aggregator is charging LESS" : "Perfect Match"}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 border-b border-gray-200">
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
               <button 
-                onClick={() => setFilterTab('all')} 
-                className={`px-4 py-2 text-sm font-medium border-b-2 ${filterTab === 'all' ? 'border-[#3b2fc9] text-[#3b2fc9]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                onClick={() => {
+                  triggerHaptic('light');
+                  setFilterTab('all');
+                }} 
+                className={`flex-1 h-10 px-3 rounded-xl text-xs font-black transition-all whitespace-nowrap active:scale-95 ${
+                  filterTab === 'all' 
+                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs' 
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
               >
-                All Items ({differences.length})
+                All ({differences.length})
               </button>
               <button 
-                onClick={() => setFilterTab('issues')} 
-                className={`px-4 py-2 text-sm font-medium border-b-2 ${filterTab === 'issues' ? 'border-rose-500 text-rose-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                onClick={() => {
+                  triggerHaptic('light');
+                  setFilterTab('issues');
+                }} 
+                className={`flex-1 h-10 px-3 rounded-xl text-xs font-black transition-all whitespace-nowrap active:scale-95 ${
+                  filterTab === 'issues' 
+                    ? 'bg-rose-600 text-white shadow-xs' 
+                    : 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30'
+                }`}
               >
                 Issues ({differences.filter(d => d.status !== 'match').length})
               </button>
               <button 
-                onClick={() => setFilterTab('matches')} 
-                className={`px-4 py-2 text-sm font-medium border-b-2 ${filterTab === 'matches' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                onClick={() => {
+                  triggerHaptic('light');
+                  setFilterTab('matches');
+                }} 
+                className={`flex-1 h-10 px-3 rounded-xl text-xs font-black transition-all whitespace-nowrap active:scale-95 ${
+                  filterTab === 'matches' 
+                    ? 'bg-emerald-600 text-white shadow-xs' 
+                    : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
+                }`}
               >
-                Perfect Matches ({differences.filter(d => d.status === 'match').length})
+                Matches ({differences.filter(d => d.status === 'match').length})
               </button>
             </div>
 
             {differences.filter(d => filterTab === 'all' || (filterTab === 'issues' && d.status !== 'match') || (filterTab === 'matches' && d.status === 'match')).length === 0 ? (
-              <div className="p-8 text-center bg-gray-50 border border-gray-100 rounded-xl">
-                <CheckCircle2 className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <h3 className="text-lg font-medium text-gray-600">No items found for this view.</h3>
+              <div className="p-10 text-center bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+                <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto mb-2 opacity-80" />
+                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">No items found for this view.</h3>
               </div>
             ) : (
-              <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+              <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
                 {/* Mobile Cards (md:hidden) */}
-                <div className="md:hidden divide-y divide-gray-100 max-h-[550px] overflow-y-auto">
+                <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800 max-h-[550px] overflow-y-auto">
                   {differences
                     .filter(d => filterTab === 'all' || (filterTab === 'issues' && d.status !== 'match') || (filterTab === 'matches' && d.status === 'match'))
                     .map((diff, idx) => (
-                      <div key={idx} className={`p-4 space-y-2.5 ${diff.status === 'match' ? 'bg-emerald-50/20' : diff.status === 'missing' ? 'bg-rose-50/20' : 'bg-amber-50/20'}`}>
+                      <div key={idx} className={`p-4 space-y-2.5 ${diff.status === 'match' ? 'bg-emerald-50/30 dark:bg-emerald-950/15' : diff.status === 'missing' ? 'bg-rose-50/30 dark:bg-rose-950/15' : 'bg-amber-50/30 dark:bg-amber-950/15'}`}>
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <span className="font-semibold text-gray-900 text-sm block leading-snug">
+                            <span className="font-bold text-slate-900 dark:text-white text-sm block leading-snug">
                               {diff.item}
                             </span>
-                            <span className="text-[11px] text-gray-500 font-mono mt-0.5 block truncate" title={diff.dcs.join(', ')}>
+                            <span className="text-[11px] text-slate-400 font-mono mt-0.5 block truncate" title={diff.dcs.join(', ')}>
                               DC: {diff.dcs.join(', ')}
                             </span>
                           </div>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold shrink-0 ${
-                            diff.status === 'match' ? 'bg-emerald-100 text-emerald-700' : diff.status === 'missing' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                            diff.status === 'match' ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300' : diff.status === 'missing' ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300' : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
                           }`}>
                             {diff.issue}
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 text-xs bg-white/80 p-2.5 rounded-lg border border-gray-100">
+                        <div className="grid grid-cols-2 gap-2 text-xs bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
                           <div>
-                            <span className="text-[10px] text-gray-400 uppercase font-semibold block">Aggregator</span>
-                            <span className="font-medium text-gray-800">{diff.aggQty} pcs</span>
-                            <span className="text-gray-500 block text-[11px]">₹{diff.aggVal.toLocaleString('en-IN')}</span>
+                            <span className="text-[10px] text-slate-400 uppercase font-bold block">Aggregator</span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{diff.aggQty} pcs</span>
+                            <span className="text-slate-500 font-mono block text-[11px]">₹{diff.aggVal.toLocaleString('en-IN')}</span>
                           </div>
                           <div className="text-right">
-                            <span className="text-[10px] text-gray-400 uppercase font-semibold block">Our Record</span>
-                            <span className="font-medium text-gray-800">{diff.ourQty} pcs</span>
-                            <span className="text-gray-500 block text-[11px]">₹{diff.ourVal.toLocaleString('en-IN')}</span>
+                            <span className="text-[10px] text-slate-400 uppercase font-bold block">Our Record</span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{diff.ourQty} pcs</span>
+                            <span className="text-slate-500 font-mono block text-[11px]">₹{diff.ourVal.toLocaleString('en-IN')}</span>
                           </div>
                         </div>
                       </div>
@@ -626,7 +682,7 @@ export default function ReconcilePage() {
                 {/* Desktop Table (hidden md:block) */}
                 <div className="hidden md:block overflow-x-auto max-h-[500px]">
                   <table className="w-full text-sm text-left min-w-[700px]">
-                    <thead className="bg-gray-50 text-gray-600 font-medium sticky top-0 shadow-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold sticky top-0 shadow-xs">
                       <tr>
                         <th className="px-4 py-3 border-b">DC Numbers</th>
                         <th className="px-4 py-3 border-b">Item Name</th>
@@ -637,21 +693,21 @@ export default function ReconcilePage() {
                         <th className="px-4 py-3 border-b">Issue</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
                       {differences
                         .filter(d => filterTab === 'all' || (filterTab === 'issues' && d.status !== 'match') || (filterTab === 'matches' && d.status === 'match'))
                         .map((diff, idx) => (
-                        <tr key={idx} className={`hover:bg-gray-50/50 ${diff.status === 'match' ? 'bg-emerald-50/30' : diff.status === 'missing' ? 'bg-rose-50/30' : 'bg-amber-50/30'}`}>
-                          <td className="px-4 py-3 font-medium text-gray-900 max-w-[150px] truncate" title={diff.dcs.join(', ')}>
+                        <tr key={idx} className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/50 ${diff.status === 'match' ? 'bg-emerald-50/20' : diff.status === 'missing' ? 'bg-rose-50/20' : 'bg-amber-50/20'}`}>
+                          <td className="px-4 py-3 font-mono font-medium text-slate-900 dark:text-white max-w-[150px] truncate" title={diff.dcs.join(', ')}>
                             {diff.dcs.join(', ')}
                           </td>
-                          <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate" title={diff.item}>{diff.item}</td>
-                          <td className="px-4 py-3 text-right text-gray-900">{diff.aggQty}</td>
-                          <td className="px-4 py-3 text-right text-gray-900">{diff.ourQty}</td>
-                          <td className="px-4 py-3 text-right font-medium text-gray-900">₹{diff.aggVal.toLocaleString('en-IN')}</td>
-                          <td className="px-4 py-3 text-right font-medium text-gray-900">₹{diff.ourVal.toLocaleString('en-IN')}</td>
+                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300 max-w-[200px] truncate" title={diff.item}>{diff.item}</td>
+                          <td className="px-4 py-3 text-right font-mono text-slate-900 dark:text-white">{diff.aggQty}</td>
+                          <td className="px-4 py-3 text-right font-mono text-slate-900 dark:text-white">{diff.ourQty}</td>
+                          <td className="px-4 py-3 text-right font-mono font-bold text-slate-900 dark:text-white">₹{diff.aggVal.toLocaleString('en-IN')}</td>
+                          <td className="px-4 py-3 text-right font-mono font-bold text-slate-900 dark:text-white">₹{diff.ourVal.toLocaleString('en-IN')}</td>
                           <td className="px-4 py-3">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
+                            <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold ${
                               diff.status === 'match' ? 'bg-emerald-100 text-emerald-700' : diff.status === 'missing' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
                             }`}>
                               {diff.issue}
@@ -668,59 +724,77 @@ export default function ReconcilePage() {
         )}
       </div>
 
+      {/* SKU Alias Modal -> Bottom Sheet on Mobile */}
       {isAliasModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-xl">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900">SKU Alias Dictionary</h2>
-              <button onClick={() => setIsAliasModalOpen(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom sm:zoom-in-95">
+            {/* Drag Handle on Mobile */}
+            <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800">
+              <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">SKU Alias Dictionary</h2>
+              <button 
+                onClick={() => {
+                  triggerHaptic('light');
+                  setIsAliasModalOpen(false);
+                }} 
+                className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
             
-            <div className="p-4 sm:p-5 border-b border-gray-100 bg-gray-50">
+            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
               <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
                 <input
                   type="text"
                   placeholder="Internal Name (e.g. Storia Banana Milkshake)"
                   value={aliasForm.internalName}
                   onChange={(e) => setAliasForm({...aliasForm, internalName: e.target.value})}
-                  className="flex-1 h-10 px-3 border border-gray-200 rounded-xl sm:rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
+                  className="flex-1 h-12 sm:h-10 px-3.5 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 bg-white dark:bg-slate-900"
                 />
                 <input
                   type="text"
                   placeholder="Aggregator Name (e.g. Storia Bnana shake)"
                   value={aliasForm.aggregatorName}
                   onChange={(e) => setAliasForm({...aliasForm, aggregatorName: e.target.value})}
-                  className="flex-1 h-10 px-3 border border-gray-200 rounded-xl sm:rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
+                  className="flex-1 h-12 sm:h-10 px-3.5 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 bg-white dark:bg-slate-900"
                 />
                 <button
-                  onClick={handleSaveAlias}
-                  className="h-10 px-5 bg-[#3b2fc9] text-white rounded-xl sm:rounded-lg font-semibold text-xs sm:text-sm hover:bg-[#3228ab] transition-colors shrink-0 shadow-xs"
+                  onClick={() => {
+                    triggerHaptic('medium');
+                    handleSaveAlias();
+                  }}
+                  className="h-12 sm:h-10 px-5 bg-indigo-600 text-white rounded-2xl font-black text-xs sm:text-sm hover:bg-indigo-700 active:scale-95 transition-all shrink-0 shadow-md"
                 >
                   Add Alias
                 </button>
               </div>
             </div>
             
-            <div className="overflow-y-auto p-5">
+            <div className="overflow-y-auto p-4 sm:p-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
               {aliases.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">No aliases created yet.</p>
+                <p className="text-xs sm:text-sm font-medium text-slate-400 text-center py-6">No aliases created yet.</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {aliases.map(alias => (
-                    <div key={alias.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-[#3b2fc9]/30 transition-colors">
+                    <div key={alias.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl shadow-xs gap-2">
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold uppercase text-[#3b2fc9]/70 w-24">Internal:</span>
-                          <span className="text-sm font-medium text-gray-900">{alias.internalName}</span>
+                          <span className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 w-20 shrink-0">Internal:</span>
+                          <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{alias.internalName}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold uppercase text-gray-400 w-24">Aggregator:</span>
-                          <span className="text-sm text-gray-600">{alias.aggregatorName}</span>
+                          <span className="text-[10px] font-black uppercase text-slate-400 w-20 shrink-0">Aggregator:</span>
+                          <span className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300">{alias.aggregatorName}</span>
                         </div>
                       </div>
                       <button
-                        onClick={() => handleDeleteAlias(alias.id)}
-                        className="mt-3 sm:mt-0 px-3 py-1.5 text-xs font-medium text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors"
+                        onClick={() => {
+                          triggerHaptic('medium');
+                          handleDeleteAlias(alias.id);
+                        }}
+                        className="h-8 px-3 text-xs font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 rounded-xl transition-all self-end sm:self-auto active:scale-95"
                       >
                         Delete
                       </button>

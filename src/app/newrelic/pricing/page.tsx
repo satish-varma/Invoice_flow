@@ -32,7 +32,11 @@ import {
   Layers,
   ArrowUpRight,
   Percent,
+  ArrowLeft,
+  Sparkles,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { triggerHaptic } from '@/lib/haptics';
 
 type EditRow = {
   brandName: string;
@@ -318,31 +322,48 @@ export default function PricingPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-8 py-6">
       {/* Header */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="h-5 w-5 text-[#3b2fc9]" />
-            <h1 className="text-xl font-bold text-gray-900">Procurement Pricing</h1>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                router.back();
+              }}
+              className="sm:hidden p-2 -ml-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 dark:bg-purple-400/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 text-[10px] sm:text-xs font-black tracking-widest uppercase">
+              <Sparkles className="h-3 w-3" />
+              <span>Procurement Rates</span>
+            </div>
           </div>
-          <p className="text-sm text-gray-500">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            Procurement Pricing
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             Set MRP and discount per item per location. These prices auto-fill P.Cost when creating new DCs.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => {
+              triggerHaptic('medium');
               setShowBulkModal(true);
               setBulkBrand(availableBrands[0] || '');
               setError('');
             }}
-            className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-3.5 py-2 rounded-lg text-sm font-semibold hover:from-purple-700 hover:to-indigo-700 shadow-xs transition-all"
+            className="flex-1 sm:flex-initial h-11 sm:h-10 px-3.5 rounded-2xl sm:rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs sm:text-sm font-bold hover:from-purple-700 hover:to-indigo-700 shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-2 active:scale-95"
           >
             <Sliders className="h-4 w-4" />
-            Batch Price Update
+            <span>Batch Update</span>
           </button>
 
           <button
             onClick={async () => {
+              triggerHaptic('medium');
               if (!confirm('This will populate the Pricing table from your existing DC history (latest data wins). Continue?')) return;
               setIsSeeding(true);
               setSeedResult(null);
@@ -359,58 +380,77 @@ export default function PricingPage() {
               }
             }}
             disabled={isSeeding || isCleaning || saving}
-            className="flex items-center gap-1.5 bg-white border border-gray-300 text-gray-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            className="flex-1 sm:flex-initial h-11 sm:h-10 px-3 rounded-2xl sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5 shadow-xs active:scale-95"
           >
             <RefreshCw className={`h-4 w-4 ${isSeeding ? 'animate-spin' : ''}`} />
-            {isSeeding ? 'Seeding…' : 'Seed from DC History'}
+            <span>{isSeeding ? 'Seeding…' : 'Seed History'}</span>
           </button>
           
           <button
-            onClick={handleCleanPricing}
+            onClick={() => {
+              triggerHaptic('medium');
+              handleCleanPricing();
+            }}
             disabled={isSeeding || isCleaning || saving}
-            className="flex items-center gap-1.5 bg-white border border-red-200 text-red-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-50 disabled:opacity-50 transition-colors"
+            className="h-11 sm:h-10 px-3 rounded-2xl sm:rounded-xl bg-white dark:bg-slate-900 border border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400 text-xs sm:text-sm font-bold hover:bg-red-50 dark:hover:bg-red-950/40 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5 shadow-xs active:scale-95"
           >
             <Trash2 className={`h-4 w-4 ${isCleaning ? 'animate-spin' : ''}`} />
-            {isCleaning ? 'Cleaning…' : 'Clean Orphaned Data'}
+            <span className="hidden sm:inline">{isCleaning ? 'Cleaning…' : 'Clean Orphaned'}</span>
           </button>
           <button
-            onClick={() => { setShowAdd(true); setNewRow(emptyEdit(activeLocation)); setError(''); setSeedResult(null); }}
-            className="flex items-center gap-1.5 bg-[#3b2fc9] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#2f25a8] transition-colors"
+            onClick={() => {
+              triggerHaptic('medium');
+              setShowAdd(true);
+              setNewRow(emptyEdit(activeLocation));
+              setError('');
+              setSeedResult(null);
+            }}
+            className="w-full sm:w-auto h-11 sm:h-10 px-4 rounded-2xl sm:rounded-xl bg-[#3b2fc9] hover:bg-[#2f25a8] text-white text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-md shadow-indigo-500/20 active:scale-95"
           >
-            <Plus className="h-4 w-4" /> Add Pricing Row
+            <Plus className="h-4 w-4" />
+            <span>Add Pricing Row</span>
           </button>
         </div>
       </div>
 
       {/* Seed result banner */}
       {seedResult && (
-        <div className="mb-3 px-3 py-2 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm flex items-center justify-between">
+        <div className="mb-3 px-3.5 py-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-300 rounded-2xl text-xs sm:text-sm font-medium flex items-center justify-between shadow-xs">
           <span>{seedResult}</span>
-          <button onClick={() => setSeedResult(null)} className="ml-2 text-green-500 hover:text-green-700"><X className="h-3.5 w-3.5" /></button>
+          <button onClick={() => setSeedResult(null)} className="ml-2 text-emerald-600 hover:text-emerald-800 p-1"><X className="h-3.5 w-3.5" /></button>
         </div>
       )}
 
       {/* Location Tabs + Filter Pills Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         {/* Location switcher */}
-        <div className="w-full sm:w-auto flex p-1 bg-gray-100 rounded-xl border border-gray-200/80 shadow-2xs">
+        <div className="w-full sm:w-auto flex p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
           {locations.map(loc => {
             const isSelected = activeLocation === loc;
             const count = pricingItems.filter(i => i.location === loc).length;
             return (
               <button
                 key={loc}
-                onClick={() => { setActiveLocation(loc); setEditingId(null); setShowAdd(false); }}
-                className={`flex-1 sm:flex-initial px-4 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-bold sm:font-medium transition-all flex items-center justify-center gap-1.5 active:scale-98 ${
+                onClick={() => {
+                  triggerHaptic('light');
+                  setActiveLocation(loc);
+                  setEditingId(null);
+                  setShowAdd(false);
+                }}
+                className={cn(
+                  "flex-1 sm:flex-initial h-10 px-4 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 active:scale-95",
                   isSelected
-                    ? 'bg-white text-[#3b2fc9] shadow-xs'
-                    : 'text-gray-500 hover:text-gray-800'
-                }`}
+                    ? 'bg-white dark:bg-slate-900 text-[#3b2fc9] dark:text-white shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
+                )}
               >
                 <span>{NEWRELIC_LOCATIONS[loc].label}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-medium ${
-                  isSelected ? 'bg-indigo-50 text-[#3b2fc9]' : 'bg-gray-200/70 text-gray-500'
-                }`}>
+                <span className={cn(
+                  "text-[10px] px-2 py-0.5 rounded-full font-mono font-bold",
+                  isSelected
+                    ? 'bg-indigo-50 dark:bg-indigo-950 text-[#3b2fc9] dark:text-indigo-400'
+                    : 'bg-slate-200/70 dark:bg-slate-700 text-slate-500'
+                )}>
                   {count}
                 </span>
               </button>
@@ -421,63 +461,78 @@ export default function PricingPage() {
         {/* Missing Rate Audit Filter Pills */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
           <button
-            onClick={() => setFilterMode('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors shrink-0 ${
+            onClick={() => {
+              triggerHaptic('light');
+              setFilterMode('all');
+            }}
+            className={cn(
+              "h-10 sm:h-9 px-3.5 rounded-2xl text-xs font-black whitespace-nowrap transition-all shrink-0 active:scale-95 shadow-xs",
               filterMode === 'all'
-                ? 'bg-gray-800 text-white'
-                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}
+                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                : 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50'
+            )}
           >
             All Items ({locationItems.length})
           </button>
 
           <button
-            onClick={() => setFilterMode('missing-cost')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-colors shrink-0 ${
+            onClick={() => {
+              triggerHaptic('light');
+              setFilterMode('missing-cost');
+            }}
+            className={cn(
+              "h-10 sm:h-9 px-3.5 rounded-2xl text-xs font-black whitespace-nowrap flex items-center gap-1.5 transition-all shrink-0 active:scale-95 shadow-xs",
               filterMode === 'missing-cost'
-                ? 'bg-red-600 text-white shadow-xs'
+                ? 'bg-red-600 text-white shadow-sm'
                 : missingCostCount > 0
-                ? 'bg-red-50 border border-red-200 text-red-700 hover:bg-red-100'
-                : 'bg-white border border-gray-200 text-gray-400 opacity-60'
-            }`}
+                ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 hover:bg-red-100'
+                : 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-400 opacity-60'
+            )}
           >
             <AlertTriangle className="h-3.5 w-3.5" />
-            Missing P.Cost ({missingCostCount})
+            <span>Missing P.Cost ({missingCostCount})</span>
           </button>
 
           <button
-            onClick={() => setFilterMode('missing-mrp')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-colors shrink-0 ${
+            onClick={() => {
+              triggerHaptic('light');
+              setFilterMode('missing-mrp');
+            }}
+            className={cn(
+              "h-10 sm:h-9 px-3.5 rounded-2xl text-xs font-black whitespace-nowrap flex items-center gap-1.5 transition-all shrink-0 active:scale-95 shadow-xs",
               filterMode === 'missing-mrp'
-                ? 'bg-amber-600 text-white shadow-xs'
+                ? 'bg-amber-600 text-white shadow-sm'
                 : missingMrpCount > 0
-                ? 'bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100'
-                : 'bg-white border border-gray-200 text-gray-400 opacity-60'
-            }`}
+                ? 'bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-700 dark:text-amber-300 hover:bg-amber-100'
+                : 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-400 opacity-60'
+            )}
           >
             <AlertTriangle className="h-3.5 w-3.5" />
-            Missing MRP ({missingMrpCount})
+            <span>Missing MRP ({missingMrpCount})</span>
           </button>
         </div>
       </div>
 
       {/* Search */}
-      <div className="relative mb-4 max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+      <div className="relative mb-4 max-w-md">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
         <input
           type="text"
           placeholder="Search brand or item..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 bg-white"
+          className="w-full h-12 sm:h-10 pl-10 pr-10 text-sm font-medium border border-slate-200/80 dark:border-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white dark:bg-slate-900 shadow-xs text-slate-900 dark:text-white"
         />
         {search && (
           <button
-            onClick={() => setSearch('')}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-100"
+            onClick={() => {
+              triggerHaptic('light');
+              setSearch('');
+            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             title="Clear search"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-4 w-4" />
           </button>
         )}
       </div>
@@ -603,33 +658,38 @@ export default function PricingPage() {
           {/* ── Mobile Card List View (< md) ── */}
           <div className="md:hidden space-y-3">
             {filteredItems.map(item => (
-              <div key={item.id} className="bg-white rounded-2xl border border-gray-200 p-4 shadow-2xs space-y-3">
+              <div key={item.id} className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 p-4 shadow-xs space-y-3">
                 {editingId === item.id ? (
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-                      <span className="text-xs font-bold text-[#3b2fc9]">Edit Pricing</span>
-                      <span className="text-xs font-medium text-gray-500">{item.brandName}</span>
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-indigo-50 dark:bg-indigo-950/50 rounded-xl text-[#3b2fc9]">
+                          <Pencil className="h-4 w-4" />
+                        </div>
+                        <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Edit Rate</span>
+                      </div>
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{item.brandName}</span>
                     </div>
                     <div className="space-y-2.5">
                       <div>
-                        <label className="text-[11px] font-semibold text-gray-500 mb-0.5 block">Brand Name</label>
+                        <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Brand Name</label>
                         <input
                           list="pricing-brands-edit-mob"
                           value={editRow.brandName}
                           onChange={e => setEditRow(r => ({ ...r, brandName: e.target.value }))}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20"
+                          className="w-full h-11 px-3 text-sm font-medium border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20"
                         />
                         <datalist id="pricing-brands-edit-mob">
                           {availableBrands.map(b => <option key={b} value={b} />)}
                         </datalist>
                       </div>
                       <div>
-                        <label className="text-[11px] font-semibold text-gray-500 mb-0.5 block">Item Name</label>
+                        <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Item Name</label>
                         <input
                           list="pricing-items-edit-mob"
                           value={editRow.itemName}
                           onChange={e => setEditRow(r => ({ ...r, itemName: e.target.value }))}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20"
+                          className="w-full h-11 px-3 text-sm font-medium border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20"
                         />
                         <datalist id="pricing-items-edit-mob">
                           {getCatalogItemsForBrand(editRow.brandName).map(it => <option key={it} value={it} />)}
@@ -637,7 +697,7 @@ export default function PricingPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[11px] font-semibold text-gray-500 mb-0.5 block">MRP (₹)</label>
+                          <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">MRP (₹)</label>
                           <input
                             type="number"
                             value={editRow.mrp}
@@ -645,11 +705,11 @@ export default function PricingPage() {
                               const updated = { ...r, mrp: e.target.value };
                               return { ...updated, purchaseCost: autoCalcCost(e.target.value, r.discountPercent) };
                             })}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white text-right font-medium"
+                            className="w-full h-11 px-3 text-sm font-mono font-bold border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-right"
                           />
                         </div>
                         <div>
-                          <label className="text-[11px] font-semibold text-gray-500 mb-0.5 block">Disc (%)</label>
+                          <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Disc (%)</label>
                           <input
                             type="number"
                             value={editRow.discountPercent}
@@ -657,39 +717,46 @@ export default function PricingPage() {
                               const updated = { ...r, discountPercent: e.target.value };
                               return { ...updated, purchaseCost: autoCalcCost(r.mrp, e.target.value) };
                             })}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white text-right font-medium"
+                            className="w-full h-11 px-3 text-sm font-mono font-bold border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-right"
                           />
                         </div>
                         <div>
-                          <label className="text-[11px] font-semibold text-gray-500 mb-0.5 block">P.Cost (₹)</label>
+                          <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">P.Cost (₹)</label>
                           <input
                             type="number"
                             value={editRow.purchaseCost}
                             onChange={e => setEditRow(r => ({ ...r, purchaseCost: e.target.value }))}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white text-right font-bold text-[#3b2fc9]"
+                            className="w-full h-11 px-3 text-sm font-mono font-black border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-[#3b2fc9] dark:text-indigo-400 text-right"
                           />
                         </div>
                         <div>
-                          <label className="text-[11px] font-semibold text-gray-500 mb-0.5 block">Effective Date</label>
+                          <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5 block">Effective Date</label>
                           <input
                             type="date"
                             value={editRow.effectiveDate}
                             onChange={e => setEditRow(r => ({ ...r, effectiveDate: e.target.value }))}
-                            className="w-full px-2 py-2 text-xs border border-gray-300 rounded-xl bg-white"
+                            className="w-full h-11 px-2.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                           />
                         </div>
                       </div>
                       <div className="flex gap-2 pt-1">
                         <button
-                          onClick={handleSaveEdit}
+                          onClick={() => {
+                            triggerHaptic('medium');
+                            handleSaveEdit();
+                          }}
                           disabled={saving}
-                          className="flex-1 py-2.5 rounded-xl bg-[#3b2fc9] text-white text-xs font-semibold hover:bg-[#2d23a0] flex items-center justify-center gap-1.5 shadow-xs active:scale-95"
+                          className="flex-1 h-11 rounded-xl bg-gradient-to-r from-[#3b2fc9] to-indigo-600 text-white text-xs font-bold hover:from-[#2d23a0] hover:to-indigo-700 flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/20 active:scale-95 transition-all"
                         >
                           <Check className="h-4 w-4" /> Save
                         </button>
                         <button
-                          onClick={() => { setEditingId(null); setError(''); }}
-                          className="py-2.5 px-4 rounded-xl border border-gray-200 bg-white text-gray-600 text-xs font-medium hover:bg-gray-50"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setEditingId(null);
+                            setError('');
+                          }}
+                          className="h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 transition-all active:scale-95"
                         >
                           Cancel
                         </button>
@@ -702,55 +769,55 @@ export default function PricingPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-bold text-[11px] bg-indigo-50 text-[#3b2fc9] px-2 py-0.5 rounded-md border border-indigo-100">
+                          <span className="font-black text-[10px] uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/60 text-[#3b2fc9] dark:text-indigo-400 px-2.5 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-900/60">
                             {item.brandName}
                           </span>
                           {(!item.purchaseCost || item.purchaseCost <= 0) && (
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-red-100 text-red-700">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/60">
                               Zero Cost
                             </span>
                           )}
                           {(!item.mrp || item.mrp <= 0) && (
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-700">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900/60">
                               No MRP
                             </span>
                           )}
                         </div>
-                        <p className="font-semibold text-gray-900 text-sm mt-1 leading-snug">
+                        <p className="font-bold text-slate-900 dark:text-white text-sm mt-1 leading-snug">
                           {item.itemName}
                         </p>
                       </div>
                     </div>
 
                     {/* Metrics 3-box Grid */}
-                    <div className="grid grid-cols-3 gap-2 bg-gray-50/80 rounded-xl p-2.5 border border-gray-100">
+                    <div className="grid grid-cols-3 gap-2 bg-slate-50/80 dark:bg-slate-800/50 rounded-2xl p-2.5 border border-slate-100 dark:border-slate-800">
                       <div>
-                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">MRP</p>
-                        <p className="text-xs font-bold text-gray-800 mt-0.5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">MRP</p>
+                        <p className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200 mt-0.5">
                           {item.mrp > 0 ? `₹${item.mrp.toFixed(2)}` : <span className="text-red-400">₹0.00</span>}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Discount</p>
-                        <p className="text-xs font-bold text-emerald-600 mt-0.5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Discount</p>
+                        <p className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
                           {item.discountPercent}%
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">P.Cost</p>
-                        <p className="text-sm font-extrabold text-[#3b2fc9] mt-0.5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">P.Cost</p>
+                        <p className="text-sm font-mono font-black text-[#3b2fc9] dark:text-indigo-400 mt-0.5">
                           {item.purchaseCost > 0 ? `₹${item.purchaseCost.toFixed(2)}` : <span className="text-red-500">₹0.00</span>}
                         </p>
                       </div>
                     </div>
 
                     {/* Card Footer: Effective date & actions */}
-                    <div className="flex items-center justify-between pt-1 border-t border-gray-100 text-xs">
-                      <div className="flex items-center gap-1.5 text-gray-400 text-[11px]">
-                        <Calendar className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800 text-xs">
+                      <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-medium">
+                        <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                         <span>{item.effectiveDate || 'Initial'}</span>
                         {item.history && item.history.length > 0 && (
-                          <span className="text-[#3b2fc9] font-semibold">
+                          <span className="text-[#3b2fc9] dark:text-indigo-400 font-bold">
                             ({item.history.length} rev)
                           </span>
                         )}
@@ -759,23 +826,32 @@ export default function PricingPage() {
                       <div className="flex items-center gap-1">
                         {item.history && item.history.length > 0 && (
                           <button
-                            onClick={() => setHistoryItem(item)}
-                            className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-gray-100 active:scale-95"
+                            onClick={() => {
+                              triggerHaptic('light');
+                              setHistoryItem(item);
+                            }}
+                            className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-800 rounded-xl transition-colors active:scale-95"
                             title="View Price History"
                           >
                             <History className="h-4 w-4" />
                           </button>
                         )}
                         <button
-                          onClick={() => startEdit(item)}
-                          className="p-1.5 text-gray-600 hover:text-[#3b2fc9] hover:bg-blue-50 rounded-lg transition-colors border border-gray-100 active:scale-95"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            startEdit(item);
+                          }}
+                          className="p-2 text-slate-600 hover:text-[#3b2fc9] hover:bg-blue-50 dark:hover:bg-slate-800 rounded-xl transition-colors active:scale-95"
                           title="Edit"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(item.id!)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-100 active:scale-95"
+                          onClick={() => {
+                            triggerHaptic('medium');
+                            handleDelete(item.id!);
+                          }}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition-colors active:scale-95"
                           title="Delete"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -952,19 +1028,26 @@ export default function PricingPage() {
 
       {/* ─── Batch Price Update Modal ─── */}
       {showBulkModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-md w-full p-5 sm:p-6 space-y-4 max-h-[92vh] overflow-y-auto pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom duration-200 border-t sm:border border-slate-200 dark:border-slate-800">
+            <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto -mt-1 mb-2 shrink-0" />
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-purple-100 text-purple-700 rounded-xl">
+                <div className="p-2 bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 rounded-2xl">
                   <Sliders className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900 text-base">Batch Price Update</h3>
-                  <p className="text-xs text-gray-500">Update rates across an entire brand in {NEWRELIC_LOCATIONS[activeLocation].label}</p>
+                  <h3 className="font-black text-slate-900 dark:text-white text-base">Batch Price Update</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Update rates across an entire brand in {NEWRELIC_LOCATIONS[activeLocation].label}</p>
                 </div>
               </div>
-              <button onClick={() => setShowBulkModal(false)} className="text-gray-400 hover:text-gray-600 p-1">
+              <button
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowBulkModal(false);
+                }}
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -972,60 +1055,75 @@ export default function PricingPage() {
             <div className="space-y-3.5 text-xs">
               {/* Select Brand */}
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Target Brand</label>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Target Brand</label>
                 <select
                   value={bulkBrand}
                   onChange={(e) => setBulkBrand(e.target.value)}
-                  className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+                  className="w-full h-11 px-3 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
                 >
                   <option value="">-- Choose Brand --</option>
                   {availableBrands.map((b) => (
                     <option key={b} value={b}>{b}</option>
                   ))}
                 </select>
-                <p className="text-[11px] text-gray-400 mt-1">
+                <p className="text-[11px] text-slate-400 mt-1">
                   Affects all {locationItems.filter(i => i.brandName.toLowerCase() === bulkBrand.toLowerCase()).length} items currently configured under this brand.
                 </p>
               </div>
 
               {/* Update Strategy Mode */}
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Update Strategy</label>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Update Strategy</label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
-                    onClick={() => { setBulkMode('percentage_increase'); setBulkValue(5); }}
-                    className={`p-2 rounded-lg border text-center transition-all ${
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setBulkMode('percentage_increase');
+                      setBulkValue(5);
+                    }}
+                    className={cn(
+                      "p-2.5 rounded-2xl border text-center transition-all active:scale-95",
                       bulkMode === 'percentage_increase'
-                        ? 'border-purple-600 bg-purple-50 text-purple-800 font-bold'
-                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
+                        ? 'border-purple-600 bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 font-bold shadow-xs'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                    )}
                   >
-                    <ArrowUpRight className="h-4 w-4 mx-auto mb-0.5 text-purple-600" />
+                    <ArrowUpRight className="h-4 w-4 mx-auto mb-0.5 text-purple-600 dark:text-purple-400" />
                     +X% Inflation
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setBulkMode('set_discount'); setBulkValue(20); }}
-                    className={`p-2 rounded-lg border text-center transition-all ${
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setBulkMode('set_discount');
+                      setBulkValue(20);
+                    }}
+                    className={cn(
+                      "p-2.5 rounded-2xl border text-center transition-all active:scale-95",
                       bulkMode === 'set_discount'
-                        ? 'border-purple-600 bg-purple-50 text-purple-800 font-bold'
-                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
+                        ? 'border-purple-600 bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 font-bold shadow-xs'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                    )}
                   >
-                    <Percent className="h-4 w-4 mx-auto mb-0.5 text-purple-600" />
+                    <Percent className="h-4 w-4 mx-auto mb-0.5 text-purple-600 dark:text-purple-400" />
                     Set Disc %
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setBulkMode('fixed_increase'); setBulkValue(2); }}
-                    className={`p-2 rounded-lg border text-center transition-all ${
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setBulkMode('fixed_increase');
+                      setBulkValue(2);
+                    }}
+                    className={cn(
+                      "p-2.5 rounded-2xl border text-center transition-all active:scale-95",
                       bulkMode === 'fixed_increase'
-                        ? 'border-purple-600 bg-purple-50 text-purple-800 font-bold'
-                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
+                        ? 'border-purple-600 bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 font-bold shadow-xs'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                    )}
                   >
-                    <Layers className="h-4 w-4 mx-auto mb-0.5 text-purple-600" />
+                    <Layers className="h-4 w-4 mx-auto mb-0.5 text-purple-600 dark:text-purple-400" />
                     Flat ₹ Shift
                   </button>
                 </div>
@@ -1034,9 +1132,9 @@ export default function PricingPage() {
               {/* Field to apply to */}
               {bulkMode !== 'set_discount' && (
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Apply Multiplier To</label>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Apply Multiplier To</label>
                   <div className="flex gap-4">
-                    <label className="flex items-center gap-1.5 cursor-pointer">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-slate-800 dark:text-slate-200 font-medium">
                       <input
                         type="radio"
                         checked={bulkApplyTo === 'purchaseCost'}
@@ -1045,7 +1143,7 @@ export default function PricingPage() {
                       />
                       <span>Purchase Cost (P.Cost)</span>
                     </label>
-                    <label className="flex items-center gap-1.5 cursor-pointer">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-slate-800 dark:text-slate-200 font-medium">
                       <input
                         type="radio"
                         checked={bulkApplyTo === 'mrp'}
@@ -1060,7 +1158,7 @@ export default function PricingPage() {
 
               {/* Multiplier Value */}
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
                   {bulkMode === 'percentage_increase' ? 'Percentage Adjustment (+ / - %)' : bulkMode === 'set_discount' ? 'Uniform Discount (%)' : 'Flat Amount (₹)'}
                 </label>
                 <input
@@ -1068,39 +1166,45 @@ export default function PricingPage() {
                   step="0.1"
                   value={bulkValue}
                   onChange={(e) => setBulkValue(parseFloat(e.target.value) || 0)}
-                  className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+                  className="w-full h-11 px-3 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   placeholder="e.g. 5"
                 />
               </div>
 
               {/* Effective Date */}
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Effective Date for New Prices</label>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Effective Date for New Prices</label>
                 <input
                   type="date"
                   value={bulkEffectiveDate}
                   onChange={(e) => setBulkEffectiveDate(e.target.value)}
-                  className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+                  className="w-full h-11 px-3 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
-                <p className="text-[11px] text-gray-400 mt-1">
+                <p className="text-[11px] text-slate-400 mt-1">
                   Historical DCs dated prior to this date will preserve their original pricing.
                 </p>
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2 border-t border-gray-100">
+            <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
-                onClick={() => setShowBulkModal(false)}
-                className="flex-1 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowBulkModal(false);
+                }}
+                className="flex-1 h-11 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 transition-all active:scale-95"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleBulkUpdate}
+                onClick={() => {
+                  triggerHaptic('medium');
+                  handleBulkUpdate();
+                }}
                 disabled={isBulkUpdating || !bulkBrand}
-                className="flex-1 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs font-bold shadow-sm"
+                className="flex-1 h-11 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-all active:scale-95"
               >
                 {isBulkUpdating ? 'Updating…' : 'Apply Batch Update'}
               </button>
@@ -1111,52 +1215,59 @@ export default function PricingPage() {
 
       {/* ─── Price History Audit Modal ─── */}
       {historyItem && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-lg w-full p-5 sm:p-6 space-y-4 max-h-[92vh] overflow-y-auto pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom duration-200 border-t sm:border border-slate-200 dark:border-slate-800">
+            <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto -mt-1 mb-2 shrink-0" />
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-indigo-100 text-indigo-700 rounded-xl">
+                <div className="p-2 bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 rounded-2xl">
                   <History className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900 text-base">{historyItem.itemName}</h3>
-                  <p className="text-xs text-gray-500">{historyItem.brandName} · {NEWRELIC_LOCATIONS[historyItem.location].label}</p>
+                  <h3 className="font-black text-slate-900 dark:text-white text-base">{historyItem.itemName}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{historyItem.brandName} · {NEWRELIC_LOCATIONS[historyItem.location].label}</p>
                 </div>
               </div>
-              <button onClick={() => setHistoryItem(null)} className="text-gray-400 hover:text-gray-600 p-1">
+              <button
+                onClick={() => {
+                  triggerHaptic('light');
+                  setHistoryItem(null);
+                }}
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <div className="space-y-3">
               {/* Current active rate */}
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Current Active Rate</span>
+              <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 rounded-2xl p-3 text-xs">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 block">Current Active Rate</span>
                 <div className="flex items-center justify-between mt-1">
                   <div>
-                    <span className="font-bold text-emerald-950 text-sm">₹{historyItem.purchaseCost.toFixed(2)}</span>
-                    <span className="text-emerald-700 ml-2">MRP: ₹{historyItem.mrp.toFixed(2)} ({historyItem.discountPercent}% off)</span>
+                    <span className="font-mono font-black text-emerald-950 dark:text-emerald-100 text-sm">₹{historyItem.purchaseCost.toFixed(2)}</span>
+                    <span className="text-emerald-700 dark:text-emerald-300 ml-2 font-mono text-[11px]">MRP: ₹{historyItem.mrp.toFixed(2)} ({historyItem.discountPercent}% off)</span>
                   </div>
-                  <span className="text-[11px] font-semibold text-emerald-800">Effective Since: {historyItem.effectiveDate || 'Initial'}</span>
+                  <span className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-200">Effective: {historyItem.effectiveDate || 'Initial'}</span>
                 </div>
               </div>
 
               {/* Historical logs */}
               <div>
-                <h4 className="text-xs font-bold text-gray-700 mb-2">Previous Rate Timeline</h4>
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Previous Rate Timeline</h4>
                 {(!historyItem.history || historyItem.history.length === 0) ? (
-                  <p className="text-xs text-gray-400 py-4 text-center">No previous revisions recorded.</p>
+                  <p className="text-xs text-slate-400 py-4 text-center">No previous revisions recorded.</p>
                 ) : (
                   <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                     {historyItem.history.slice().reverse().map((h, idx) => (
-                      <div key={idx} className="border border-gray-100 rounded-lg p-2.5 bg-gray-50/70 text-xs flex items-center justify-between">
+                      <div key={idx} className="border border-slate-100 dark:border-slate-800 rounded-xl p-2.5 bg-slate-50/70 dark:bg-slate-800/40 text-xs flex items-center justify-between">
                         <div>
-                          <p className="font-semibold text-gray-800">P.Cost: ₹{h.purchaseCost.toFixed(2)}</p>
-                          <p className="text-[11px] text-gray-500">MRP: ₹{h.mrp.toFixed(2)} · {h.discountPercent}% Disc</p>
+                          <p className="font-mono font-bold text-slate-800 dark:text-slate-200">P.Cost: ₹{h.purchaseCost.toFixed(2)}</p>
+                          <p className="text-[11px] font-mono text-slate-500">MRP: ₹{h.mrp.toFixed(2)} · {h.discountPercent}% Disc</p>
                         </div>
                         <div className="text-right">
-                          <span className="text-[11px] font-medium text-gray-600 block">Valid around {h.effectiveDate}</span>
-                          {h.updatedBy && <span className="text-[10px] text-gray-400 block">{h.updatedBy}</span>}
+                          <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300 block">Valid around {h.effectiveDate}</span>
+                          {h.updatedBy && <span className="text-[10px] text-slate-400 block">{h.updatedBy}</span>}
                         </div>
                       </div>
                     ))}
@@ -1165,11 +1276,14 @@ export default function PricingPage() {
               </div>
             </div>
 
-            <div className="pt-2 border-t border-gray-100">
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
-                onClick={() => setHistoryItem(null)}
-                className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setHistoryItem(null);
+                }}
+                className="w-full h-11 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-2xl active:scale-95 transition-all"
               >
                 Close
               </button>

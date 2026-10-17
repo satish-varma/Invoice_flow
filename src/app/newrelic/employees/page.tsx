@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Users, UserPlus, Search, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Users, UserPlus, Search, Loader2, ArrowLeft, Sparkles, X, MapPin, IndianRupee } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { NewRelicEmployee } from '@/types/employee';
@@ -13,8 +14,11 @@ import {
 } from '@/services/newrelicEmployeeService';
 import { EmployeeForm } from '@/components/newrelic/employee/employee-form';
 import { EmployeeList } from '@/components/newrelic/employee/employee-list';
+import { triggerHaptic } from '@/lib/haptics';
+import { cn } from '@/lib/utils';
 
 export default function EmployeesPage() {
+  const router = useRouter();
   const { toast } = useToast();
   const { user, role } = useAuth();
   const [employees, setEmployees] = useState<NewRelicEmployee[]>([]);
@@ -58,12 +62,14 @@ export default function EmployeesPage() {
   };
 
   const handleEdit = (emp: NewRelicEmployee) => {
+    triggerHaptic('light');
     setEditEmployee(emp);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (emp: NewRelicEmployee) => {
+    triggerHaptic('medium');
     if (!confirm(`Delete ${emp.name}? This cannot be undone.`)) return;
     try {
       await deleteEmployee(emp.id!);
@@ -75,6 +81,7 @@ export default function EmployeesPage() {
   };
 
   const handleCancel = () => {
+    triggerHaptic('light');
     setShowForm(false);
     setEditEmployee(null);
   };
@@ -97,64 +104,112 @@ export default function EmployeesPage() {
   const totalSalary = siteScopedEmployees.filter(e => e.isActive).reduce((s, e) => s + (e.monthlySalary || 0), 0);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-3 sm:px-8 py-4 sm:py-8 space-y-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="max-w-4xl mx-auto px-4 sm:px-8 py-5 sm:py-8 space-y-6">
+
+        {/* Large Title Mobile Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  triggerHaptic('light');
+                  router.back();
+                }}
+                className="sm:hidden p-2 -ml-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95"
+                aria-label="Go back"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 dark:bg-blue-400/10 border border-blue-500/20 text-[#3b2fc9] dark:text-blue-400 text-[10px] sm:text-xs font-black tracking-widest uppercase">
+                <Sparkles className="h-3 w-3" />
+                <span>HR & Staff Hub</span>
+              </div>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              Team Roster
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              Manage staff profiles, designated sites, base salary, and shift timings
+            </p>
+          </div>
+
+          {isAdmin && !showForm && (
+            <button
+              onClick={() => {
+                triggerHaptic('medium');
+                setEditEmployee(null);
+                setShowForm(true);
+              }}
+              className="w-full sm:w-auto h-12 sm:h-10 px-5 rounded-2xl sm:rounded-xl bg-gradient-to-r from-[#3b2fc9] to-indigo-600 hover:from-[#2f25a8] hover:to-indigo-700 text-white text-sm font-bold shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
+            >
+              <UserPlus className="h-4 w-4" />
+              <span>Add Employee</span>
+            </button>
+          )}
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Total Employees" value={siteScopedEmployees.length} color="text-[#3b2fc9]" bg="bg-[#3b2fc9]/5" />
-          <StatCard label="Hyderabad" value={hydCount} color="text-blue-600" bg="bg-blue-50" />
-          <StatCard label="Bangalore" value={blrCount} color="text-emerald-600" bg="bg-emerald-50" />
+          <StatCard label="Total Staff" value={siteScopedEmployees.length} color="text-[#3b2fc9] dark:text-indigo-400" icon={<Users className="h-4 w-4 text-[#3b2fc9]" />} />
+          <StatCard label="Hyderabad" value={hydCount} color="text-blue-600 dark:text-blue-400" icon={<MapPin className="h-4 w-4 text-blue-600" />} />
+          <StatCard label="Bangalore" value={blrCount} color="text-emerald-600 dark:text-emerald-400" icon={<MapPin className="h-4 w-4 text-emerald-600" />} />
           {isAdmin && (
             <StatCard
-              label="Monthly Payroll"
-              value={`\u20b9${(totalSalary / 1000).toFixed(0)}K`}
-              color="text-amber-600"
-              bg="bg-amber-50"
+              label="Payroll"
+              value={`₹${(totalSalary / 1000).toFixed(0)}K`}
+              color="text-amber-600 dark:text-amber-400"
+              icon={<IndianRupee className="h-4 w-4 text-amber-600" />}
               isText
             />
           )}
         </div>
 
-        {/* Add button */}
-        {isAdmin && !showForm && (
-          <button
-            onClick={() => { setEditEmployee(null); setShowForm(true); }}
-            className="w-full sm:w-auto flex items-center gap-2 bg-[#3b2fc9] text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-[#3b2fc9]/90 shadow-sm"
-          >
-            <UserPlus className="h-4 w-4" />
-            Add Employee
-          </button>
-        )}
-
         {/* Form */}
         {showForm && isAdmin && (
-          <EmployeeForm
-            initialData={editEmployee}
-            onSave={handleSave}
-            onCancel={handleCancel}
-            isSaving={isSaving}
-          />
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-md">
+            <EmployeeForm
+              initialData={editEmployee}
+              onSave={handleSave}
+              onCancel={handleCancel}
+              isSaving={isSaving}
+            />
+          </div>
         )}
 
         {/* Search + Filter */}
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-2.5">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, ID, designation…"
-              className="w-full h-9 pl-9 pr-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
+              className="w-full h-12 sm:h-10 pl-10 pr-10 border border-slate-200/80 dark:border-slate-800 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white dark:bg-slate-900 shadow-xs text-slate-900 dark:text-white"
             />
+            {search && (
+              <button
+                onClick={() => {
+                  triggerHaptic('light');
+                  setSearch('');
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           {isAdmin && (
             <select
               value={filterSite}
-              onChange={(e) => setFilterSite(e.target.value)}
-              className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white font-medium"
+              onChange={(e) => {
+                triggerHaptic('light');
+                setFilterSite(e.target.value);
+              }}
+              className="h-12 sm:h-10 px-3.5 border border-slate-200/80 dark:border-slate-800 rounded-2xl text-xs sm:text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 shadow-xs"
             >
-              <option value="all">All Sites</option>
+              <option value="all">🏢 All Sites</option>
               {SITE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -164,10 +219,13 @@ export default function EmployeesPage() {
           )}
           <select
             value={filterLoc}
-            onChange={(e) => setFilterLoc(e.target.value)}
-            className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white"
+            onChange={(e) => {
+              triggerHaptic('light');
+              setFilterLoc(e.target.value);
+            }}
+            className="h-12 sm:h-10 px-3.5 border border-slate-200/80 dark:border-slate-800 rounded-2xl text-xs sm:text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 shadow-xs"
           >
-            <option value="all">All Locations</option>
+            <option value="all">📍 All Locations</option>
             <option value="hyderabad">Hyderabad</option>
             <option value="bangalore">Bangalore</option>
           </select>
@@ -176,7 +234,7 @@ export default function EmployeesPage() {
         {/* List */}
         {isLoading ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#3b2fc9]" />
           </div>
         ) : (
           <EmployeeList
@@ -195,19 +253,25 @@ function StatCard({
   label,
   value,
   color,
-  bg,
+  icon,
   isText,
 }: {
   label: string;
   value: number | string;
   color: string;
-  bg: string;
+  icon?: React.ReactNode;
   isText?: boolean;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-      <p className={`${isText ? 'text-lg' : 'text-2xl'} font-bold ${color}`}>{value}</p>
-      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+    <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] p-3.5 sm:p-4 space-y-1">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+        {icon && <div className="p-1.5 rounded-xl bg-slate-50 dark:bg-slate-800">{icon}</div>}
+      </div>
+      <p className={cn("font-mono font-black", color, isText ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl')}>
+        {value}
+      </p>
     </div>
   );
 }
+

@@ -12,10 +12,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Plus, Trash2, Edit2, ShieldAlert, Sparkles, Compass, CheckCircle2 } from 'lucide-react';
+import { Loader2, Plus, Trash2, Edit2, ShieldAlert, Sparkles, Compass, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { SiteId, COMPANY_SITES, resolveSiteId } from '@/types/site';
+import { triggerHaptic } from '@/lib/haptics';
+import { cn } from '@/lib/utils';
 import {
   PermissionKey,
   PERMISSION_CATEGORIES,
@@ -329,31 +331,56 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2 tracking-tight">
-            <ShieldAlert className="h-6 w-6 text-[#3b2fc9]" />
-            Access Control & Users
+    <div className="max-w-6xl mx-auto px-4 sm:px-8 py-5 sm:py-8 space-y-6">
+      {/* Large Title Mobile Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                router.back();
+              }}
+              className="sm:hidden p-2 -ml-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 dark:bg-purple-400/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 text-[10px] sm:text-xs font-black tracking-widest uppercase">
+              <Sparkles className="h-3 w-3" />
+              <span>Access & Security</span>
+            </div>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            User Management
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             Configure granular permissions, company site scoping, allowed tabs, and default landing page after login.
           </p>
         </div>
-        <Button onClick={() => handleOpenModal()} className="bg-[#3b2fc9] hover:bg-[#2d23a0] shadow-md shadow-indigo-900/10">
-          <Plus className="h-4 w-4 mr-2" /> Add User
-        </Button>
+        <button
+          onClick={() => {
+            triggerHaptic('medium');
+            handleOpenModal();
+          }}
+          className="w-full sm:w-auto h-12 sm:h-10 px-5 rounded-2xl sm:rounded-xl bg-gradient-to-r from-[#3b2fc9] to-indigo-600 hover:from-[#2d23a0] hover:to-indigo-700 text-white text-sm font-bold shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Add User</span>
+        </button>
       </div>
 
       {/* Mobile Card List View (md:hidden) */}
-      <div className="md:hidden divide-y divide-gray-100 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="md:hidden space-y-3">
         {isLoading ? (
-          <div className="p-8 text-center text-gray-500">
-            <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
-            <p className="text-xs">Loading users...</p>
+          <div className="p-8 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-[#3b2fc9]" />
+            <p className="text-xs font-medium">Loading user access accounts...</p>
           </div>
         ) : users.length === 0 ? (
-          <div className="p-8 text-center text-sm text-gray-500">No users found</div>
+          <div className="p-8 text-center text-sm text-slate-400 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+            No users found
+          </div>
         ) : (
           users.map((u) => {
             const tabsCount = u.allowedTabs?.length || u.assignedApps?.length || 0;
@@ -363,32 +390,34 @@ export default function AdminUsersPage() {
               '/newrelic/tuckshop';
 
             return (
-              <div key={u.id} className="p-4 space-y-3">
+              <div key={u.id} className="p-4 sm:p-5 space-y-3 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-gray-900 text-sm truncate">{u.email}</p>
+                    <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{u.email}</p>
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        className={cn(
+                          "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider",
                           u.role === 'admin'
-                            ? 'bg-purple-100 text-purple-700'
+                            ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300'
                             : u.role === 'manager'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
+                            ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                        )}
                       >
                         {u.role.toUpperCase()}
                       </span>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        className={cn(
+                          "px-2.5 py-0.5 rounded-full text-[10px] font-bold border",
                           u.role === 'admin'
-                            ? 'bg-gray-100 text-gray-700'
+                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200'
                             : u.assignedSite === 'dsm'
-                            ? 'bg-cyan-100 text-cyan-800'
+                            ? 'bg-cyan-50 dark:bg-cyan-950/50 text-cyan-800 dark:text-cyan-300 border-cyan-200'
                             : u.assignedSite === 'ntt_data'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-indigo-100 text-[#3b2fc9]'
-                        }`}
+                            ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border-amber-200'
+                            : 'bg-indigo-50 dark:bg-indigo-950/50 text-[#3b2fc9] dark:text-indigo-400 border-indigo-100'
+                        )}
                       >
                         {u.role === 'admin'
                           ? 'All Sites'
@@ -397,41 +426,46 @@ export default function AdminUsersPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenModal(u)}>
-                      <Edit2 className="h-4 w-4 text-gray-500 hover:text-[#3b2fc9]" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleDelete(u.id, u.email)}
-                      disabled={u.email === user?.email}
+                    <button
+                      onClick={() => {
+                        triggerHaptic('light');
+                        handleOpenModal(u);
+                      }}
+                      className="p-2 rounded-xl text-slate-500 hover:text-[#3b2fc9] hover:bg-indigo-50 dark:hover:bg-slate-800 transition-all active:scale-95"
+                      title="Edit"
                     >
-                      <Trash2
-                        className={`h-4 w-4 ${
-                          u.email === user?.email ? 'text-gray-300' : 'text-gray-500 hover:text-red-600'
-                        }`}
-                      />
-                    </Button>
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        triggerHaptic('medium');
+                        handleDelete(u.id, u.email);
+                      }}
+                      disabled={u.email === user?.email}
+                      className="p-2 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 disabled:opacity-30 transition-all active:scale-95"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
 
                 {/* Details Badges */}
-                <div className="space-y-1.5 text-xs bg-gray-50 p-2.5 rounded-xl border border-gray-150">
+                <div className="space-y-1.5 text-xs bg-slate-50/80 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-gray-500 font-semibold flex items-center gap-1">
-                      <Compass className="w-3 h-3 text-[#3b2fc9]" /> Default Landing
+                    <span className="text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                      <Compass className="w-3.5 h-3.5 text-[#3b2fc9] dark:text-indigo-400" /> Default Landing
                     </span>
-                    <span className="font-bold text-[#3b2fc9] truncate max-w-[190px]">
+                    <span className="font-bold text-[#3b2fc9] dark:text-indigo-400 truncate max-w-[190px]">
                       {landingPageLabel}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-[11px] pt-1 border-t border-gray-200/60">
-                    <span className="text-gray-500 font-semibold">Active Tabs</span>
+                  <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60">
+                    <span className="text-slate-500 dark:text-slate-400 font-semibold">Active Modules</span>
                     {u.role === 'admin' ? (
-                      <span className="text-purple-700 font-bold">Unrestricted (All)</span>
+                      <span className="text-purple-700 dark:text-purple-400 font-bold">Unrestricted (All)</span>
                     ) : (
-                      <span className="font-semibold text-gray-700">{tabsCount} Modules Active</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">{tabsCount} Active</span>
                     )}
                   </div>
                 </div>
@@ -442,7 +476,7 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Desktop Table (hidden md:block) */}
-      <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="hidden md:block bg-white dark:bg-slate-900 rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 overflow-hidden">
         <div className="overflow-x-auto">
           <Table className="min-w-[850px]">
             <TableHeader>
@@ -565,14 +599,15 @@ export default function AdminUsersPage() {
 
       {/* ── MODAL: User Details, Scopes, Presets & Categorized Permissions ── */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-black tracking-tight text-gray-900">
+        <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto bottom-0 top-auto sm:top-[50%] sm:bottom-auto translate-y-0 sm:translate-y-[-50%] rounded-t-3xl sm:rounded-3xl p-0 border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-2xl flex flex-col">
+          <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+          <DialogHeader className="p-5 sm:p-6 pb-2 border-b border-slate-100 dark:border-slate-800">
+            <DialogTitle className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
               {editingUser ? 'Edit User & Permissions' : 'Add New User'}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSaveUser} className="space-y-5 pt-3">
+          <form onSubmit={handleSaveUser} className="space-y-5 p-5 sm:p-6 pt-3">
             {/* Account Credentials */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -838,13 +873,22 @@ export default function AdminUsersPage() {
               </div>
             )}
 
-            <DialogFooter className="mt-6 pt-3 border-t border-gray-100">
-              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+            <DialogFooter className="sticky bottom-0 bg-white dark:bg-slate-900 mt-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-slate-100 dark:border-slate-800 gap-2 flex-row">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 h-11 rounded-2xl"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setIsModalOpen(false);
+                }}
+              >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                className="bg-[#3b2fc9] hover:bg-[#2d23a0] shadow-md shadow-indigo-900/10"
+                onClick={() => triggerHaptic('medium')}
+                className="flex-1 h-11 rounded-2xl bg-gradient-to-r from-[#3b2fc9] to-indigo-600 hover:from-[#2d23a0] hover:to-indigo-700 shadow-md shadow-indigo-900/10 text-white font-bold"
                 disabled={isSubmitting}
               >
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}

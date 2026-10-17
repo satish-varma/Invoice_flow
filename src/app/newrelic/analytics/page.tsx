@@ -48,6 +48,7 @@ import {
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import { FinancialGate } from '@/components/newrelic/financial-gate';
+import { triggerHaptic } from '@/lib/haptics';
 import {
   BarChart,
   Bar,
@@ -1265,106 +1266,132 @@ export default function AnalyticsDashboardPage() {
 
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
             <div className="flex items-start gap-3.5">
-              <Link href="/newrelic" className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white shrink-0 mt-0.5" title="Back to DC Hub">
+              <Link 
+                href="/newrelic" 
+                onClick={() => triggerHaptic('light')}
+                className="p-2.5 rounded-2xl bg-white/10 hover:bg-white/20 transition-all text-white shrink-0 mt-0.5 active:scale-95 border border-white/15 shadow-xs" 
+                title="Back to DC Hub"
+              >
                 <ArrowLeft className="h-5 w-5" />
               </Link>
               <div>
                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                  <span className="text-[10px] font-extrabold tracking-widest uppercase bg-gradient-to-r from-amber-300 via-rose-300 to-amber-200 text-transparent bg-clip-text">
-                    The Gut Guru Tracker
+                  <span className="text-[10px] font-black tracking-widest uppercase text-amber-300 bg-amber-400/10 px-2.5 py-0.5 rounded-full border border-amber-300/30">
+                    The Gut Guru Operations
                   </span>
                   <span className="text-[10px] bg-white/15 px-2.5 py-0.5 rounded-full font-bold border border-white/20 text-white/90">
-                    Executive Analytics & BI Suite
+                    Executive Analytics &amp; BI Suite
                   </span>
                 </div>
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
-                  <BarChart2 className="h-6 w-6 text-amber-300" />
-                  Executive Insights & P&L Reporting
+                <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white flex items-center gap-2">
+                  <BarChart2 className="h-6 w-6 sm:h-8 sm:w-8 text-amber-300" />
+                  Executive Insights
                 </h1>
-                <p className="text-xs text-gray-300 mt-1 max-w-2xl leading-relaxed">
-                  Interactive multi-filter dashboard: Financial P&L, stock fulfillment, brand intelligence, expiry risk radar, and workforce analytics.
+                <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed font-medium">
+                  Financial P&amp;L ledger, stock fulfillment rate, brand intelligence, expiry risk radar, and staff productivity.
                 </p>
               </div>
             </div>
 
             {/* Quick Actions & Navigation Pill Switcher */}
-            <div className="flex items-center gap-2 flex-wrap self-start lg:self-auto">
+            <div className="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end gap-3 w-full lg:w-auto">
               <button
                 type="button"
-                onClick={handleExportExcel}
-                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition-all active:scale-98"
+                onClick={() => {
+                  triggerHaptic('medium');
+                  handleExportExcel();
+                }}
+                className="h-11 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 w-full sm:w-auto"
                 title="Download 5-Sheet Excel Suite"
               >
-                <FileSpreadsheet className="h-3.5 w-3.5" />
+                <FileSpreadsheet className="h-4 w-4" />
                 <span>Export 5-Sheet Excel</span>
               </button>
 
-              <div className="flex items-center gap-1 p-1 bg-white/10 backdrop-blur-md border border-white/15 rounded-xl shadow-xs overflow-x-auto max-w-full">
+              <div className="flex items-center gap-1.5 p-1.5 bg-black/25 backdrop-blur-xl border border-white/15 rounded-2xl shadow-inner overflow-x-auto max-w-full w-full sm:w-auto">
                 <button
-                  onClick={() => setActiveTab('overview')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setActiveTab('overview');
+                  }}
+                  className={`h-9 px-3 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
                     activeTab === 'overview'
                       ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
-                      : 'text-white/80 hover:bg-white/20'
+                      : 'text-white/80 hover:bg-white/15'
                   }`}
                 >
                   <TrendingUp className="h-3.5 w-3.5" />
                   Overview
                 </button>
                 <button
-                  onClick={() => setActiveTab('brands')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setActiveTab('brands');
+                  }}
+                  className={`h-9 px-3 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
                     activeTab === 'brands'
                       ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
-                      : 'text-white/80 hover:bg-white/20'
+                      : 'text-white/80 hover:bg-white/15'
                   }`}
                 >
                   <Tag className="h-3.5 w-3.5" />
-                  Brands & Expiry
+                  Brands &amp; Expiry
                 </button>
                 <button
-                  onClick={() => setActiveTab('inventory')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setActiveTab('inventory');
+                  }}
+                  className={`h-9 px-3 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
                     activeTab === 'inventory'
                       ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
-                      : 'text-white/80 hover:bg-white/20'
+                      : 'text-white/80 hover:bg-white/15'
                   }`}
                 >
                   <ClipboardList className="h-3.5 w-3.5" />
                   Stock Requests
                 </button>
                 <button
-                  onClick={() => setActiveTab('workforce')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setActiveTab('workforce');
+                  }}
+                  className={`h-9 px-3 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
                     activeTab === 'workforce'
                       ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
-                      : 'text-white/80 hover:bg-white/20'
+                      : 'text-white/80 hover:bg-white/15'
                   }`}
                 >
                   <Users className="h-3.5 w-3.5" />
                   Workforce
                 </button>
                 <button
-                  onClick={() => setActiveTab('comparison')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setActiveTab('comparison');
+                  }}
+                  className={`h-9 px-3 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
                     activeTab === 'comparison'
                       ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
-                      : 'text-white/80 hover:bg-white/20'
+                      : 'text-white/80 hover:bg-white/15'
                   }`}
                 >
                   <MapPin className="h-3.5 w-3.5" />
-                  HYD vs BLR & Cycles
+                  HYD vs BLR &amp; Cycles
                 </button>
                 <button
-                  onClick={() => setActiveTab('ledger')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setActiveTab('ledger');
+                  }}
+                  className={`h-9 px-3 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
                     activeTab === 'ledger'
                       ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
-                      : 'text-white/80 hover:bg-white/20'
+                      : 'text-white/80 hover:bg-white/15'
                   }`}
                 >
                   <DollarSign className="h-3.5 w-3.5" />
-                  P&L Ledger
+                  P&amp;L Ledger
                 </button>
               </div>
             </div>

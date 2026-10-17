@@ -24,6 +24,9 @@ import {
   Sparkles,
   Palette,
   Check,
+  Globe,
+  RotateCcw,
+  Building,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeBackdrop } from '@/contexts/ThemeBackdropContext';
@@ -39,7 +42,20 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, role, signOut, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const { theme, setTheme, themes } = useThemeBackdrop();
+  const {
+    theme,
+    companyDefaultTheme,
+    isPersonalOverride,
+    setPersonalTheme,
+    resetToCompanyDefault,
+    setCompanyDefaultTheme,
+    themes,
+    isSyncing,
+  } = useThemeBackdrop();
+
+  const isAdmin = role === 'admin' || role === 'superadmin';
+  const companyDefaultThemeName = themes.find((t) => t.id === companyDefaultTheme)?.name || 'Ambient Orbs & Aurora';
+  const currentThemeName = themes.find((t) => t.id === theme)?.name || 'Theme';
 
   const [employee, setEmployee] = useState<NewRelicEmployee | null>(null);
   const [todayAttendance, setTodayAttendance] = useState<NewRelicAttendance | null>(null);
@@ -392,36 +408,118 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* ── App Theme & Backdrops Picker ── */}
-      <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md rounded-2xl border border-white/80 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs space-y-3.5">
-        <div className="flex items-center justify-between">
+      {/* ── App Theme & Backdrops Picker (Mode B: Company Default + Personal Choice) ── */}
+      <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md rounded-2xl border border-white/80 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs space-y-4">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-xs">
               <Palette className="w-4 h-4" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-gray-900 dark:text-white">App Backdrop & Theme</h2>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">Personalize your visual experience</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                {isPersonalOverride
+                  ? 'Personal choice active on this device'
+                  : `Syncing with Company Default (${companyDefaultThemeName})`}
+              </p>
             </div>
           </div>
-          <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60">
-            5 PRESETS
-          </span>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {isPersonalOverride ? (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  resetToCompanyDefault();
+                  toast({
+                    title: 'Switched to Company Default',
+                    description: `Now following official company theme (${companyDefaultThemeName}).`,
+                  });
+                }}
+                className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 px-2.5 py-1 rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Reset to Company Default</span>
+              </button>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Following Company Default
+              </span>
+            )}
+          </div>
         </div>
 
+        {/* Admin Organization Sync Action Banner */}
+        {isAdmin && (
+          <div className="p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-indigo-500/10 border border-amber-300/40 dark:border-amber-600/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <Building className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-xs font-bold text-gray-900 dark:text-white">
+                  Admin Control: Company-Wide Default
+                </p>
+                <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5">
+                  Official Default is <strong className="text-amber-700 dark:text-amber-300 font-bold">{companyDefaultThemeName}</strong>. You can publish your active theme to all employee apps.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={isSyncing || theme === companyDefaultTheme}
+              onClick={async () => {
+                triggerHaptic('medium');
+                try {
+                  await setCompanyDefaultTheme(theme, user?.email);
+                  toast({
+                    title: 'Company Default Published!',
+                    description: `"${currentThemeName}" is now the default theme for all team members.`,
+                  });
+                } catch {
+                  toast({
+                    variant: 'destructive',
+                    title: 'Failed to update',
+                    description: 'Could not update company default theme.',
+                  });
+                }
+              }}
+              className={`shrink-0 flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer ${
+                theme === companyDefaultTheme
+                  ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 cursor-default'
+                  : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white'
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>
+                {theme === companyDefaultTheme
+                  ? 'Active Is Company Default'
+                  : isSyncing
+                  ? 'Publishing...'
+                  : `Publish "${currentThemeName}" to All Users`}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* 5 Theme Option Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
           {themes.map((opt) => {
             const isSelected = theme === opt.id;
+            const isCompanyDefault = companyDefaultTheme === opt.id;
+
             return (
               <button
                 key={opt.id}
                 type="button"
                 onClick={() => {
                   triggerHaptic('medium');
-                  setTheme(opt.id);
+                  setPersonalTheme(opt.id);
                   toast({
                     title: `Theme: ${opt.name}`,
-                    description: 'Backdrop updated instantly across the entire app.',
+                    description: 'Backdrop updated for your device.',
                   });
                 }}
                 className={`relative flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all active:scale-[0.98] cursor-pointer ${
@@ -450,13 +548,20 @@ export default function ProfilePage() {
 
                 {/* Theme Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center justify-between gap-1 flex-wrap">
                     <span className={`text-xs font-bold truncate ${isSelected ? 'text-indigo-950 dark:text-indigo-200 font-extrabold' : 'text-gray-900 dark:text-white'}`}>
                       {opt.name}
                     </span>
-                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 shrink-0">
-                      {opt.badge}
-                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isCompanyDefault && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          Company Default
+                        </span>
+                      )}
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400">
+                        {opt.badge}
+                      </span>
+                    </div>
                   </div>
                   <p className="text-[11px] font-medium text-gray-600 dark:text-gray-300 mt-0.5 line-clamp-1">
                     {opt.subtitle}

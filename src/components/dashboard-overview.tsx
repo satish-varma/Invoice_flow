@@ -202,7 +202,7 @@ export function DashboardOverview({
           return (
             <div
               key={index}
-              className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 ${stat.cardBg}`}
+              className={`relative overflow-hidden rounded-2xl sm:rounded-3xl border p-4 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] hover:shadow-md transition-all active:scale-[0.98] ${stat.cardBg}`}
             >
               <div className="flex items-center justify-between mb-2.5">
                 <span
@@ -211,19 +211,19 @@ export function DashboardOverview({
                   {stat.badge}
                 </span>
                 <div
-                  className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-sm shrink-0 ${stat.iconBg}`}
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-xs shrink-0 ${stat.iconBg}`}
                 >
                   <Icon className="w-4 h-4" />
                 </div>
               </div>
 
-              <p className="text-xs font-semibold text-gray-500 truncate">
+              <p className="text-xs font-semibold text-slate-500 truncate">
                 {stat.title}
               </p>
-              <p className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight font-mono tabular-nums mt-1">
+              <p className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight font-mono tabular-nums mt-1">
                 {stat.value}
               </p>
-              <p className="text-[11px] text-gray-400 font-medium truncate mt-1">
+              <p className="text-[11px] text-slate-400 font-medium truncate mt-1">
                 {stat.description}
               </p>
             </div>
@@ -236,56 +236,56 @@ export function DashboardOverview({
         <Link
           href="/#invoice-form"
           onClick={() => triggerHaptic('light')}
-          className="flex items-center gap-2.5 p-3 rounded-xl bg-white hover:bg-gray-50 border border-gray-200/80 shadow-2xs hover:border-[#3b2fc9]/40 transition-all active:scale-[0.98] group"
+          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/80 shadow-xs hover:border-[#3b2fc9]/40 transition-all active:scale-[0.96] group"
         >
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 group-hover:bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 transition-colors">
+          <div className="w-9 h-9 rounded-xl bg-indigo-50 group-hover:bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 transition-colors">
             <FilePlus className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-gray-900 truncate">New Invoice</p>
-            <p className="text-[10px] text-gray-400 truncate">Create GST invoice</p>
+            <p className="text-xs font-bold text-slate-900 truncate">New Invoice</p>
+            <p className="text-[10px] text-slate-400 truncate">Create GST invoice</p>
           </div>
         </Link>
 
         <Link
           href="/quotation"
           onClick={() => triggerHaptic('light')}
-          className="flex items-center gap-2.5 p-3 rounded-xl bg-white hover:bg-gray-50 border border-gray-200/80 shadow-2xs hover:border-amber-500/40 transition-all active:scale-[0.98] group"
+          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/80 shadow-xs hover:border-amber-500/40 transition-all active:scale-[0.96] group"
         >
-          <div className="w-8 h-8 rounded-lg bg-amber-50 group-hover:bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 transition-colors">
+          <div className="w-9 h-9 rounded-xl bg-amber-50 group-hover:bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 transition-colors">
             <FileSearch className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-gray-900 truncate">New Quotation</p>
-            <p className="text-[10px] text-gray-400 truncate">Send proposal quote</p>
+            <p className="text-xs font-bold text-slate-900 truncate">New Quotation</p>
+            <p className="text-[10px] text-slate-400 truncate">Send proposal quote</p>
           </div>
         </Link>
 
         <Link
           href="/delivery-challan"
           onClick={() => triggerHaptic('light')}
-          className="flex items-center gap-2.5 p-3 rounded-xl bg-white hover:bg-gray-50 border border-gray-200/80 shadow-2xs hover:border-cyan-500/40 transition-all active:scale-[0.98] group"
+          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/80 shadow-xs hover:border-cyan-500/40 transition-all active:scale-[0.96] group"
         >
-          <div className="w-8 h-8 rounded-lg bg-blue-50 group-hover:bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 transition-colors">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 group-hover:bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 transition-colors">
             <Truck className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-gray-900 truncate">Delivery Challan</p>
-            <p className="text-[10px] text-gray-400 truncate">Dispatch goods</p>
+            <p className="text-xs font-bold text-slate-900 truncate">Delivery Challan</p>
+            <p className="text-[10px] text-slate-400 truncate">Dispatch goods</p>
           </div>
         </Link>
 
         <Link
           href="/invoices"
           onClick={() => triggerHaptic('light')}
-          className="flex items-center gap-2.5 p-3 rounded-xl bg-white hover:bg-gray-50 border border-gray-200/80 shadow-2xs hover:border-purple-500/40 transition-all active:scale-[0.98] group"
+          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/80 shadow-xs hover:border-purple-500/40 transition-all active:scale-[0.96] group"
         >
-          <div className="w-8 h-8 rounded-lg bg-purple-50 group-hover:bg-purple-100 text-purple-700 flex items-center justify-center shrink-0 transition-colors">
+          <div className="w-9 h-9 rounded-xl bg-purple-50 group-hover:bg-purple-100 text-purple-700 flex items-center justify-center shrink-0 transition-colors">
             <FileText className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-gray-900 truncate">All Invoices</p>
-            <p className="text-[10px] text-gray-400 truncate">Filter &amp; bulk export</p>
+            <p className="text-xs font-bold text-slate-900 truncate">All Invoices</p>
+            <p className="text-[10px] text-slate-400 truncate">Filter &amp; bulk export</p>
           </div>
         </Link>
       </div>

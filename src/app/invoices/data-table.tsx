@@ -26,11 +26,12 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Invoice } from "@/services/invoiceService"
-import { Download, Trash2, FileSpreadsheet, Eye, Copy, FileText } from "lucide-react"
+import { Download, Trash2, FileSpreadsheet, Eye, Copy, FileText, Search, X, Calendar } from "lucide-react"
 import { exportToCSV } from "@/lib/export"
 import { Checkbox } from "@/components/ui/checkbox"
 import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
+import { triggerHaptic } from "@/lib/haptics"
 
 
 interface DataTableProps<TData extends Invoice, TValue> {
@@ -114,29 +115,46 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
     };
 
     return (
-        <div>
+        <div className="space-y-4">
             {/* ── Filters & Bulk Actions ─────────────────────────────── */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-                    {/* Mobile uses a single search input */}
-                    <Input
-                        placeholder="Search customer or invoice #..."
-                        value={(searchText || (table.getColumn("billToName")?.getFilterValue() as string)) ?? ""}
-                        onChange={(event) => {
-                            setSearchText(event.target.value);
-                            table.getColumn("billToName")?.setFilterValue(event.target.value);
-                            table.getColumn("invoiceNumber")?.setFilterValue(event.target.value);
-                        }}
-                        className="w-full sm:w-64 md:hidden"
-                    />
-                    {/* Desktop keeps both filters */}
+                    {/* Mobile 48px Search */}
+                    <div className="relative w-full md:hidden">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                            placeholder="Search customer or invoice #..."
+                            value={searchText}
+                            onChange={(event) => {
+                                setSearchText(event.target.value);
+                                table.getColumn("billToName")?.setFilterValue(event.target.value);
+                                table.getColumn("invoiceNumber")?.setFilterValue(event.target.value);
+                            }}
+                            className="h-12 pl-10 pr-10 rounded-2xl border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm font-medium shadow-xs focus-visible:ring-emerald-500"
+                        />
+                        {searchText && (
+                            <button
+                                onClick={() => {
+                                    triggerHaptic('light');
+                                    setSearchText('');
+                                    table.getColumn("billToName")?.setFilterValue('');
+                                    table.getColumn("invoiceNumber")?.setFilterValue('');
+                                }}
+                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Desktop filters */}
                     <Input
                         placeholder="Filter by customer..."
                         value={(table.getColumn("billToName")?.getFilterValue() as string) ?? ""}
                         onChange={(event) =>
                             table.getColumn("billToName")?.setFilterValue(event.target.value)
                         }
-                        className="hidden md:block w-full sm:w-64"
+                        className="hidden md:block w-full sm:w-64 h-10 rounded-xl"
                     />
                     <Input
                         placeholder="Filter by invoice #..."
@@ -144,22 +162,30 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
                         onChange={(event) =>
                             table.getColumn("invoiceNumber")?.setFilterValue(event.target.value)
                         }
-                        className="hidden md:block w-full sm:w-48"
+                        className="hidden md:block w-full sm:w-48 h-10 rounded-xl"
                     />
                 </div>
+
                 <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
-                    <Button variant="outline" onClick={() => exportToCSV(table.getSelectedRowModel().rows.length > 0 ? table.getSelectedRowModel().rows.map(r => r.original) : data, `invoices-export-${new Date().toISOString().split('T')[0]}.csv`)} className="w-full sm:w-auto">
-                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    <Button 
+                        variant="outline" 
+                        onClick={() => {
+                            triggerHaptic('light');
+                            exportToCSV(table.getSelectedRowModel().rows.length > 0 ? table.getSelectedRowModel().rows.map(r => r.original) : data, `invoices-export-${new Date().toISOString().split('T')[0]}.csv`);
+                        }} 
+                        className="h-10 rounded-2xl font-bold text-xs w-full sm:w-auto border-slate-200 dark:border-slate-800 active:scale-95 transition-all"
+                    >
+                        <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-600" />
                         Export CSV {table.getSelectedRowModel().rows.length > 0 ? `(${table.getSelectedRowModel().rows.length})` : '(All)'}
                     </Button>
 
                     {table.getSelectedRowModel().rows.length > 0 && (
-                        <div className="flex w-full sm:w-auto items-center gap-2">
-                            <Button variant="outline" onClick={handleDownload} className="w-full sm:w-auto">
+                        <div className="hidden sm:flex items-center gap-2">
+                            <Button variant="outline" onClick={handleDownload} className="h-10 rounded-2xl font-bold text-xs">
                                 <Download className="mr-2 h-4 w-4" />
                                 Download ({table.getSelectedRowModel().rows.length})
                             </Button>
-                            <Button variant="destructive" onClick={handleDelete} className="w-full sm:w-auto">
+                            <Button variant="destructive" onClick={handleDelete} className="h-10 rounded-2xl font-bold text-xs">
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Delete ({table.getSelectedRowModel().rows.length})
                             </Button>
@@ -168,12 +194,47 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
                 </div>
             </div>
 
-            {/* ── MOBILE CARD LIST ──────────────────────────────────── */}
+            {/* Mobile Bulk Selection Bar */}
+            {mobileSelected.size > 0 && (
+                <div className="md:hidden flex items-center justify-between p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800 shadow-sm animate-in fade-in slide-in-from-top-2">
+                    <span className="text-xs font-black text-emerald-800 dark:text-emerald-300">
+                        {mobileSelected.size} selected
+                    </span>
+                    <div className="flex gap-2">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-9 rounded-xl text-xs font-bold border-emerald-300 dark:border-emerald-700 active:scale-95"
+                            onClick={() => {
+                                triggerHaptic('light');
+                                const selected = data.filter(d => mobileSelected.has(d.id!));
+                                onDownloadSelected(selected);
+                            }}
+                        >
+                            <Download className="h-3.5 w-3.5 mr-1" /> Download
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="destructive"
+                            className="h-9 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 active:scale-95"
+                            onClick={() => {
+                                triggerHaptic('medium');
+                                onDeleteSelected(Array.from(mobileSelected));
+                            }}
+                        >
+                            <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* ── MOBILE SQUIRCLE CARD LIST ──────────────────────────────────── */}
             <div className="md:hidden space-y-3">
                 {filteredData.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-12 border rounded-lg">
-                        <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                        <p>No invoices found.</p>
+                    <div className="text-center text-slate-500 dark:text-slate-400 py-12 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60">
+                        <FileText className="h-10 w-10 mx-auto mb-2 opacity-30 text-emerald-500" />
+                        <p className="font-bold text-sm">No invoices found</p>
+                        <p className="text-xs text-slate-400 mt-1">Try searching for a different customer or invoice #</p>
                     </div>
                 ) : (
                     filteredData.map((invoice) => {
@@ -182,57 +243,76 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
                         return (
                             <div
                                 key={id}
-                                className={`border rounded-xl p-4 space-y-3 transition-all duration-150 ${isSelected ? 'border-primary bg-primary/5 shadow-md' : 'bg-card shadow-sm'}`}
+                                className={`rounded-2xl border transition-all duration-150 p-4 space-y-3.5 ${
+                                    isSelected
+                                        ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-md ring-2 ring-emerald-500/20'
+                                        : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)]'
+                                }`}
                             >
                                 {/* Top row: Checkbox + Invoice # + Amount */}
                                 <div className="flex items-start justify-between gap-2">
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
                                         <Checkbox
                                             checked={isSelected}
-                                            onCheckedChange={() => toggleMobileSelect(id)}
+                                            onCheckedChange={() => {
+                                                triggerHaptic('light');
+                                                toggleMobileSelect(id);
+                                            }}
                                             aria-label="Select invoice"
-                                            className="mt-0.5"
+                                            className="mt-0.5 rounded-lg h-5 w-5"
                                         />
-                                        <div>
-                                            <p className="font-bold text-sm text-primary leading-tight">
+                                        <div className="min-w-0">
+                                            <p className="font-mono font-black text-sm text-emerald-600 dark:text-emerald-400 truncate">
                                                 {invoice.invoiceNumber || 'No Number'}
                                             </p>
-                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 truncate mt-0.5">
                                                 {invoice.billToName || invoice.customerName || '—'}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="text-right flex-shrink-0">
-                                        <p className="font-bold text-base">₹{formatAmount(invoice.total)}</p>
-                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                    <div className="text-right shrink-0">
+                                        <p className="font-mono font-black text-base text-slate-900 dark:text-white">
+                                            ₹{formatAmount(invoice.total)}
+                                        </p>
+                                        <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-0.5 flex items-center justify-end gap-1">
+                                            <Calendar className="h-3 w-3" />
                                             {formatDate(invoice.date)}
                                         </p>
                                     </div>
                                 </div>
 
-                                {/* Action buttons */}
-                                <div className="grid grid-cols-3 gap-2 pt-1 border-t">
+                                {/* 3 Inline Tactile Action buttons */}
+                                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="w-full text-xs h-9"
-                                        onClick={() => onPreview?.(invoice)}
+                                        className="h-10 rounded-xl text-xs font-bold active:scale-95 transition-all border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200"
+                                        onClick={() => {
+                                            triggerHaptic('light');
+                                            onPreview?.(invoice);
+                                        }}
                                     >
-                                        <Eye className="h-3.5 w-3.5 mr-1" /> Preview
+                                        <Eye className="h-3.5 w-3.5 mr-1 text-slate-500" /> Preview
                                     </Button>
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="w-full text-xs h-9"
-                                        onClick={() => onDownloadSingle?.(invoice)}
+                                        className="h-10 rounded-xl text-xs font-bold active:scale-95 transition-all border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                                        onClick={() => {
+                                            triggerHaptic('light');
+                                            onDownloadSingle?.(invoice);
+                                        }}
                                     >
                                         <Download className="h-3.5 w-3.5 mr-1" /> PDF
                                     </Button>
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="w-full text-xs h-9 text-destructive border-destructive/30 hover:bg-destructive/10"
-                                        onClick={() => onDeleteSingle?.(invoice)}
+                                        className="h-10 rounded-xl text-xs font-bold active:scale-95 transition-all text-rose-600 dark:text-rose-400 border-rose-200/60 dark:border-rose-900/40 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                                        onClick={() => {
+                                            triggerHaptic('medium');
+                                            onDeleteSingle?.(invoice);
+                                        }}
                                     >
                                         <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
                                     </Button>
@@ -244,7 +324,7 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
 
                 {/* Mobile pagination hint */}
                 {filteredData.length > 0 && (
-                    <p className="text-xs text-center text-muted-foreground pb-2">
+                    <p className="text-xs text-center font-medium text-slate-400 pb-2">
                         Showing {filteredData.length} invoice{filteredData.length !== 1 ? 's' : ''}
                     </p>
                 )}

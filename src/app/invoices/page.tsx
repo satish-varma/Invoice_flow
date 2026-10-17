@@ -6,7 +6,7 @@ import { InvoicesDataTable } from "./data-table";
 import { getColumns } from "./columns";
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader } from "lucide-react";
+import { ArrowLeft, Loader, Plus, Receipt } from "lucide-react";
 import React, { useRef, useEffect, useState } from "react";
 import { InvoicePreviewDialog } from "@/components/invoice-preview-dialog";
 import jsPDF from "jspdf";
@@ -14,6 +14,7 @@ import html2canvas from "html2canvas";
 import { InvoicePreview } from "@/components/invoice-preview";
 import type { Settings } from "@/services/settingsService";
 import { getSettings } from "@/services/settingsService";
+import { triggerHaptic } from "@/lib/haptics";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -216,24 +217,52 @@ export default function InvoicesPage() {
 
   return (
     <AppShell>
-      <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
-        <div className="w-full max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between mb-8 gap-4">
+      <main className="min-h-screen bg-slate-50/50 dark:bg-slate-950 flex flex-col items-center p-3 sm:p-8 pb-24">
+        <div className="w-full max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <Button variant="outline" asChild>
-                <Link href="/">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Create
-                </Link>
-              </Button>
-              <h1 className="text-3xl sm:text-4xl font-headline font-bold text-primary mt-4">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  asChild
+                  onClick={() => triggerHaptic('light')}
+                  className="h-9 rounded-2xl font-bold text-xs active:scale-95 transition-all"
+                >
+                  <Link href="/">
+                    <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+                    Back
+                  </Link>
+                </Button>
+                <span className="uppercase text-[10px] sm:text-xs font-black tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-200/60 dark:border-emerald-800/60 inline-flex items-center gap-1.5 shadow-xs">
+                  <Receipt className="w-3 h-3 text-emerald-500" />
+                  Billing • Invoices
+                </span>
+                <span className="text-[11px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-full border border-slate-200/60 dark:border-slate-700/60">
+                  {data.length} Total
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
                 Saved Invoices
               </h1>
-              <p className="text-muted-foreground text-sm sm:text-base">
-                Here are all the invoices you have saved. You can filter, sort, and manage them from here.
+              <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
+                Filter, export, preview, and generate PDFs for your invoices.
               </p>
             </div>
+
+            <Button
+              asChild
+              onClick={() => triggerHaptic('light')}
+              className="h-11 rounded-2xl font-black text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-md active:scale-95 transition-all w-full sm:w-auto"
+            >
+              <Link href="/">
+                <Plus className="mr-2 h-4 w-4" />
+                Create New Invoice
+              </Link>
+            </Button>
           </div>
+
           <InvoicesDataTable
             columns={columns}
             data={data}
@@ -282,16 +311,22 @@ export default function InvoicesPage() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!invoicesToDelete} onOpenChange={(open) => !open && setInvoicesToDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[90vw] sm:max-w-md rounded-3xl p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-lg font-black tracking-tight text-slate-900 dark:text-white">Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm font-medium text-slate-500 dark:text-slate-400">
               This action cannot be undone. This will permanently delete the selected invoice(s).
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setInvoicesToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+          <AlertDialogFooter className="flex-row gap-2 mt-4 sm:justify-end">
+            <AlertDialogCancel onClick={() => setInvoicesToDelete(null)} className="flex-1 sm:flex-initial h-11 rounded-2xl font-bold border-slate-200 dark:border-slate-800">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete} 
+              disabled={isDeleting} 
+              className="flex-1 sm:flex-initial h-11 rounded-2xl font-bold bg-rose-600 hover:bg-rose-700 text-white"
+            >
               {isDeleting ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : null}
               Delete
             </AlertDialogAction>

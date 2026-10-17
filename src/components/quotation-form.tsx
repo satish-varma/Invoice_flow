@@ -22,6 +22,7 @@ import { getSettings, Settings, CompanyProfile, BillToContact, ShipToContact } f
 import { getClients, saveClient, Client } from '@/services/clientService';
 import { Checkbox } from './ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { triggerHaptic } from '@/lib/haptics';
 
 
 interface QuotationFormProps {
@@ -890,88 +891,107 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
 
             {/* Manage Columns Dialog */}
             <Dialog open={isColumnDialog} onOpenChange={setIsColumnDialog}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Manage Table Columns</DialogTitle>
+                <DialogContent className="w-full sm:max-w-2xl max-h-[92vh] sm:max-h-[85vh] bottom-0 top-auto sm:top-[50%] sm:bottom-auto translate-y-0 sm:translate-y-[-50%] rounded-t-3xl sm:rounded-3xl p-0 border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-2xl flex flex-col">
+                    <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+                    <DialogHeader className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 text-left">
+                        <DialogTitle className="text-base sm:text-lg font-black text-slate-900 dark:text-white">Manage Table Columns</DialogTitle>
                     </DialogHeader>
-                    <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto">
+                    <div className="p-4 sm:p-6 space-y-4 max-h-[60vh] overflow-y-auto">
                         <div className="space-y-2">
                             {tempColumns.map((col, index) => (
-                                <div key={col.id} className="flex items-center gap-2 p-2 border rounded-md">
+                                <div key={col.id} className="flex items-center gap-2 p-2 border border-slate-200/80 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40">
                                     <Label htmlFor={`col-label-${col.id}`} className="sr-only">Column Label</Label>
                                     <Input
                                         id={`col-label-${col.id}`}
                                         value={col.label}
                                         onChange={(e) => handleTempColumnLabelChange(col.id, e.target.value)}
-                                        className="flex-grow"
+                                        className="flex-grow h-10 rounded-xl"
                                     />
-                                    <Button variant="ghost" size="icon" onClick={() => handleMoveColumn(index, 'left')} disabled={index === 0}>
+                                    <Button variant="ghost" size="icon" onClick={() => handleMoveColumn(index, 'left')} disabled={index === 0} className="rounded-xl">
                                         <ArrowLeft className="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleMoveColumn(index, 'right')} disabled={index === tempColumns.length - 1}>
+                                    <Button variant="ghost" size="icon" onClick={() => handleMoveColumn(index, 'right')} disabled={index === tempColumns.length - 1} className="rounded-xl">
                                         <ArrowRight className="h-4 w-4" />
                                     </Button>
                                     {!defaultColumns.some(dc => dc.id === col.id) && (
-                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveTempColumn(col.id)} className="text-destructive">
+                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveTempColumn(col.id)} className="text-destructive rounded-xl">
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     )}
                                 </div>
                             ))}
                         </div>
-                        <div className="flex items-center gap-2 pt-4 border-t">
+                        <div className="flex items-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                             <Label htmlFor="new-col-name" className="sr-only">New column name</Label>
                             <Input
                                 id="new-col-name"
                                 placeholder="New column name..."
                                 value={newColumnName}
                                 onChange={(e) => setNewColumnName(e.target.value)}
+                                className="h-10 rounded-xl"
                             />
-                            <Button onClick={handleAddTempColumn}>Add Column</Button>
+                            <Button onClick={handleAddTempColumn} className="h-10 rounded-xl font-bold">Add Column</Button>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                        <Button onClick={applyColumnChanges}>Apply Changes</Button>
+                    <DialogFooter className="p-3 sm:p-4 bg-slate-50/80 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-800 flex-row gap-2 justify-end">
+                        <DialogClose asChild><Button variant="outline" className="h-10 rounded-xl font-bold flex-1 sm:flex-initial">Cancel</Button></DialogClose>
+                        <Button onClick={applyColumnChanges} className="h-10 rounded-xl font-bold flex-1 sm:flex-initial">Apply Changes</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            {/* ── Mobile sticky action bar ───────────────────────── */}
-            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-t shadow-2xl px-4 py-3 flex items-center gap-2 no-print">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 h-11 text-sm"
-                    onClick={() => excelInputRef.current?.click()}
-                    disabled={isImportingExcel}
-                >
-                    {isImportingExcel ? <Loader className="animate-spin mr-1 h-4 w-4" /> : <Sheet className="mr-1 h-4 w-4" />}
-                    Import
-                </Button>
-                <Button
-                    variant="secondary"
-                    size="sm"
-                    className="flex-1 h-11 text-sm"
-                    onClick={() => handleSaveQuotation(false)}
-                    disabled={isSaving}
-                >
-                    {isSaving ? <Loader className="animate-spin mr-1 h-4 w-4" /> : <Save className="mr-1 h-4 w-4" />}
-                    {initialData ? 'Update' : 'Save'}
-                </Button>
-                <Button
-                    size="sm"
-                    className="flex-1 h-11 text-sm bg-accent text-accent-foreground hover:bg-accent/90"
-                    onClick={() => handleSaveQuotation(true)}
-                    disabled={isSaving}
-                >
-                    {isSaving ? <Loader className="animate-spin mr-1 h-4 w-4" /> : <Save className="mr-1 h-4 w-4" />}
-                    Save+PDF
-                </Button>
+            {/* ── Mobile Floating Quick Action Dock (Safely at bottom-[80px] above bottom nav bar) ───────────────────────── */}
+            <div className="sm:hidden fixed bottom-[80px] left-3 right-3 z-30 bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-700/60 shadow-2xl rounded-2xl p-2.5 flex items-center justify-between gap-2 no-print">
+                <div className="pl-1 min-w-0">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Proposal Total</span>
+                    <span className="font-mono font-black text-sm text-emerald-400 block truncate">
+                        ₹{(Number(total) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl active:scale-95"
+                        onClick={() => {
+                            triggerHaptic('light');
+                            excelInputRef.current?.click();
+                        }}
+                        disabled={isImportingExcel}
+                        title="Import Excel"
+                    >
+                        {isImportingExcel ? <Loader className="animate-spin h-4 w-4" /> : <Sheet className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-10 px-3 bg-slate-800/80 hover:bg-slate-800 text-white border-slate-700 text-xs font-bold rounded-xl active:scale-95"
+                        onClick={() => {
+                            triggerHaptic('light');
+                            handleSaveQuotation(false);
+                        }}
+                        disabled={isSaving}
+                    >
+                        {isSaving ? <Loader className="animate-spin mr-1 h-3.5 w-3.5" /> : <Save className="mr-1 h-3.5 w-3.5" />}
+                        {initialData ? 'Update' : 'Save'}
+                    </Button>
+                    <Button
+                        size="sm"
+                        className="h-10 px-3.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md active:scale-95"
+                        onClick={() => {
+                            triggerHaptic('medium');
+                            handleSaveQuotation(true);
+                        }}
+                        disabled={isSaving}
+                    >
+                        {isSaving ? <Loader className="animate-spin mr-1 h-3.5 w-3.5" /> : <Save className="mr-1 h-3.5 w-3.5" />}
+                        Save+PDF
+                    </Button>
+                </div>
             </div>
 
-            {/* Bottom spacer so sticky bar doesn't cover content */}
-            <div className="sm:hidden h-20" />
+            {/* Bottom spacer so floating dock doesn't cover form inputs */}
+            <div className="sm:hidden h-28" />
         </>
     );
 }

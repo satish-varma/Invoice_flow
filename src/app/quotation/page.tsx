@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Loader } from 'lucide-react';
+import { Loader, ArrowLeft, FileSpreadsheet, Sparkles } from 'lucide-react';
 import { getSettings, Settings } from '@/services/settingsService';
 import { generateAndSavePdf } from '@/lib/pdf';
 import { QuotationForm } from '@/components/quotation-form';
@@ -11,6 +11,9 @@ import { QuotationList } from '@/components/quotation-list';
 import { Quotation, getQuotations } from '@/services/quotationService';
 import { QuotationPreview } from '@/components/quotation-preview';
 import { AppShell } from '@/components/app-shell';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { triggerHaptic } from '@/lib/haptics';
 
 export default function QuotationPage() {
     const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -96,8 +99,50 @@ export default function QuotationPage() {
 
     return (
         <AppShell>
-            <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
-                <div className="w-full max-w-7xl mx-auto">
+            <main className="min-h-screen bg-slate-50/50 dark:bg-slate-950 flex flex-col items-center p-3 sm:p-8 pb-32">
+                <div className="w-full max-w-7xl mx-auto space-y-6">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    asChild
+                                    onClick={() => triggerHaptic('light')}
+                                    className="h-9 rounded-2xl font-bold text-xs active:scale-95 transition-all"
+                                >
+                                    <Link href="/quotations">
+                                        <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+                                        All Proposals
+                                    </Link>
+                                </Button>
+                                <span className="uppercase text-[10px] sm:text-xs font-black tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-full border border-indigo-200/60 dark:border-indigo-800/60 inline-flex items-center gap-1.5 shadow-xs">
+                                    <Sparkles className="w-3 h-3 text-indigo-500" />
+                                    Proposal Generator
+                                </span>
+                            </div>
+                            <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                                {selectedQuotation ? `Edit Quotation ${selectedQuotation.quotationNumber}` : 'Create Quotation'}
+                            </h1>
+                            <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
+                                Fill in details, calculate item prices, and generate client-ready PDF proposals instantly.
+                            </p>
+                        </div>
+
+                        <Button
+                            variant="outline"
+                            asChild
+                            onClick={() => triggerHaptic('light')}
+                            className="h-11 rounded-2xl font-black text-xs sm:text-sm border-slate-200 dark:border-slate-800 shadow-xs active:scale-95 transition-all w-full sm:w-auto"
+                        >
+                            <Link href="/quotations">
+                                <FileSpreadsheet className="mr-2 h-4 w-4 text-indigo-600" />
+                                View All ({quotations.length})
+                            </Link>
+                        </Button>
+                    </div>
+
                     <div className="grid grid-cols-1 gap-8">
                         <div className="w-full">
                             <QuotationForm

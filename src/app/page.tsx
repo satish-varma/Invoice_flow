@@ -192,20 +192,20 @@ export default function RootHomePage() {
           </div>
 
           {/* Mobile View Switcher Tabs (md:hidden) */}
-          <div className="md:hidden flex items-center p-1 rounded-2xl bg-gray-200/70 border border-gray-300/60 shadow-inner">
+          <div className="md:hidden flex items-center p-1.5 rounded-2xl bg-slate-200/70 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700 shadow-inner">
             <button
               type="button"
               onClick={() => {
                 triggerHaptic('light');
                 setMobileTab('list');
               }}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 h-11 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
                 mobileTab === 'list'
-                  ? 'bg-white text-[#3b2fc9] shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-white dark:bg-slate-900 text-[#3b2fc9] dark:text-indigo-400 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              <ListOrdered className="w-3.5 h-3.5" />
+              <ListOrdered className="w-4 h-4" />
               <span>Invoices ({invoices.length})</span>
             </button>
             <button
@@ -214,13 +214,13 @@ export default function RootHomePage() {
                 triggerHaptic('light');
                 setMobileTab('form');
               }}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 h-11 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
                 mobileTab === 'form'
                   ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              <FilePlus className="w-3.5 h-3.5" />
+              <FilePlus className="w-4 h-4" />
               <span>{selectedInvoice ? 'Edit Invoice' : '+ New Invoice'}</span>
             </button>
           </div>

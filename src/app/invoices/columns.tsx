@@ -102,28 +102,6 @@ export const getColumns = (
     },
   },
   {
-    accessorKey: "billToName",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="text-xs font-bold"
-        >
-          Customer
-          <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => {
-      return (
-        <div className="font-medium text-xs text-slate-800 dark:text-slate-200 truncate max-w-[170px]">
-          {row.original.billToName || row.original.customerName || "—"}
-        </div>
-      );
-    },
-  },
-  {
     accessorKey: "shipToName",
     header: ({ column }) => {
       return (
@@ -138,13 +116,19 @@ export const getColumns = (
       );
     },
     cell: ({ row }) => {
-      const shipTo = row.original.shipToName;
+      const shipTo = row.original.shipToName || "";
+      const firstWord = shipTo.trim().split(/\s+/)[0];
       return (
-        <div className="text-xs text-slate-600 dark:text-slate-300 font-medium truncate max-w-[160px]">
-          {shipTo ? (
-            <span title={shipTo}>{shipTo}</span>
+        <div className="text-xs text-slate-700 dark:text-slate-300 font-semibold whitespace-nowrap">
+          {firstWord ? (
+            <span
+              title={shipTo}
+              className="inline-block px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 cursor-help"
+            >
+              {firstWord}
+            </span>
           ) : (
-            <span className="text-slate-400 italic">Same as Bill To</span>
+            <span className="text-slate-400 font-normal">—</span>
           )}
         </div>
       );

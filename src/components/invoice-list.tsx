@@ -393,7 +393,13 @@ export function InvoiceList({
                           <Truck className="w-3 h-3 text-slate-400 shrink-0" />
                           <span className="truncate">
                             <span className="font-medium text-slate-400 dark:text-slate-500">Ship: </span>
-                            {invoice.shipToName || 'Same as Customer'}
+                            {invoice.shipToName ? (
+                              <span title={invoice.shipToName} className="font-semibold text-slate-700 dark:text-slate-200">
+                                {invoice.shipToName.trim().split(/\s+/)[0]}
+                              </span>
+                            ) : (
+                              '—'
+                            )}
                           </span>
                         </div>
                         {invoice.period ? (
@@ -500,35 +506,32 @@ export function InvoiceList({
               </div>
 
               {/* ── DESKTOP DATA TABLE (hidden md:block) ── */}
-              <div className="hidden md:block overflow-x-auto">
+              <div className="hidden md:block">
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent bg-slate-50/70 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                      <TableHead className="w-[130px] text-xs font-bold text-slate-600 dark:text-slate-300">
+                      <TableHead className="w-[125px] text-xs font-bold text-slate-600 dark:text-slate-300">
                         Invoice #
                       </TableHead>
-                      <TableHead className="w-[115px] text-xs font-bold text-slate-600 dark:text-slate-300">
+                      <TableHead className="w-[105px] text-xs font-bold text-slate-600 dark:text-slate-300">
                         Event #
                       </TableHead>
-                      <TableHead className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                        Customer
-                      </TableHead>
-                      <TableHead className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                      <TableHead className="w-[85px] text-xs font-bold text-slate-600 dark:text-slate-300">
                         Ship To
                       </TableHead>
-                      <TableHead className="w-[125px] text-xs font-bold text-slate-600 dark:text-slate-300">
+                      <TableHead className="w-[115px] text-xs font-bold text-slate-600 dark:text-slate-300">
                         Service Month
                       </TableHead>
-                      <TableHead className="w-[110px] text-xs font-bold text-slate-600 dark:text-slate-300">
+                      <TableHead className="w-[105px] text-xs font-bold text-slate-600 dark:text-slate-300">
                         Date
                       </TableHead>
-                      <TableHead className="w-[100px] text-xs font-bold text-slate-600 dark:text-slate-300">
+                      <TableHead className="w-[95px] text-xs font-bold text-slate-600 dark:text-slate-300">
                         Status
                       </TableHead>
                       <TableHead className="text-right text-xs font-bold text-slate-600 dark:text-slate-300">
                         Amount
                       </TableHead>
-                      <TableHead className="text-center w-[170px] text-xs font-bold text-slate-600 dark:text-slate-300">
+                      <TableHead className="text-center w-[145px] text-xs font-bold text-slate-600 dark:text-slate-300">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -588,18 +591,22 @@ export function InvoiceList({
                             </div>
                           </TableCell>
 
-                          {/* Customer */}
-                          <TableCell className="max-w-[200px] truncate font-medium text-slate-800 dark:text-slate-200 text-sm">
-                            {invoice.billToName || invoice.customerName || '—'}
-                          </TableCell>
-
-                          {/* Ship To */}
-                          <TableCell className="max-w-[180px] truncate text-xs text-slate-600 dark:text-slate-300 font-medium">
-                            {invoice.shipToName ? (
-                              <span title={invoice.shipToName}>{invoice.shipToName}</span>
-                            ) : (
-                              <span className="text-slate-400 italic">Same as Bill To</span>
-                            )}
+                          {/* Ship To (trimmed to first word) */}
+                          <TableCell className="text-xs font-semibold whitespace-nowrap">
+                            {(() => {
+                              const shipTo = invoice.shipToName || '';
+                              const firstWord = shipTo.trim().split(/\s+/)[0];
+                              return firstWord ? (
+                                <span
+                                  title={shipTo}
+                                  className="inline-block px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-help"
+                                >
+                                  {firstWord}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 font-normal">—</span>
+                              );
+                            })()}
                           </TableCell>
 
                           {/* Service Month */}
@@ -655,7 +662,7 @@ export function InvoiceList({
                                     onDownloadInvoice(invoice);
                                   }
                                 }}
-                                className="h-8 px-2.5 rounded-xl border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors"
+                                className="h-7 px-2 rounded-lg border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors"
                                 title="View / Preview Invoice"
                               >
                                 <Eye className="w-3.5 h-3.5 mr-1 text-indigo-600 dark:text-indigo-400" />
@@ -671,7 +678,7 @@ export function InvoiceList({
                                   triggerHaptic('light');
                                   onSelectInvoice(invoice);
                                 }}
-                                className="h-8 px-2.5 rounded-xl border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors"
+                                className="h-7 px-2 rounded-lg border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors"
                                 title="Edit Invoice"
                               >
                                 <Pencil className="w-3.5 h-3.5 mr-1 text-amber-600 dark:text-amber-400" />
@@ -687,7 +694,7 @@ export function InvoiceList({
                                   triggerHaptic('warning');
                                   setInvoiceToDelete(invoice);
                                 }}
-                                className="h-8 px-2 rounded-xl border-rose-200 dark:border-rose-900/60 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                                className="h-7 px-2 rounded-lg border-rose-200 dark:border-rose-900/60 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                                 title="Delete Invoice"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />

@@ -412,7 +412,13 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
                     <Truck className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span className="truncate">
                       <span className="font-medium text-slate-400">Ship: </span>
-                      {invoice.shipToName || "Same as Customer"}
+                      {invoice.shipToName ? (
+                        <span title={invoice.shipToName} className="font-semibold text-slate-700 dark:text-slate-200">
+                          {invoice.shipToName.trim().split(/\s+/)[0]}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
                     </span>
                   </div>
                   {invoice.period ? (

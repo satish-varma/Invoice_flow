@@ -132,9 +132,25 @@ export async function saveNewRelicChallan(challan: SaveInput, userEmail: string 
       await saveCatalogItems(challan.lineItems);
     }
 
-    if (challan.id) {
+    // 1. Resolve target document ID
+    let targetDocId = challan.id?.trim() || undefined;
+
+    // 2. If no ID was explicitly provided, check if an active challan with this dcNumber already exists
+    if (!targetDocId && challan.dcNumber?.trim()) {
+      const q = query(
+        collection(db, NEWRELIC_CHALLANS_COLLECTION),
+        where('dcNumber', '==', challan.dcNumber.trim())
+      );
+      const existingSnap = await getDocs(q);
+      const activeExisting = existingSnap.docs.find((d) => !d.data().isDeleted);
+      if (activeExisting) {
+        targetDocId = activeExisting.id;
+      }
+    }
+
+    if (targetDocId) {
       // Fetch existing data for history snapshot
-      const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, challan.id);
+      const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, targetDocId);
       const oldSnap = await getDoc(docRef);
       
       if (oldSnap.exists()) {
@@ -143,7 +159,7 @@ export async function saveNewRelicChallan(challan: SaveInput, userEmail: string 
           editedAt: serverTimestamp(),
           action: 'UPDATED',
           editedBy: userEmail,
-          previousData: deepCleanUndefined({ ...oldSnap.data(), id: challan.id }),
+          previousData: deepCleanUndefined({ ...oldSnap.data(), id: targetDocId }),
         });
       }
 
@@ -158,14 +174,15 @@ export async function saveNewRelicChallan(challan: SaveInput, userEmail: string 
       };
       await updateDoc(docRef, updatePayload);
       const snap = await getDoc(docRef);
-      finalData = { id: challan.id, ...snap.data() };
+      finalData = { id: targetDocId, ...snap.data() };
     } else {
       // Create new: use specified dcNumber or generate one as fallback
       const dcNumber =
         challan.dcNumber?.trim() || (await getSuggestedDcNumber(challan.location));
       const { id, ...data } = challan;
+      const cleanData = deepCleanUndefined(data);
       const completeData = {
-        ...data,
+        ...cleanData,
         dcNumber,
         createdAt: serverTimestamp(),
         createdBy: userEmail,
@@ -400,8 +417,25 @@ export async function revertNewRelicChallanVersion(
   versionData: Partial<NewRelicChallan>,
   userEmail: string | null = null
 ): Promise<NewRelicChallan> {
-  const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, challanId);
-  const currentSnap = await getDoc(docRef);
+  let targetId = challanId;
+  let docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, targetId);
+  let currentSnap = await getDoc(docRef);
+
+  // If the target doc was deleted or not found, try looking up by dcNumber for the active document
+  if ((!currentSnap.exists() || currentSnap.data()?.isDeleted) && versionData.dcNumber?.trim()) {
+    const q = query(
+      collection(db, NEWRELIC_CHALLANS_COLLECTION),
+      where('dcNumber', '==', versionData.dcNumber.trim())
+    );
+    const snap = await getDocs(q);
+    const activeDoc = snap.docs.find(d => !d.data().isDeleted);
+    if (activeDoc) {
+      targetId = activeDoc.id;
+      docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, targetId);
+      currentSnap = activeDoc;
+    }
+  }
+
   if (!currentSnap.exists()) {
     throw new Error('Challan not found');
   }
@@ -413,7 +447,7 @@ export async function revertNewRelicChallanVersion(
     editedAt: serverTimestamp(),
     action: 'RESTORED',
     editedBy: userEmail,
-    previousData: deepCleanUndefined({ ...currentData, id: challanId }),
+    previousData: deepCleanUndefined({ ...currentData, id: targetId }),
   });
 
   // 2. Harvest items if available

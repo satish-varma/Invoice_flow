@@ -97,6 +97,10 @@ export function NewRelicChallanForm({
   const [currentData, setCurrentData] = useState<NewRelicChallan | null>(initialData || null);
   const formId = useId();
 
+  useEffect(() => {
+    setCurrentData(initialData || null);
+  }, [initialData]);
+
   const defaultValues: FormValues = {
     dcNumber: initialData?.dcNumber ?? '',
     location: (initialData?.location as NewRelicLocation) ?? defaultLocation ?? 'hyderabad',
@@ -432,8 +436,9 @@ export function NewRelicChallanForm({
 
       const calculatedProcurementCost = validItems.reduce((acc, item) => acc + ((item.procurementCost || 0) * item.quantity), 0);
 
+      const targetId = initialData?.id || currentData?.id;
       const payload: any = {
-        id: initialData?.id,
+        ...(targetId ? { id: targetId } : {}),
         dcNumber: values.dcNumber,
         location: values.location,
         dcDate: values.dcDate.toISOString(),

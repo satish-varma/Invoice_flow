@@ -189,6 +189,7 @@ export default function NewRelicPage() {
   const handleStartCreateNew = (loc: NewRelicLocation) => {
     setSelectedChallan(null);
     setIsCreatingNew(loc);
+    setFormKey(`new-${loc}-${Date.now()}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => {
       const el = document.getElementById('challan-form-section');
@@ -390,7 +391,20 @@ export default function NewRelicPage() {
   }, [challanToDownload, toast]);
 
   /* ── Stats & Filtering ── */
-  const activeChallans = challans.filter((c) => !c.isDeleted);
+  const activeChallans = useMemo(() => {
+    const seen = new Map<string, NewRelicChallan>();
+    for (const c of challans) {
+      if (!c.isDeleted) {
+        const dc = c.dcNumber?.trim();
+        if (dc && !seen.has(dc)) {
+          seen.set(dc, c);
+        } else if (!dc) {
+          seen.set(c.id || Math.random().toString(), c);
+        }
+      }
+    }
+    return Array.from(seen.values());
+  }, [challans]);
   const trashChallans = challans.filter((c) => c.isDeleted);
   
   const displayChallans = useMemo(() => {
@@ -653,7 +667,7 @@ export default function NewRelicPage() {
         {(selectedChallan || isCreatingNew) && (
           <div id="challan-form-section">
             <NewRelicChallanForm
-              key={selectedChallan?.id ?? (isCreatingNew ? `new-${isCreatingNew}` : formKey)}
+              key={formKey || selectedChallan?.id || (isCreatingNew ? `new-${isCreatingNew}` : 'new')}
               initialData={selectedChallan}
               defaultLocation={isCreatingNew || undefined}
               onChallanSave={handleSave}

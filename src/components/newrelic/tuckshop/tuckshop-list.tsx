@@ -8,6 +8,7 @@ import { TuckshopDashboard, getCategoryBadge } from './tuckshop-dashboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { SiteId, resolveSiteId, SITE_OPTIONS } from '@/types/site';
 import { triggerHaptic } from '@/lib/haptics';
+import { RollingCashCounter } from '@/components/effects/RollingCashCounter';
 
 interface Props {
   records: NewRelicTuckshopRecord[];
@@ -358,7 +359,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
             return (
               <div
                 key={record.id}
-                className={`p-4 rounded-2xl sm:rounded-3xl theme-card space-y-3 transition-all ${
+                className={`p-4 rounded-2xl sm:rounded-3xl theme-card theme-card-shimmer space-y-3 transition-all ${
                   isExp ? 'border-rose-200/50 hover:border-rose-400' : 'border-emerald-200/50 hover:border-emerald-400'
                 }`}
               >
@@ -419,7 +420,10 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                         ? 'bg-rose-50 border-rose-200 text-rose-700'
                         : 'bg-emerald-50 border-emerald-200 text-emerald-700'
                     }`}>
-                      {isExp ? '-' : '+'}₹{record.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      <RollingCashCounter
+                        value={record.amount}
+                        prefix={isExp ? '-₹' : '+₹'}
+                      />
                     </div>
                   </div>
                 </div>

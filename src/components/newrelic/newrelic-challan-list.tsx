@@ -7,6 +7,7 @@ import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreV
 import { triggerHaptic } from '@/lib/haptics';
 import { useToast } from '@/hooks/use-toast';
 import { NewRelicAttachmentModal } from './newrelic-attachment-modal';
+import { RollingCashCounter } from '@/components/effects/RollingCashCounter';
 import {
   Table,
   TableBody,
@@ -241,7 +242,7 @@ export function NewRelicChallanList({
           return (
             <div
               key={challan.id}
-              className="relative overflow-hidden rounded-3xl theme-card shadow-lg transition-all group"
+              className="relative overflow-hidden rounded-3xl theme-card theme-card-shimmer shadow-lg transition-all group"
             >
               {/* Swipe Action Reveal Rail (revealed behind card when swiped left) */}
               <div className="absolute inset-y-0 right-0 flex items-stretch z-0">
@@ -328,9 +329,10 @@ export function NewRelicChallanList({
                     <span className="text-[11px] uppercase font-bold tracking-wider theme-text-muted block">
                       Total Value
                     </span>
-                    <span className="text-xl font-black font-mono tracking-tight theme-text-primary tabular-nums">
-                      ₹{mrpTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
+                    <RollingCashCounter
+                      value={mrpTotal}
+                      className="text-xl font-black font-mono tracking-tight theme-text-primary block"
+                    />
                   </div>
                   <div className="text-right">
                     <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full theme-card theme-text-primary shadow-2xs">

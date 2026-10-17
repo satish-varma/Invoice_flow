@@ -133,8 +133,27 @@ export const THEME_OPTIONS: ThemeOption[] = [
   },
 ];
 
+export interface MotionFxConfig {
+  masterEnabled: boolean; // Master switch for all motion FX
+  stardustTrail: boolean; // ✨ Touch & cursor stardust trail (auto-sleeps when idle)
+  shimmerBorders: boolean; // 💫 GPU-accelerated running shimmer card borders
+  actionBursts: boolean; // 💥 Tap spark micro-bursts on primary actions
+  rollingCounters: boolean; // 🎰 Smooth numerical odometry cash counters
+  cosmicRipple: boolean; // 🌊 Radial shockwave wave when switching themes
+}
+
+export const DEFAULT_MOTION_FX: MotionFxConfig = {
+  masterEnabled: true,
+  stardustTrail: true,
+  shimmerBorders: true,
+  actionBursts: true,
+  rollingCounters: true,
+  cosmicRipple: true,
+};
+
 const STORAGE_OVERRIDE_KEY = 'invoiceflow_theme_override';
 const STORAGE_USER_THEME_KEY = 'invoiceflow_user_theme';
+const STORAGE_MOTION_FX_KEY = 'invoiceflow_motion_fx';
 const SETTINGS_DOC_PATH = ['settings', 'appTheme'] as const;
 
 interface ThemeBackdropContextType {
@@ -147,6 +166,11 @@ interface ThemeBackdropContextType {
   setTheme: (theme: ThemeBackdropId) => void; // Convenience alias for setPersonalTheme
   themes: ThemeOption[];
   isSyncing: boolean;
+  motionFx: MotionFxConfig;
+  updateMotionFx: (partial: Partial<MotionFxConfig>) => void;
+  resetMotionFx: () => void;
+  triggerActionBurst: (x: number, y: number, color?: string) => void;
+  triggerCosmicRipple: (x: number, y: number, color?: string) => void;
 }
 
 const ThemeBackdropContext = createContext<ThemeBackdropContextType | undefined>(undefined);
@@ -156,6 +180,7 @@ export function ThemeBackdropProvider({ children }: { children: React.ReactNode 
   const [userPersonalTheme, setUserPersonalTheme] = useState<ThemeBackdropId | null>(null);
   const [isPersonalOverride, setIsPersonalOverride] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [motionFx, setMotionFx] = useState<MotionFxConfig>(DEFAULT_MOTION_FX);
 
   // 1. Initialize local personal preference from localStorage
   useEffect(() => {
@@ -169,6 +194,12 @@ export function ThemeBackdropProvider({ children }: { children: React.ReactNode 
       } else {
         setIsPersonalOverride(false);
         setUserPersonalTheme(null);
+      }
+
+      // Load Motion FX configuration
+      const savedFx = localStorage.getItem(STORAGE_MOTION_FX_KEY);
+      if (savedFx) {
+        setMotionFx({ ...DEFAULT_MOTION_FX, ...JSON.parse(savedFx) });
       }
     } catch {
       // Local storage disabled or error
@@ -248,6 +279,41 @@ export function ThemeBackdropProvider({ children }: { children: React.ReactNode 
     }
   }, []);
 
+  // Update Motion FX configuration and persist to localStorage
+  const updateMotionFx = useCallback((partial: Partial<MotionFxConfig>) => {
+    setMotionFx((prev) => {
+      const updated = { ...prev, ...partial };
+      try {
+        localStorage.setItem(STORAGE_MOTION_FX_KEY, JSON.stringify(updated));
+      } catch {
+        // Ignore quota errors
+      }
+      return updated;
+    });
+  }, []);
+
+  // Reset Motion FX configuration to default
+  const resetMotionFx = useCallback(() => {
+    setMotionFx(DEFAULT_MOTION_FX);
+    try {
+      localStorage.removeItem(STORAGE_MOTION_FX_KEY);
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  // Dispatch Action Button Particle Burst event
+  const triggerActionBurst = useCallback((x: number, y: number, color?: string) => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('invoiceflow:burst', { detail: { x, y, color } }));
+  }, []);
+
+  // Dispatch Cosmic Ripple wave event
+  const triggerCosmicRipple = useCallback((x: number, y: number, color?: string) => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('invoiceflow:ripple', { detail: { x, y, color } }));
+  }, []);
+
   // Effective active theme: Personal choice if customized, otherwise follows Company Default in real-time
   const activeTheme: ThemeBackdropId = isPersonalOverride && userPersonalTheme
     ? userPersonalTheme
@@ -267,6 +333,15 @@ export function ThemeBackdropProvider({ children }: { children: React.ReactNode 
     }
   }, [activeTheme]);
 
+  // Synchronize data-shimmer attribute for running shimmer border CSS
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.setAttribute(
+      'data-shimmer',
+      String(motionFx.masterEnabled && motionFx.shimmerBorders)
+    );
+  }, [motionFx.masterEnabled, motionFx.shimmerBorders]);
+
   const value = useMemo(
     () => ({
       theme: activeTheme,
@@ -278,6 +353,11 @@ export function ThemeBackdropProvider({ children }: { children: React.ReactNode 
       setTheme: setPersonalTheme,
       themes: THEME_OPTIONS,
       isSyncing,
+      motionFx,
+      updateMotionFx,
+      resetMotionFx,
+      triggerActionBurst,
+      triggerCosmicRipple,
     }),
     [
       activeTheme,
@@ -287,6 +367,11 @@ export function ThemeBackdropProvider({ children }: { children: React.ReactNode 
       resetToCompanyDefault,
       setCompanyDefaultTheme,
       isSyncing,
+      motionFx,
+      updateMotionFx,
+      resetMotionFx,
+      triggerActionBurst,
+      triggerCosmicRipple,
     ]
   );
 
@@ -310,7 +395,23 @@ export function useThemeBackdrop() {
       setTheme: () => {},
       themes: THEME_OPTIONS,
       isSyncing: false,
+      motionFx: DEFAULT_MOTION_FX,
+      updateMotionFx: () => {},
+      resetMotionFx: () => {},
+      triggerActionBurst: () => {},
+      triggerCosmicRipple: () => {},
     };
   }
   return context;
+}
+
+export function useMotionFx() {
+  const ctx = useThemeBackdrop();
+  return {
+    motionFx: ctx.motionFx,
+    updateMotionFx: ctx.updateMotionFx,
+    resetMotionFx: ctx.resetMotionFx,
+    triggerActionBurst: ctx.triggerActionBurst,
+    triggerCosmicRipple: ctx.triggerCosmicRipple,
+  };
 }

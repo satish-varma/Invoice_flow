@@ -276,6 +276,53 @@
   border: 1px solid var(--theme-card-border) !important;
 }
 
+/* ── Running Shimmer Border (100% GPU-accelerated) ── */
+@keyframes theme-shimmer-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+[data-shimmer="true"] .theme-card-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+[data-shimmer="true"] .theme-card-shimmer::before {
+  content: '';
+  position: absolute;
+  top: -60%;
+  left: -60%;
+  width: 220%;
+  height: 220%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 280deg,
+    var(--theme-accent) 330deg,
+    var(--theme-text-primary) 360deg
+  );
+  animation: theme-shimmer-spin 4s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.45;
+}
+
+/* ── Cosmic Theme Ripple Shockwave ── */
+@keyframes cosmic-ripple-expand {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(45);
+    opacity: 0;
+  }
+}
+
+.animate-cosmic-ripple {
+  animation: cosmic-ripple-expand 0.95s cubic-bezier(0.1, 0.8, 0.25, 1) forwards;
+}
+
 @layer utilities {
   .pdf-capture .no-print {
     display: none !important;

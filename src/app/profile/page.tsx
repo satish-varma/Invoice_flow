@@ -28,9 +28,13 @@ import {
   RotateCcw,
   Building,
   Flame,
+  Zap,
+  Sliders,
+  Play,
+  Waves,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useThemeBackdrop, ThemeOption } from '@/contexts/ThemeBackdropContext';
+import { useThemeBackdrop, useMotionFx, ThemeOption } from '@/contexts/ThemeBackdropContext';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { COMPANY_SITES, SiteId } from '@/types/site';
@@ -53,6 +57,14 @@ export default function ProfilePage() {
     themes,
     isSyncing,
   } = useThemeBackdrop();
+
+  const {
+    motionFx,
+    updateMotionFx,
+    resetMotionFx,
+    triggerActionBurst,
+    triggerCosmicRipple,
+  } = useMotionFx();
 
   const [themeCategory, setThemeCategory] = useState<'all' | 'pro' | 'crazy'>('all');
 
@@ -569,8 +581,9 @@ export default function ProfilePage() {
               <button
                 key={opt.id}
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
                   triggerHaptic('medium');
+                  triggerCosmicRipple(e.clientX, e.clientY);
                   setPersonalTheme(opt.id);
                   toast({
                     title: `Theme: ${opt.name}`,
@@ -628,6 +641,215 @@ export default function ProfilePage() {
               </button>
             );
           })}
+        </div>
+      </div>
+
+      {/* ── Animation & Visual FX Studio ── */}
+      <div className="theme-card rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[var(--theme-accent)]" />
+            <div>
+              <h2 className="text-sm font-bold theme-text-primary">Motion & Visual FX Studio</h2>
+              <p className="text-[11px] theme-text-muted">
+                GPU-accelerated interactive animation layers with zero idle battery drain.
+              </p>
+            </div>
+          </div>
+
+          {/* Master FX Toggle Button */}
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('medium');
+              updateMotionFx({ masterEnabled: !motionFx.masterEnabled });
+              toast({
+                title: motionFx.masterEnabled ? 'Motion FX Paused' : 'Motion FX Activated',
+                description: motionFx.masterEnabled
+                  ? 'All animations disabled for maximum battery saving.'
+                  : 'Interactive animations and shaders enabled.',
+              });
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0 ${
+              motionFx.masterEnabled
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-xs'
+                : 'bg-slate-200/80 dark:bg-slate-800 text-slate-500 border border-slate-300 dark:border-slate-700'
+            }`}
+          >
+            <Zap className={`w-3.5 h-3.5 ${motionFx.masterEnabled ? 'fill-current' : ''}`} />
+            <span>{motionFx.masterEnabled ? 'FX Enabled' : 'Battery Saver (Off)'}</span>
+          </button>
+        </div>
+
+        {/* Quick Presets Row */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[11px] font-bold theme-text-muted mr-1">Presets:</span>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              updateMotionFx({
+                masterEnabled: true,
+                stardustTrail: true,
+                shimmerBorders: true,
+                actionBursts: true,
+                rollingCounters: true,
+                cosmicRipple: true,
+              });
+              toast({ title: 'Full Spectacle Preset Applied' });
+            }}
+            className="px-2.5 py-1 rounded-lg text-xs font-bold theme-card-subtle theme-text-primary hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+          >
+            🚀 Full Spectacle
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              updateMotionFx({
+                masterEnabled: true,
+                stardustTrail: false,
+                shimmerBorders: true,
+                actionBursts: true,
+                rollingCounters: true,
+                cosmicRipple: true,
+              });
+              toast({ title: 'Balanced Preset Applied' });
+            }}
+            className="px-2.5 py-1 rounded-lg text-xs font-bold theme-card-subtle theme-text-primary hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+          >
+            ⚖️ Balanced
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              updateMotionFx({ masterEnabled: false });
+              toast({ title: 'Battery Saver Preset Applied' });
+            }}
+            className="px-2.5 py-1 rounded-lg text-xs font-bold theme-card-subtle theme-text-primary hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+          >
+            🔋 Battery Saver
+          </button>
+        </div>
+
+        {/* Individual Toggles Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+          {/* 1. Stardust Trail */}
+          <div className="flex items-center justify-between p-3 rounded-xl theme-card-subtle">
+            <div className="space-y-0.5 pr-2">
+              <span className="text-xs font-bold theme-text-primary flex items-center gap-1.5">
+                <span>✨</span> Stardust Touch Trail
+              </span>
+              <p className="text-[10px] theme-text-muted">
+                Glowing theme particles trail behind your finger/cursor (auto-sleeps).
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={motionFx.masterEnabled && motionFx.stardustTrail}
+              disabled={!motionFx.masterEnabled}
+              onChange={(e) => updateMotionFx({ stardustTrail: e.target.checked })}
+              className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0 disabled:opacity-40"
+            />
+          </div>
+
+          {/* 2. Running Shimmer Borders */}
+          <div className="flex items-center justify-between p-3 rounded-xl theme-card-subtle">
+            <div className="space-y-0.5 pr-2">
+              <span className="text-xs font-bold theme-text-primary flex items-center gap-1.5">
+                <span>💫</span> Running Shimmer Borders
+              </span>
+              <p className="text-[10px] theme-text-muted">
+                Rotating gradient neon beams traveling along cards & badges.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={motionFx.masterEnabled && motionFx.shimmerBorders}
+              disabled={!motionFx.masterEnabled}
+              onChange={(e) => updateMotionFx({ shimmerBorders: e.target.checked })}
+              className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0 disabled:opacity-40"
+            />
+          </div>
+
+          {/* 3. Action Button Bursts */}
+          <div className="flex items-center justify-between p-3 rounded-xl theme-card-subtle">
+            <div className="space-y-0.5 pr-2">
+              <span className="text-xs font-bold theme-text-primary flex items-center gap-1.5">
+                <span>💥</span> Action Tap Bursts
+              </span>
+              <p className="text-[10px] theme-text-muted">
+                Micro-burst sparks when saving challans, check-in, or punches.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={motionFx.masterEnabled && motionFx.actionBursts}
+              disabled={!motionFx.masterEnabled}
+              onChange={(e) => updateMotionFx({ actionBursts: e.target.checked })}
+              className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0 disabled:opacity-40"
+            />
+          </div>
+
+          {/* 4. Rolling Number Counters */}
+          <div className="flex items-center justify-between p-3 rounded-xl theme-card-subtle">
+            <div className="space-y-0.5 pr-2">
+              <span className="text-xs font-bold theme-text-primary flex items-center gap-1.5">
+                <span>🎰</span> Rolling Number Counters
+              </span>
+              <p className="text-[10px] theme-text-muted">
+                Smooth mechanical odometry ticker rolls for totals and stats.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={motionFx.masterEnabled && motionFx.rollingCounters}
+              disabled={!motionFx.masterEnabled}
+              onChange={(e) => updateMotionFx({ rollingCounters: e.target.checked })}
+              className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0 disabled:opacity-40"
+            />
+          </div>
+
+          {/* 5. Cosmic Theme Ripple */}
+          <div className="flex items-center justify-between p-3 rounded-xl theme-card-subtle sm:col-span-2">
+            <div className="space-y-0.5 pr-2">
+              <span className="text-xs font-bold theme-text-primary flex items-center gap-1.5">
+                <span>🌊</span> Cosmic Theme Ripple
+              </span>
+              <p className="text-[10px] theme-text-muted">
+                Smooth radial shockwave wave expanding outward across the screen on theme changes.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={motionFx.masterEnabled && motionFx.cosmicRipple}
+              disabled={!motionFx.masterEnabled}
+              onChange={(e) => updateMotionFx({ cosmicRipple: e.target.checked })}
+              className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0 disabled:opacity-40"
+            />
+          </div>
+        </div>
+
+        {/* Live Test FX Button */}
+        <div className="pt-1 flex items-center justify-between gap-3 border-t border-white/10">
+          <p className="text-[11px] theme-text-muted">
+            Tap to test active animation effects right here:
+          </p>
+          <button
+            type="button"
+            onClick={(e) => {
+              triggerHaptic('heavy');
+              triggerActionBurst(e.clientX, e.clientY);
+              triggerCosmicRipple(e.clientX, e.clientY);
+              toast({ title: '✨ Spark & Ripple Triggered!' });
+            }}
+            className="px-3.5 py-1.5 rounded-xl theme-btn-primary text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shrink-0 shadow-md"
+          >
+            <Play className="w-3 h-3 fill-current" />
+            <span>Test FX Now</span>
+          </button>
         </div>
       </div>
 

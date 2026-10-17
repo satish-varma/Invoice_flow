@@ -7,6 +7,7 @@ import { FirebaseProvider } from '@/firebase';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeBackdropProvider } from '@/contexts/ThemeBackdropContext';
 import { MobileAnimatedBackground } from '@/components/ui/mobile-animated-background';
+import { GlobalMotionFxOverlay } from '@/components/effects/GlobalMotionFxOverlay';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -52,6 +53,7 @@ export default function RootLayout({
           <AuthProvider>
             <ThemeBackdropProvider>
               <MobileAnimatedBackground />
+              <GlobalMotionFxOverlay />
               <div className="relative z-10 min-h-screen">
                 {children}
               </div>

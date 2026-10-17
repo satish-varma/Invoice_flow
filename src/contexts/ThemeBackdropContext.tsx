@@ -140,6 +140,7 @@ export interface MotionFxConfig {
   actionBursts: boolean; // 💥 Tap spark micro-bursts on primary actions
   rollingCounters: boolean; // 🎰 Smooth numerical odometry cash counters
   cosmicRipple: boolean; // 🌊 Radial shockwave wave when switching themes
+  card3dTilt: boolean; // 🎮 3D Perspective Tilt with Specular Glare
 }
 
 export const DEFAULT_MOTION_FX: MotionFxConfig = {
@@ -149,6 +150,7 @@ export const DEFAULT_MOTION_FX: MotionFxConfig = {
   actionBursts: true,
   rollingCounters: true,
   cosmicRipple: true,
+  card3dTilt: true,
 };
 
 const STORAGE_OVERRIDE_KEY = 'invoiceflow_theme_override';

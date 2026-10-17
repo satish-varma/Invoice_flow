@@ -8,6 +8,7 @@ import { triggerHaptic } from '@/lib/haptics';
 import { useToast } from '@/hooks/use-toast';
 import { NewRelicAttachmentModal } from './newrelic-attachment-modal';
 import { RollingCashCounter } from '@/components/effects/RollingCashCounter';
+import { TiltCard } from '@/components/effects/TiltCard';
 import {
   Table,
   TableBody,
@@ -240,7 +241,7 @@ export function NewRelicChallanList({
           const extraItemsCount = (challan.lineItems?.length || 0) - 2;
 
           return (
-            <div
+            <TiltCard
               key={challan.id}
               className="relative overflow-hidden rounded-3xl theme-card theme-card-shimmer shadow-lg transition-all group"
             >
@@ -580,7 +581,7 @@ export function NewRelicChallanList({
                   )}
                 </div>
               </div>
-            </div>
+            </TiltCard>
           );
         })}
       </div>

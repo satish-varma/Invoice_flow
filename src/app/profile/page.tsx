@@ -42,6 +42,7 @@ import { NewRelicEmployee, NewRelicAttendance } from '@/types/employee';
 import { getTodayAttendance } from '@/services/newrelicAttendanceService';
 import { triggerHaptic } from '@/lib/haptics';
 import { useToast } from '@/hooks/use-toast';
+import { TiltCard } from '@/components/effects/TiltCard';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -204,65 +205,67 @@ export default function ProfilePage() {
         </div>
 
         {/* Main Profile Identity Card */}
-        <div className="relative rounded-3xl bg-gradient-to-br from-[#181156] via-[#241775] to-[#3b2fc9] p-6 text-white shadow-xl overflow-hidden">
-          <div className="absolute -right-8 -top-8 w-40 h-40 bg-indigo-400/20 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute right-20 -bottom-8 w-32 h-32 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
+        <TiltCard className="rounded-3xl shadow-xl">
+          <div className="relative rounded-3xl bg-gradient-to-br from-[#181156] via-[#241775] to-[#3b2fc9] p-6 text-white shadow-xl overflow-hidden">
+            <div className="absolute -right-8 -top-8 w-40 h-40 bg-indigo-400/20 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute right-20 -bottom-8 w-32 h-32 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5">
-          {/* Avatar / Selfie Photo */}
-          <div className="relative">
-            {employee?.profilePhotoUrl || todayAttendance?.checkIn?.selfieUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={employee?.profilePhotoUrl || todayAttendance?.checkIn?.selfieUrl}
-                alt="Profile photo"
-                className="w-20 h-20 rounded-2xl object-cover border-2 border-white/40 shadow-lg bg-black/20"
-              />
-            ) : (
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 text-white flex items-center justify-center font-black text-2xl shadow-lg border-2 border-white/30">
-                {initials}
-              </div>
-            )}
-            <span className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-emerald-500 border-2 border-[#181156] flex items-center justify-center shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-white" />
-            </span>
-          </div>
-
-          <div className="flex-1 min-w-0 space-y-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white truncate">
-                {employee?.name || user?.email?.split('@')[0] || 'User Profile'}
-              </h1>
-              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-300/30">
-                {role || 'User'}
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5">
+            {/* Avatar / Selfie Photo */}
+            <div className="relative">
+              {employee?.profilePhotoUrl || todayAttendance?.checkIn?.selfieUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={employee?.profilePhotoUrl || todayAttendance?.checkIn?.selfieUrl}
+                  alt="Profile photo"
+                  className="w-20 h-20 rounded-2xl object-cover border-2 border-white/40 shadow-lg bg-black/20"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 text-white flex items-center justify-center font-black text-2xl shadow-lg border-2 border-white/30">
+                  {initials}
+                </div>
+              )}
+              <span className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-emerald-500 border-2 border-[#181156] flex items-center justify-center shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-white" />
               </span>
             </div>
 
-            <p className="text-xs text-indigo-100/90 font-medium truncate flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5 text-indigo-300" />
-              {user?.email}
-            </p>
+            <div className="flex-1 min-w-0 space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white truncate">
+                  {employee?.name || user?.email?.split('@')[0] || 'User Profile'}
+                </h1>
+                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-300/30">
+                  {role || 'User'}
+                </span>
+              </div>
 
-            <div className="flex items-center gap-2 pt-1 flex-wrap text-xs text-indigo-200">
-              <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-lg border border-white/10">
-                <Building2 className="w-3 h-3 text-amber-300" />
-                {siteConfig.name} Stall
-              </span>
-              {employee?.location && (
-                <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-lg border border-white/10 capitalize">
-                  <MapPin className="w-3 h-3 text-emerald-300" />
-                  {employee.location}
+              <p className="text-xs text-indigo-100/90 font-medium truncate flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-indigo-300" />
+                {user?.email}
+              </p>
+
+              <div className="flex items-center gap-2 pt-1 flex-wrap text-xs text-indigo-200">
+                <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-lg border border-white/10">
+                  <Building2 className="w-3 h-3 text-amber-300" />
+                  {siteConfig.name} Stall
                 </span>
-              )}
-              {employee?.employeeId && (
-                <span className="bg-white/10 px-2 py-0.5 rounded-lg border border-white/10 font-mono text-[11px]">
-                  ID: {employee.employeeId}
-                </span>
-              )}
+                {employee?.location && (
+                  <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-lg border border-white/10 capitalize">
+                    <MapPin className="w-3 h-3 text-emerald-300" />
+                    {employee.location}
+                  </span>
+                )}
+                {employee?.employeeId && (
+                  <span className="bg-white/10 px-2 py-0.5 rounded-lg border border-white/10 font-mono text-[11px]">
+                    ID: {employee.employeeId}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </TiltCard>
 
       {/* Today's Attendance Quick Status Card */}
       <div className="theme-card rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
@@ -692,10 +695,30 @@ export default function ProfilePage() {
               updateMotionFx({
                 masterEnabled: true,
                 stardustTrail: true,
+                card3dTilt: true,
+                actionBursts: true,
+                rollingCounters: true,
+                shimmerBorders: true,
+                cosmicRipple: true,
+              });
+              toast({ title: 'Crown Jewels Bundle Applied ✨' });
+            }}
+            className="px-2.5 py-1 rounded-lg text-xs font-bold theme-btn-primary hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-xs"
+          >
+            💎 Crown Jewels (All 4)
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              updateMotionFx({
+                masterEnabled: true,
+                stardustTrail: true,
                 shimmerBorders: true,
                 actionBursts: true,
                 rollingCounters: true,
                 cosmicRipple: true,
+                card3dTilt: true,
               });
               toast({ title: 'Full Spectacle Preset Applied' });
             }}
@@ -714,6 +737,7 @@ export default function ProfilePage() {
                 actionBursts: true,
                 rollingCounters: true,
                 cosmicRipple: true,
+                card3dTilt: false,
               });
               toast({ title: 'Balanced Preset Applied' });
             }}
@@ -812,8 +836,27 @@ export default function ProfilePage() {
             />
           </div>
 
-          {/* 5. Cosmic Theme Ripple */}
-          <div className="flex items-center justify-between p-3 rounded-xl theme-card-subtle sm:col-span-2">
+          {/* 5. 3D Perspective Tilt & Glare */}
+          <div className="flex items-center justify-between p-3 rounded-xl theme-card-subtle">
+            <div className="space-y-0.5 pr-2">
+              <span className="text-xs font-bold theme-text-primary flex items-center gap-1.5">
+                <span>🎮</span> 3D Tilt & Specular Glare
+              </span>
+              <p className="text-[10px] theme-text-muted">
+                Perspective tilt with radial light glare reflecting across cards on hover & drag.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={motionFx.masterEnabled && motionFx.card3dTilt}
+              disabled={!motionFx.masterEnabled}
+              onChange={(e) => updateMotionFx({ card3dTilt: e.target.checked })}
+              className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0 disabled:opacity-40"
+            />
+          </div>
+
+          {/* 6. Cosmic Theme Ripple */}
+          <div className="flex items-center justify-between p-3 rounded-xl theme-card-subtle">
             <div className="space-y-0.5 pr-2">
               <span className="text-xs font-bold theme-text-primary flex items-center gap-1.5">
                 <span>🌊</span> Cosmic Theme Ripple

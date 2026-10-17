@@ -238,14 +238,142 @@ button, a, nav, header {
   will-change: transform, opacity;
 }
 
+/* ── Theme 2: Fintech Luxe (Liquid Satin) Keyframes ── */
+@keyframes satinFlow1 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-40px, 35px, 0) scale(1.15) rotate(12deg);
+  }
+}
+
+@keyframes satinFlow2 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(35px, -45px, 0) scale(1.18) rotate(-15deg);
+  }
+}
+
+@keyframes metallicSheen {
+  0% {
+    transform: translate3d(-35%, -35%, 0) rotate(25deg);
+    opacity: 0.05;
+  }
+  50% {
+    opacity: 0.28;
+  }
+  100% {
+    transform: translate3d(35%, 35%, 0) rotate(25deg);
+    opacity: 0.05;
+  }
+}
+
+.animate-satin-1 {
+  animation: satinFlow1 24s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-satin-2 {
+  animation: satinFlow2 28s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-metallic-sheen {
+  animation: metallicSheen 18s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* ── Theme 3: Linear Cosmic Grid Keyframes ── */
+@keyframes cosmicLaserPulse {
+  0% {
+    transform: translate3d(0, -120%, 0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.75;
+  }
+  80% {
+    opacity: 0.75;
+  }
+  100% {
+    transform: translate3d(0, 220%, 0);
+    opacity: 0;
+  }
+}
+
+@keyframes cosmicGlowPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.28;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.48;
+  }
+}
+
+.animate-cosmic-laser {
+  animation: cosmicLaserPulse 8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform, opacity;
+}
+
+.animate-cosmic-glow {
+  animation: cosmicGlowPulse 12s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* ── Theme 4: Nordic Mist Keyframes ── */
+@keyframes mistDrift1 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translate3d(-35px, 30px, 0) scale(1.12);
+    opacity: 0.55;
+  }
+}
+
+@keyframes mistDrift2 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate3d(40px, -30px, 0) scale(1.16);
+    opacity: 0.5;
+  }
+}
+
+.animate-mist-1 {
+  animation: mistDrift1 32s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-mist-2 {
+  animation: mistDrift2 36s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-ambient-1,
   .animate-ambient-2,
   .animate-ambient-3,
   .animate-ambient-4,
   .animate-ambient-sweep,
-  .animate-ambient-particle {
+  .animate-ambient-particle,
+  .animate-satin-1,
+  .animate-satin-2,
+  .animate-metallic-sheen,
+  .animate-cosmic-laser,
+  .animate-cosmic-glow,
+  .animate-mist-1,
+  .animate-mist-2 {
     animation: none !important;
   }
 }
+
 

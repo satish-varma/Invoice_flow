@@ -22,8 +22,11 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
+  Palette,
+  Check,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useThemeBackdrop } from '@/contexts/ThemeBackdropContext';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { COMPANY_SITES, SiteId } from '@/types/site';
@@ -36,6 +39,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, role, signOut, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const { theme, setTheme, themes } = useThemeBackdrop();
 
   const [employee, setEmployee] = useState<NewRelicEmployee | null>(null);
   const [todayAttendance, setTodayAttendance] = useState<NewRelicAttendance | null>(null);
@@ -387,6 +391,85 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* ── App Theme & Backdrops Picker ── */}
+      <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md rounded-2xl border border-white/80 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs space-y-3.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-xs">
+              <Palette className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-gray-900 dark:text-white">App Backdrop & Theme</h2>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">Personalize your visual experience</p>
+            </div>
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60">
+            5 PRESETS
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+          {themes.map((opt) => {
+            const isSelected = theme === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => {
+                  triggerHaptic('medium');
+                  setTheme(opt.id);
+                  toast({
+                    title: `Theme: ${opt.name}`,
+                    description: 'Backdrop updated instantly across the entire app.',
+                  });
+                }}
+                className={`relative flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all active:scale-[0.98] cursor-pointer ${
+                  isSelected
+                    ? 'bg-indigo-50/90 dark:bg-indigo-950/40 border-indigo-500/80 shadow-xs ring-1 ring-indigo-500/50'
+                    : 'bg-white/60 dark:bg-slate-800/40 border-gray-200/80 dark:border-slate-700/60 hover:bg-gray-50 dark:hover:bg-slate-800/70'
+                }`}
+              >
+                {/* Visual Color Swatch */}
+                <div className="relative shrink-0 mt-0.5">
+                  <div className="w-10 h-10 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 grid grid-cols-2 shadow-2xs">
+                    {opt.previewColors.map((color, idx) => (
+                      <div
+                        key={idx}
+                        className="w-full h-full"
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                  {isSelected && (
+                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xs border-2 border-white dark:border-slate-900">
+                      <Check className="w-3 h-3 stroke-[3]" />
+                    </span>
+                  )}
+                </div>
+
+                {/* Theme Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className={`text-xs font-bold truncate ${isSelected ? 'text-indigo-950 dark:text-indigo-200 font-extrabold' : 'text-gray-900 dark:text-white'}`}>
+                      {opt.name}
+                    </span>
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 shrink-0">
+                      {opt.badge}
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-medium text-gray-600 dark:text-gray-300 mt-0.5 line-clamp-1">
+                    {opt.subtitle}
+                  </p>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 line-clamp-2">
+                    {opt.description}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Account & Security Information */}
       <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md rounded-2xl border border-white/80 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs space-y-3">

@@ -224,7 +224,8 @@ export function ChallansDataTable<TData, TValue>({
                         return (
                             <div
                                 key={id}
-                                className={`rounded-2xl border bg-white dark:bg-slate-900 p-4 space-y-3.5 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] transition-all active:scale-[0.99] ${
+                                data-card="true"
+                                className={`rounded-2xl border p-4 space-y-3.5 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] transition-all active:scale-[0.99] theme-card ${
                                     isSelected 
                                         ? 'border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50/20 dark:bg-indigo-950/20' 
                                         : 'border-slate-200/80 dark:border-slate-800'
@@ -306,7 +307,7 @@ export function ChallansDataTable<TData, TValue>({
 
             {/* ── DESKTOP TABLE ─────────────────────────────────────── */}
             <div className="hidden md:block">
-                <div className="rounded-md border overflow-x-auto">
+                <div data-card="true" className="rounded-2xl border overflow-x-auto theme-card">
                     <Table>
                         <TableHeader>
                             {table.getHeaderGroups().map((headerGroup) => (

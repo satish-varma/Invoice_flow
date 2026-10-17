@@ -276,35 +276,71 @@
   border: 1px solid var(--theme-card-border) !important;
 }
 
-/* ── Running Shimmer Border (100% GPU-accelerated) ── */
-@keyframes theme-shimmer-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+/* ── Universal Running Rim Shimmer (Clean 1px border only, zero text wash) ── */
+@keyframes theme-rim-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
-[data-shimmer="true"] .theme-card-shimmer {
-  position: relative;
-  overflow: hidden;
+[data-shimmer="true"] .theme-card,
+[data-shimmer="true"] .bg-card,
+[data-shimmer="true"] [data-card="true"] {
+  border: 1px solid transparent !important;
+  background-clip: padding-box, border-box !important;
+  background-origin: padding-box, border-box !important;
+  background-image: 
+    linear-gradient(var(--theme-card-bg, #0f172a), var(--theme-card-bg, #0f172a)),
+    linear-gradient(90deg, var(--theme-card-border, rgba(99,102,241,0.25)), var(--theme-accent, #6366f1), var(--theme-card-border, rgba(99,102,241,0.25))) !important;
+  background-size: 100% 100%, 250% 100% !important;
+  animation: theme-rim-shimmer 4.5s ease infinite;
 }
 
-[data-shimmer="true"] .theme-card-shimmer::before {
-  content: '';
-  position: absolute;
-  top: -60%;
-  left: -60%;
-  width: 220%;
-  height: 220%;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    transparent 280deg,
-    var(--theme-accent) 330deg,
-    var(--theme-text-primary) 360deg
-  );
-  animation: theme-shimmer-spin 4s linear infinite;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.45;
+/* Tactile micro-press for mobile & desktop */
+.theme-card,
+.bg-card,
+[data-card="true"] {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+.theme-card:active,
+.bg-card:active,
+[data-card="true"]:active {
+  transform: scale(0.988);
+}
+
+/* ── Universal Card Text & Component Adaptability for Dark/Vibrant Themes ── */
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .theme-card .text-slate-900,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .theme-card .text-slate-800,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .theme-card .text-gray-900,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .theme-card .text-gray-800,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .bg-card .text-slate-900,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .bg-card .text-slate-800,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) [data-card="true"] .text-slate-900,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) [data-card="true"] .text-slate-800 {
+  color: var(--theme-text-primary) !important;
+}
+
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .theme-card .text-slate-500,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .theme-card .text-slate-400,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .theme-card .text-slate-600,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .theme-card .text-gray-500,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .theme-card .text-gray-400,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .bg-card .text-slate-500,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .bg-card .text-slate-400,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) [data-card="true"] .text-slate-500,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) [data-card="true"] .text-slate-400 {
+  color: var(--theme-text-muted) !important;
+}
+
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .theme-card th,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .bg-card th,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) [data-card="true"] th {
+  color: var(--theme-text-muted) !important;
+}
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .theme-card td,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) .bg-card td,
+[data-theme]:not([data-theme="ambient-orbs"]):not([data-theme="classic-minimal"]) [data-card="true"] td {
+  color: var(--theme-text-primary) !important;
 }
 
 /* ── Cosmic Theme Ripple Shockwave ── */

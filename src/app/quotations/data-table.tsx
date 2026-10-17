@@ -245,10 +245,11 @@ export function QuotationsDataTable<TData, TValue>({
                         return (
                             <div
                                 key={id}
-                                className={`rounded-2xl border transition-all duration-150 p-4 space-y-3.5 ${
+                                data-card="true"
+                                className={`rounded-2xl border transition-all duration-150 p-4 space-y-3.5 theme-card ${
                                     isSelected
                                         ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-md ring-2 ring-indigo-500/20'
-                                        : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)]'
+                                        : 'border-slate-200/80 dark:border-slate-800/80 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)]'
                                 }`}
                             >
                                 <div className="flex items-start justify-between gap-2">
@@ -331,7 +332,7 @@ export function QuotationsDataTable<TData, TValue>({
 
             {/* ── DESKTOP TABLE ─────────────────────────────────────── */}
             <div className="hidden md:block">
-                <div className="rounded-md border overflow-x-auto">
+                <div data-card="true" className="rounded-2xl border overflow-x-auto theme-card">
                     <Table>
                         <TableHeader>
                             {table.getHeaderGroups().map((headerGroup) => (

@@ -335,14 +335,18 @@ export function ThemeBackdropProvider({ children }: { children: React.ReactNode 
     }
   }, [activeTheme]);
 
-  // Synchronize data-shimmer attribute for running shimmer border CSS
+  // Synchronize data-shimmer and data-fx-card attributes for running shimmer border & card FX CSS
   useEffect(() => {
     if (typeof document === 'undefined') return;
     document.documentElement.setAttribute(
       'data-shimmer',
       String(motionFx.masterEnabled && motionFx.shimmerBorders)
     );
-  }, [motionFx.masterEnabled, motionFx.shimmerBorders]);
+    document.documentElement.setAttribute(
+      'data-fx-card',
+      String(motionFx.masterEnabled && motionFx.card3dTilt)
+    );
+  }, [motionFx.masterEnabled, motionFx.shimmerBorders, motionFx.card3dTilt]);
 
   const value = useMemo(
     () => ({

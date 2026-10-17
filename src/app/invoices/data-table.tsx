@@ -368,10 +368,11 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
             return (
               <div
                 key={id}
-                className={`rounded-2xl border transition-all duration-150 p-4 space-y-3 ${
+                data-card="true"
+                className={`rounded-2xl border transition-all duration-150 p-4 space-y-3 theme-card ${
                   isSelected
                     ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-md ring-2 ring-emerald-500/20"
-                    : "border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)]"
+                    : "border-slate-200/80 dark:border-slate-800/80 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)]"
                 }`}
               >
                 {/* Top row: Checkbox + Invoice # + Amount */}
@@ -505,7 +506,7 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
 
       {/* ── DESKTOP TABLE ─────────────────────────────────────── */}
       <div className="hidden md:block">
-        <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+        <div data-card="true" className="rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden theme-card">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (

@@ -204,11 +204,12 @@ export function DashboardOverview({
           return (
             <div
               key={index}
-              className={`relative overflow-hidden rounded-2xl sm:rounded-3xl border p-4 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] hover:shadow-md transition-all active:scale-[0.98] ${stat.cardBg}`}
+              data-card="true"
+              className="relative overflow-hidden rounded-2xl sm:rounded-3xl border p-4 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] hover:shadow-md transition-all active:scale-[0.98] theme-card"
             >
               <div className="flex items-center justify-between mb-2.5">
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${stat.badgeClass}`}
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider theme-badge"
                 >
                   {stat.badge}
                 </span>
@@ -219,13 +220,13 @@ export function DashboardOverview({
                 </div>
               </div>
 
-              <p className="text-xs font-semibold text-slate-500 truncate">
+              <p className="text-xs font-semibold theme-text-muted truncate">
                 {stat.title}
               </p>
-              <p className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight font-mono tabular-nums mt-1">
+              <p className="text-lg sm:text-2xl font-black theme-text-primary tracking-tight font-mono tabular-nums mt-1">
                 {stat.value}
               </p>
-              <p className="text-[11px] text-slate-400 font-medium truncate mt-1">
+              <p className="text-[11px] theme-text-muted opacity-80 font-medium truncate mt-1">
                 {stat.description}
               </p>
             </div>
@@ -237,60 +238,64 @@ export function DashboardOverview({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
         <button
           type="button"
+          data-card="true"
           onClick={() => {
             triggerHaptic('medium');
             onNewInvoice?.();
           }}
-          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-[#3b2fc9]/40 transition-all active:scale-[0.96] group text-left w-full cursor-pointer"
+          className="flex items-center gap-2.5 p-3.5 rounded-2xl theme-card-subtle hover:opacity-90 border shadow-xs transition-all active:scale-[0.96] group text-left w-full cursor-pointer"
         >
           <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-400 flex items-center justify-center shrink-0 transition-colors">
             <FilePlus className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">New Invoice</p>
-            <p className="text-[10px] text-slate-400 truncate">Create GST invoice</p>
+            <p className="text-xs font-bold theme-text-primary truncate">New Invoice</p>
+            <p className="text-[10px] theme-text-muted truncate">Create GST invoice</p>
           </div>
         </button>
 
         <Link
           href="/quotation"
+          data-card="true"
           onClick={() => triggerHaptic('light')}
-          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-amber-500/40 transition-all active:scale-[0.96] group"
+          className="flex items-center gap-2.5 p-3.5 rounded-2xl theme-card-subtle hover:opacity-90 border shadow-xs transition-all active:scale-[0.96] group"
         >
           <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/60 group-hover:bg-amber-100 dark:group-hover:bg-amber-900/60 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 transition-colors">
             <FileSearch className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">New Quotation</p>
-            <p className="text-[10px] text-slate-400 truncate">Send proposal quote</p>
+            <p className="text-xs font-bold theme-text-primary truncate">New Quotation</p>
+            <p className="text-[10px] theme-text-muted truncate">Send proposal quote</p>
           </div>
         </Link>
 
         <Link
           href="/delivery-challan"
+          data-card="true"
           onClick={() => triggerHaptic('light')}
-          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-cyan-500/40 transition-all active:scale-[0.96] group"
+          className="flex items-center gap-2.5 p-3.5 rounded-2xl theme-card-subtle hover:opacity-90 border shadow-xs transition-all active:scale-[0.96] group"
         >
           <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/60 text-blue-700 dark:text-blue-400 flex items-center justify-center shrink-0 transition-colors">
             <Truck className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">Delivery Challan</p>
-            <p className="text-[10px] text-slate-400 truncate">Dispatch goods</p>
+            <p className="text-xs font-bold theme-text-primary truncate">Delivery Challan</p>
+            <p className="text-[10px] theme-text-muted truncate">Dispatch goods</p>
           </div>
         </Link>
 
         <Link
           href="/invoices"
+          data-card="true"
           onClick={() => triggerHaptic('light')}
-          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-purple-500/40 transition-all active:scale-[0.96] group"
+          className="flex items-center gap-2.5 p-3.5 rounded-2xl theme-card-subtle hover:opacity-90 border shadow-xs transition-all active:scale-[0.96] group"
         >
           <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-950/60 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/60 text-purple-700 dark:text-purple-400 flex items-center justify-center shrink-0 transition-colors">
             <FileText className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">All Invoices</p>
-            <p className="text-[10px] text-slate-400 truncate">Filter &amp; bulk export</p>
+            <p className="text-xs font-bold theme-text-primary truncate">All Invoices</p>
+            <p className="text-[10px] theme-text-muted truncate">Filter &amp; bulk export</p>
           </div>
         </Link>
       </div>

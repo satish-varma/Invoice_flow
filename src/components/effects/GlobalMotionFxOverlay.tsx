@@ -106,16 +106,25 @@ export function GlobalMotionFxOverlay() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // 1. Touch & Cursor Stardust Trail (Capped at 25 particles for silky 60-120fps)
+  // 1. Touch & Cursor Stardust Trail (Clean, non-distracting & 60-120fps)
   useEffect(() => {
     if (!motionFx.masterEnabled || !motionFx.stardustTrail) return;
 
     let lastSpawn = 0;
-    const SPAWN_INTERVAL = 32; // ~30 spawns per sec
+    const SPAWN_INTERVAL = 32; // ~30 spawns per sec for desktop
 
     const handlePointerMove = (e: PointerEvent) => {
+      const isTouch = e.pointerType === 'touch';
+
+      // Mobile Touch Optimization:
+      // Suppress particles during rapid vertical scrolling so user's thumb has zero lag/distraction
+      if (isTouch) {
+        if (Math.abs(e.movementY) > 8) return;
+      }
+
       const now = performance.now();
-      if (now - lastSpawn < SPAWN_INTERVAL) return;
+      const interval = isTouch ? 70 : SPAWN_INTERVAL;
+      if (now - lastSpawn < interval) return;
       lastSpawn = now;
 
       // Cap max particles to prevent any stutter
@@ -129,11 +138,11 @@ export function GlobalMotionFxOverlay() {
       particlesRef.current.push({
         x: e.clientX,
         y: e.clientY,
-        vx: (Math.random() - 0.5) * 1.5,
-        vy: (Math.random() - 0.5) * 1.5 + 0.3,
-        size: Math.random() * 3 + 1.5,
-        alpha: 0.85,
-        decay: Math.random() * 0.035 + 0.02,
+        vx: (Math.random() - 0.5) * (isTouch ? 0.7 : 1.5),
+        vy: (Math.random() - 0.5) * (isTouch ? 0.7 : 1.5) + (isTouch ? 0 : 0.3),
+        size: isTouch ? Math.random() * 1.2 + 0.8 : Math.random() * 3 + 1.5,
+        alpha: isTouch ? 0.6 : 0.85,
+        decay: isTouch ? 0.055 : Math.random() * 0.035 + 0.02,
         color,
       });
 

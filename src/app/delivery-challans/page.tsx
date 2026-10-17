@@ -261,7 +261,7 @@ export default function DeliveryChallansPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] p-3 sm:p-6">
+                    <div data-card="true" className="theme-card rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] p-3 sm:p-6">
                         <ChallansDataTable
                             columns={columns}
                             data={data}

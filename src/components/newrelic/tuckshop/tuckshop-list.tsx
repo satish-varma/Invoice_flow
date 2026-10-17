@@ -397,25 +397,22 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
 
       {/* Desktop Table View (hidden md:block) */}
       <div className="hidden md:block overflow-x-auto flex-1">
-        <table className="w-full text-left border-collapse min-w-[700px]">
+        <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50/80 border-b border-gray-200">
-              <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Site</th>
-              <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Location</th>
-              <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Type</th>
-              <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Category</th>
-              <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">User</th>
-              <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Description</th>
-              <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Bill</th>
-              <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Amount</th>
-              <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+              <th className="px-3.5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
+              <th className="px-3.5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Site & Location</th>
+              <th className="px-3.5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Type & Category</th>
+              <th className="px-3.5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Description & User</th>
+              <th className="px-2.5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Bill</th>
+              <th className="px-3.5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Amount</th>
+              <th className="px-3.5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {paginatedRecords.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-5 py-8 text-center text-sm text-gray-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
                   No records found.
                 </td>
               </tr>
@@ -425,69 +422,86 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                 const isExp = record.type === 'expense';
                 return (
                   <tr key={record.id} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap font-medium">
+                    {/* Date */}
+                    <td className="px-3.5 py-3 text-xs text-gray-700 whitespace-nowrap font-medium">
                       {new Date(record.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </td>
-                    <td className="px-5 py-3.5 text-sm whitespace-nowrap">
-                      {(() => {
-                        const sId = resolveSiteId(record.siteId);
-                        return (
-                          <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-semibold border ${
-                            sId === 'dsm'
-                              ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
-                              : sId === 'ntt_data'
-                              ? 'bg-amber-50 text-amber-800 border-amber-200'
-                              : 'bg-indigo-50 text-[#3b2fc9] border-indigo-200'
-                          }`}>
-                            {sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic'}
-                          </span>
-                        );
-                      })()}
+
+                    {/* Combined: Site & Location */}
+                    <td className="px-3.5 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {(() => {
+                          const sId = resolveSiteId(record.siteId);
+                          return (
+                            <span className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-bold border ${
+                              sId === 'dsm'
+                                ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
+                                : sId === 'ntt_data'
+                                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                : 'bg-indigo-50 text-[#3b2fc9] border-indigo-200'
+                            }`}>
+                              {sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic'}
+                            </span>
+                          );
+                        })()}
+                        <span className={`inline-block px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                          record.location === 'HYD' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-teal-50 text-teal-700 border border-teal-200'
+                        }`}>
+                          {record.location}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-5 py-3.5 text-sm font-semibold">
-                      <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${
-                        record.location === 'HYD' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-teal-50 text-teal-700 border border-teal-200'
-                      }`}>
-                        {record.location}
-                      </span>
+
+                    {/* Combined: Type & Category */}
+                    <td className="px-3.5 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border ${catBadge.color}`}>
+                          <span>{catBadge.emoji}</span>
+                          <span className="truncate max-w-[130px]">{catBadge.label}</span>
+                        </span>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                          isExp ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        }`}>
+                          {isExp ? <TrendingDown className="h-2.5 w-2.5" /> : <TrendingUp className="h-2.5 w-2.5" />}
+                          {record.type}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-5 py-3.5 text-sm whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide border ${
-                        isExp ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      }`}>
-                        {isExp ? <TrendingDown className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
-                        {record.type}
-                      </span>
+
+                    {/* Combined: Description & User */}
+                    <td className="px-3.5 py-3">
+                      <div className="min-w-0 max-w-[220px]">
+                        <p className="text-xs text-gray-700 font-medium truncate" title={record.description || ''}>
+                          {record.description || '—'}
+                        </p>
+                        <p className="text-[10px] text-gray-400 font-medium truncate" title={record.createdBy || ''}>
+                          By: <span className="font-semibold text-gray-600">{record.createdBy || 'Unknown'}</span>
+                        </p>
+                      </div>
                     </td>
-                    <td className="px-5 py-3.5 text-sm whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold border ${catBadge.color}`}>
-                        <span>{catBadge.emoji}</span>
-                        <span>{catBadge.label}</span>
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-sm text-gray-500 max-w-[140px] truncate" title={record.createdBy || ''}>
-                      {record.createdBy || 'Unknown'}
-                    </td>
-                    <td className="px-5 py-3.5 text-sm text-gray-500 max-w-[200px] truncate" title={record.description}>
-                      {record.description || '-'}
-                    </td>
-                    <td className="px-5 py-3.5 text-center whitespace-nowrap">
+
+                    {/* Bill */}
+                    <td className="px-2.5 py-3 text-center whitespace-nowrap">
                       {record.billUrl ? (
                         <a href={record.billUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center p-1.5 text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors shadow-2xs" title="View Uploaded Bill">
-                          <FileText className="h-4 w-4" />
+                          <FileText className="h-3.5 w-3.5" />
                         </a>
                       ) : (
-                        <span className="text-gray-300">-</span>
+                        <span className="text-gray-300 text-xs">—</span>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-sm text-right whitespace-nowrap">
-                      <span className={`inline-block px-2.5 py-1 rounded-xl font-bold text-xs shadow-2xs border ${
+
+                    {/* Amount */}
+                    <td className="px-3.5 py-3 text-right whitespace-nowrap">
+                      <span className={`inline-block px-2.5 py-1 rounded-xl font-mono font-black text-xs shadow-2xs border ${
                         isExp ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       }`}>
                         {isExp ? '-' : '+'}₹{record.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-right whitespace-nowrap">
+
+                    {/* Actions */}
+                    <td className="px-3.5 py-3 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">
                         {onEdit && canEditRecord(record) && (
                           <button
@@ -495,7 +509,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                             className="text-gray-400 hover:text-[#3b2fc9] p-1.5 rounded-lg hover:bg-[#3b2fc9]/10 transition-colors"
                             title="Edit Record"
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Pencil className="h-3.5 w-3.5" />
                           </button>
                         )}
                         {canDeleteRecord(record) && (
@@ -504,7 +518,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                             className="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors"
                             title="Delete Record"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         )}
                       </div>

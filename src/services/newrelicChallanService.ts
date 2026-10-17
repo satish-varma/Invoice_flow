@@ -96,6 +96,28 @@ export async function checkDuplicateDcNumber(dcNumber: string, excludeId?: strin
   return isDuplicate;
 }
 
+function deepCleanUndefined(obj: any): any {
+  if (obj === undefined || obj === null) return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(deepCleanUndefined).filter((v) => v !== undefined);
+  }
+  if (
+    typeof obj === 'object' &&
+    !(obj instanceof Date) &&
+    typeof obj.toDate !== 'function' &&
+    typeof obj.isEqual !== 'function'
+  ) {
+    const clean: Record<string, any> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        clean[key] = deepCleanUndefined(value);
+      }
+    }
+    return clean;
+  }
+  return obj;
+}
+
 type SaveInput = Omit<NewRelicChallan, 'dcNumber' | 'createdAt'> & {
   id?: string;
   dcNumber?: string;
@@ -121,14 +143,15 @@ export async function saveNewRelicChallan(challan: SaveInput, userEmail: string 
           editedAt: serverTimestamp(),
           action: 'UPDATED',
           editedBy: userEmail,
-          previousData: oldSnap.data()
+          previousData: deepCleanUndefined({ ...oldSnap.data(), id: challan.id }),
         });
       }
 
       // Update existing
       const { id, ...data } = challan;
+      const cleanData = deepCleanUndefined(data);
       const updatePayload = { 
-        ...data,
+        ...cleanData,
         pCost: deleteField(),
         updatedAt: serverTimestamp(),
         updatedBy: userEmail,
@@ -358,7 +381,10 @@ export async function getNewRelicChallanHistory(id: string): Promise<NewRelicCha
         editedAt,
         action: data.action || 'UPDATED',
         editedBy: data.editedBy || 'Unknown',
-        previousData: data.previousData as NewRelicChallan,
+        previousData: {
+          ...data.previousData,
+          id: data.previousData?.id || id,
+        } as NewRelicChallan,
       });
     });
 
@@ -367,6 +393,64 @@ export async function getNewRelicChallanHistory(id: string): Promise<NewRelicCha
     console.error('Error fetching challan history:', error);
     return [];
   }
+}
+
+export async function revertNewRelicChallanVersion(
+  challanId: string,
+  versionData: Partial<NewRelicChallan>,
+  userEmail: string | null = null
+): Promise<NewRelicChallan> {
+  const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, challanId);
+  const currentSnap = await getDoc(docRef);
+  if (!currentSnap.exists()) {
+    throw new Error('Challan not found');
+  }
+  const currentData = currentSnap.data();
+
+  // 1. Record the state prior to revert in history with action RESTORED
+  const historyRef = collection(docRef, 'history');
+  await addDoc(historyRef, {
+    editedAt: serverTimestamp(),
+    action: 'RESTORED',
+    editedBy: userEmail,
+    previousData: deepCleanUndefined({ ...currentData, id: challanId }),
+  });
+
+  // 2. Harvest items if available
+  if (versionData.lineItems?.length) {
+    try {
+      await saveCatalogItems(versionData.lineItems);
+    } catch (e) {
+      console.warn('Could not harvest catalog items during revert:', e);
+    }
+  }
+
+  // 3. Prepare payload from versionData without system fields
+  const { id, createdAt, createdBy, updatedAt, updatedBy, history, ...rest } = versionData as any;
+  const cleanData = deepCleanUndefined(rest);
+
+  const updatePayload: Record<string, any> = {
+    ...cleanData,
+    pCost: deleteField(),
+    updatedAt: serverTimestamp(),
+    updatedBy: userEmail,
+  };
+
+  await updateDoc(docRef, updatePayload);
+  const snap = await getDoc(docRef);
+  const finalData = { id: challanId, ...snap.data() } as any;
+
+  return {
+    ...finalData,
+    dcDate:
+      finalData.dcDate instanceof Timestamp
+        ? finalData.dcDate.toDate().toISOString()
+        : new Date(finalData.dcDate).toISOString(),
+    createdAt:
+      finalData.createdAt instanceof Timestamp
+        ? finalData.createdAt.toDate().toISOString()
+        : new Date().toISOString(),
+  };
 }
 
 export async function getGlobalAuditLogs(): Promise<NewRelicChallanHistory[]> {

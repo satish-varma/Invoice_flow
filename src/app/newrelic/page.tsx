@@ -6,7 +6,7 @@ import { Loader2, FileText, MapPin, Filter, FileSpreadsheet, RefreshCcw, Search,
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
-import {getNewRelicChallans, deleteNewRelicChallan, NEWRELIC_LOCATIONS} from '@/services/newrelicChallanService';
+import {getNewRelicChallans, deleteNewRelicChallan, revertNewRelicChallanVersion, NEWRELIC_LOCATIONS} from '@/services/newrelicChallanService';
 import { NewRelicChallanForm } from '@/components/newrelic/newrelic-challan-form';
 import { NewRelicChallanList } from '@/components/newrelic/newrelic-challan-list';
 import { NewRelicItemDashboard } from '@/components/newrelic/newrelic-item-dashboard';
@@ -233,11 +233,10 @@ export default function NewRelicPage() {
 
   const handleRestore = async (id: string) => {
     try {
-      import('@/services/newrelicChallanService').then(async (m) => {
-        await m.restoreNewRelicChallans([id], user?.email || null);
-        toast({ title: 'Challan restored' });
-        fetchData();
-      });
+      const { restoreNewRelicChallans } = await import('@/services/newrelicChallanService');
+      await restoreNewRelicChallans([id], user?.email || null);
+      toast({ title: 'Challan restored' });
+      await fetchData();
     } catch {
       toast({ variant: 'destructive', title: 'Restore failed' });
     }
@@ -264,14 +263,25 @@ export default function NewRelicPage() {
 
   const handleRestoreVersion = async (version: NewRelicChallan) => {
     try {
-      import('@/services/newrelicChallanService').then(async (m) => {
-        // To restore a version, we just save it as the current active data
-        await m.saveNewRelicChallan(version, user?.email || null);
-        toast({ title: 'Invoice reverted to previous version' });
-        fetchData();
+      const challanId = version.id || historyChallan?.id;
+      if (!challanId) {
+        throw new Error('Missing document ID for restore');
+      }
+      await revertNewRelicChallanVersion(challanId, version, user?.email || null);
+      toast({
+        title: 'Version Restored',
+        description: `Successfully reverted ${version.dcNumber || historyChallan?.dcNumber || 'challan'} to previous version.`,
       });
-    } catch {
-      toast({ variant: 'destructive', title: 'Revert failed' });
+      await fetchData();
+      setHistoryChallan(null);
+    } catch (err: any) {
+      console.error('Revert failed:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Revert failed',
+        description: err?.message || 'Failed to revert to previous state.',
+      });
+      throw err;
     }
   };
 

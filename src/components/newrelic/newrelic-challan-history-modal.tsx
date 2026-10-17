@@ -23,7 +23,7 @@ interface NewRelicChallanHistoryModalProps {
   challanId: string;
   dcNumber: string;
   currentChallan: NewRelicChallan | null;
-  onRestoreVersion: (version: NewRelicChallan) => void;
+  onRestoreVersion: (version: NewRelicChallan) => Promise<void> | void;
 }
 
 export function NewRelicChallanHistoryModal({
@@ -37,6 +37,7 @@ export function NewRelicChallanHistoryModal({
   const { toast } = useToast();
   const [history, setHistory] = useState<NewRelicChallanHistory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [revertingVersionId, setRevertingVersionId] = useState<string | null>(null);
 
   const formatAuthorName = (email?: string | null) => {
     if (!email) return 'System';
@@ -94,9 +95,17 @@ export function NewRelicChallanHistoryModal({
     }
   };
 
-  const handleRestore = (version: NewRelicChallan) => {
-    onRestoreVersion(version);
-    onClose();
+  const handleRestore = async (version: NewRelicChallan, versionId?: string) => {
+    try {
+      if (versionId) setRevertingVersionId(versionId);
+      await onRestoreVersion({ ...version, id: challanId });
+      onClose();
+    } catch (err) {
+      console.error('Error during revert:', err);
+      toast({ variant: 'destructive', title: 'Revert failed', description: 'Could not restore this version.' });
+    } finally {
+      setRevertingVersionId(null);
+    }
   };
 
   const handleDownloadCSV = () => {
@@ -223,12 +232,21 @@ export function NewRelicChallanHistoryModal({
                     </div>
                     {version.previousData && (
                       <Button
-                        onClick={() => handleRestore(version.previousData)}
+                        onClick={() => handleRestore(version.previousData, version.id)}
                         variant="outline"
                         size="sm"
+                        disabled={!!revertingVersionId}
                         className="w-full h-8 text-xs gap-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
                       >
-                        <RotateCcw className="h-3 w-3" /> Revert to this state
+                        {revertingVersionId === version.id ? (
+                          <>
+                            <Loader2 className="h-3 w-3 animate-spin" /> Reverting...
+                          </>
+                        ) : (
+                          <>
+                            <RotateCcw className="h-3 w-3" /> Revert to this state
+                          </>
+                        )}
                       </Button>
                     )}
                   </div>

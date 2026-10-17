@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, Copy, Download, Eye, Pencil, Trash2, Calendar, Truck } from "lucide-react";
+import { ArrowUpDown, Copy, Download, Eye, Pencil, Trash2, Calendar, Truck, Paperclip } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Invoice } from "@/services/invoiceService";
@@ -56,6 +56,50 @@ export const getColumns = (
         {row.original.invoiceNumber}
       </span>
     ),
+  },
+  {
+    accessorKey: "eventNumber",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="text-xs font-bold"
+        >
+          Event #
+          <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const eventNo = row.original.eventNumber;
+      const poUrl = row.original.poFileUrl;
+      const poName = row.original.poFileName;
+      return (
+        <div className="flex items-center gap-1.5 text-xs font-mono font-bold whitespace-nowrap">
+          {eventNo ? (
+            <span className="text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+              {eventNo}
+            </span>
+          ) : (
+            <span className="text-slate-400 font-sans">—</span>
+          )}
+          {poUrl && (
+            <a
+              href={poUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-0.5 text-[10px] font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-1.5 py-0.5 rounded border border-indigo-200/60 dark:border-indigo-800/60"
+              title={`View PO: ${poName || "Purchase Order"}`}
+            >
+              <Paperclip className="w-3 h-3" />
+              PO
+            </a>
+          )}
+        </div>
+      );
+    },
   },
   {
     accessorKey: "billToName",

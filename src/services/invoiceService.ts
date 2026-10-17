@@ -46,6 +46,11 @@ export interface Invoice {
     shipToAddress?: string;
     shipToGst?: string;
 
+    // PO and Event tracking
+    eventNumber?: string;
+    poFileUrl?: string;
+    poFileName?: string;
+
     // Status tracking
     status?: 'pending' | 'paid' | 'cancelled';
 
@@ -200,6 +205,10 @@ export async function getInvoices(): Promise<Invoice[]> {
                 shipToName: data.shipToName || "",
                 shipToAddress: data.shipToAddress || "",
                 shipToGst: data.shipToGst || "",
+                eventNumber: data.eventNumber || "",
+                poFileUrl: data.poFileUrl || "",
+                poFileName: data.poFileName || "",
+                status: data.status || "pending",
                 customerName: data.billToName || data.customerName || "",
                 customerAddress: data.customerAddress || "",
                 tax: Number(data.tax) || 0,

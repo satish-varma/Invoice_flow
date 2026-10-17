@@ -38,6 +38,7 @@ import {
   Calendar,
   Filter,
   RotateCcw,
+  Paperclip,
 } from "lucide-react";
 import {
   Select,
@@ -102,7 +103,8 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
         (inv.invoiceNumber || "").toLowerCase().includes(query) ||
         (inv.billToName || inv.customerName || "").toLowerCase().includes(query) ||
         (inv.shipToName || "").toLowerCase().includes(query) ||
-        (inv.period || "").toLowerCase().includes(query);
+        (inv.period || "").toLowerCase().includes(query) ||
+        (inv.eventNumber || "").toLowerCase().includes(query);
 
       const matchesStatus =
         statusFilter === "all" || (inv.status || "pending") === statusFilter;
@@ -186,7 +188,7 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Search invoice #, customer, ship to..."
+              placeholder="Search invoice #, customer, ship to, event #..."
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               className="h-10 pl-10 pr-9 rounded-xl border-slate-200/80 dark:border-slate-800 text-xs sm:text-sm bg-slate-50/50 dark:bg-slate-800/40"
@@ -420,6 +422,29 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
                     </span>
                   ) : (
                     <span className="text-slate-400 text-[10px]">—</span>
+                  )}
+                </div>
+
+                {/* Event # & Attached PO Attachment */}
+                <div className="flex items-center justify-between text-[11px] gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-slate-400 dark:text-slate-500 font-medium">Event #:</span>
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                      {invoice.eventNumber || "—"}
+                    </span>
+                  </div>
+                  {invoice.poFileUrl && (
+                    <a
+                      href={invoice.poFileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 text-[10px] font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-2 py-0.5 rounded-md border border-indigo-200/60 dark:border-indigo-800/60 shrink-0"
+                      title={invoice.poFileName || "Purchase Order"}
+                    >
+                      <Paperclip className="w-3 h-3" />
+                      Attached PO
+                    </a>
                   )}
                 </div>
 

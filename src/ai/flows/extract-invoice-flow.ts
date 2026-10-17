@@ -35,6 +35,7 @@ const ExtractInvoiceDataOutputSchema = z.object({
   date: z.string().optional().describe('The date of the invoice in YYYY-MM-DD format.'),
   serviceMonth: z.string().optional().describe('The service month, e.g., Apr-26.'),
   deliverTo: z.string().optional().describe('The name/address of the delivery target.'),
+  eventNumber: z.string().optional().describe('The event number or booking ID extracted from the PO.'),
   lineItems: z.array(LineItemSchema).optional().describe('An array of line items from the invoice.'),
 });
 export type ExtractInvoiceDataOutput = z.infer<
@@ -108,6 +109,7 @@ export function parseInvoiceText(text: string): ExtractInvoiceDataOutput {
   let date = '';
   let serviceMonth = '';
   let deliverTo = '';
+  let eventNumber = '';
   const lineItems: any[] = [];
 
   // ── 1. Invoice Number ─────────────────────────────────────────────────────
@@ -209,6 +211,33 @@ export function parseInvoiceText(text: string): ExtractInvoiceDataOutput {
   if (!customerName || customerName.toLowerCase().includes('gut guru')) {
     if (fullText.toLowerCase().includes('hungerbox') || fullText.toLowerCase().includes('eatgood')) {
       customerName = 'Hungerbox';
+    }
+  }
+
+  // ── 3b. Event Number ──────────────────────────────────────────────────────
+  // 1. Direct explicit label patterns (e.g., "Event Number: 5009", "Event No.: 88472", "Booking ID: EVT-01")
+  const eventLabelPatterns = [
+    /(?:Event\s*(?:Number|No\.?|#|Id|Code|Ref(?:erence)?))\s*[:#-]?\s*([a-zA-Z0-9/_-]+)/i,
+    /(?:Booking\s*(?:Number|No\.?|#|Id))\s*[:#-]?\s*([a-zA-Z0-9/_-]+)/i,
+    /\bEvent\s*[:#-]\s*([a-zA-Z0-9/_-]+)/i,
+  ];
+  for (const re of eventLabelPatterns) {
+    const m = fullText.match(re);
+    if (m && m[1] && m[1].length >= 2 && !/^(date|desc|description|name|details|type|status)$/i.test(m[1])) {
+      eventNumber = m[1].trim();
+      break;
+    }
+  }
+
+  // 2. Hungerbox Purchase Order structure fallback (e.g., 'Purchase Order # TS/.../M5009/2' or '.../5009')
+  if (!eventNumber) {
+    const hbPoMatch = fullText.match(/Purchase\s*Order\s*#?\s*([a-zA-Z0-9/_-]+)/i);
+    if (hbPoMatch) {
+      const poNum = hbPoMatch[1].trim();
+      const segMatch = poNum.match(/\/(M\d+|\d{4,})(?:\/\d+)?$/i) || poNum.match(/\/(M\d+|\d{4,})\b/i);
+      if (segMatch) {
+        eventNumber = segMatch[1].trim();
+      }
     }
   }
 
@@ -388,6 +417,7 @@ export function parseInvoiceText(text: string): ExtractInvoiceDataOutput {
   if (date) output.date = date;
   if (serviceMonth) output.serviceMonth = serviceMonth;
   if (deliverTo) output.deliverTo = deliverTo;
+  if (eventNumber) output.eventNumber = eventNumber;
   if (lineItems.length > 0) output.lineItems = lineItems;
   return output;
 }

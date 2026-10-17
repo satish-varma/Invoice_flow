@@ -8,12 +8,13 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, Paperclip, ExternalLink, X } from 'lucide-react';
 import { format } from "date-fns"
 import { ExtractInvoiceDataResponse } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
 import { Invoice, saveInvoice, TaxItem } from '@/services/invoiceService';
+import { uploadStorageFile } from '@/services/storageService';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Label } from './ui/label';
@@ -64,6 +65,11 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
 
     const [period, setPeriod] = useState('');
     const [delivery, setDelivery] = useState('');
+    const [eventNumber, setEventNumber] = useState('');
+
+    const [poFile, setPoFile] = useState<File | null>(null);
+    const [poFileName, setPoFileName] = useState('');
+    const [poFileUrl, setPoFileUrl] = useState('');
 
     const [billToName, setBillToName] = useState('');
     const [billToAddress, setBillToAddress] = useState('');
@@ -191,6 +197,10 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             setDate(new Date(initialData.date));
             setPeriod(initialData.period || '');
             setDelivery(initialData.delivery || '');
+            setEventNumber(initialData.eventNumber || '');
+            setPoFileUrl(initialData.poFileUrl || '');
+            setPoFileName(initialData.poFileName || '');
+            setPoFile(null);
             setBillToName(initialData.billToName || '');
             setBillToAddress(initialData.billToAddress || '');
             setBillToGst(initialData.billToGst || '');
@@ -304,6 +314,10 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         const prevMonthName = months[prevMonthIndex];
         setPeriod(prevMonthName);
         setDelivery(prevMonthName);
+        setEventNumber('');
+        setPoFile(null);
+        setPoFileName('');
+        setPoFileUrl('');
         setBillToName('');
         setBillToAddress('');
         setBillToGst('');
@@ -340,11 +354,30 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
 
         setIsSaving(true);
         try {
+            let currentPoUrl = poFileUrl;
+            if (poFile) {
+                try {
+                    const uniquePrefix = `po_${Date.now()}_`;
+                    currentPoUrl = await uploadStorageFile(
+                        invoiceNumber || initialData?.invoiceNumber || `inv_${Date.now()}`,
+                        poFile,
+                        'invoice-pos',
+                        uniquePrefix
+                    );
+                    setPoFileUrl(currentPoUrl);
+                } catch (uploadErr) {
+                    console.error("Failed to upload PO attachment to storage:", uploadErr);
+                }
+            }
+
             const invoiceData: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & { id?: string } = {
                 date: date?.toISOString() || new Date().toISOString(),
                 companyProfileId: activeCompanyProfile.id,
                 period,
                 delivery,
+                eventNumber: eventNumber.trim(),
+                poFileUrl: currentPoUrl || '',
+                poFileName: poFileName || '',
                 billToName,
                 billToAddress,
                 billToGst,
@@ -414,6 +447,8 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         const file = event.target.files?.[0];
         if (!file) return;
 
+        setPoFile(file);
+        setPoFileName(file.name);
         setIsExtracting(true);
         try {
             const dataUri = await fileToDataUri(file);
@@ -435,6 +470,10 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             }
 
             const result = response.data;
+
+            if (result.eventNumber) {
+                setEventNumber(result.eventNumber);
+            }
 
             if (result.customerName) {
                 setBillToName(result.customerName);
@@ -684,8 +723,46 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 disabled={isExtracting}
             />
             <Card className="w-full shadow-lg">
-                <CardHeader className="bg-muted/20 p-4 sm:p-6">
-                    <CardTitle>Invoice Details</CardTitle>
+                <CardHeader className="bg-muted/20 p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                        <CardTitle>Invoice Details</CardTitle>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                            Fill in invoice details or use Autofill from a PO PDF.
+                        </p>
+                    </div>
+
+                    {(poFileName || poFileUrl) && (
+                        <div className="flex items-center gap-2 p-2 px-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/80 dark:border-indigo-800 text-xs shadow-xs">
+                            <Paperclip className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                            <div className="min-w-0 max-w-[200px]">
+                                <span className="font-bold text-slate-800 dark:text-slate-200 truncate block" title={poFileName || 'Attached PO'}>
+                                    {poFileName || 'Attached PO'}
+                                </span>
+                            </div>
+                            {poFileUrl && (
+                                <a
+                                    href={poFileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-800 text-[11px] ml-1"
+                                >
+                                    <ExternalLink className="w-3 h-3" /> View
+                                </a>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setPoFile(null);
+                                    setPoFileName('');
+                                    setPoFileUrl('');
+                                }}
+                                className="p-0.5 text-slate-400 hover:text-rose-600 rounded ml-1"
+                                title="Remove PO Attachment"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    )}
                 </CardHeader>
                 <CardContent className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Left Column */}
@@ -838,6 +915,16 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                         {months.map(month => <SelectItem key={month} value={month}>{month}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
+                            </div>
+                            <div>
+                                <Label htmlFor='eventNumber'>Event Number</Label>
+                                <Input
+                                    id="eventNumber"
+                                    placeholder="e.g. 5009 or EVT-1234"
+                                    value={eventNumber}
+                                    onChange={e => setEventNumber(e.target.value)}
+                                    className="font-mono font-bold"
+                                />
                             </div>
                         </div>
 

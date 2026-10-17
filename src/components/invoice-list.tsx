@@ -29,6 +29,7 @@ import {
   Truck,
   RotateCcw,
   Sparkles,
+  Paperclip,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -149,7 +150,8 @@ export function InvoiceList({
         invoice.invoiceNumber.toLowerCase().includes(query) ||
         (invoice.billToName || invoice.customerName || '').toLowerCase().includes(query) ||
         (invoice.shipToName || '').toLowerCase().includes(query) ||
-        (invoice.period || '').toLowerCase().includes(query);
+        (invoice.period || '').toLowerCase().includes(query) ||
+        (invoice.eventNumber || '').toLowerCase().includes(query);
 
       const matchesStatus =
         statusFilter === 'all' || (invoice.status || 'pending') === statusFilter;
@@ -404,6 +406,29 @@ export function InvoiceList({
                         )}
                       </div>
 
+                      {/* Event # & Attached PO Attachment */}
+                      <div className="flex items-center justify-between text-[11px] gap-2 pt-1 border-t border-slate-50 dark:border-slate-800/60">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-slate-400 dark:text-slate-500 font-medium">Event #:</span>
+                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                            {invoice.eventNumber || '—'}
+                          </span>
+                        </div>
+                        {invoice.poFileUrl && (
+                          <a
+                            href={invoice.poFileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 text-[10px] font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-2 py-0.5 rounded-md border border-indigo-200/60 dark:border-indigo-800/60 shrink-0"
+                            title={invoice.poFileName || 'Purchase Order'}
+                          >
+                            <Paperclip className="w-3 h-3" />
+                            Attached PO
+                          </a>
+                        )}
+                      </div>
+
                       {/* Bottom Row: Amount + View, Edit, Delete Actions */}
                       <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 gap-2">
                         <div>
@@ -482,6 +507,9 @@ export function InvoiceList({
                       <TableHead className="w-[130px] text-xs font-bold text-slate-600 dark:text-slate-300">
                         Invoice #
                       </TableHead>
+                      <TableHead className="w-[115px] text-xs font-bold text-slate-600 dark:text-slate-300">
+                        Event #
+                      </TableHead>
                       <TableHead className="text-xs font-bold text-slate-600 dark:text-slate-300">
                         Customer
                       </TableHead>
@@ -531,6 +559,32 @@ export function InvoiceList({
                                   <Copy className="w-3.5 h-3.5" />
                                 )}
                               </button>
+                            </div>
+                          </TableCell>
+
+                          {/* Event # & Attached PO */}
+                          <TableCell className="text-xs whitespace-nowrap font-medium">
+                            <div className="flex items-center gap-1.5">
+                              {invoice.eventNumber ? (
+                                <span className="font-mono font-bold text-[11px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
+                                  {invoice.eventNumber}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 font-sans">—</span>
+                              )}
+                              {invoice.poFileUrl && (
+                                <a
+                                  href={invoice.poFileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-0.5 text-[10px] font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-1.5 py-0.5 rounded border border-indigo-200/60 dark:border-indigo-800/60"
+                                  title={`View Attached PO: ${invoice.poFileName || 'Purchase Order'}`}
+                                >
+                                  <Paperclip className="w-3 h-3" />
+                                  PO
+                                </a>
+                              )}
                             </div>
                           </TableCell>
 

@@ -7,13 +7,12 @@ import { InvoiceForm } from '@/components/invoice-form';
 import { InvoiceList } from '@/components/invoice-list';
 import { getInvoices, Invoice } from '@/services/invoiceService';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Loader, ListOrdered, FilePlus } from 'lucide-react';
+import { Loader2, Loader, ListOrdered, FilePlus, ArrowLeft, Plus, RefreshCcw } from 'lucide-react';
 import { InvoicePreview } from '@/components/invoice-preview';
 import { getSettings, Settings } from '@/services/settingsService';
 import { generateAndSavePdf } from '@/lib/pdf';
 import { AppShell } from '@/components/app-shell';
 import { DashboardOverview } from '@/components/dashboard-overview';
-import { RevenueChart } from '@/components/revenue-chart';
 import { getQuotations, Quotation } from '@/services/quotationService';
 import { getChallans, Challan } from '@/services/challanService';
 import { triggerHaptic } from '@/lib/haptics';
@@ -31,8 +30,9 @@ export default function RootHomePage() {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [challans, setChallans] = useState<Challan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [mobileTab, setMobileTab] = useState<'list' | 'form'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'form'>('list');
   const { toast } = useToast();
   const invoicePreviewRef = useRef<HTMLDivElement>(null);
   const [invoiceToDownload, setInvoiceToDownload] = useState<Invoice | null>(null);
@@ -104,6 +104,14 @@ export default function RootHomePage() {
     }
   };
 
+  const handleSync = async () => {
+    setIsRefreshing(true);
+    triggerHaptic('light');
+    await fetchData();
+    setIsRefreshing(false);
+    toast({ title: '✨ Invoices & Stats Refreshed' });
+  };
+
   useEffect(() => {
     if (redirecting === false) {
       fetchData();
@@ -113,7 +121,7 @@ export default function RootHomePage() {
   const handleInvoiceSave = (savedInvoice?: Invoice) => {
     fetchData();
     setSelectedInvoice(null);
-    setMobileTab('list');
+    setActiveTab('list');
     if (savedInvoice) {
       handleDownload(savedInvoice);
     }
@@ -121,16 +129,17 @@ export default function RootHomePage() {
 
   const handleSelectInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
-    setMobileTab('form');
+    setActiveTab('form');
+    triggerHaptic('selection');
     if (typeof window !== 'undefined') {
-      const el = document.getElementById('invoice-form-section');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      window.scrollTo({ top: 400, behavior: 'smooth' });
     }
   };
 
   const handleAddNew = () => {
     setSelectedInvoice(null);
-    setMobileTab('form');
+    setActiveTab('form');
+    triggerHaptic('medium');
   };
 
   const handleDownload = (invoice: Invoice) => {
@@ -184,72 +193,117 @@ export default function RootHomePage() {
             quotations={quotations}
             challans={challans}
             settings={settings}
+            onNewInvoice={handleAddNew}
           />
 
-          {/* Revenue Analytics Chart */}
-          <div className="grid grid-cols-1">
-            <RevenueChart invoices={invoices} settings={settings} />
-          </div>
+          {/* Modernized Workspace Switcher Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)]">
+            <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl gap-1 border border-slate-200/80 dark:border-slate-700 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setActiveTab('list');
+                }}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  activeTab === 'list'
+                    ? 'bg-gradient-to-r from-indigo-600 to-[#3b2fc9] text-white shadow-xs font-black'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-white/60 dark:hover:bg-slate-700/60'
+                }`}
+              >
+                <ListOrdered className="w-4 h-4" />
+                <span>Invoices Directory</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                  activeTab === 'list' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                }`}>
+                  {invoices.length}
+                </span>
+              </button>
 
-          {/* Mobile View Switcher Tabs (md:hidden) */}
-          <div className="md:hidden flex items-center p-1.5 rounded-2xl bg-slate-200/70 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700 shadow-inner">
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setMobileTab('list');
-              }}
-              className={`flex-1 h-11 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
-                mobileTab === 'list'
-                  ? 'bg-white dark:bg-slate-900 text-[#3b2fc9] dark:text-indigo-400 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              <ListOrdered className="w-4 h-4" />
-              <span>Invoices ({invoices.length})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setMobileTab('form');
-              }}
-              className={`flex-1 h-11 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
-                mobileTab === 'form'
-                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              <FilePlus className="w-4 h-4" />
-              <span>{selectedInvoice ? 'Edit Invoice' : '+ New Invoice'}</span>
-            </button>
-          </div>
-
-          {/* Forms & Invoice List Section */}
-          <div className="space-y-8" id="invoice-form-section">
-            <div className={`w-full ${mobileTab === 'list' ? 'hidden md:block' : 'block'}`}>
-              <InvoiceForm
-                key={selectedInvoice?.id || 'new'}
-                initialData={selectedInvoice}
-                onInvoiceSave={handleInvoiceSave}
-                onAddNew={handleAddNew}
-              />
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('medium');
+                  setActiveTab('form');
+                }}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  activeTab === 'form'
+                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-xs font-black'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-white/60 dark:hover:bg-slate-700/60'
+                }`}
+              >
+                <FilePlus className="w-4 h-4" />
+                <span>{selectedInvoice ? `Edit (${selectedInvoice.invoiceNumber})` : '+ Create Invoice'}</span>
+              </button>
             </div>
 
-            <div className={`w-full ${mobileTab === 'form' ? 'hidden md:block' : 'block'}`}>
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-gray-200/80 gap-3">
-                  <Loader className="h-8 w-8 text-[#3b2fc9] animate-spin" />
-                  <p className="text-xs text-gray-500 font-medium">Loading Invoices...</p>
-                </div>
-              ) : (
-                <InvoiceList
-                  invoices={invoices}
-                  onSelectInvoice={handleSelectInvoice}
-                  onDownloadInvoice={handleDownload}
-                />
+            <div className="flex items-center gap-2">
+              {activeTab === 'form' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setSelectedInvoice(null);
+                    setActiveTab('list');
+                  }}
+                  className="h-10 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Directory</span>
+                </button>
               )}
+
+              {activeTab === 'list' && (
+                <button
+                  type="button"
+                  onClick={handleAddNew}
+                  className="h-10 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-[#3b2fc9] text-white text-xs font-black flex items-center gap-1.5 shadow-md shadow-indigo-600/25 transition-all active:scale-95 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>New Invoice</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleSync}
+                disabled={isRefreshing}
+                className="h-10 px-3.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                title="Sync Invoices Data"
+              >
+                <RefreshCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-indigo-600' : 'text-slate-500'}`} />
+                <span className="hidden sm:inline">{isRefreshing ? 'Syncing...' : 'Sync'}</span>
+              </button>
             </div>
+          </div>
+
+          {/* Workspace Content: Invoices Directory OR Focused Invoice Form */}
+          <div className="transition-all duration-200" id="invoice-workspace-section">
+            {activeTab === 'form' ? (
+              <div className="space-y-4">
+                <InvoiceForm
+                  key={selectedInvoice?.id || 'new'}
+                  initialData={selectedInvoice}
+                  onInvoiceSave={handleInvoiceSave}
+                  onAddNew={handleAddNew}
+                />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {isLoading ? (
+                  <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 gap-3">
+                    <Loader className="h-8 w-8 text-[#3b2fc9] animate-spin" />
+                    <p className="text-xs text-slate-500 font-medium">Loading Invoices...</p>
+                  </div>
+                ) : (
+                  <InvoiceList
+                    invoices={invoices}
+                    onSelectInvoice={handleSelectInvoice}
+                    onDownloadInvoice={handleDownload}
+                  />
+                )}
+              </div>
+            )}
           </div>
 
           {/* Off-screen PDF generation target */}

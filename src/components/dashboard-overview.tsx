@@ -27,13 +27,15 @@ interface DashboardOverviewProps {
   quotations?: Quotation[];
   challans?: Challan[];
   settings: Settings | null;
+  onNewInvoice?: () => void;
 }
 
 export function DashboardOverview({
   invoices,
   quotations = [],
   challans = [],
-  settings
+  settings,
+  onNewInvoice,
 }: DashboardOverviewProps) {
   const currencySymbol = settings?.currencySymbol || '₹';
   const totalRevenue = invoices.reduce((acc, inv) => acc + (inv.total || 0), 0);
@@ -233,30 +235,33 @@ export function DashboardOverview({
 
       {/* ── Fast Navigation Quick Action Chips ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-        <Link
-          href="/#invoice-form"
-          onClick={() => triggerHaptic('light')}
-          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/80 shadow-xs hover:border-[#3b2fc9]/40 transition-all active:scale-[0.96] group"
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic('medium');
+            onNewInvoice?.();
+          }}
+          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-[#3b2fc9]/40 transition-all active:scale-[0.96] group text-left w-full cursor-pointer"
         >
-          <div className="w-9 h-9 rounded-xl bg-indigo-50 group-hover:bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 transition-colors">
+          <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-400 flex items-center justify-center shrink-0 transition-colors">
             <FilePlus className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-900 truncate">New Invoice</p>
+            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">New Invoice</p>
             <p className="text-[10px] text-slate-400 truncate">Create GST invoice</p>
           </div>
-        </Link>
+        </button>
 
         <Link
           href="/quotation"
           onClick={() => triggerHaptic('light')}
-          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/80 shadow-xs hover:border-amber-500/40 transition-all active:scale-[0.96] group"
+          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-amber-500/40 transition-all active:scale-[0.96] group"
         >
-          <div className="w-9 h-9 rounded-xl bg-amber-50 group-hover:bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 transition-colors">
+          <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/60 group-hover:bg-amber-100 dark:group-hover:bg-amber-900/60 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 transition-colors">
             <FileSearch className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-900 truncate">New Quotation</p>
+            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">New Quotation</p>
             <p className="text-[10px] text-slate-400 truncate">Send proposal quote</p>
           </div>
         </Link>
@@ -264,13 +269,13 @@ export function DashboardOverview({
         <Link
           href="/delivery-challan"
           onClick={() => triggerHaptic('light')}
-          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/80 shadow-xs hover:border-cyan-500/40 transition-all active:scale-[0.96] group"
+          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-cyan-500/40 transition-all active:scale-[0.96] group"
         >
-          <div className="w-9 h-9 rounded-xl bg-blue-50 group-hover:bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 transition-colors">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/60 text-blue-700 dark:text-blue-400 flex items-center justify-center shrink-0 transition-colors">
             <Truck className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-900 truncate">Delivery Challan</p>
+            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">Delivery Challan</p>
             <p className="text-[10px] text-slate-400 truncate">Dispatch goods</p>
           </div>
         </Link>
@@ -278,13 +283,13 @@ export function DashboardOverview({
         <Link
           href="/invoices"
           onClick={() => triggerHaptic('light')}
-          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/80 shadow-xs hover:border-purple-500/40 transition-all active:scale-[0.96] group"
+          className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-purple-500/40 transition-all active:scale-[0.96] group"
         >
-          <div className="w-9 h-9 rounded-xl bg-purple-50 group-hover:bg-purple-100 text-purple-700 flex items-center justify-center shrink-0 transition-colors">
+          <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-950/60 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/60 text-purple-700 dark:text-purple-400 flex items-center justify-center shrink-0 transition-colors">
             <FileText className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-900 truncate">All Invoices</p>
+            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">All Invoices</p>
             <p className="text-[10px] text-slate-400 truncate">Filter &amp; bulk export</p>
           </div>
         </Link>

@@ -104,29 +104,29 @@ export function InvoiceList({
   });
 
   return (
-    <Card className="rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden bg-white">
-      <CardHeader className="p-4 sm:p-5 border-b border-gray-100 bg-gray-50/50">
+    <Card className="rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] overflow-hidden bg-white dark:bg-slate-900">
+      <CardHeader className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <CardTitle className="text-base sm:text-lg font-black text-gray-900 tracking-tight">
+              <CardTitle className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
                 Recent Invoices
               </CardTitle>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-mono">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60 font-mono">
                 {filteredInvoices.length}
               </span>
             </div>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Click any invoice to edit, view, or download PDF
             </p>
           </div>
 
           <div className="flex flex-wrap w-full md:w-auto items-center gap-2">
             <div className="relative flex-1 md:w-56">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
               <Input
                 placeholder="Search invoice or client..."
-                className="pl-8 h-9 text-xs rounded-xl border-gray-200 bg-white"
+                className="pl-8 h-9 text-xs rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />

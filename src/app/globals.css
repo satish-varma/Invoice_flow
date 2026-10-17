@@ -358,6 +358,269 @@ button, a, nav, header {
   will-change: transform, opacity;
 }
 
+/* ── Theme 6: Cyberpunk 80s / Synthwave Keyframes ── */
+@keyframes synthwaveGridMove {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 48px;
+  }
+}
+
+@keyframes synthwaveSunPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 25px rgba(255, 0, 127, 0.65)) drop-shadow(0 0 50px rgba(255, 110, 0, 0.45));
+  }
+  50% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 35px rgba(255, 0, 127, 0.85)) drop-shadow(0 0 70px rgba(255, 110, 0, 0.65));
+  }
+}
+
+@keyframes synthwaveBeamPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scaleY(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1.3);
+  }
+}
+
+.animate-synthwave-grid {
+  animation: synthwaveGridMove 1.6s linear infinite;
+  will-change: background-position;
+}
+
+.animate-synthwave-sun {
+  animation: synthwaveSunPulse 6s ease-in-out infinite;
+  will-change: transform, filter;
+}
+
+.animate-synthwave-beam {
+  animation: synthwaveBeamPulse 4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* ── Theme 7: Matrix Digital Rain Keyframes ── */
+@keyframes matrixStreamFall {
+  0% {
+    transform: translate3d(0, -100%, 0);
+  }
+  100% {
+    transform: translate3d(0, 100%, 0);
+  }
+}
+
+@keyframes crtScanlineSweep {
+  0% {
+    transform: translate3d(0, -100%, 0);
+  }
+  100% {
+    transform: translate3d(0, 1000%, 0);
+  }
+}
+
+.animate-matrix-stream {
+  animation: matrixStreamFall var(--matrix-dur, 5s) linear infinite;
+  animation-delay: var(--matrix-delay, 0s);
+  will-change: transform;
+}
+
+.animate-crt-scanline {
+  animation: crtScanlineSweep 8s linear infinite;
+  will-change: transform;
+}
+
+/* ── Theme 8: Electric Plasma Storm Keyframes ── */
+@keyframes lightningArcFlash1 {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0.96) rotate(-2deg);
+  }
+  8% {
+    opacity: 0.95;
+    transform: scale(1.04) rotate(1deg);
+  }
+  11% {
+    opacity: 0.2;
+  }
+  14% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  17% {
+    opacity: 0;
+  }
+  65% {
+    opacity: 0;
+  }
+  68% {
+    opacity: 0.85;
+    transform: scale(1.03);
+  }
+  71% {
+    opacity: 0;
+  }
+}
+
+@keyframes lightningArcFlash2 {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(1.02) rotate(3deg);
+  }
+  32% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.95;
+    transform: scale(0.98) rotate(-1deg);
+  }
+  38% {
+    opacity: 0.15;
+  }
+  41% {
+    opacity: 1;
+  }
+  44% {
+    opacity: 0;
+  }
+}
+
+@keyframes plasmaRingPulse {
+  0% {
+    transform: scale(0.65);
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+
+@keyframes sparkJitter {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(3px, -4px, 0);
+  }
+  50% {
+    transform: translate3d(-3px, 3px, 0);
+  }
+  75% {
+    transform: translate3d(4px, 2px, 0);
+  }
+}
+
+.animate-lightning-1 {
+  animation: lightningArcFlash1 6s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-lightning-2 {
+  animation: lightningArcFlash2 7.5s ease-in-out infinite;
+  animation-delay: 2s;
+  will-change: transform, opacity;
+}
+
+.animate-plasma-ring {
+  animation: plasmaRingPulse 4.5s ease-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-spark-jitter {
+  animation: sparkJitter 0.25s linear infinite;
+  will-change: transform;
+}
+
+/* ── Theme 9: Volcanic Magma & Rising Embers Keyframes ── */
+@keyframes lavaChurnPulse {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translate3d(0, -18px, 0) scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes emberRiseFloat {
+  0% {
+    transform: translate3d(var(--ember-x, 0px), 110vh, 0) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate3d(calc(var(--ember-x, 0px) + var(--ember-drift, 25px)), -30px, 0) scale(1.2);
+    opacity: 0;
+  }
+}
+
+.animate-lava-churn {
+  animation: lavaChurnPulse 8s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-ember-rise {
+  animation: emberRiseFloat var(--ember-dur, 7s) ease-out infinite;
+  animation-delay: var(--ember-delay, 0s);
+  will-change: transform, opacity;
+}
+
+/* ── Theme 10: Hyperdrive Starfield Warp Keyframes ── */
+@keyframes warpStreakAccelerate {
+  0% {
+    transform: translate3d(-50%, -50%, 0) rotate(var(--warp-angle, 0deg)) translateY(0px) scale(0.1);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.85;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(-50%, -50%, 0) rotate(var(--warp-angle, 0deg)) translateY(380px) scale(2.4);
+    opacity: 0;
+  }
+}
+
+@keyframes nebulaSwirlRotate {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.12);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+.animate-warp-streak {
+  animation: warpStreakAccelerate var(--warp-dur, 2s) cubic-bezier(0.4, 0, 1, 1) infinite;
+  animation-delay: var(--warp-delay, 0s);
+  will-change: transform, opacity;
+}
+
+.animate-nebula-swirl {
+  animation: nebulaSwirlRotate 40s linear infinite;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-ambient-1,
   .animate-ambient-2,
@@ -371,7 +634,20 @@ button, a, nav, header {
   .animate-cosmic-laser,
   .animate-cosmic-glow,
   .animate-mist-1,
-  .animate-mist-2 {
+  .animate-mist-2,
+  .animate-synthwave-grid,
+  .animate-synthwave-sun,
+  .animate-synthwave-beam,
+  .animate-matrix-stream,
+  .animate-crt-scanline,
+  .animate-lightning-1,
+  .animate-lightning-2,
+  .animate-plasma-ring,
+  .animate-spark-jitter,
+  .animate-lava-churn,
+  .animate-ember-rise,
+  .animate-warp-streak,
+  .animate-nebula-swirl {
     animation: none !important;
   }
 }

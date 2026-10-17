@@ -9,7 +9,12 @@ export type ThemeBackdropId =
   | 'fintech-luxe'
   | 'linear-cosmic'
   | 'nordic-mist'
-  | 'classic-minimal';
+  | 'classic-minimal'
+  | 'cyberpunk-80s'
+  | 'matrix-rain'
+  | 'electric-plasma'
+  | 'volcanic-magma'
+  | 'hyperdrive-warp';
 
 export interface ThemeOption {
   id: ThemeBackdropId;
@@ -17,16 +22,19 @@ export interface ThemeOption {
   subtitle: string;
   description: string;
   badge: string;
+  category: 'pro' | 'crazy';
   previewColors: string[];
 }
 
 export const THEME_OPTIONS: ThemeOption[] = [
+  // ── Professional & Minimal Presets ──
   {
     id: 'ambient-orbs',
     name: 'Ambient Orbs & Aurora',
     subtitle: 'Current Dynamic Experience',
     description: 'Drifting organic light orbs, tactile dot matrix, aurora sweep, and floating micro-sparkles.',
     badge: 'Popular',
+    category: 'pro',
     previewColors: ['#4f46e5', '#f59e0b', '#10b981', '#38bdf8'],
   },
   {
@@ -35,6 +43,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     subtitle: 'Liquid Satin & Metallic Shifts',
     description: 'Flowing metallic mesh, champagne gold, titanium violet, and satin specular sheen.',
     badge: 'Executive',
+    category: 'pro',
     previewColors: ['#312e81', '#d97706', '#db2777', '#4338ca'],
   },
   {
@@ -43,6 +52,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     subtitle: 'High-Tech Precision Grid',
     description: 'Perspective coordinate grid with cyber cyan & violet laser pulses inspired by Linear.',
     badge: 'Tech',
+    category: 'pro',
     previewColors: ['#0f172a', '#06b6d4', '#8b5cf6', '#3b82f6'],
   },
   {
@@ -51,6 +61,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     subtitle: 'Minimal & Paper Grain',
     description: 'Warm paper alabaster, soft watercolor bleeds, and tactile micro-noise grain overlay.',
     badge: 'Calm',
+    category: 'pro',
     previewColors: ['#f8fafc', '#a7f3d0', '#fed7aa', '#cbd5e1'],
   },
   {
@@ -59,7 +70,55 @@ export const THEME_OPTIONS: ThemeOption[] = [
     subtitle: 'Clean & Hairline Accents',
     description: 'Crisp distraction-free canvas with soft vignette and hairline accents. Zero motion.',
     badge: 'Minimal',
+    category: 'pro',
     previewColors: ['#f8fafc', '#e2e8f0', '#94a3b8', '#64748b'],
+  },
+
+  // ── 🔥 Crazy & High-Energy Presets ──
+  {
+    id: 'cyberpunk-80s',
+    name: 'Cyberpunk 80s / Synthwave',
+    subtitle: 'Retro Horizon & Neon Highway',
+    description: 'Gliding 3D perspective floor grid, sliced retrowave neon sun, and electric magenta/cyan lasers.',
+    badge: 'Crazy',
+    category: 'crazy',
+    previewColors: ['#ff007f', '#00f0ff', '#7928ca', '#0d0221'],
+  },
+  {
+    id: 'matrix-rain',
+    name: 'Matrix Digital Rain',
+    subtitle: 'Phosphor Green Terminal Streams',
+    description: 'Cascading streams of glowing digital glyphs, phosphor green trails, and CRT monitor scanlines.',
+    badge: 'Crazy',
+    category: 'crazy',
+    previewColors: ['#22c55e', '#4ade80', '#15803d', '#020508'],
+  },
+  {
+    id: 'electric-plasma',
+    name: 'Electric Plasma Storm',
+    subtitle: 'High-Voltage Lightning Arcs',
+    description: 'Crackling electric energy tendrils, shockwave plasma bubbles, and vibrating cyan lightning sparks.',
+    badge: 'Crazy',
+    category: 'crazy',
+    previewColors: ['#a855f7', '#22d3ee', '#3b82f6', '#050814'],
+  },
+  {
+    id: 'volcanic-magma',
+    name: 'Volcanic Magma & Embers',
+    subtitle: 'Liquid Lava & Rising Fire Sparks',
+    description: 'Churning molten gold magma cauldron beneath obsidian rock with weightless rising fire embers.',
+    badge: 'Crazy',
+    category: 'crazy',
+    previewColors: ['#f59e0b', '#ea580c', '#dc2626', '#090503'],
+  },
+  {
+    id: 'hyperdrive-warp',
+    name: 'Hyperdrive Starfield Warp',
+    subtitle: 'Warp Speed Hyperspace Flight',
+    description: 'Star streaks shooting past at light speed, swirling cosmic nebula arms, and pulsar flares.',
+    badge: 'Crazy',
+    category: 'crazy',
+    previewColors: ['#38bdf8', '#c084fc', '#ffffff', '#02040a'],
   },
 ];
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -27,9 +27,10 @@ import {
   Globe,
   RotateCcw,
   Building,
+  Flame,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useThemeBackdrop } from '@/contexts/ThemeBackdropContext';
+import { useThemeBackdrop, ThemeOption } from '@/contexts/ThemeBackdropContext';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { COMPANY_SITES, SiteId } from '@/types/site';
@@ -53,9 +54,16 @@ export default function ProfilePage() {
     isSyncing,
   } = useThemeBackdrop();
 
+  const [themeCategory, setThemeCategory] = useState<'all' | 'pro' | 'crazy'>('all');
+
   const isAdmin = role === 'admin' || role === 'superadmin';
   const companyDefaultThemeName = themes.find((t) => t.id === companyDefaultTheme)?.name || 'Ambient Orbs & Aurora';
   const currentThemeName = themes.find((t) => t.id === theme)?.name || 'Theme';
+
+  const filteredThemes = useMemo(() => {
+    if (themeCategory === 'all') return themes;
+    return themes.filter((t) => t.category === themeCategory);
+  }, [themes, themeCategory]);
 
   const [employee, setEmployee] = useState<NewRelicEmployee | null>(null);
   const [todayAttendance, setTodayAttendance] = useState<NewRelicAttendance | null>(null);
@@ -504,9 +512,56 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* 5 Theme Option Cards */}
+        {/* Category Tabs Filter */}
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/60">
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              setThemeCategory('all');
+            }}
+            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+              themeCategory === 'all'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
+                : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+            }`}
+          >
+            All (10)
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              setThemeCategory('pro');
+            }}
+            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+              themeCategory === 'pro'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+            }`}
+          >
+            <span>🏢 Pro (5)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              setThemeCategory('crazy');
+            }}
+            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+              themeCategory === 'crazy'
+                ? 'bg-gradient-to-r from-pink-500 to-rose-600 text-white shadow-xs'
+                : 'text-rose-500 hover:text-rose-600 dark:text-rose-400'
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5 fill-current" />
+            <span>🔥 Crazy (5)</span>
+          </button>
+        </div>
+
+        {/* Theme Option Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-          {themes.map((opt) => {
+          {filteredThemes.map((opt: ThemeOption) => {
             const isSelected = theme === opt.id;
             const isCompanyDefault = companyDefaultTheme === opt.id;
 
@@ -531,7 +586,7 @@ export default function ProfilePage() {
                 {/* Visual Color Swatch */}
                 <div className="relative shrink-0 mt-0.5">
                   <div className="w-10 h-10 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 grid grid-cols-2 shadow-2xs">
-                    {opt.previewColors.map((color, idx) => (
+                    {opt.previewColors.map((color: string, idx: number) => (
                       <div
                         key={idx}
                         className="w-full h-full"

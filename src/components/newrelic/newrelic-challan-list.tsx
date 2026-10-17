@@ -136,16 +136,16 @@ export function NewRelicChallanList({
 
   if (challans.length === 0) {
     return (
-      <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-10 text-center">
-        <p className="text-gray-400 text-sm">No challans yet. Create your first one above.</p>
+      <div className="theme-card rounded-2xl shadow-sm p-10 text-center">
+        <p className="theme-text-muted text-sm">No challans yet. Create your first one above.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
-      <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Saved Challans</h3>
+    <div className="theme-card rounded-2xl shadow-sm overflow-hidden">
+      <div className="px-4 sm:px-6 py-4 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h3 className="font-semibold theme-text-primary text-sm sm:text-base">Saved Challans</h3>
         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-gray-500">
           <span>{challans.length} document{challans.length !== 1 ? 's' : ''}</span>
           {(role === 'admin' || role === 'superadmin') && (
@@ -241,7 +241,7 @@ export function NewRelicChallanList({
           return (
             <div
               key={challan.id}
-              className="relative overflow-hidden rounded-3xl bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border border-white/80 dark:border-slate-800/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] transition-all group"
+              className="relative overflow-hidden rounded-3xl theme-card shadow-lg transition-all group"
             >
               {/* Swipe Action Reveal Rail (revealed behind card when swiped left) */}
               <div className="absolute inset-y-0 right-0 flex items-stretch z-0">
@@ -275,10 +275,10 @@ export function NewRelicChallanList({
 
               {/* The swipeable card surface */}
               <div
-                className={`relative z-10 bg-white dark:bg-slate-900 rounded-3xl p-4 space-y-3 transition-transform duration-200 ease-out ${
+                className={`relative z-10 theme-card rounded-3xl p-4 space-y-3 transition-transform duration-200 ease-out ${
                   challan.location === 'hyderabad'
-                    ? 'border-t-4 border-t-sky-500 bg-gradient-to-b from-sky-500/5 via-white to-white dark:from-sky-500/10 dark:via-slate-900 dark:to-slate-900'
-                    : 'border-t-4 border-t-emerald-500 bg-gradient-to-b from-emerald-500/5 via-white to-white dark:from-emerald-500/10 dark:via-slate-900 dark:to-slate-900'
+                    ? 'border-t-4 border-t-sky-500'
+                    : 'border-t-4 border-t-emerald-500'
                 } ${swipedId === challan.id ? '-translate-x-36 shadow-md' : 'translate-x-0'}`}
                 onTouchStart={handleCardTouchStart}
                 onTouchEnd={(e) => handleCardTouchEnd(e, challan)}
@@ -323,18 +323,18 @@ export function NewRelicChallanList({
                 </div>
 
                 {/* Total Value & Item Count Inset Banner */}
-                <div className="flex items-center justify-between bg-slate-50/90 dark:bg-slate-800/60 rounded-2xl p-3 border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between theme-card-subtle rounded-2xl p-3">
                   <div>
-                    <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400 block">
+                    <span className="text-[11px] uppercase font-bold tracking-wider theme-text-muted block">
                       Total Value
                     </span>
-                    <span className="text-xl font-black font-mono tracking-tight text-indigo-950 dark:text-indigo-200 tabular-nums">
+                    <span className="text-xl font-black font-mono tracking-tight theme-text-primary tabular-nums">
                       ₹{mrpTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                   <div className="text-right">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 shadow-2xs">
-                      <Package className="w-3.5 h-3.5 text-indigo-600" />
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full theme-card theme-text-primary shadow-2xs">
+                      <Package className="w-3.5 h-3.5 text-[var(--theme-accent)]" />
                       {(challan.lineItems || []).length} Item{(challan.lineItems || []).length !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -346,12 +346,12 @@ export function NewRelicChallanList({
                   const items = challan.lineItems || [];
 
                   return (
-                    <div className="bg-slate-50/80 dark:bg-slate-800/40 rounded-2xl p-3 text-xs text-slate-700 dark:text-slate-300 space-y-1.5 border border-slate-100 dark:border-slate-800">
+                    <div className="theme-card-subtle rounded-2xl p-3 text-xs theme-text-primary space-y-1.5">
                       {!isExpanded ? (
                         <div>
                           {topItems.length > 0 && (
-                            <p className="text-xs text-slate-600 dark:text-slate-400 truncate leading-relaxed">
-                              <span className="font-semibold text-slate-900 dark:text-slate-100">{topItems.map(i => `${i.quantity}x ${i.itemName}`).join(', ')}</span>
+                            <p className="text-xs theme-text-muted truncate leading-relaxed">
+                              <span className="font-semibold theme-text-primary">{topItems.map(i => `${i.quantity}x ${i.itemName}`).join(', ')}</span>
                               {extraItemsCount > 0 ? ` +${extraItemsCount} more` : ''}
                             </p>
                           )}

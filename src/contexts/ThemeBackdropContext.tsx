@@ -23,6 +23,7 @@ export interface ThemeOption {
   description: string;
   badge: string;
   category: 'pro' | 'crazy';
+  isDark: boolean;
   previewColors: string[];
 }
 
@@ -35,6 +36,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     description: 'Drifting organic light orbs, tactile dot matrix, aurora sweep, and floating micro-sparkles.',
     badge: 'Popular',
     category: 'pro',
+    isDark: false,
     previewColors: ['#4f46e5', '#f59e0b', '#10b981', '#38bdf8'],
   },
   {
@@ -44,6 +46,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     description: 'Flowing metallic mesh, champagne gold, titanium violet, and satin specular sheen.',
     badge: 'Executive',
     category: 'pro',
+    isDark: false,
     previewColors: ['#312e81', '#d97706', '#db2777', '#4338ca'],
   },
   {
@@ -53,6 +56,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     description: 'Perspective coordinate grid with cyber cyan & violet laser pulses inspired by Linear.',
     badge: 'Tech',
     category: 'pro',
+    isDark: true,
     previewColors: ['#0f172a', '#06b6d4', '#8b5cf6', '#3b82f6'],
   },
   {
@@ -62,6 +66,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     description: 'Warm paper alabaster, soft watercolor bleeds, and tactile micro-noise grain overlay.',
     badge: 'Calm',
     category: 'pro',
+    isDark: false,
     previewColors: ['#f8fafc', '#a7f3d0', '#fed7aa', '#cbd5e1'],
   },
   {
@@ -71,6 +76,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     description: 'Crisp distraction-free canvas with soft vignette and hairline accents. Zero motion.',
     badge: 'Minimal',
     category: 'pro',
+    isDark: false,
     previewColors: ['#f8fafc', '#e2e8f0', '#94a3b8', '#64748b'],
   },
 
@@ -82,6 +88,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     description: 'Gliding 3D perspective floor grid, sliced retrowave neon sun, and electric magenta/cyan lasers.',
     badge: 'Crazy',
     category: 'crazy',
+    isDark: true,
     previewColors: ['#ff007f', '#00f0ff', '#7928ca', '#0d0221'],
   },
   {
@@ -91,6 +98,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     description: 'Cascading streams of glowing digital glyphs, phosphor green trails, and CRT monitor scanlines.',
     badge: 'Crazy',
     category: 'crazy',
+    isDark: true,
     previewColors: ['#22c55e', '#4ade80', '#15803d', '#020508'],
   },
   {
@@ -100,6 +108,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     description: 'Crackling electric energy tendrils, shockwave plasma bubbles, and vibrating cyan lightning sparks.',
     badge: 'Crazy',
     category: 'crazy',
+    isDark: true,
     previewColors: ['#a855f7', '#22d3ee', '#3b82f6', '#050814'],
   },
   {
@@ -109,6 +118,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     description: 'Churning molten gold magma cauldron beneath obsidian rock with weightless rising fire embers.',
     badge: 'Crazy',
     category: 'crazy',
+    isDark: true,
     previewColors: ['#f59e0b', '#ea580c', '#dc2626', '#090503'],
   },
   {
@@ -118,6 +128,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     description: 'Star streaks shooting past at light speed, swirling cosmic nebula arms, and pulsar flares.',
     badge: 'Crazy',
     category: 'crazy',
+    isDark: true,
     previewColors: ['#38bdf8', '#c084fc', '#ffffff', '#02040a'],
   },
 ];
@@ -241,6 +252,20 @@ export function ThemeBackdropProvider({ children }: { children: React.ReactNode 
   const activeTheme: ThemeBackdropId = isPersonalOverride && userPersonalTheme
     ? userPersonalTheme
     : companyDefaultTheme;
+
+  // Synchronize active theme with <html> attributes and Tailwind dark mode class
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const opt = THEME_OPTIONS.find((t) => t.id === activeTheme);
+    document.documentElement.setAttribute('data-theme', activeTheme);
+    if (opt?.isDark) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.style.colorScheme = 'light';
+    }
+  }, [activeTheme]);
 
   const value = useMemo(
     () => ({

@@ -165,13 +165,13 @@ export default function ProfilePage() {
                   router.push('/newrelic');
                 }
               }}
-              className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-2xl shadow-2xs active:scale-95 transition-all"
+              className="flex items-center gap-1.5 text-xs font-bold theme-text-primary theme-card px-3 py-2 rounded-2xl shadow-2xs active:scale-95 transition-all cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
             </button>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[10px] sm:text-xs font-black tracking-widest uppercase shadow-xs">
-              <Sparkles className="h-3 w-3 animate-pulse" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full theme-card-subtle theme-text-primary text-[10px] sm:text-xs font-black tracking-widest uppercase shadow-xs">
+              <Sparkles className="h-3 w-3 animate-pulse text-[var(--theme-accent)]" />
               STAFF PROFILE
             </div>
           </div>
@@ -184,9 +184,9 @@ export default function ProfilePage() {
               toast({ title: 'Profile refreshed' });
             }}
             disabled={isLoading}
-            className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/50 px-3.5 py-2 rounded-2xl active:scale-95 transition-all"
+            className="flex items-center gap-1.5 text-xs font-bold theme-text-primary theme-card-subtle px-3.5 py-2 rounded-2xl active:scale-95 transition-all cursor-pointer"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-[var(--theme-accent)] ${isLoading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
         </div>
@@ -253,15 +253,15 @@ export default function ProfilePage() {
       </div>
 
       {/* Today's Attendance Quick Status Card */}
-      <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md rounded-2xl border border-white/80 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs space-y-3">
+      <div className="theme-card rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-[#3b2fc9]" />
-            <h2 className="text-sm font-bold text-gray-900">Today&apos;s Attendance Status</h2>
+            <Calendar className="w-4 h-4 text-[var(--theme-accent)]" />
+            <h2 className="text-sm font-bold theme-text-primary">Today&apos;s Attendance Status</h2>
           </div>
           <Link
             href="/newrelic/attendance"
-            className="text-xs font-bold text-[#3b2fc9] hover:underline flex items-center gap-1"
+            className="text-xs font-bold text-[var(--theme-accent)] hover:underline flex items-center gap-1"
           >
             <span>Attendance Hub</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -357,76 +357,76 @@ export default function ProfilePage() {
 
       {/* Staff Roster Details (If linked) */}
       {employee && (
-        <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md rounded-2xl border border-white/80 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs space-y-3">
+        <div className="theme-card rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
           <div className="flex items-center gap-2">
-            <Briefcase className="w-4 h-4 text-[#3b2fc9]" />
-            <h2 className="text-sm font-bold text-gray-900">Employment Details</h2>
+            <Briefcase className="w-4 h-4 text-[var(--theme-accent)]" />
+            <h2 className="text-sm font-bold theme-text-primary">Employment Details</h2>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+            <div className="theme-card-subtle p-3 rounded-xl">
+              <span className="text-[10px] font-bold theme-text-muted uppercase tracking-wider block">
                 Designation
               </span>
-              <p className="text-xs font-bold text-gray-800 mt-0.5">{employee.designation || 'Staff'}</p>
+              <p className="text-xs font-bold theme-text-primary mt-0.5">{employee.designation || 'Staff'}</p>
             </div>
 
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+            <div className="theme-card-subtle p-3 rounded-xl">
+              <span className="text-[10px] font-bold theme-text-muted uppercase tracking-wider block">
                 Phone Number
               </span>
-              <p className="text-xs font-bold text-gray-800 mt-0.5">{employee.phone || '—'}</p>
+              <p className="text-xs font-bold theme-text-primary mt-0.5">{employee.phone || '—'}</p>
             </div>
 
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+            <div className="theme-card-subtle p-3 rounded-xl">
+              <span className="text-[10px] font-bold theme-text-muted uppercase tracking-wider block">
                 Date Joined
               </span>
-              <p className="text-xs font-bold text-gray-800 mt-0.5">
+              <p className="text-xs font-bold theme-text-primary mt-0.5">
                 {employee.joinDate
                   ? new Date(employee.joinDate).toLocaleDateString('en-IN')
                   : '—'}
               </p>
             </div>
 
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+            <div className="theme-card-subtle p-3 rounded-xl">
+              <span className="text-[10px] font-bold theme-text-muted uppercase tracking-wider block">
                 Roster Status
               </span>
-              <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 mt-0.5">
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-500 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 {employee.isActive !== false ? 'Active Employee' : 'Inactive'}
               </span>
             </div>
 
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+            <div className="theme-card-subtle p-3 rounded-xl">
+              <span className="text-[10px] font-bold theme-text-muted uppercase tracking-wider block">
                 Cafeteria Site
               </span>
-              <p className="text-xs font-bold text-gray-800 mt-0.5">{siteConfig.name}</p>
+              <p className="text-xs font-bold theme-text-primary mt-0.5">{siteConfig.name}</p>
             </div>
 
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+            <div className="theme-card-subtle p-3 rounded-xl">
+              <span className="text-[10px] font-bold theme-text-muted uppercase tracking-wider block">
                 Location
               </span>
-              <p className="text-xs font-bold text-gray-800 mt-0.5 capitalize">{employee.location}</p>
+              <p className="text-xs font-bold theme-text-primary mt-0.5 capitalize">{employee.location}</p>
             </div>
           </div>
         </div>
       )}
 
       {/* ── App Theme & Backdrops Picker (Mode B: Company Default + Personal Choice) ── */}
-      <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md rounded-2xl border border-white/80 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs space-y-4">
+      <div className="theme-card rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-xs">
+            <div className="w-8 h-8 rounded-xl theme-btn-primary flex items-center justify-center shadow-xs">
               <Palette className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white">App Backdrop & Theme</h2>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              <h2 className="text-sm font-bold theme-text-primary">App Backdrop & Theme</h2>
+              <p className="text-[11px] theme-text-muted">
                 {isPersonalOverride
                   ? 'Personal choice active on this device'
                   : `Syncing with Company Default (${companyDefaultThemeName})`}
@@ -446,14 +446,14 @@ export default function ProfilePage() {
                     description: `Now following official company theme (${companyDefaultThemeName}).`,
                   });
                 }}
-                className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 px-2.5 py-1 rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs"
+                className="flex items-center gap-1.5 text-[11px] font-bold theme-badge px-2.5 py-1 rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs"
               >
                 <RotateCcw className="w-3 h-3" />
                 <span>Reset to Company Default</span>
               </button>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-2xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-2xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Following Company Default
               </span>
             )}
@@ -579,8 +579,8 @@ export default function ProfilePage() {
                 }}
                 className={`relative flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all active:scale-[0.98] cursor-pointer ${
                   isSelected
-                    ? 'bg-indigo-50/90 dark:bg-indigo-950/40 border-indigo-500/80 shadow-xs ring-1 ring-indigo-500/50'
-                    : 'bg-white/60 dark:bg-slate-800/40 border-gray-200/80 dark:border-slate-700/60 hover:bg-gray-50 dark:hover:bg-slate-800/70'
+                    ? 'theme-card ring-2 ring-[var(--theme-accent)] shadow-lg'
+                    : 'theme-card-subtle hover:opacity-95'
                 }`}
               >
                 {/* Visual Color Swatch */}
@@ -595,7 +595,7 @@ export default function ProfilePage() {
                     ))}
                   </div>
                   {isSelected && (
-                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xs border-2 border-white dark:border-slate-900">
+                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full theme-btn-primary flex items-center justify-center shadow-xs border-2 border-white dark:border-slate-900">
                       <Check className="w-3 h-3 stroke-[3]" />
                     </span>
                   )}
@@ -604,24 +604,24 @@ export default function ProfilePage() {
                 {/* Theme Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1 flex-wrap">
-                    <span className={`text-xs font-bold truncate ${isSelected ? 'text-indigo-950 dark:text-indigo-200 font-extrabold' : 'text-gray-900 dark:text-white'}`}>
+                    <span className={`text-xs font-bold truncate theme-text-primary ${isSelected ? 'font-black' : ''}`}>
                       {opt.name}
                     </span>
                     <div className="flex items-center gap-1 shrink-0">
                       {isCompanyDefault && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
                           Company Default
                         </span>
                       )}
-                      <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400">
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded theme-badge">
                         {opt.badge}
                       </span>
                     </div>
                   </div>
-                  <p className="text-[11px] font-medium text-gray-600 dark:text-gray-300 mt-0.5 line-clamp-1">
+                  <p className="text-[11px] font-medium theme-text-muted mt-0.5 line-clamp-1">
                     {opt.subtitle}
                   </p>
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 line-clamp-2">
+                  <p className="text-[10px] theme-text-muted opacity-80 mt-0.5 line-clamp-2">
                     {opt.description}
                   </p>
                 </div>
@@ -632,28 +632,28 @@ export default function ProfilePage() {
       </div>
 
       {/* Account & Security Information */}
-      <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md rounded-2xl border border-white/80 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs space-y-3">
+      <div className="theme-card rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
         <div className="flex items-center gap-2">
-          <Shield className="w-4 h-4 text-[#3b2fc9]" />
-          <h2 className="text-sm font-bold text-gray-900">Account & Security</h2>
+          <Shield className="w-4 h-4 text-[var(--theme-accent)]" />
+          <h2 className="text-sm font-bold theme-text-primary">Account & Security</h2>
         </div>
 
-        <div className="space-y-2.5 text-xs text-gray-600 divide-y divide-gray-100">
+        <div className="space-y-2.5 text-xs divide-y divide-white/10 dark:divide-white/10">
           <div className="flex items-center justify-between py-1">
-            <span className="font-medium text-gray-500">Account Email</span>
-            <span className="font-bold text-gray-900">{user?.email}</span>
+            <span className="font-medium theme-text-muted">Account Email</span>
+            <span className="font-bold theme-text-primary">{user?.email}</span>
           </div>
 
           <div className="flex items-center justify-between py-1 pt-2">
-            <span className="font-medium text-gray-500">Access Level</span>
-            <span className="font-bold uppercase text-[#3b2fc9] bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
+            <span className="font-medium theme-text-muted">Access Level</span>
+            <span className="font-bold uppercase theme-badge px-2.5 py-0.5 rounded-full">
               {role || 'User'}
             </span>
           </div>
 
           <div className="flex items-center justify-between py-1 pt-2">
-            <span className="font-medium text-gray-500">Assigned Branch Locations</span>
-            <span className="font-bold text-gray-900">
+            <span className="font-medium theme-text-muted">Assigned Branch Locations</span>
+            <span className="font-bold theme-text-primary">
               {role === 'admin' || role === 'superadmin'
                 ? 'All Locations (HYD & BLR)'
                 : siteConfig.allowedLocations.map((l) => l.toUpperCase()).join(' & ')}
@@ -661,8 +661,8 @@ export default function ProfilePage() {
           </div>
 
           <div className="flex items-center justify-between py-1 pt-2">
-            <span className="font-medium text-gray-500">User ID</span>
-            <span className="font-mono text-[11px] text-gray-400">{user?.id || '—'}</span>
+            <span className="font-medium theme-text-muted">User ID</span>
+            <span className="font-mono text-[11px] theme-text-muted opacity-75">{user?.id || '—'}</span>
           </div>
         </div>
       </div>

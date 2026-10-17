@@ -158,12 +158,12 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
     <div className="flex flex-col gap-6 h-full w-full">
       {showDashboard && <TuckshopDashboard records={filteredRecords} />}
       
-      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden h-full flex flex-col">
-      <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col gap-3.5 bg-gray-50/50">
+      <div className="theme-card rounded-2xl shadow-sm overflow-hidden h-full flex flex-col">
+      <div className="p-4 sm:p-5 border-b border-white/10 flex flex-col gap-3.5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-gray-800 text-base sm:text-lg">Transaction Ledger</h3>
-            <span className="text-xs text-gray-500 font-medium">
+            <h3 className="font-semibold theme-text-primary text-base sm:text-lg">Transaction Ledger</h3>
+            <span className="text-xs theme-text-muted font-medium">
               ({filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''})
             </span>
           </div>
@@ -358,8 +358,8 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
             return (
               <div
                 key={record.id}
-                className={`p-4 rounded-2xl sm:rounded-3xl border shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] bg-white/85 dark:bg-slate-900/85 backdrop-blur-md space-y-3 transition-all ${
-                  isExp ? 'border-rose-100 hover:border-rose-200' : 'border-emerald-100 hover:border-emerald-200'
+                className={`p-4 rounded-2xl sm:rounded-3xl theme-card space-y-3 transition-all ${
+                  isExp ? 'border-rose-200/50 hover:border-rose-400' : 'border-emerald-200/50 hover:border-emerald-400'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2.5">
@@ -407,7 +407,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                     </div>
 
                     {record.description && (
-                      <p className="text-xs text-slate-600 mt-2 line-clamp-2 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-100 font-medium">
+                      <p className="text-xs theme-text-primary mt-2 line-clamp-2 theme-card-subtle px-2.5 py-1.5 rounded-xl font-medium">
                         {record.description}
                       </p>
                     )}

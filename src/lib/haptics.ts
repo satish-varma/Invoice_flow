@@ -2,12 +2,13 @@
  * Native Haptic Feedback Utility for mobile browsers & PWAs.
  * Safe fallback for desktop or browsers without vibration API.
  */
-export type HapticType = 'light' | 'medium' | 'heavy' | 'success' | 'warning';
+export type HapticType = 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'selection';
 
 export function triggerHaptic(type: HapticType = 'light'): void {
   if (typeof window === 'undefined') return;
 
   const patterns: Record<HapticType, number | number[]> = {
+    selection: 10,     // Ultra subtle tick on tap/select
     light: 12,        // Quick subtle tick (steppers, tabs)
     medium: 25,       // Standard button press (check in, capture)
     heavy: 45,        // Primary confirmations

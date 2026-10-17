@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { generateAndSavePdf } from '@/lib/pdf';
 import { DeclarationPreview } from './declaration-preview';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, Sparkles, FileText } from 'lucide-react';
+import { triggerHaptic } from '@/lib/haptics';
 
 export const declarationSchema = z.object({
   vendorName: z.string().min(1, 'Vendor name is required'),
@@ -98,119 +99,134 @@ export function DeclarationForm() {
   };
 
   return (
-    <div className="grid lg:grid-cols-[400px_1fr] gap-6 items-start">
-      <Card>
-        <CardHeader className="pb-4 border-b">
-          <div className="flex items-center justify-between">
+    <div className="grid lg:grid-cols-[420px_1fr] gap-6 items-start">
+      <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/40 flex items-center justify-center text-teal-600 dark:text-teal-400">
+              <FileText className="h-5 w-5" />
+            </div>
             <div>
-              <CardTitle className="text-lg">Declaration Details</CardTitle>
-              <CardDescription>Fill details or use a preset</CardDescription>
+              <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                Declaration Details
+              </h2>
+              <p className="text-xs text-slate-500">Fill details or select a preset</p>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="pt-4 space-y-4">
-          <div className="space-y-2 pb-4 border-b">
-            <Label>Load Preset</Label>
-            <Select onValueChange={handlePresetChange} defaultValue="gut_guru">
-              <SelectTrigger>
+        </div>
+
+        <div className="p-4 sm:p-5 space-y-4">
+          <div className="space-y-1.5 pb-4 border-b border-slate-100 dark:border-slate-800">
+            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Load Preset</Label>
+            <Select onValueChange={(val) => { triggerHaptic('light'); handlePresetChange(val); }} defaultValue="gut_guru">
+              <SelectTrigger className="h-11 rounded-2xl text-sm">
                 <SelectValue placeholder="Select a preset..." />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-2xl">
                 <SelectItem value="gut_guru">The Gut Guru</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900">Vendor Info</h3>
-            <div className="grid gap-2">
-              <Label>Vendor Name</Label>
-              <Input {...form.register('vendorName')} placeholder="Company Name" />
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">Vendor Info</h3>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Vendor Name</Label>
+              <Input {...form.register('vendorName')} placeholder="Company Name" className="h-11 rounded-2xl text-sm" />
             </div>
-            <div className="grid gap-2">
-              <Label>Address</Label>
-              <Input {...form.register('address')} placeholder="Full Address" />
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Address</Label>
+              <Input {...form.register('address')} placeholder="Full Address" className="h-11 rounded-2xl text-sm" />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label>Phone (opt)</Label>
-                <Input {...form.register('phone')} />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Phone</Label>
+                <Input {...form.register('phone')} className="h-11 rounded-2xl text-sm" />
               </div>
-              <div className="grid gap-2">
-                <Label>Email (opt)</Label>
-                <Input {...form.register('email')} />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Email</Label>
+                <Input {...form.register('email')} className="h-11 rounded-2xl text-sm" />
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label>Website (opt)</Label>
-              <Input {...form.register('website')} />
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Website</Label>
+              <Input {...form.register('website')} className="h-11 rounded-2xl text-sm" />
             </div>
-            <div className="grid gap-2">
-              <Label>GSTIN</Label>
-              <Input {...form.register('gstin')} placeholder="GST No or 'Applied for'" />
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">GSTIN</Label>
+              <Input {...form.register('gstin')} placeholder="GST No or 'Applied for'" className="h-11 rounded-2xl text-sm font-mono" />
             </div>
           </div>
 
-          <div className="space-y-3 pt-3 border-t">
-            <h3 className="text-sm font-semibold text-gray-900">Document Meta</h3>
+          <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">Document Meta</h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label>Date</Label>
-                <Input type="date" {...form.register('date')} />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Date</Label>
+                <Input type="date" {...form.register('date')} className="h-11 rounded-2xl text-sm" />
               </div>
-              <div className="grid gap-2">
-                <Label>Place</Label>
-                <Input {...form.register('place')} />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Place</Label>
+                <Input {...form.register('place')} className="h-11 rounded-2xl text-sm" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label>Ref No (opt)</Label>
-                <Input {...form.register('refNo')} />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Ref No</Label>
+                <Input {...form.register('refNo')} className="h-11 rounded-2xl text-sm font-mono" />
               </div>
-              <div className="grid gap-2">
-                <Label>Financial Year</Label>
-                <Input {...form.register('financialYear')} placeholder="2026-27" />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Financial Year</Label>
+                <Input {...form.register('financialYear')} placeholder="2026-27" className="h-11 rounded-2xl text-sm" />
               </div>
             </div>
           </div>
           
-          <div className="space-y-3 pt-3 border-t">
-            <h3 className="text-sm font-semibold text-gray-900">Declaration Text</h3>
-            <div className="grid gap-2">
-              <Label>Text (Supports basic dynamic fields like {'{vendorName}'})</Label>
+          <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">Declaration Text</h3>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Text Content</Label>
               <Textarea 
                 {...form.register('declarationText')} 
-                className="h-32 font-mono text-xs" 
+                className="h-28 font-mono text-xs rounded-2xl resize-none" 
               />
             </div>
           </div>
 
-          <div className="space-y-3 pt-3 border-t">
-            <h3 className="text-sm font-semibold text-gray-900">Signatory</h3>
+          <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">Signatory</h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label>Name</Label>
-                <Input {...form.register('personName')} />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Name</Label>
+                <Input {...form.register('personName')} className="h-11 rounded-2xl text-sm" />
               </div>
-              <div className="grid gap-2">
-                <Label>Designation</Label>
-                <Input {...form.register('designation')} />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Designation</Label>
+                <Input {...form.register('designation')} className="h-11 rounded-2xl text-sm" />
               </div>
             </div>
           </div>
-        </CardContent>
-        <CardFooter className="bg-gray-50 border-t p-4">
-          <Button onClick={handleDownload} disabled={isExporting} className="w-full">
+        </div>
+
+        <div className="p-4 sm:p-5 bg-slate-50/80 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800">
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              handleDownload();
+            }}
+            disabled={isExporting}
+            className="w-full h-12 rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-600 text-white font-bold text-sm shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+          >
             {isExporting ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <Download className="w-4 h-4 mr-2" />
+              <Download className="w-4 h-4" />
             )}
-            Download PDF
-          </Button>
-        </CardFooter>
-      </Card>
+            <span>Download Declaration PDF</span>
+          </button>
+        </div>
+      </div>
 
       {/* Preview Section */}
       <div className="sticky top-20">

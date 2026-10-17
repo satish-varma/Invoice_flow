@@ -25,10 +25,11 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Download, Trash2, FileSpreadsheet, Eye, FileText } from "lucide-react"
+import { Download, Trash2, FileSpreadsheet, Eye, FileText, Search, X } from "lucide-react"
 import { exportToCSV } from "@/lib/export"
 import { Checkbox } from "@/components/ui/checkbox"
 import { format } from "date-fns"
+import { triggerHaptic } from "@/lib/haptics"
 
 
 interface DataTableProps<TData, TValue> {
@@ -118,25 +119,45 @@ export function ChallansDataTable<TData, TValue>({
     return (
         <div>
             {/* ── Filters & Bulk Actions ─────────────────────────────── */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 py-3">
                 <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-                    <Input
-                        placeholder="Search customer or challan #..."
-                        value={searchText}
-                        onChange={(e) => {
-                            setSearchText(e.target.value);
-                            table.getColumn("billToName")?.setFilterValue(e.target.value);
-                            table.getColumn("dcNumber")?.setFilterValue(e.target.value);
-                        }}
-                        className="w-full sm:w-64 md:hidden"
-                    />
+                    {/* Mobile 48px Search with clear (X) */}
+                    <div className="relative flex-1 w-full md:hidden">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                        <Input
+                            placeholder="Search customer or challan #..."
+                            value={searchText}
+                            onChange={(e) => {
+                                setSearchText(e.target.value);
+                                table.getColumn("billToName")?.setFilterValue(e.target.value);
+                                table.getColumn("dcNumber")?.setFilterValue(e.target.value);
+                            }}
+                            className="pl-10 pr-10 h-12 rounded-2xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm font-medium shadow-sm focus-visible:ring-indigo-500"
+                        />
+                        {searchText && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    triggerHaptic('light');
+                                    setSearchText('');
+                                    table.getColumn("billToName")?.setFilterValue('');
+                                    table.getColumn("dcNumber")?.setFilterValue('');
+                                }}
+                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-full active:scale-90"
+                                aria-label="Clear search"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
+                    </div>
+
                     <Input
                         placeholder="Filter by customer..."
                         value={(table.getColumn("billToName")?.getFilterValue() as string) ?? ""}
                         onChange={(event) =>
                             table.getColumn("billToName")?.setFilterValue(event.target.value)
                         }
-                        className="hidden md:block w-full sm:w-64"
+                        className="hidden md:block w-full sm:w-64 h-10 rounded-xl"
                     />
                     <Input
                         placeholder="Filter by challan #..."
@@ -144,22 +165,43 @@ export function ChallansDataTable<TData, TValue>({
                         onChange={(event) =>
                             table.getColumn("dcNumber")?.setFilterValue(event.target.value)
                         }
-                        className="hidden md:block w-full sm:w-48"
+                        className="hidden md:block w-full sm:w-48 h-10 rounded-xl"
                     />
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
-                    <Button variant="outline" onClick={handleExportCSV} className="w-full sm:w-auto">
-                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    <Button 
+                        variant="outline" 
+                        onClick={() => {
+                            triggerHaptic('selection');
+                            handleExportCSV();
+                        }} 
+                        className="w-full sm:w-auto h-11 sm:h-10 rounded-xl font-bold text-xs active:scale-95 transition-all"
+                    >
+                        <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-600" />
                         Export CSV {table.getSelectedRowModel().rows.length > 0 ? `(${table.getSelectedRowModel().rows.length})` : '(All)'}
                     </Button>
 
                     {table.getSelectedRowModel().rows.length > 0 && (
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" onClick={handleDownload} className="w-full sm:w-auto">
-                                <Download className="mr-2 h-4 w-4" />
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <Button 
+                                variant="outline" 
+                                onClick={() => {
+                                    triggerHaptic('medium');
+                                    handleDownload();
+                                }} 
+                                className="flex-1 sm:flex-initial h-11 sm:h-10 rounded-xl font-bold text-xs active:scale-95 transition-all"
+                            >
+                                <Download className="mr-2 h-4 w-4 text-indigo-600" />
                                 Download ({table.getSelectedRowModel().rows.length})
                             </Button>
-                            <Button variant="destructive" onClick={handleDelete} className="w-full sm:w-auto">
+                            <Button 
+                                variant="destructive" 
+                                onClick={() => {
+                                    triggerHaptic('warning');
+                                    handleDelete();
+                                }} 
+                                className="flex-1 sm:flex-initial h-11 sm:h-10 rounded-xl font-bold text-xs active:scale-95 transition-all"
+                            >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Delete ({table.getSelectedRowModel().rows.length})
                             </Button>
@@ -171,9 +213,9 @@ export function ChallansDataTable<TData, TValue>({
             {/* ── MOBILE CARD LIST ──────────────────────────────────── */}
             <div className="md:hidden space-y-3">
                 {filteredData.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-12 border rounded-lg">
-                        <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                        <p>No challans found.</p>
+                    <div className="text-center text-muted-foreground py-12 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50">
+                        <FileText className="h-10 w-10 mx-auto mb-2 opacity-30 text-slate-400" />
+                        <p className="font-bold text-sm text-slate-600 dark:text-slate-400">No challans found</p>
                     </div>
                 ) : (
                     (filteredData as any[]).map((challan) => {
@@ -182,55 +224,71 @@ export function ChallansDataTable<TData, TValue>({
                         return (
                             <div
                                 key={id}
-                                className={`border rounded-xl p-4 space-y-3 transition-all duration-150 ${isSelected ? 'border-primary bg-primary/5 shadow-md' : 'bg-card shadow-sm'}`}
+                                className={`rounded-2xl border bg-white dark:bg-slate-900 p-4 space-y-3.5 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] transition-all active:scale-[0.99] ${
+                                    isSelected 
+                                        ? 'border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50/20 dark:bg-indigo-950/20' 
+                                        : 'border-slate-200/80 dark:border-slate-800'
+                                }`}
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="flex items-center gap-3">
                                         <Checkbox
                                             checked={isSelected}
-                                            onCheckedChange={() => toggleMobileSelect(id)}
+                                            onCheckedChange={() => {
+                                                triggerHaptic('light');
+                                                toggleMobileSelect(id);
+                                            }}
                                             aria-label="Select challan"
-                                            className="mt-0.5"
+                                            className="h-5 w-5 rounded-lg border-slate-300 dark:border-slate-700"
                                         />
                                         <div>
-                                            <p className="font-bold text-sm text-primary leading-tight">
+                                            <p className="font-mono font-black text-sm text-indigo-600 dark:text-indigo-400 leading-tight">
                                                 {challan.dcNumber || 'No Number'}
                                             </p>
-                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-0.5 line-clamp-1">
                                                 {challan.billToName || '—'}
                                             </p>
                                         </div>
                                     </div>
                                     <div className="text-right flex-shrink-0">
-                                        <p className="font-bold text-base">₹{formatAmount(challan.total)}</p>
-                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                        <p className="font-mono font-black text-base text-slate-900 dark:text-white">₹{formatAmount(challan.total)}</p>
+                                        <p className="text-[11px] font-medium text-slate-400 mt-0.5">
                                             {formatDate(challan.dcDate)}
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-2 pt-1 border-t">
+                                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="w-full text-xs h-9"
-                                        onClick={() => onPreview?.(challan)}
+                                        className="w-full text-xs font-bold h-10 rounded-xl bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 active:scale-95 transition-all"
+                                        onClick={() => {
+                                            triggerHaptic('selection');
+                                            onPreview?.(challan);
+                                        }}
                                     >
-                                        <Eye className="h-3.5 w-3.5 mr-1" /> Preview
+                                        <Eye className="h-3.5 w-3.5 mr-1 text-slate-600 dark:text-slate-300" /> Preview
                                     </Button>
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="w-full text-xs h-9"
-                                        onClick={() => onDownloadSingle?.(challan)}
+                                        className="w-full text-xs font-bold h-10 rounded-xl bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 active:scale-95 transition-all"
+                                        onClick={() => {
+                                            triggerHaptic('medium');
+                                            onDownloadSingle?.(challan);
+                                        }}
                                     >
                                         <Download className="h-3.5 w-3.5 mr-1" /> PDF
                                     </Button>
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="w-full text-xs h-9 text-destructive border-destructive/30 hover:bg-destructive/10"
-                                        onClick={() => onDeleteSingle?.(challan)}
+                                        className="w-full text-xs font-bold h-10 rounded-xl text-rose-600 border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 active:scale-95 transition-all"
+                                        onClick={() => {
+                                            triggerHaptic('warning');
+                                            onDeleteSingle?.(challan);
+                                        }}
                                     >
                                         <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
                                     </Button>
@@ -240,7 +298,7 @@ export function ChallansDataTable<TData, TValue>({
                     })
                 )}
                 {filteredData.length > 0 && (
-                    <p className="text-xs text-center text-muted-foreground pb-2">
+                    <p className="text-xs text-center font-medium text-slate-400 pb-2">
                         Showing {filteredData.length} challan{filteredData.length !== 1 ? 's' : ''}
                     </p>
                 )}

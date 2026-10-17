@@ -122,46 +122,53 @@ export default function ProfilePage() {
   const isCheckedOut = Boolean(todayAttendance?.checkOut?.time);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-8 space-y-5 pb-28">
-      {/* Top Navigation / Back Bar */}
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => {
-            triggerHaptic('light');
-            if (window.history.length > 1) {
-              router.back();
-            } else {
-              router.push('/newrelic');
-            }
-          }}
-          className="flex items-center gap-1.5 text-xs font-bold text-gray-600 hover:text-gray-900 bg-white border border-gray-200 px-3 py-1.5 rounded-xl shadow-2xs active:scale-95 transition-all"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back</span>
-        </button>
+    <div className="min-h-screen bg-slate-50/60 dark:bg-slate-950 p-3 sm:p-8 pb-[max(6rem,env(safe-area-inset-bottom))]">
+      <div className="max-w-3xl mx-auto space-y-5">
+        {/* Top Navigation / Back Bar with Category Badge */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                if (window.history.length > 1) {
+                  router.back();
+                } else {
+                  router.push('/newrelic');
+                }
+              }}
+              className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-2xl shadow-2xs active:scale-95 transition-all"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[10px] sm:text-xs font-black tracking-widest uppercase shadow-xs">
+              <Sparkles className="h-3 w-3 animate-pulse" />
+              STAFF PROFILE
+            </div>
+          </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            triggerHaptic('light');
-            loadProfileData();
-            toast({ title: 'Profile refreshed' });
-          }}
-          disabled={isLoading}
-          className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-xl active:scale-95 transition-all"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              loadProfileData();
+              toast({ title: 'Profile refreshed' });
+            }}
+            disabled={isLoading}
+            className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/50 px-3.5 py-2 rounded-2xl active:scale-95 transition-all"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
+        </div>
 
-      {/* Main Profile Identity Card */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-[#181156] via-[#241775] to-[#3b2fc9] p-6 text-white shadow-xl overflow-hidden">
-        <div className="absolute -right-8 -top-8 w-40 h-40 bg-indigo-400/20 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute right-20 -bottom-8 w-32 h-32 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
+        {/* Main Profile Identity Card */}
+        <div className="relative rounded-3xl bg-gradient-to-br from-[#181156] via-[#241775] to-[#3b2fc9] p-6 text-white shadow-xl overflow-hidden">
+          <div className="absolute -right-8 -top-8 w-40 h-40 bg-indigo-400/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute right-20 -bottom-8 w-32 h-32 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5">
           {/* Avatar / Selfie Photo */}
           <div className="relative">
             {employee?.profilePhotoUrl || todayAttendance?.checkIn?.selfieUrl ? (
@@ -433,5 +440,6 @@ export default function ProfilePage() {
         </p>
       </div>
     </div>
+  </div>
   );
 }

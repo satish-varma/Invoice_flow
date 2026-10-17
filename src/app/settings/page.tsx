@@ -29,7 +29,7 @@ import {
     saveGeneralSettings
 } from '@/services/settingsService';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader, PlusCircle, Pencil, Trash2, Star, Save } from 'lucide-react';
+import { ArrowLeft, Loader, PlusCircle, Pencil, Trash2, Star, Save, Sparkles, Building2, Users, Sliders, Receipt } from 'lucide-react';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -39,6 +39,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AppShell } from '@/components/app-shell';
 import { availableTaxes } from '@/lib/tax-constants';
+import { triggerHaptic } from '@/lib/haptics';
 
 
 type ContactType = 'billTo' | 'shipTo';
@@ -528,27 +529,83 @@ export default function SettingsPage() {
 
     return (
         <AppShell>
-            <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
-                <div className="w-full max-w-6xl mx-auto">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <Button variant="outline" asChild className="mb-4">
-                                <Link href="/">
-                                    <ArrowLeft className="mr-2 h-4 w-4" />
-                                    Back to Create
-                                </Link>
-                            </Button>
-                            <h1 className="text-3xl sm:text-4xl font-headline font-bold text-primary mt-4">Settings</h1>
-                            <p className="text-muted-foreground text-sm sm:text-base">Manage your company profiles, invoice settings, and customer contacts.</p>
+            <main className="min-h-screen bg-slate-50/60 dark:bg-slate-950 flex flex-col items-center p-3 sm:p-8">
+                <div className="w-full max-w-6xl mx-auto space-y-6">
+                    {/* Mobile Large Title Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        triggerHaptic('light');
+                                        window.history.back();
+                                    }}
+                                    className="sm:hidden p-2 -ml-2 rounded-xl text-slate-600 dark:text-slate-300 active:scale-95 transition-all"
+                                >
+                                    <ArrowLeft className="h-5 w-5" />
+                                </button>
+                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-slate-500/10 via-indigo-500/10 to-slate-500/10 border border-slate-500/20 text-indigo-600 dark:text-indigo-400 text-[10px] sm:text-xs font-black tracking-widest uppercase shadow-xs">
+                                    <Sparkles className="h-3 w-3 animate-pulse" />
+                                    CONFIGURATION & PROFILES
+                                </div>
+                            </div>
+
+                            <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                                Settings & Master Config
+                            </h1>
+                            <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">
+                                Manage company letterheads, customer contacts, tax slabs, and billing defaults
+                            </p>
+                        </div>
+
+                        <div className="hidden sm:flex items-center gap-2">
+                            <Link
+                                href="/"
+                                onClick={() => triggerHaptic('light')}
+                                className="inline-flex items-center gap-2 h-10 px-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                                <span>Back to Home</span>
+                            </Link>
                         </div>
                     </div>
 
                     <Tabs defaultValue="company" className="w-full">
-                    <TabsList className='mb-4'>
-                        <TabsTrigger value="company">Company Profiles</TabsTrigger>
-                        <TabsTrigger value="contacts">Contacts</TabsTrigger>
-                        <TabsTrigger value="taxes">Taxes</TabsTrigger>
-                        <TabsTrigger value="general">General</TabsTrigger>
+                    {/* Tactile Scrolling Tab Switcher */}
+                    <TabsList className="flex w-full overflow-x-auto no-scrollbar gap-2 p-1.5 bg-slate-100/90 dark:bg-slate-800/80 rounded-2xl mb-6 border border-slate-200/50 dark:border-slate-700/50">
+                        <TabsTrigger
+                            value="company"
+                            onClick={() => triggerHaptic('light')}
+                            className="flex-1 min-w-[125px] h-10 rounded-xl text-xs font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400 active:scale-95 transition-all flex items-center gap-1.5 justify-center"
+                        >
+                            <Building2 className="h-3.5 w-3.5" />
+                            <span>Profiles</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="contacts"
+                            onClick={() => triggerHaptic('light')}
+                            className="flex-1 min-w-[125px] h-10 rounded-xl text-xs font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400 active:scale-95 transition-all flex items-center gap-1.5 justify-center"
+                        >
+                            <Users className="h-3.5 w-3.5" />
+                            <span>Contacts</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="taxes"
+                            onClick={() => triggerHaptic('light')}
+                            className="flex-1 min-w-[125px] h-10 rounded-xl text-xs font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400 active:scale-95 transition-all flex items-center gap-1.5 justify-center"
+                        >
+                            <Receipt className="h-3.5 w-3.5" />
+                            <span>Taxes</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="general"
+                            onClick={() => triggerHaptic('light')}
+                            className="flex-1 min-w-[125px] h-10 rounded-xl text-xs font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400 active:scale-95 transition-all flex items-center gap-1.5 justify-center"
+                        >
+                            <Sliders className="h-3.5 w-3.5" />
+                            <span>General</span>
+                        </TabsTrigger>
                     </TabsList>
                     <TabsContent value="company">
                         <Card>
@@ -872,58 +929,150 @@ export default function SettingsPage() {
                 </Tabs>
 
             </div>
-            {/* Edit Profile Dialog */}
+            {/* Edit Profile Bottom Sheet Dialog */}
             {editingProfile && (
                 <Dialog open={isProfileEditDialogOpen} onOpenChange={setIsProfileEditDialogOpen}>
-                    <DialogContent className="max-w-3xl">
-                        <DialogHeader>
-                            <DialogTitle>{editingProfile.id ? 'Edit' : 'Add New'} Company Profile</DialogTitle>
-                        </DialogHeader>
-                        <div className="max-h-[70vh] overflow-y-auto p-1">
+                    <DialogContent className="w-full sm:max-w-3xl rounded-t-3xl sm:rounded-3xl bottom-0 top-auto sm:top-[50%] sm:bottom-auto translate-y-0 sm:translate-y-[-50%] p-0 border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-2xl flex flex-col max-h-[90vh]">
+                        {/* Native Drag Handle */}
+                        <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+
+                        <div className="px-5 sm:px-6 pt-3 sm:pt-5 pb-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                                <Building2 className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                                    {editingProfile.id ? 'Edit' : 'Add New'} Company Profile
+                                </DialogTitle>
+                                <p className="text-xs text-slate-500">Configure letterhead, bank details, and stamp</p>
+                            </div>
+                        </div>
+
+                        <div className="px-5 sm:px-6 py-4 overflow-y-auto max-h-[calc(90vh-140px)]">
                             {renderProfileForm(editingProfile)}
                         </div>
-                        <DialogFooter>
-                            <DialogClose asChild><Button variant="outline" onClick={() => setEditingProfile(null)}>Cancel</Button></DialogClose>
-                            <Button onClick={handleSaveProfile} disabled={isSaving}>
-                                {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : 'Save Profile'}
-                            </Button>
-                        </DialogFooter>
+
+                        <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                            <DialogClose asChild>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        triggerHaptic('light');
+                                        setEditingProfile(null);
+                                    }}
+                                    className="h-11 rounded-2xl font-bold text-xs px-5 border-slate-200 dark:border-slate-800"
+                                >
+                                    Cancel
+                                </Button>
+                            </DialogClose>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    triggerHaptic('light');
+                                    handleSaveProfile();
+                                }}
+                                disabled={isSaving}
+                                className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-2xl bg-gradient-to-r from-[#181156] to-[#241775] text-white font-bold text-xs shadow-md active:scale-95 disabled:opacity-50 transition-all"
+                            >
+                                {isSaving && <Loader className="h-4 w-4 animate-spin" />}
+                                <span>Save Profile</span>
+                            </button>
+                        </div>
                     </DialogContent>
                 </Dialog>
             )}
 
-            {/* Edit Contact Dialog */}
+            {/* Edit Contact Bottom Sheet Dialog */}
             {editingContact && (
                 <Dialog open={isContactEditDialogOpen} onOpenChange={setIsContactEditDialogOpen}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Edit {editingContactType === 'billTo' ? 'Bill To' : 'Ship To'} Contact</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="editDisplayName">Display Name</Label>
-                                <Input id="editDisplayName" value={editingContact.displayName} onChange={e => handleInputChange('editContact', 'displayName', e.target.value)} />
+                    <DialogContent className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl bottom-0 top-auto sm:top-[50%] sm:bottom-auto translate-y-0 sm:translate-y-[-50%] p-0 border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-2xl flex flex-col max-h-[90vh]">
+                        {/* Native Drag Handle */}
+                        <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+
+                        <div className="px-5 sm:px-6 pt-3 sm:pt-5 pb-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                                <Users className="h-5 w-5" />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="editName">Name</Label>
-                                <Input id="editName" value={editingContact.name} onChange={e => handleInputChange('editContact', 'name', e.target.value)} />
+                            <div>
+                                <DialogTitle className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                                    Edit {editingContactType === 'billTo' ? 'Bill To' : 'Ship To'} Contact
+                                </DialogTitle>
+                                <p className="text-xs text-slate-500">Update party details and address</p>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="editAddress">Address</Label>
-                                <Textarea id="editAddress" value={editingContact.address} onChange={e => handleInputChange('editContact', 'address', e.target.value)} />
+                        </div>
+
+                        <div className="px-5 sm:px-6 py-4 space-y-4 overflow-y-auto">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="editDisplayName" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                    Display Name
+                                </Label>
+                                <Input
+                                    id="editDisplayName"
+                                    value={editingContact.displayName}
+                                    onChange={e => handleInputChange('editContact', 'displayName', e.target.value)}
+                                    className="h-11 rounded-2xl text-sm"
+                                />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="editGst">GSTIN</Label>
-                                <Input id="editGst" value={editingContact.gst} onChange={e => handleInputChange('editContact', 'gst', e.target.value)} />
+                            <div className="space-y-1.5">
+                                <Label htmlFor="editName" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                    Legal Entity Name
+                                </Label>
+                                <Input
+                                    id="editName"
+                                    value={editingContact.name}
+                                    onChange={e => handleInputChange('editContact', 'name', e.target.value)}
+                                    className="h-11 rounded-2xl text-sm"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="editAddress" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                    Address
+                                </Label>
+                                <Textarea
+                                    id="editAddress"
+                                    value={editingContact.address}
+                                    onChange={e => handleInputChange('editContact', 'address', e.target.value)}
+                                    rows={3}
+                                    className="rounded-2xl text-sm resize-none"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="editGst" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                    GSTIN
+                                </Label>
+                                <Input
+                                    id="editGst"
+                                    value={editingContact.gst}
+                                    onChange={e => handleInputChange('editContact', 'gst', e.target.value)}
+                                    className="h-11 rounded-2xl text-sm font-mono uppercase"
+                                />
                             </div>
                             {editingContactType === 'shipTo' && renderTaxesSelector('editContact', editingContact)}
                         </div>
-                        <DialogFooter>
-                            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                            <Button onClick={handleUpdateContact} disabled={isSaving}>
-                                {isSaving ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : 'Save Changes'}
-                            </Button>
-                        </DialogFooter>
+
+                        <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                            <DialogClose asChild>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => triggerHaptic('light')}
+                                    className="h-11 rounded-2xl font-bold text-xs px-5 border-slate-200 dark:border-slate-800"
+                                >
+                                    Cancel
+                                </Button>
+                            </DialogClose>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    triggerHaptic('light');
+                                    handleUpdateContact();
+                                }}
+                                disabled={isSaving}
+                                className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-2xl bg-gradient-to-r from-[#181156] to-[#241775] text-white font-bold text-xs shadow-md active:scale-95 disabled:opacity-50 transition-all"
+                            >
+                                {isSaving && <Loader className="h-4 w-4 animate-spin" />}
+                                <span>Save Changes</span>
+                            </button>
+                        </div>
                     </DialogContent>
                 </Dialog>
             )}

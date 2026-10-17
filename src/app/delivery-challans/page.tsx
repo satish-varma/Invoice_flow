@@ -6,10 +6,11 @@ import { ChallansDataTable } from "./data-table";
 import { getColumns } from "./columns";
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader, Plus } from "lucide-react";
+import { ArrowLeft, Loader, Plus, Sparkles, FileText } from "lucide-react";
 import React, { useRef, useEffect, useState } from "react";
 import { DeliveryChallanPreview } from "@/components/delivery-challan-preview";
 import { AppShell } from "@/components/app-shell";
+import { triggerHaptic } from "@/lib/haptics";
 import type { Settings } from "@/services/settingsService";
 import { getSettings } from "@/services/settingsService";
 import {
@@ -207,70 +208,126 @@ export default function DeliveryChallansPage() {
 
     return (
         <AppShell>
-            <main className="min-h-screen bg-background flex flex-col items-center p-4 sm:p-8">
-                <div className="w-full max-w-7xl mx-auto">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between mb-8 gap-4">
-                        <div>
-                            <Button variant="outline" asChild>
-                                <Link href="/delivery-challan">
+            <main className="min-h-screen bg-slate-50/60 dark:bg-slate-950 flex flex-col items-center p-3 sm:p-8">
+                <div className="w-full max-w-7xl mx-auto space-y-6">
+                    {/* Mobile Large Title Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        triggerHaptic('light');
+                                        window.history.back();
+                                    }}
+                                    className="sm:hidden p-2 -ml-2 rounded-xl text-slate-600 dark:text-slate-300 active:scale-95 transition-all"
+                                >
+                                    <ArrowLeft className="h-5 w-5" />
+                                </button>
+                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] sm:text-xs font-black tracking-widest uppercase shadow-xs">
+                                    <Sparkles className="h-3 w-3 animate-pulse" />
+                                    DELIVERY CHALLANS ARCHIVE
+                                </div>
+                            </div>
+
+                            <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                                Saved Delivery Challans
+                            </h1>
+                            <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium">
+                                Manage all delivery documents. Filter, inspect, and download in bulk
+                            </p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                asChild
+                                className="hidden sm:inline-flex rounded-2xl h-10 border-slate-200 dark:border-slate-800 text-xs font-bold"
+                            >
+                                <Link href="/delivery-challan" onClick={() => triggerHaptic('light')}>
                                     <ArrowLeft className="mr-2 h-4 w-4" />
                                     Back to Create
                                 </Link>
                             </Button>
-                            <h1 className="text-3xl sm:text-4xl font-headline font-bold text-primary mt-4">
-                                Saved Delivery Challans
-                            </h1>
-                            <p className="text-muted-foreground text-sm sm:text-base">
-                                Manage all your delivery documents. Filter, sort, and download in bulk.
-                            </p>
+                            <Button
+                                asChild
+                                className="h-11 sm:h-10 px-5 rounded-2xl bg-gradient-to-r from-[#181156] to-[#241775] text-white font-bold text-xs sm:text-sm shadow-md active:scale-95 transition-all"
+                            >
+                                <Link href="/delivery-challan" onClick={() => triggerHaptic('light')}>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Create Challan
+                                </Link>
+                            </Button>
                         </div>
                     </div>
-                    <ChallansDataTable
-                        columns={columns}
-                        data={data}
-                        onDeleteSelected={handleBulkDeleteRequest}
-                        onDownloadSelected={handleBulkDownload}
-                        onPreview={handlePreview}
-                        onDownloadSingle={handleDownload}
-                        onDeleteSingle={handleDeleteRequest}
-                    />
+
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] p-3 sm:p-6">
+                        <ChallansDataTable
+                            columns={columns}
+                            data={data}
+                            onDeleteSelected={handleBulkDeleteRequest}
+                            onDownloadSelected={handleBulkDownload}
+                            onPreview={handlePreview}
+                            onDownloadSingle={handleDownload}
+                            onDeleteSingle={handleDeleteRequest}
+                        />
+                    </div>
                 </div>
             </main>
 
-            {/* Preview Dialog */}
+            {/* Preview Bottom Sheet Dialog */}
             <Dialog open={!!previewingChallan} onOpenChange={(open) => !open && closePreview()}>
-                <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-                    <DialogHeader>
-                        <DialogTitle>Challan Preview: {previewingChallan?.dcNumber}</DialogTitle>
-                    </DialogHeader>
-                    <div className="flex-grow overflow-auto bg-muted/20 p-4 sm:p-8 flex items-center justify-center rounded-md border">
+                <DialogContent className="w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bottom-0 top-auto sm:top-[50%] sm:bottom-auto translate-y-0 sm:translate-y-[-50%] p-0 border-0 overflow-hidden bg-white dark:bg-slate-900 shadow-2xl flex flex-col h-[90vh]">
+                    {/* Native Drag Handle */}
+                    <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+
+                    <div className="px-5 sm:px-6 pt-3 sm:pt-5 pb-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <DialogTitle className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                            Challan Preview: {previewingChallan?.dcNumber}
+                        </DialogTitle>
+                    </div>
+
+                    <div className="flex-grow overflow-auto bg-slate-100/50 dark:bg-slate-950 p-2 sm:p-6 flex items-center justify-center">
                         {isGeneratingPdf ? (
-                            <div className="flex flex-col items-center justify-center py-20">
-                                <Loader className="h-8 w-8 animate-spin mb-4" />
-                                <p>Generating Preview...</p>
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                                <Loader className="h-8 w-8 animate-spin mb-3 text-indigo-600" />
+                                <p className="text-sm font-medium">Generating Preview...</p>
                             </div>
                         ) : pdfUrl ? (
-                            <iframe src={pdfUrl} className="w-full h-full border-none shadow-sm" title="Challan Preview" />
+                            <iframe src={pdfUrl} className="w-full h-full border-none rounded-xl shadow-sm" title="Challan Preview" />
                         ) : (
-                            <div className="flex items-center justify-center py-20 text-muted-foreground">
-                                Could not generate preview.
+                            <div className="flex items-center justify-center py-20 text-slate-400 text-sm">
+                                Could not render document preview.
                             </div>
                         )}
                     </div>
+
                     {pdfUrl && !isGeneratingPdf && (
-                        <div className="flex justify-end pt-4 mt-auto border-t">
+                        <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5 pb-[max(1rem,env(safe-area-inset-bottom))]">
                             <Button
+                                variant="outline"
+                                onClick={() => {
+                                    triggerHaptic('light');
+                                    closePreview();
+                                }}
+                                className="h-11 rounded-2xl font-bold text-xs px-5 border-slate-200 dark:border-slate-800"
+                            >
+                                Close
+                            </Button>
+                            <button
+                                type="button"
                                 onClick={async () => {
+                                    triggerHaptic('light');
                                     const container = document.getElementById('pdf-capture-container-dialog');
                                     if (container && previewingChallan) {
                                       await generateAndSavePdf(container as HTMLElement, `challan-${previewingChallan.dcNumber}.pdf`, 'save');
                                     }
                                 }}
-                                className="inline-flex items-center justify-center"
+                                className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-2xl bg-gradient-to-r from-[#181156] to-[#241775] text-white font-bold text-xs shadow-md active:scale-95 transition-all"
                             >
-                                <Download className="mr-2 h-4 w-4" />
-                                Download PDF
-                            </Button>
+                                <Download className="h-4 w-4" />
+                                <span>Download PDF</span>
+                            </button>
                         </div>
                     )}
                 </DialogContent>
@@ -303,18 +360,36 @@ export default function DeliveryChallansPage() {
                     <DeliveryChallanPreview ref={challanPreviewRef} challan={challanToGenerate} settings={settings} />
                 </div>
             )}
-            {/* Delete Confirmation */}
+
+            {/* Delete Confirmation Alert */}
             <AlertDialog open={!!challansToDelete} onOpenChange={(open) => !open && setChallansToDelete(null)}>
-                <AlertDialogContent>
+                <AlertDialogContent className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl p-6">
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
+                        <AlertDialogTitle className="text-xl font-black text-slate-900 dark:text-white">
+                            Delete Challan(s)?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm text-slate-600 dark:text-slate-400">
                             This action cannot be undone. This will permanently delete the selected challan(s).
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setChallansToDelete(null)}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                    <AlertDialogFooter className="mt-4 gap-2">
+                        <AlertDialogCancel
+                            onClick={() => {
+                                triggerHaptic('light');
+                                setChallansToDelete(null);
+                            }}
+                            className="h-11 rounded-2xl font-bold text-xs"
+                        >
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                triggerHaptic('light');
+                                confirmDelete();
+                            }}
+                            disabled={isDeleting}
+                            className="h-11 rounded-2xl font-bold text-xs bg-rose-600 hover:bg-rose-700 text-white shadow-md"
+                        >
                             {isDeleting ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : null}
                             Delete
                         </AlertDialogAction>
@@ -322,11 +397,16 @@ export default function DeliveryChallansPage() {
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* Mobile Floating Action Button */}
-            <div className="sm:hidden fixed bottom-6 right-6 z-50 no-print">
-                <Button size="icon" className="h-14 w-14 rounded-full shadow-xl bg-primary text-primary-foreground" asChild>
+            {/* Mobile Floating Action Button - Positioned safely above bottom nav dock at bottom-[84px] */}
+            <div className="sm:hidden fixed bottom-[84px] right-4 z-40 no-print">
+                <Button
+                    size="icon"
+                    className="h-14 w-14 rounded-2xl shadow-xl bg-gradient-to-tr from-[#181156] to-[#241775] text-white active:scale-90 transition-transform"
+                    asChild
+                    onClick={() => triggerHaptic('light')}
+                >
                     <Link href="/delivery-challan">
-                        <Plus className="h-6 w-6" />
+                        <Plus className="h-6 w-6 stroke-[2.5]" />
                     </Link>
                 </Button>
             </div>

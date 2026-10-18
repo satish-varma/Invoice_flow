@@ -29,9 +29,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { generateAndSavePdf } from "@/lib/pdf";
 import { AppShell } from "@/components/app-shell";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 export default function InvoicesPage() {
+  const { role, isReadOnly } = useAuth();
   const [data, setData] = useState<Invoice[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -142,12 +144,20 @@ export default function InvoicesPage() {
   }
 
   const handleDeleteRequest = (invoice: Invoice) => {
+    if (isReadOnly || role === 'guest') {
+      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete invoices.' });
+      return;
+    }
     if (invoice.id) {
       setInvoicesToDelete([invoice.id]);
     }
   }
 
   const handleBulkDeleteRequest = (ids: string[]) => {
+    if (isReadOnly || role === 'guest') {
+      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete invoices.' });
+      return;
+    }
     setInvoicesToDelete(ids);
   }
 
@@ -179,6 +189,10 @@ export default function InvoicesPage() {
   };
 
   const confirmDelete = async () => {
+    if (isReadOnly || role === 'guest') {
+      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete invoices.' });
+      return;
+    }
     if (!invoicesToDelete) return;
     setIsDeleting(true);
     try {

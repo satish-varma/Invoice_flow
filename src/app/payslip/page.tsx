@@ -14,8 +14,10 @@ import { PayslipList } from '@/components/payslip-list';
 import { PayslipPreview } from '@/components/payslip-preview';
 import { getPayslips, Payslip, deletePayslip } from '@/services/payslipService';
 import { MONTH_NAMES } from '@/lib/payslipConstants';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function PayslipPage() {
+    const { role, isReadOnly } = useAuth();
     const [payslips, setPayslips] = useState<Payslip[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selected, setSelected] = useState<Payslip | null>(null);
@@ -46,6 +48,10 @@ export default function PayslipPage() {
     };
 
     const handleDelete = async (id: string) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete payslips.' });
+            return;
+        }
         if (!confirm('Delete this payslip?')) return;
         try {
             await deletePayslip(id);

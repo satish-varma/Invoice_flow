@@ -1,5 +1,6 @@
 
 import { db } from '@/lib/firebase';
+import { assertWritePermission } from '@/lib/readOnlyGuard';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, setDoc } from 'firebase/firestore';
 
 export interface Client {
@@ -17,6 +18,7 @@ export interface Client {
 const CLIENTS_COLLECTION = 'clients';
 
 export async function saveClient(client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    await assertWritePermission('Saving Client');
     try {
         const docRef = await addDoc(collection(db, CLIENTS_COLLECTION), {
             ...client,
@@ -45,6 +47,7 @@ export async function getClients(): Promise<Client[]> {
 }
 
 export async function updateClient(id: string, updates: Partial<Client>): Promise<void> {
+    await assertWritePermission('Updating Client');
     try {
         const docRef = doc(db, CLIENTS_COLLECTION, id);
         await updateDoc(docRef, {
@@ -58,6 +61,7 @@ export async function updateClient(id: string, updates: Partial<Client>): Promis
 }
 
 export async function deleteClient(id: string): Promise<void> {
+    await assertWritePermission('Deleting Client');
     try {
         await deleteDoc(doc(db, CLIENTS_COLLECTION, id));
     } catch (error) {

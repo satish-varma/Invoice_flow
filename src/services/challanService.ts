@@ -1,6 +1,7 @@
 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc, deleteDoc, writeBatch, getDoc, Timestamp } from 'firebase/firestore';
+import { assertWritePermission } from '@/lib/readOnlyGuard';
 
 export interface ChallanLineItem {
   id: number;
@@ -92,6 +93,7 @@ async function getNextChallanNumber(prefix: string): Promise<string> {
 
 
 export async function saveChallan(challan: Omit<Challan, 'dcNumber' | 'createdAt'> & { id?: string }): Promise<Challan> {
+  await assertWritePermission('Saving Delivery Challan');
   try {
     let finalChallanData: any;
     let docRef;
@@ -301,6 +303,7 @@ export async function removeChallanAttachment(
 }
 
 export async function deleteChallan(id: string): Promise<void> {
+  await assertWritePermission('Deleting Delivery Challan');
   try {
     const docRef = doc(db, CHALLANS_COLLECTION, id);
     await deleteDoc(docRef);
@@ -311,6 +314,7 @@ export async function deleteChallan(id: string): Promise<void> {
 }
 
 export async function deleteChallans(ids: string[]): Promise<void> {
+  await assertWritePermission('Bulk Deleting Delivery Challans');
   try {
     const batch = writeBatch(db);
     ids.forEach(id => {

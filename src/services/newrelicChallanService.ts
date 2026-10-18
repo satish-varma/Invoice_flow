@@ -46,6 +46,7 @@ export const NEWRELIC_LOCATIONS: Record<
 const NEWRELIC_CHALLANS_COLLECTION = 'newrelic_challans';
 
 import { saveCatalogItems } from './newrelicCatalogService';
+import { assertWritePermission } from '@/lib/readOnlyGuard';
 
 export async function getSuggestedDcNumber(location: NewRelicLocation): Promise<string> {
   const locationConfig = NEWRELIC_LOCATIONS[location];
@@ -124,6 +125,7 @@ type SaveInput = Omit<NewRelicChallan, 'dcNumber' | 'createdAt'> & {
 };
 
 export async function saveNewRelicChallan(challan: SaveInput, userEmail: string | null = null): Promise<NewRelicChallan> {
+  await assertWritePermission('Saving Delivery Challan');
   try {
     let finalData: any;
 
@@ -322,6 +324,7 @@ export function incrementDcNumber(dcNumber: string): string {
 }
 
 export async function deleteNewRelicChallan(id: string, userEmail: string | null = null): Promise<void> {
+  await assertWritePermission('Deleting Delivery Challan');
   const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, id);
   const oldSnap = await getDoc(docRef);
   if (oldSnap.exists()) {
@@ -341,11 +344,13 @@ export async function deleteNewRelicChallan(id: string, userEmail: string | null
 }
 
 export async function permanentDeleteNewRelicChallan(id: string): Promise<void> {
+  await assertWritePermission('Permanently Deleting Delivery Challan');
   const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, id);
   await deleteDoc(docRef);
 }
 
 export async function deleteNewRelicChallans(ids: string[], userEmail: string | null = null): Promise<void> {
+  await assertWritePermission('Bulk Deleting Delivery Challans');
   const batch = writeBatch(db);
   for (const id of ids) {
     const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, id);
@@ -369,6 +374,7 @@ export async function deleteNewRelicChallans(ids: string[], userEmail: string | 
 }
 
 export async function restoreNewRelicChallans(ids: string[], userEmail: string | null = null): Promise<void> {
+  await assertWritePermission('Restoring Delivery Challans');
   const batch = writeBatch(db);
   for (const id of ids) {
     const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, id);

@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { SessionProvider, useSession, signOut as nextAuthSignOut } from 'next-auth/react';
 
 import { SiteId } from '@/types/site';
+import { setGlobalUserRole } from '@/lib/readOnlyGuard';
 
 export type UserRole = 'admin' | 'superadmin' | 'manager' | 'user' | 'guest';
 
@@ -41,6 +42,10 @@ function AuthProviderInner({ children }: { children: React.ReactNode }) {
   const user = session?.user ? (session.user as unknown as AppUser) : null;
   const role = user?.role || null;
   const isReadOnly = role === 'guest';
+
+  useEffect(() => {
+    setGlobalUserRole(role);
+  }, [role]);
 
   const signOut = async () => {
     try {

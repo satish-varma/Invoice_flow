@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getSettings, Settings } from '@/services/settingsService';
 import { saveOfferLetter, OfferLetter } from '@/services/offerLetterService';
 import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/contexts/AuthContext';
 
 const formSchema = z.object({
   employeeName: z.string().min(2, 'Employee name is required'),
@@ -41,6 +42,7 @@ interface OfferLetterFormProps {
 }
 
 export function OfferLetterForm({ initialData, onOfferSave, onAddNew }: OfferLetterFormProps) {
+  const { role, isReadOnly } = useAuth();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
@@ -77,6 +79,10 @@ export function OfferLetterForm({ initialData, onOfferSave, onAddNew }: OfferLet
   }, [initialData, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (isReadOnly || role === 'guest') {
+      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot create or edit offer letters.' });
+      return;
+    }
     setIsSaving(true);
     try {
       const offerData = {
@@ -97,6 +103,17 @@ export function OfferLetterForm({ initialData, onOfferSave, onAddNew }: OfferLet
 
   return (
     <Card className="w-full">
+      {(isReadOnly || role === 'guest') && (
+        <div className="mx-6 mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-amber-700 dark:text-amber-400">
+          <div className="flex items-center gap-2 text-xs font-bold">
+            <span>👁️</span>
+            <span>Guest Mode (Read-Only) — Submitting or editing offer letters is disabled.</span>
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-wider bg-amber-500/20 px-2 py-0.5 rounded-full">
+            Read-Only
+          </span>
+        </div>
+      )}
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-xl font-bold text-primary">
           {initialData ? `Edit Offer: ${initialData.offerNumber}` : 'Create New Offer Letter'}
@@ -333,8 +350,8 @@ export function OfferLetterForm({ initialData, onOfferSave, onAddNew }: OfferLet
             />
 
             <div className="flex justify-end pt-4">
-              <Button type="submit" disabled={isSaving} className="w-full sm:w-auto">
-                {isSaving ? 'Processing...' : <><Save className="mr-2 h-4 w-4" /> Save Offer Letter</>}
+              <Button type="submit" disabled={isSaving || isReadOnly || role === 'guest'} className="w-full sm:w-auto">
+                {isReadOnly || role === 'guest' ? 'Read-Only Mode' : isSaving ? 'Processing...' : <><Save className="mr-2 h-4 w-4" /> Save Offer Letter</>}
               </Button>
             </div>
           </form>

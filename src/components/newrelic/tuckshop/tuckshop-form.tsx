@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { saveTuckshopRecord, uploadTuckshopBill, NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
-import { PlusCircle, Loader2, IndianRupee, TrendingDown } from 'lucide-react';
+import { PlusCircle, Loader2, IndianRupee, TrendingDown, AlertTriangle } from 'lucide-react';
 import { SiteId, SITE_OPTIONS, resolveSiteId, COMPANY_SITES } from '@/types/site';
 import { triggerHaptic } from '@/lib/haptics';
 
@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function TuckshopForm({ existingCategories, initialTab = 'expense', editRecord, onSuccess }: Props) {
-  const { user, role } = useAuth();
+  const { user, role, isReadOnly } = useAuth();
   const isAdmin = role === 'admin' || role === 'superadmin';
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -83,6 +83,14 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isReadOnly || role === 'guest') {
+      toast({
+        variant: 'destructive',
+        title: 'Guest Account (Read-Only)',
+        description: 'Modifications are disabled for guest users. Tuckshop records cannot be saved or updated.',
+      });
+      return;
+    }
     const amount = activeTab === 'expense' ? expenseAmount : saleAmount;
     
     if (!amount || Number(amount) <= 0) {
@@ -208,6 +216,14 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+        {(isReadOnly || role === 'guest') && (
+          <div className="mx-4 sm:mx-6 mt-4 flex items-center gap-3 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 text-xs sm:text-sm font-medium">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+            <div>
+              <span className="font-bold">Guest Mode (Read-Only):</span> You can view and inspect Tuckshop records, but logging new sales or expenses is disabled.
+            </div>
+          </div>
+        )}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {isAdmin && (
@@ -349,8 +365,9 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
         <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50/80 flex items-center justify-end pb-[max(1rem,env(safe-area-inset-bottom))] shrink-0">
           <button
             type="submit"
-            disabled={isSaving}
-            className={`w-full sm:w-auto h-12 sm:h-11 px-8 text-white text-sm font-black rounded-2xl disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 ${
+            disabled={isSaving || isReadOnly || role === 'guest'}
+            title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
+            className={`w-full sm:w-auto h-12 sm:h-11 px-8 text-white text-sm font-black rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 ${
               activeTab === 'sale'
                 ? 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-900/20 hover:from-emerald-700 hover:to-teal-700'
                 : 'bg-gradient-to-r from-[#3b2fc9] to-indigo-600 shadow-indigo-900/20 hover:from-[#2a2296] hover:to-indigo-700'
@@ -361,7 +378,13 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
             ) : (
               <PlusCircle className="h-4 w-4" />
             )}
-            {editRecord ? 'Update Record' : activeTab === 'sale' ? 'Record Sale' : 'Save Expense'}
+            {isReadOnly || role === 'guest'
+              ? 'Read-Only Mode'
+              : editRecord
+              ? 'Update Record'
+              : activeTab === 'sale'
+              ? 'Record Sale'
+              : 'Save Expense'}
           </button>
         </div>
       </form>

@@ -13,8 +13,10 @@ import { OfferLetterForm } from '@/components/offer-letter-form';
 import { OfferLetterList } from '@/components/offer-letter-list';
 import { OfferLetterPreview } from '@/components/offer-letter-preview';
 import { getOfferLetters, OfferLetter, deleteOfferLetter } from '@/services/offerLetterService';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function OfferLetterPage() {
+    const { role, isReadOnly } = useAuth();
     const [offerLetters, setOfferLetters] = useState<OfferLetter[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedOffer, setSelectedOffer] = useState<OfferLetter | null>(null);
@@ -61,6 +63,10 @@ export default function OfferLetterPage() {
     };
 
     const handleDelete = async (id: string) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete offer letters.' });
+            return;
+        }
         if (confirm('Are you sure you want to delete this offer letter?')) {
             try {
                 await deleteOfferLetter(id);

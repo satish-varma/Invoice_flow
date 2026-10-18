@@ -1,5 +1,6 @@
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc, deleteDoc, writeBatch, getDoc, Timestamp } from 'firebase/firestore';
+import { assertWritePermission } from '@/lib/readOnlyGuard';
 
 export interface ColumnDef {
   id: string;
@@ -71,6 +72,7 @@ async function getNextQuotationNumber(prefix: string): Promise<string> {
 
 
 export async function saveQuotation(quotation: Omit<Quotation, 'quotationNumber' | 'createdAt'> & { id?: string }): Promise<Quotation> {
+  await assertWritePermission('Saving Quotation');
   try {
     let finalQuotationData: any;
     let newQuotationNumber: string | null = null;
@@ -182,6 +184,7 @@ export async function getQuotations(): Promise<Quotation[]> {
 }
 
 export async function deleteQuotation(id: string): Promise<void> {
+  await assertWritePermission('Deleting Quotation');
   try {
     const docRef = doc(db, QUOTATIONS_COLLECTION, id);
     await deleteDoc(docRef);
@@ -192,6 +195,7 @@ export async function deleteQuotation(id: string): Promise<void> {
 }
 
 export async function deleteQuotations(ids: string[]): Promise<void> {
+  await assertWritePermission('Bulk Deleting Quotations');
   try {
     const batch = writeBatch(db);
     ids.forEach(id => {

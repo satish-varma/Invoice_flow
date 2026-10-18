@@ -14,6 +14,7 @@ import {
   limit,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { assertWritePermission } from '@/lib/readOnlyGuard';
 
 import { SiteId } from '@/types/site';
 
@@ -86,6 +87,7 @@ export const getTuckshopRecords = async (siteIdFilter?: string): Promise<NewReli
 };
 
 export const saveTuckshopRecord = async (record: Partial<NewRelicTuckshopRecord>, userEmail: string | null): Promise<NewRelicTuckshopRecord> => {
+  await assertWritePermission('Saving Tuckshop Record');
   // Deep clean undefined to prevent Firebase addDoc/updateDoc errors
   const cleanUndefined = (obj: any): any => {
     if (Array.isArray(obj)) return obj.map(cleanUndefined);
@@ -134,10 +136,12 @@ export const saveTuckshopRecord = async (record: Partial<NewRelicTuckshopRecord>
 };
 
 export const deleteTuckshopRecord = async (id: string) => {
+  await assertWritePermission('Deleting Tuckshop Record');
   await deleteDoc(doc(db, NEWRELIC_TUCKSHOP_COLLECTION, id));
 };
 
 export const uploadTuckshopBill = async (file: File): Promise<string> => {
+  await assertWritePermission('Uploading Tuckshop Bill');
   // Requires "import { storage } from '@/lib/firebase'" and "import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'"
   const { storage } = await import('@/lib/firebase');
   const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');

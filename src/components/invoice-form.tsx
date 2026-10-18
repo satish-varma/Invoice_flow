@@ -8,10 +8,11 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, Paperclip, ExternalLink, X } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Wand2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, Paperclip, ExternalLink, X, AlertTriangle } from 'lucide-react';
 import { format } from "date-fns"
 import { ExtractInvoiceDataResponse } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from './ui/textarea';
 import { Invoice, saveInvoice, TaxItem } from '@/services/invoiceService';
 import { uploadStorageFile } from '@/services/storageService';
@@ -101,6 +102,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     const [activeCompanyProfile, setActiveCompanyProfile] = useState<CompanyProfile | null>(null);
 
     const { toast } = useToast();
+    const { role, isReadOnly } = useAuth();
 
     const { subtotal } = useMemo(() => {
         const sub = lineItems.reduce((acc, item) => acc + (Number(item.quantity) * Number(item.unitPrice)), 0);
@@ -335,6 +337,14 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     };
 
     const handleSaveInvoice = async (mode: 'save' | 'preview' = 'save') => {
+        if (isReadOnly || role === 'guest') {
+            toast({
+                variant: "destructive",
+                title: "Guest Account (Read-Only)",
+                description: "Modifications are disabled for guest users. Invoices cannot be saved or updated.",
+            });
+            return;
+        }
         const andDownload = mode === 'save';
         if (!billToName) {
             toast({
@@ -703,11 +713,11 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 <><Wand2 /> Autofill</>
                             )}
                         </Button>
-                        <Button onClick={() => handleSaveInvoice('save')} disabled={isSaving} variant="secondary">
+                        <Button onClick={() => handleSaveInvoice('save')} disabled={isSaving || isReadOnly || role === 'guest'} variant="secondary" title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}>
                             {isSaving ? <Loader className="animate-spin" /> : <Save />}
-                            {initialData ? 'Update' : 'Save'}
+                            {isReadOnly || role === 'guest' ? 'Read-Only' : (initialData ? 'Update' : 'Save')}
                         </Button>
-                        <Button onClick={() => handleSaveInvoice('preview')} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
+                        <Button onClick={() => handleSaveInvoice('preview')} disabled={isSaving || isReadOnly || role === 'guest'} className="bg-accent text-accent-foreground hover:bg-accent/90" title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}>
                             {isSaving ? <Loader className="animate-spin" /> : <Wand2 />}
                             Preview PDF
                         </Button>
@@ -764,6 +774,16 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                         </div>
                     )}
                 </CardHeader>
+
+                {(isReadOnly || role === 'guest') && (
+                    <div className="mx-4 sm:mx-6 mt-4 flex items-center gap-3 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 text-xs sm:text-sm font-medium">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                        <div>
+                            <span className="font-bold">Guest Mode (Read-Only):</span> You can view and inspect this Invoice, but saving or updating records is disabled.
+                        </div>
+                    </div>
+                )}
+
                 <CardContent className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Left Column */}
                     <div>
@@ -1204,18 +1224,20 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 <Button
                     variant="secondary"
                     size="sm"
-                    className="flex-1 h-11 text-sm"
+                    className="flex-1 h-11 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => handleSaveInvoice('save')}
-                    disabled={isSaving}
+                    disabled={isSaving || isReadOnly || role === 'guest'}
+                    title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
                 >
                     {isSaving ? <Loader className="animate-spin mr-1 h-4 w-4" /> : <Save className="mr-1 h-4 w-4" />}
-                    {initialData ? 'Update' : 'Save'}
+                    {isReadOnly || role === 'guest' ? 'Read-Only' : (initialData ? 'Update' : 'Save')}
                 </Button>
                 <Button
                     size="sm"
-                    className="flex-1 h-11 text-sm bg-accent text-accent-foreground hover:bg-accent/90"
+                    className="flex-1 h-11 text-sm bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => handleSaveInvoice('preview')}
-                    disabled={isSaving}
+                    disabled={isSaving || isReadOnly || role === 'guest'}
+                    title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
                 >
                     {isSaving ? <Loader className="animate-spin mr-1 h-4 w-4" /> : <Wand2 className="mr-1 h-4 w-4" />}
                     Preview

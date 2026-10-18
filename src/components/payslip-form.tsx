@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getSettings, Settings } from '@/services/settingsService';
 import { savePayslip, Payslip } from '@/services/payslipService';
 import { MONTH_NAMES } from '@/lib/payslipConstants';
+import { useAuth } from '@/contexts/AuthContext';
 
 const earningDeductionSchema = z.object({
     label: z.string().min(1, 'Required'),
@@ -62,6 +63,7 @@ const defaultDeductions = [
 ];
 
 export function PayslipForm({ initialData, onPayslipSave, onAddNew }: PayslipFormProps) {
+    const { role, isReadOnly } = useAuth();
     const [settings, setSettings] = useState<Settings | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
@@ -111,6 +113,10 @@ export function PayslipForm({ initialData, onPayslipSave, onAddNew }: PayslipFor
     }, [initialData, form]);
 
     async function onSubmit(values: FormValues) {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot create or edit payslips.' });
+            return;
+        }
         setIsSaving(true);
         try {
             const payload = {
@@ -134,6 +140,17 @@ export function PayslipForm({ initialData, onPayslipSave, onAddNew }: PayslipFor
 
     return (
         <Card className="w-full">
+            {(isReadOnly || role === 'guest') && (
+                <div className="mx-6 mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-amber-700 dark:text-amber-400">
+                    <div className="flex items-center gap-2 text-xs font-bold">
+                        <span>👁️</span>
+                        <span>Guest Mode (Read-Only) — Submitting or editing payslips is disabled.</span>
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-amber-500/20 px-2 py-0.5 rounded-full">
+                        Read-Only
+                    </span>
+                </div>
+            )}
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <CardTitle className="text-xl font-bold text-primary">
                     {initialData ? `Edit Payslip: ${initialData.payslipNumber}` : 'Generate Payslip'}
@@ -295,8 +312,8 @@ export function PayslipForm({ initialData, onPayslipSave, onAddNew }: PayslipFor
                                 <p className="text-sm text-muted-foreground">Net Pay</p>
                                 <p className="text-2xl font-bold text-primary">₹{netPay.toLocaleString('en-IN')}</p>
                             </div>
-                            <Button type="submit" disabled={isSaving} size="lg">
-                                {isSaving ? 'Saving...' : <><Save className="mr-2 h-4 w-4" /> Save & Download</>}
+                            <Button type="submit" disabled={isSaving || isReadOnly || role === 'guest'} size="lg">
+                                {isReadOnly || role === 'guest' ? 'Read-Only Mode' : isSaving ? 'Saving...' : <><Save className="mr-2 h-4 w-4" /> Save & Download</>}
                             </Button>
                         </div>
                     </form>

@@ -1,4 +1,5 @@
 import { db } from '@/lib/firebase';
+import { assertWritePermission } from '@/lib/readOnlyGuard';
 import {
   collection,
   getDocs,
@@ -192,6 +193,7 @@ export async function getCatalogItems(siteId?: string): Promise<CatalogItem[]> {
 export async function saveCatalogItems(
   lineItems: { brandName: string; itemName: string; quantity: number }[]
 ): Promise<void> {
+  await assertWritePermission('Saving Catalog Items');
   try {
     for (const item of lineItems) {
       if (!item.brandName?.trim() || !item.itemName?.trim()) continue;
@@ -216,6 +218,7 @@ export async function saveCatalogItems(
 }
 
 export async function saveCatalogItem(item: Omit<CatalogItem, 'id'>, id?: string): Promise<void> {
+  await assertWritePermission('Saving Catalog Item');
   try {
     const docId = id || `${item.brandName.trim().toLowerCase()}_${item.itemName
       .trim()
@@ -239,6 +242,7 @@ export async function saveCatalogItem(item: Omit<CatalogItem, 'id'>, id?: string
 }
 
 export async function deleteCatalogItem(id: string): Promise<void> {
+  await assertWritePermission('Deleting Catalog Item');
   try {
     await deleteDoc(doc(db, CATALOG_COLLECTION, id));
   } catch (error) {
@@ -249,6 +253,7 @@ export async function deleteCatalogItem(id: string): Promise<void> {
 
 
 export async function seedDefaultCatalog(): Promise<void> {
+  await assertWritePermission('Seeding Default Catalog');
   try {
     const batch = writeBatch(db);
     for (const item of DEFAULT_CATALOG) {

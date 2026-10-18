@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { useToast } from "@/hooks/use-toast";
 import { AppShell } from "@/components/app-shell";
 import { triggerHaptic } from "@/lib/haptics";
+import { useAuth } from "@/contexts/AuthContext";
 import {
     Dialog,
     DialogContent,
@@ -41,6 +42,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function ProductsPage() {
+    const { role, isReadOnly } = useAuth();
     const [products, setProducts] = useState<Product[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -73,6 +75,10 @@ export default function ProductsPage() {
     }, [loadProducts]);
 
     const handleAddClick = () => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot create products.' });
+            return;
+        }
         setEditingProduct({
             name: '',
             description: '',
@@ -85,16 +91,28 @@ export default function ProductsPage() {
     };
 
     const handleEditClick = (product: Product) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot edit products.' });
+            return;
+        }
         setEditingProduct({ ...product });
         setIsAddEditDialogOpen(true);
     };
 
     const handleDeleteClick = (product: Product) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete products.' });
+            return;
+        }
         setProductToDelete(product);
         setIsDeleteDialogOpen(true);
     };
 
     const confirmDelete = async () => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete products.' });
+            return;
+        }
         if (!productToDelete?.id) return;
         try {
             await deleteProduct(productToDelete.id);
@@ -109,6 +127,10 @@ export default function ProductsPage() {
     };
 
     const handleSaveProduct = async () => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot save products.' });
+            return;
+        }
         if (!editingProduct?.name) {
             toast({ variant: "destructive", title: "Product name is required" });
             return;

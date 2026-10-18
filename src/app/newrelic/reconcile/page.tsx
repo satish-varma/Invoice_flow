@@ -23,7 +23,7 @@ interface Difference {
 
 export default function ReconcilePage() {
   const router = useRouter();
-  const { role, user } = useAuth();
+  const { role, user, isReadOnly } = useAuth();
   
   const [challans, setChallans] = useState<NewRelicChallan[]>([]);
   const [aliases, setAliases] = useState<AliasMapping[]>([]);
@@ -71,8 +71,8 @@ export default function ReconcilePage() {
   }, []);
 
   useEffect(() => {
-    // Strictly restrict Reconcile to admin and superadmin only
-    if (role && role !== 'admin' && role !== 'superadmin') {
+    // Strictly restrict Reconcile to admin, superadmin, and guest (read-only)
+    if (role && role !== 'admin' && role !== 'superadmin' && role !== 'guest') {
       router.push('/newrelic');
     }
   }, [role, router]);
@@ -357,6 +357,10 @@ export default function ReconcilePage() {
   };
 
   const handleSaveAlias = async () => {
+    if (isReadOnly || role === 'guest') {
+      alert('Read-Only Mode: Guest account cannot add alias mappings.');
+      return;
+    }
     if (!aliasForm.internalName || !aliasForm.aggregatorName) return;
     try {
       const newAlias: AliasMapping = {
@@ -373,6 +377,10 @@ export default function ReconcilePage() {
   };
 
   const handleDeleteAlias = async (id: string) => {
+    if (isReadOnly || role === 'guest') {
+      alert('Read-Only Mode: Guest account cannot delete alias mappings.');
+      return;
+    }
     try {
       await deleteAlias(id);
       setAliases(aliases.filter(a => a.id !== id));
@@ -381,7 +389,7 @@ export default function ReconcilePage() {
     }
   };
 
-  if (role !== 'admin' && role !== 'superadmin') {
+  if (role !== 'admin' && role !== 'superadmin' && role !== 'guest') {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center">
         <p className="text-gray-500">Access Denied</p>
@@ -392,6 +400,17 @@ export default function ReconcilePage() {
   return (
     <div className="min-h-screen bg-transparent pb-28">
       <div className="max-w-6xl mx-auto px-3 sm:px-8 py-4 sm:py-8 space-y-5 sm:space-y-6">
+        {(isReadOnly || role === 'guest') && (
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-amber-700 dark:text-amber-400">
+            <div className="flex items-center gap-2 text-xs font-bold">
+              <span>👁️</span>
+              <span>Guest Mode (Read-Only) — Reconcile inspection enabled. Alias editing is disabled.</span>
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider bg-amber-500/20 px-2 py-0.5 rounded-full">
+              Read-Only
+            </span>
+          </div>
+        )}
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">

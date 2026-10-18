@@ -57,7 +57,7 @@ function renderItemSiteBadges(applicableSites?: ('newrelic' | 'dsm' | 'ntt_data'
 }
 
 export default function CatalogPage() {
-  const { role } = useAuth();
+  const { role, isReadOnly } = useAuth();
   const router = useRouter();
 
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
@@ -90,7 +90,7 @@ export default function CatalogPage() {
   const [newSites, setNewSites] = useState<('newrelic' | 'dsm' | 'ntt_data' | 'all')[]>(['all']);
 
   useEffect(() => {
-    if (role && role !== 'admin') {
+    if (role && role !== 'admin' && role !== 'guest') {
       router.push('/newrelic');
     }
   }, [role, router]);
@@ -140,6 +140,10 @@ export default function CatalogPage() {
   }, [catalog, search, filterMode, siteFilter]);
 
   async function handleSaveNew() {
+    if (isReadOnly || role === 'guest') {
+      alert('Read-Only Mode: Guest account cannot add catalog items.');
+      return;
+    }
     if (!newBrand.trim() || !newItem.trim()) {
       setError('Please fill in both brand and item name.');
       return;
@@ -171,6 +175,10 @@ export default function CatalogPage() {
   }
 
   async function handleSaveEdit(id: string) {
+    if (isReadOnly || role === 'guest') {
+      alert('Read-Only Mode: Guest account cannot edit catalog items.');
+      return;
+    }
     if (!editBrand.trim() || !editItem.trim()) {
       setError('Please fill in both brand and item name.');
       return;
@@ -197,6 +205,10 @@ export default function CatalogPage() {
   }
 
   async function handleQuickSaveField(item: CatalogItem, field: 'caseSize' | 'mrp', valueStr: string) {
+    if (isReadOnly || role === 'guest') {
+      alert('Read-Only Mode: Guest account cannot edit catalog items.');
+      return;
+    }
     const numVal = valueStr.trim() === '' ? undefined : Number(valueStr);
     if (valueStr.trim() !== '' && (isNaN(Number(valueStr)) || Number(valueStr) < 0)) {
       setError('Please enter a valid positive number.');
@@ -228,6 +240,10 @@ export default function CatalogPage() {
   }
 
   async function handleDelete(id: string) {
+    if (isReadOnly || role === 'guest') {
+      alert('Read-Only Mode: Guest account cannot delete catalog items.');
+      return;
+    }
     if (!confirm('Are you sure you want to delete this catalog item? This will remove it from autocomplete suggestions.')) return;
     setSaving(true);
     try {
@@ -261,6 +277,10 @@ export default function CatalogPage() {
   }
 
   async function handleSyncMrp() {
+    if (isReadOnly || role === 'guest') {
+      alert('Read-Only Mode: Guest account cannot sync MRP.');
+      return;
+    }
     if (!confirm('This will pull MRPs from the Procurement Pricing table to populate the Catalog Reference MRPs. Continue?')) return;
     setSaving(true);
     setError('');
@@ -306,10 +326,28 @@ export default function CatalogPage() {
     }
   }
 
-  if (!role || role !== 'admin') return null;
+  if (!role || (role !== 'admin' && role !== 'guest')) return null;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-8 py-6">
+      {/* Read-Only Guest Notice */}
+      {(isReadOnly || role === 'guest') && (
+        <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-amber-700 dark:text-amber-400">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl">👁️</span>
+            <div>
+              <p className="text-xs sm:text-sm font-bold">Guest Mode (Read-Only)</p>
+              <p className="text-[11px] sm:text-xs text-amber-600 dark:text-amber-500">
+                You can browse and explore the catalog, but editing and additions are disabled.
+              </p>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-800 dark:text-amber-300">
+            Read-Only
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">

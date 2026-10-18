@@ -40,6 +40,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AppShell } from '@/components/app-shell';
 import { availableTaxes } from '@/lib/tax-constants';
 import { triggerHaptic } from '@/lib/haptics';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 type ContactType = 'billTo' | 'shipTo';
@@ -72,6 +73,7 @@ const initialShipToState: Omit<ShipToContact, 'id'> = {
 
 
 export default function SettingsPage() {
+    const { role, isReadOnly } = useAuth();
     const [settings, setSettings] = useState<Settings>({ companyProfiles: [], billToContacts: [], shipToContacts: [] });
     const [customTaxes, setCustomTaxes] = useState<TaxSlab[]>(availableTaxes);
     const [newTax, setNewTax] = useState<Partial<TaxSlab>>({ name: '', rate: 0 });
@@ -191,6 +193,10 @@ export default function SettingsPage() {
     };
 
     const handleAddContact = async (type: ContactType) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: "destructive", title: "Read-Only Mode", description: "Guest account cannot add contacts." });
+            return;
+        }
         const contactData = type === 'billTo' ? newBillTo : newShipTo;
         if (!contactData.displayName || !contactData.name) {
             toast({ variant: "destructive", title: "Missing Information", description: "Display Name and Name are required." });
@@ -224,6 +230,10 @@ export default function SettingsPage() {
     };
 
     const handleUpdateContact = async () => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: "destructive", title: "Read-Only Mode", description: "Guest account cannot update contacts." });
+            return;
+        }
         if (!editingContact || !editingContactType) return;
 
         if (!editingContact.displayName || !editingContact.name) {
@@ -252,6 +262,10 @@ export default function SettingsPage() {
     };
 
     const handleDeleteContact = async (type: ContactType, id: string) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: "destructive", title: "Read-Only Mode", description: "Guest account cannot delete contacts." });
+            return;
+        }
         setIsSaving(true);
         try {
             if (type === 'billTo') {
@@ -270,6 +284,10 @@ export default function SettingsPage() {
     };
 
     const handleSetDefaultContact = async (type: ContactType, id: string) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: "destructive", title: "Read-Only Mode", description: "Guest account cannot set default contacts." });
+            return;
+        }
         setIsSaving(true);
         try {
             if (type === 'billTo') {
@@ -303,6 +321,10 @@ export default function SettingsPage() {
     };
 
     const handleSaveProfile = async () => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: "destructive", title: "Read-Only Mode", description: "Guest account cannot save company profiles." });
+            return;
+        }
         if (!editingProfile || !editingProfile.profileName || !editingProfile.companyName) {
             toast({ variant: "destructive", title: "Missing Information", description: "Profile Name and Company Name are required." });
             return;
@@ -332,6 +354,10 @@ export default function SettingsPage() {
     }
 
     const handleDeleteProfile = async (id: string) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: "destructive", title: "Read-Only Mode", description: "Guest account cannot delete company profiles." });
+            return;
+        }
         setIsSaving(true);
         try {
             await deleteCompanyProfile(id);
@@ -346,6 +372,10 @@ export default function SettingsPage() {
     };
 
     const handleSetDefaultProfile = async (id: string) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: "destructive", title: "Read-Only Mode", description: "Guest account cannot set default company profiles." });
+            return;
+        }
         setIsSaving(true);
         try {
             await setDefaultCompanyProfile(id);
@@ -359,6 +389,10 @@ export default function SettingsPage() {
         }
     }
     const handleSaveGeneralSettings = async (updates: Partial<Settings>) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: "destructive", title: "Read-Only Mode", description: "Guest account cannot change general settings." });
+            return;
+        }
         setIsSaving(true);
         try {
             await saveGeneralSettings(updates);
@@ -372,6 +406,10 @@ export default function SettingsPage() {
     };
 
     const handleSaveTaxes = async () => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: "destructive", title: "Read-Only Mode", description: "Guest account cannot change taxes." });
+            return;
+        }
         setIsSaving(true);
         try {
             await saveGeneralSettings({ customTaxes });

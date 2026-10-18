@@ -1,4 +1,5 @@
 import { db } from '@/lib/firebase';
+import { assertWritePermission } from '@/lib/readOnlyGuard';
 import {
   collection,
   doc,
@@ -17,6 +18,7 @@ import { NewRelicLocation } from '@/types/challan';
 export const STOCK_REQUEST_COLLECTION = 'newrelic_stock_requests';
 
 export async function saveStockRequest(request: Omit<StockRequest, 'id'>, id?: string): Promise<string> {
+  await assertWritePermission('Saving Stock Request');
   try {
     const docRef = id 
       ? doc(db, STOCK_REQUEST_COLLECTION, id)
@@ -72,6 +74,7 @@ export async function getStockRequests(location?: NewRelicLocation, siteId?: str
 }
 
 export async function updateStockRequestStatus(id: string, status: StockRequest['status']): Promise<void> {
+  await assertWritePermission('Updating Stock Request Status');
   try {
     const docRef = doc(db, STOCK_REQUEST_COLLECTION, id);
     await setDoc(docRef, { status, updatedAt: serverTimestamp() }, { merge: true });
@@ -82,6 +85,7 @@ export async function updateStockRequestStatus(id: string, status: StockRequest[
 }
 
 export async function updateStockRequestFulfillment(id: string, lineItems: StockRequest['lineItems'], status: StockRequest['status']): Promise<void> {
+  await assertWritePermission('Fulfilling Stock Request');
   try {
     const docRef = doc(db, STOCK_REQUEST_COLLECTION, id);
     await setDoc(docRef, { lineItems, status, updatedAt: serverTimestamp() }, { merge: true });
@@ -92,6 +96,7 @@ export async function updateStockRequestFulfillment(id: string, lineItems: Stock
 }
 
 export async function deleteStockRequest(id: string): Promise<void> {
+  await assertWritePermission('Deleting Stock Request');
   try {
     const docRef = doc(db, STOCK_REQUEST_COLLECTION, id);
     await deleteDoc(docRef);

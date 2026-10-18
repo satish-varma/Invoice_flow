@@ -1,5 +1,6 @@
 
 import { db } from '@/lib/firebase';
+import { assertWritePermission } from '@/lib/readOnlyGuard';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 
 export interface Product {
@@ -17,6 +18,7 @@ export interface Product {
 const PRODUCTS_COLLECTION = 'products';
 
 export async function saveProduct(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    await assertWritePermission('Saving Product');
     try {
         const docRef = await addDoc(collection(db, PRODUCTS_COLLECTION), {
             ...product,
@@ -45,6 +47,7 @@ export async function getProducts(): Promise<Product[]> {
 }
 
 export async function updateProduct(id: string, updates: Partial<Product>): Promise<void> {
+    await assertWritePermission('Updating Product');
     try {
         const docRef = doc(db, PRODUCTS_COLLECTION, id);
         await updateDoc(docRef, {
@@ -58,6 +61,7 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
 }
 
 export async function deleteProduct(id: string): Promise<void> {
+    await assertWritePermission('Deleting Product');
     try {
         await deleteDoc(doc(db, PRODUCTS_COLLECTION, id));
     } catch (error) {

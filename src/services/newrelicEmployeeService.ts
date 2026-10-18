@@ -1,4 +1,5 @@
 import { db } from '@/lib/firebase';
+import { assertWritePermission } from '@/lib/readOnlyGuard';
 import {
   collection,
   addDoc,
@@ -64,6 +65,7 @@ export async function saveEmployee(
   editorEmail: string | null,
   existingId?: string
 ): Promise<string> {
+  await assertWritePermission('Saving Employee');
   const payload = {
     ...data,
     siteId: data.siteId || 'newrelic',
@@ -85,6 +87,7 @@ export async function saveEmployee(
 }
 
 export async function deleteEmployee(id: string): Promise<void> {
+  await assertWritePermission('Deleting Employee');
   await deleteDoc(doc(db, EMPLOYEES_COLLECTION, id));
 }
 
@@ -108,6 +111,7 @@ export async function recordSalaryAdvance(
   data: Omit<NewRelicSalaryAdvance, 'id' | 'createdAt'>,
   editorEmail: string | null
 ): Promise<string> {
+  await assertWritePermission('Recording Salary Advance');
   const docRef = await addDoc(collection(db, SALARY_ADVANCES_COLLECTION), {
     ...data,
     status: 'pending',
@@ -130,6 +134,7 @@ export async function getSalaryAdvancesForMonth(month: string): Promise<NewRelic
 
 /** Delete or void a salary advance */
 export async function deleteSalaryAdvance(id: string): Promise<void> {
+  await assertWritePermission('Deleting Salary Advance');
   await deleteDoc(doc(db, SALARY_ADVANCES_COLLECTION, id));
 }
 
@@ -138,6 +143,7 @@ export async function recordSalaryPayment(
   data: Omit<NewRelicSalaryPayment, 'id' | 'createdAt'>,
   editorEmail: string | null
 ): Promise<string> {
+  await assertWritePermission('Recording Salary Payment');
   const docRef = await addDoc(collection(db, SALARY_PAYMENTS_COLLECTION), {
     ...data,
     status: 'paid',

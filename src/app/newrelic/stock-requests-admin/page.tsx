@@ -12,7 +12,7 @@ import { COMPANY_SITES, SiteId } from '@/types/site';
 import { triggerHaptic } from '@/lib/haptics';
 
 export default function StockRequestsAdminPage() {
-  const { role } = useAuth();
+  const { role, isReadOnly } = useAuth();
   const router = useRouter();
   const [requests, setRequests] = useState<StockRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,7 +23,7 @@ export default function StockRequestsAdminPage() {
   const [fulfillData, setFulfillData] = useState<{ [itemId: string]: number }>({});
 
   useEffect(() => {
-    if (role === 'admin') {
+    if (role === 'admin' || role === 'superadmin' || role === 'guest') {
       fetchRequests();
     }
   }, [role]);
@@ -41,6 +41,10 @@ export default function StockRequestsAdminPage() {
   };
 
   const handleStatusChange = async (id: string, status: StockRequest['status']) => {
+    if (isReadOnly || role === 'guest') {
+      alert('Guest Mode (Read-Only): Updating request status is disabled.');
+      return;
+    }
     if (!confirm(`Mark this request as ${status}?`)) return;
     try {
       await updateStockRequestStatus(id, status);
@@ -51,6 +55,10 @@ export default function StockRequestsAdminPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (isReadOnly || role === 'guest') {
+      alert('Guest Mode (Read-Only): Deleting requests is disabled.');
+      return;
+    }
     if (!confirm('Are you sure you want to permanently delete this request?')) return;
     try {
       await deleteStockRequest(id);
@@ -70,6 +78,10 @@ export default function StockRequestsAdminPage() {
   };
 
   const handleSaveFulfill = async (req: StockRequest) => {
+    if (isReadOnly || role === 'guest') {
+      alert('Guest Mode (Read-Only): Updating fulfillment is disabled.');
+      return;
+    }
     let allFulfilled = true;
     let anyFulfilled = false;
     const newLineItems = req.lineItems.map((item, idx) => {

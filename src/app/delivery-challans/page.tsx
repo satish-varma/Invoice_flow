@@ -27,9 +27,11 @@ import { useToast } from "@/hooks/use-toast";
 import { generateAndSavePdf } from "@/lib/pdf";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Download } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 export default function DeliveryChallansPage() {
+    const { role, isReadOnly } = useAuth();
     const [data, setData] = useState<Challan[]>([]);
     const [settings, setSettings] = useState<Settings | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -135,12 +137,20 @@ export default function DeliveryChallansPage() {
     }
 
     const handleDeleteRequest = (challan: Challan) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete delivery challans.' });
+            return;
+        }
         if (challan.id) {
             setChallansToDelete([challan.id]);
         }
     }
 
     const handleBulkDeleteRequest = (ids: string[]) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete delivery challans.' });
+            return;
+        }
         setChallansToDelete(ids);
     }
 
@@ -169,6 +179,10 @@ export default function DeliveryChallansPage() {
     };
 
     const confirmDelete = async () => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete delivery challans.' });
+            return;
+        }
         if (!challansToDelete) return;
         setIsDeleting(true);
         try {

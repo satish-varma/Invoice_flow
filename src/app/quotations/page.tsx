@@ -27,9 +27,11 @@ import { generateAndSavePdf } from "@/lib/pdf";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Download, FileSpreadsheet, FileText, Sparkles } from "lucide-react";
 import { triggerHaptic } from "@/lib/haptics";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 export default function QuotationsPage() {
+    const { role, isReadOnly } = useAuth();
     const [data, setData] = useState<Quotation[]>([]);
     const [settings, setSettings] = useState<Settings | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -135,12 +137,20 @@ export default function QuotationsPage() {
     }
 
     const handleDeleteRequest = (quotation: Quotation) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete quotations.' });
+            return;
+        }
         if (quotation.id) {
             setQuotationsToDelete([quotation.id]);
         }
     }
 
     const handleBulkDeleteRequest = (ids: string[]) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete quotations.' });
+            return;
+        }
         setQuotationsToDelete(ids);
     }
 
@@ -169,6 +179,10 @@ export default function QuotationsPage() {
     };
 
     const confirmDelete = async () => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete quotations.' });
+            return;
+        }
         if (!quotationsToDelete) return;
         setIsDeleting(true);
         try {

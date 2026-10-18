@@ -1,4 +1,5 @@
 import { db, storage } from '@/lib/firebase';
+import { assertWritePermission } from '@/lib/readOnlyGuard';
 import {
   collection,
   addDoc,
@@ -19,6 +20,7 @@ const ATTENDANCE_COLLECTION = 'newrelic_attendance';
 
 /** Upload a base64 data-URI selfie and return the download URL */
 export async function uploadSelfie(base64DataUri: string, folder: string): Promise<string> {
+  await assertWritePermission('Uploading Selfie');
   const timestamp = Date.now();
   const storageRef = ref(storage, `newrelic-selfies/${folder}/${timestamp}.jpg`);
   const uploadPromise = uploadString(storageRef, base64DataUri, 'data_url');
@@ -199,6 +201,7 @@ export async function checkInEmployee(
   date: string,
   globalRules?: Record<string, ShiftRule>
 ): Promise<{ id: string; isLate: boolean; lateMinutes: number; cutoff: string }> {
+  await assertWritePermission('Checking In Employee');
   const now = new Date().toISOString();
   const rule = getEffectiveShiftRule(employee, globalRules);
   const { isLate, lateMinutes, cutoff } = evaluateCheckInLate(now, employee.location, rule.cutoff);
@@ -240,6 +243,7 @@ export async function checkOutEmployee(
     expectedMinutes?: number;
   }
 ): Promise<{ durationMinutes: number; overtimeMinutes: number; status: NewRelicAttendance['status'] }> {
+  await assertWritePermission('Checking Out Employee');
   const now = new Date().toISOString();
   const durationMinutes = Math.round(
     (new Date(now).getTime() - new Date(checkInTime).getTime()) / 60000

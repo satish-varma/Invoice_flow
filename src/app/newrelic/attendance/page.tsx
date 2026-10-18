@@ -73,7 +73,7 @@ function getWorkingDaysInMonth(yearMonth: string, excludeSundays: boolean = fals
 
 function AttendancePageContent() {
   const { toast } = useToast();
-  const { user, role } = useAuth();
+  const { user, role, isReadOnly } = useAuth();
   const searchParams = useSearchParams();
   const isOwnerOrAdmin = role === 'admin' || role === 'superadmin';
   const isAdmin = isOwnerOrAdmin; // Strictly restricted to admin and superadmin only
@@ -366,6 +366,10 @@ function AttendancePageContent() {
   /* ── Submit Salary Advance ── */
   const handleSaveAdvance = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isReadOnly || role === 'guest') {
+      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot record salary advances.' });
+      return;
+    }
     if (!advanceModalEmployee || advanceAmount <= 0) {
       toast({ variant: 'destructive', title: 'Please enter a valid advance amount' });
       return;
@@ -401,6 +405,10 @@ function AttendancePageContent() {
   /* ── Submit Final Salary Payment ── */
   const handleSaveSalaryPayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isReadOnly || role === 'guest') {
+      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot record salary payments.' });
+      return;
+    }
     if (!payModalData) return;
     setIsSubmittingPayment(true);
     try {
@@ -615,6 +623,14 @@ function AttendancePageContent() {
   const unlockTime = inTimeMs > 0 ? new Date(inTimeMs + minWorkMinutes * 60000) : null;
 
   const handleOpenCamera = (action: AttendanceAction, forceAdminOverride: boolean = false) => {
+    if (isReadOnly || role === 'guest') {
+      toast({
+        variant: 'destructive',
+        title: 'Read-Only Mode',
+        description: 'Guest account cannot punch attendance or take selfies.',
+      });
+      return;
+    }
     triggerHaptic('medium');
     if (action === 'check-out' && todayRecord?.checkIn?.time && !forceAdminOverride) {
       if (!isMinShiftCompleted) {
@@ -640,6 +656,14 @@ function AttendancePageContent() {
     base64Uri: string,
     coordinates: { lat: number; lng: number; accuracy?: number } | null
   ) => {
+    if (isReadOnly || role === 'guest') {
+      toast({
+        variant: 'destructive',
+        title: 'Read-Only Mode',
+        description: 'Guest account cannot punch attendance or take selfies.',
+      });
+      return;
+    }
     if (!selectedEmployee) return;
     setShowCamera(false);
     setIsSubmitting(true);
@@ -2106,6 +2130,10 @@ function AttendancePageContent() {
                                 <button
                                   type="button"
                                   onClick={async () => {
+                                    if (isReadOnly) {
+                                      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete salary advances.' });
+                                      return;
+                                    }
                                     if (confirm(`Delete advance of ₹${adv.amount} for ${adv.employeeName}?`)) {
                                       await deleteSalaryAdvance(adv.id!);
                                       toast({ title: 'Advance removed' });
@@ -2144,6 +2172,10 @@ function AttendancePageContent() {
                     <button
                       type="button"
                       onClick={async () => {
+                        if (isReadOnly) {
+                          toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot edit shift rules.' });
+                          return;
+                        }
                         setIsSavingShiftRules(true);
                         try {
                           await saveGlobalShiftRules(editingRules);
@@ -2822,6 +2854,10 @@ function AttendancePageContent() {
                   type="button"
                   disabled={isSavingEmpTiming}
                   onClick={async () => {
+                    if (isReadOnly || role === 'guest') {
+                      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot edit employee timing.' });
+                      return;
+                    }
                     setIsSavingEmpTiming(true);
                     try {
                       const payloadTiming = empTimingForm.useHubDefault

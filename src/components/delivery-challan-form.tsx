@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, Sheet, Calculator, DollarSign, TrendingUp, Percent, Sparkles, Eye, EyeOff, X, FileCheck, Receipt, Paperclip, Download, MapPin, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Loader, Save, FilePlus, ListOrdered, Settings as SettingsIcon, Truck, FileText, Sheet, Calculator, DollarSign, TrendingUp, Percent, Sparkles, Eye, EyeOff, X, FileCheck, Receipt, Paperclip, Download, MapPin, Plus, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from './ui/textarea';
@@ -103,7 +103,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     const [activeCompanyProfile, setActiveCompanyProfile] = useState<CompanyProfile | null>(null);
 
     const { toast } = useToast();
-    const { user, role } = useAuth();
+    const { user, role, isReadOnly } = useAuth();
     const isAdmin = role === 'admin' || role === 'superadmin';
     const canSeeFinancials = isAdmin && showFinancials;
 
@@ -351,6 +351,14 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     };
 
     const handleSaveChallan = async (andDownload = false) => {
+        if (isReadOnly || role === 'guest') {
+            toast({
+                variant: 'destructive',
+                title: 'Guest Account (Read-Only)',
+                description: 'Modifications are disabled for guest users. Delivery Challans cannot be saved or updated.',
+            });
+            return;
+        }
         const finalBillToName = billToName || defaultHungerBoxBillTo.name;
         const finalBillToAddress = billToAddress || defaultHungerBoxBillTo.address;
         const profile = activeCompanyProfile || defaultGutGuruProfile;
@@ -669,6 +677,15 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                         </div>
                     </div>
                 </CardHeader>
+
+                {(isReadOnly || role === 'guest') && (
+                    <div className="mx-4 sm:mx-6 mt-4 flex items-center gap-3 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 text-xs sm:text-sm font-medium">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                        <div>
+                            <span className="font-bold">Guest Mode (Read-Only):</span> You can view and inspect this Delivery Challan, but saving or updating records is disabled.
+                        </div>
+                    </div>
+                )}
 
                 <CardContent className="p-4 sm:p-5">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 items-start">
@@ -1311,23 +1328,25 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 <Button
                                     type="button"
                                     onClick={() => handleSaveChallan(false)}
-                                    disabled={isSaving}
+                                    disabled={isSaving || isReadOnly || role === 'guest'}
                                     size="sm"
-                                    className="h-10 px-5 text-xs sm:text-sm font-bold rounded-xl bg-gray-900 hover:bg-gray-800 text-white shadow-xs active:scale-95"
+                                    className="h-10 px-5 text-xs sm:text-sm font-bold rounded-xl bg-gray-900 hover:bg-gray-800 text-white shadow-xs active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
                                 >
                                     {isSaving ? <Loader className="animate-spin w-4 h-4 mr-1.5" /> : <Save className="w-4 h-4 mr-1.5" />}
-                                    {initialData ? 'Update Only' : 'Save Only'}
+                                    {isReadOnly || role === 'guest' ? 'Read-Only' : (initialData ? 'Update Only' : 'Save Only')}
                                 </Button>
 
                                 <Button
                                     type="button"
                                     onClick={() => handleSaveChallan(true)}
-                                    disabled={isSaving}
+                                    disabled={isSaving || isReadOnly || role === 'guest'}
                                     size="sm"
-                                    className="h-10 px-5 text-xs sm:text-sm font-black rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm active:scale-95"
+                                    className="h-10 px-5 text-xs sm:text-sm font-black rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
                                 >
                                     {isSaving ? <Loader className="animate-spin w-4 h-4 mr-1.5" /> : <Save className="w-4 h-4 mr-1.5" />}
-                                    {initialData ? 'Update & Download PDF' : 'Save & Download PDF'}
+                                    {isReadOnly || role === 'guest' ? 'Read-Only Mode' : (initialData ? 'Update & Download PDF' : 'Save & Download PDF')}
                                 </Button>
                             </div>
                         </div>
@@ -1532,21 +1551,23 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                                 <Button
                                     type="button"
                                     onClick={() => handleSaveChallan(false)}
-                                    disabled={isSaving}
-                                    className="h-12 rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-bold text-xs sm:text-sm shadow-xs active:scale-98 flex items-center justify-center"
+                                    disabled={isSaving || isReadOnly || role === 'guest'}
+                                    className="h-12 rounded-xl bg-gray-900 hover:bg-gray-800 text-white font-bold text-xs sm:text-sm shadow-xs active:scale-98 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
                                 >
                                     {isSaving ? <Loader className="animate-spin w-4 h-4 mr-1.5" /> : <Save className="w-4 h-4 mr-1.5" />}
-                                    {initialData ? 'Update Only' : 'Save Only'}
+                                    {isReadOnly || role === 'guest' ? 'Read-Only' : (initialData ? 'Update Only' : 'Save Only')}
                                 </Button>
 
                                 <Button
                                     type="button"
                                     onClick={() => handleSaveChallan(true)}
-                                    disabled={isSaving}
-                                    className="h-12 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-sm active:scale-98 flex items-center justify-center text-center"
+                                    disabled={isSaving || isReadOnly || role === 'guest'}
+                                    className="h-12 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-sm active:scale-98 flex items-center justify-center text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
                                 >
                                     {isSaving ? <Loader className="animate-spin w-4 h-4 mr-1.5" /> : <Save className="w-4 h-4 mr-1.5" />}
-                                    {initialData ? 'Update & PDF' : 'Save & Download'}
+                                    {isReadOnly || role === 'guest' ? 'Read-Only Mode' : (initialData ? 'Update & PDF' : 'Save & Download')}
                                 </Button>
                             </div>
 
@@ -1672,27 +1693,28 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                             <Button
                                 type="button"
                                 variant="outline"
-                                disabled={isSaving}
+                                disabled={isSaving || isReadOnly || role === 'guest'}
                                 onClick={() => handleSaveChallan(false)}
-                                className="flex-1 h-11 rounded-xl bg-white/10 hover:bg-white/20 border-white/25 text-white hover:text-white font-bold text-xs gap-2 active:scale-95 transition-transform shadow-xs"
-                                title="Save without downloading"
+                                className="flex-1 h-11 rounded-xl bg-white/10 hover:bg-white/20 border-white/25 text-white hover:text-white font-bold text-xs gap-2 active:scale-95 transition-transform shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : 'Save without downloading'}
                             >
                                 <Save className="h-4 w-4 text-amber-300 shrink-0" />
-                                <span>{initialData ? 'Update Only' : 'Save Only'}</span>
+                                <span>{isReadOnly || role === 'guest' ? 'Read-Only' : (initialData ? 'Update Only' : 'Save Only')}</span>
                             </Button>
 
                             <Button
                                 type="button"
-                                disabled={isSaving}
+                                disabled={isSaving || isReadOnly || role === 'guest'}
                                 onClick={() => handleSaveChallan(true)}
-                                className="flex-1 h-11 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs gap-2 shadow-lg shadow-emerald-500/35 border border-emerald-400/30 active:scale-95 transition-transform"
+                                className="flex-1 h-11 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs gap-2 shadow-lg shadow-emerald-500/35 border border-emerald-400/30 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
                             >
                                 {isSaving ? (
                                     <Loader className="h-4 w-4 animate-spin shrink-0" />
                                 ) : (
                                     <Save className="h-4 w-4 shrink-0" />
                                 )}
-                                <span>{initialData ? 'Update & PDF' : 'Save & Download'}</span>
+                                <span>{isReadOnly || role === 'guest' ? 'Read-Only Mode' : (initialData ? 'Update & PDF' : 'Save & Download')}</span>
                             </Button>
                         </div>
                     </div>

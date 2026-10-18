@@ -1,5 +1,6 @@
 
 import { db } from '@/lib/firebase';
+import { assertWritePermission } from '@/lib/readOnlyGuard';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 export interface BillToContact {
@@ -150,6 +151,7 @@ export async function getSettings(): Promise<Settings> {
 }
 
 export async function saveCompanyProfile(profile: Omit<CompanyProfile, 'id'>): Promise<string> {
+    await assertWritePermission('Saving Company Profile');
     const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
     const settings = await getSettings();
     const profiles = settings.companyProfiles || [];
@@ -176,6 +178,7 @@ export async function saveCompanyProfile(profile: Omit<CompanyProfile, 'id'>): P
 
 
 export async function updateCompanyProfile(profile: CompanyProfile): Promise<void> {
+    await assertWritePermission('Updating Company Profile');
     const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
     const settings = await getSettings();
     const profiles = settings.companyProfiles || [];
@@ -190,6 +193,7 @@ export async function updateCompanyProfile(profile: CompanyProfile): Promise<voi
 }
 
 export async function deleteCompanyProfile(id: string): Promise<void> {
+    await assertWritePermission('Deleting Company Profile');
     const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
     const settings = await getSettings();
     const profiles = settings.companyProfiles || [];
@@ -209,6 +213,7 @@ export async function deleteCompanyProfile(id: string): Promise<void> {
 }
 
 export async function setDefaultCompanyProfile(id: string): Promise<void> {
+    await assertWritePermission('Setting Default Company Profile');
     const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
     await updateDoc(settingsRef, { defaultCompanyProfile: id });
 }
@@ -221,6 +226,7 @@ function contactExists(contacts: any[] | undefined, displayName: string): Promis
 }
 
 export async function saveBillToContact(contact: Omit<BillToContact, 'id'>): Promise<void> {
+    await assertWritePermission('Saving Bill To Contact');
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const settings = await getSettings();
@@ -247,6 +253,7 @@ export async function saveBillToContact(contact: Omit<BillToContact, 'id'>): Pro
 }
 
 export async function saveShipToContact(contact: Omit<ShipToContact, 'id'>): Promise<void> {
+    await assertWritePermission('Saving Ship To Contact');
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const settings = await getSettings();
@@ -274,6 +281,7 @@ export async function saveShipToContact(contact: Omit<ShipToContact, 'id'>): Pro
 
 
 export async function deleteBillToContact(id: string): Promise<void> {
+    await assertWritePermission('Deleting Bill To Contact');
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const settings = await getSettings();
@@ -292,6 +300,7 @@ export async function deleteBillToContact(id: string): Promise<void> {
 }
 
 export async function deleteShipToContact(id: string): Promise<void> {
+    await assertWritePermission('Deleting Ship To Contact');
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const settings = await getSettings();
@@ -310,6 +319,7 @@ export async function deleteShipToContact(id: string): Promise<void> {
 }
 
 export async function updateBillToContact(contact: BillToContact): Promise<void> {
+    await assertWritePermission('Updating Bill To Contact');
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const settings = await getSettings();
@@ -337,6 +347,7 @@ export async function updateBillToContact(contact: BillToContact): Promise<void>
 }
 
 export async function updateShipToContact(contact: ShipToContact): Promise<void> {
+    await assertWritePermission('Updating Ship To Contact');
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         const settings = await getSettings();
@@ -363,6 +374,7 @@ export async function updateShipToContact(contact: ShipToContact): Promise<void>
 }
 
 export async function setDefaultBillToContact(id: string): Promise<void> {
+    await assertWritePermission('Setting Default Bill To Contact');
     if (!id) {
         throw new Error("Cannot set default with an empty ID.");
     }
@@ -376,6 +388,7 @@ export async function setDefaultBillToContact(id: string): Promise<void> {
 }
 
 export async function setDefaultShipToContact(id: string): Promise<void> {
+    await assertWritePermission('Setting Default Ship To Contact');
     if (!id) {
         throw new Error("Cannot set default with an empty ID.");
     }
@@ -392,6 +405,7 @@ export async function setDefaultShipToContact(id: string): Promise<void> {
 
 
 export async function saveGeneralSettings(updates: Partial<Settings>): Promise<void> {
+    await assertWritePermission('Saving General Settings');
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         await setDoc(settingsRef, updates, { merge: true });

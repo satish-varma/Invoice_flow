@@ -2,6 +2,7 @@
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc, deleteDoc, writeBatch, getDoc, Timestamp } from 'firebase/firestore';
 import { getSettings, CompanyProfile } from './settingsService';
+import { assertWritePermission } from '@/lib/readOnlyGuard';
 
 export interface LineItem {
     id: number;
@@ -93,6 +94,7 @@ async function getNextInvoiceNumber(prefix: string): Promise<string> {
 
 
 export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & { id?: string }): Promise<Invoice> {
+    await assertWritePermission('Saving Invoice');
     try {
         let finalInvoiceData: any;
         let docRef;
@@ -226,6 +228,7 @@ export async function getInvoices(): Promise<Invoice[]> {
 }
 
 export async function deleteInvoice(id: string): Promise<void> {
+    await assertWritePermission('Deleting Invoice');
     try {
         const docRef = doc(db, INVOICES_COLLECTION, id);
         await deleteDoc(docRef);
@@ -236,6 +239,7 @@ export async function deleteInvoice(id: string): Promise<void> {
 }
 
 export async function deleteInvoices(ids: string[]): Promise<void> {
+    await assertWritePermission('Bulk Deleting Invoices');
     try {
         const batch = writeBatch(db);
         ids.forEach(id => {

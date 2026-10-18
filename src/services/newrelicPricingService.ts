@@ -1,4 +1,5 @@
 import { db } from '@/lib/firebase';
+import { assertWritePermission } from '@/lib/readOnlyGuard';
 import {
   collection,
   getDocs,
@@ -58,6 +59,7 @@ export async function savePricingItem(
   item: Omit<PricingItem, 'id' | 'updatedAt'>,
   userEmail?: string | null
 ): Promise<void> {
+  await assertWritePermission('Saving Pricing Item');
   const docId = getPricingDocId(item.brandName, item.itemName, item.location);
   const docRef = doc(db, PRICING_COLLECTION, docId);
   const existingSnap = await getDoc(docRef);
@@ -103,6 +105,7 @@ export async function savePricingItem(
 
 /** Delete a pricing row by document ID */
 export async function deletePricingItem(id: string): Promise<void> {
+  await assertWritePermission('Deleting Pricing Item');
   await deleteDoc(doc(db, PRICING_COLLECTION, id));
 }
 
@@ -179,6 +182,7 @@ export async function bulkUpdateBrandPricing({
   effectiveDate?: string;
   userEmail?: string | null;
 }): Promise<{ updatedCount: number }> {
+  await assertWritePermission('Bulk Updating Brand Pricing');
   const targetBrand = brandName.trim().toLowerCase();
   const allItems = await getPricingItems(location);
   const matching = allItems.filter(i => i.brandName.trim().toLowerCase() === targetBrand);
@@ -241,6 +245,7 @@ export async function bulkUpdateBrandPricing({
  * Only seeds entries where procurementCost > 0 on the DC line item.
  */
 export async function seedPricingFromChallans(): Promise<{ seeded: number; skipped: number }> {
+  await assertWritePermission('Seeding Pricing from Challans');
   // Lazy import to avoid circular deps at module level
   const { db } = await import('@/lib/firebase');
   const { collection, getDocs, query, orderBy, setDoc, doc, serverTimestamp } = await import('firebase/firestore');

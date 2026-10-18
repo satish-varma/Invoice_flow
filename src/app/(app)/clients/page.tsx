@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { useToast } from "@/hooks/use-toast";
 import { AppShell } from "@/components/app-shell";
 import { triggerHaptic } from "@/lib/haptics";
+import { useAuth } from "@/contexts/AuthContext";
 import {
     Dialog,
     DialogContent,
@@ -41,6 +42,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function ClientsPage() {
+    const { role, isReadOnly } = useAuth();
     const [clients, setClients] = useState<Client[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -73,6 +75,10 @@ export default function ClientsPage() {
     }, [loadClients]);
 
     const handleAddClick = () => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot create clients.' });
+            return;
+        }
         setEditingClient({
             name: '',
             address: '',
@@ -83,16 +89,28 @@ export default function ClientsPage() {
     };
 
     const handleEditClick = (client: Client) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot edit clients.' });
+            return;
+        }
         setEditingClient({ ...client });
         setIsAddEditDialogOpen(true);
     };
 
     const handleDeleteClick = (client: Client) => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete clients.' });
+            return;
+        }
         setClientToDelete(client);
         setIsDeleteDialogOpen(true);
     };
 
     const confirmDelete = async () => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete clients.' });
+            return;
+        }
         if (!clientToDelete?.id) return;
         try {
             await deleteClient(clientToDelete.id);
@@ -107,6 +125,10 @@ export default function ClientsPage() {
     };
 
     const handleSaveClient = async () => {
+        if (isReadOnly || role === 'guest') {
+            toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot save clients.' });
+            return;
+        }
         if (!editingClient?.name || !editingClient?.address) {
             toast({ variant: "destructive", title: "Missing fields" });
             return;

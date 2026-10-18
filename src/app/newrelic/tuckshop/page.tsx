@@ -50,12 +50,20 @@ export default function TuckshopPage() {
   }, [records]);
 
   const openDialog = (tab: 'expense' | 'sale') => {
+    if (role === 'guest') {
+      alert('Read-Only Mode: Guest account cannot record tuckshop expenses or sales.');
+      return;
+    }
     setEditingRecord(null);
     setDialogInitialTab(tab);
     setIsDialogOpen(true);
   };
 
   const handleEditRecord = (record: NewRelicTuckshopRecord) => {
+    if (role === 'guest') {
+      alert('Read-Only Mode: Guest account cannot edit tuckshop records.');
+      return;
+    }
     setEditingRecord(record);
     setDialogInitialTab(record.type);
     setIsDialogOpen(true);

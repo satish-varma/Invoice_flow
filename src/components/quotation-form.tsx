@@ -8,10 +8,11 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarIcon, PlusCircle, Trash2, Loader, Save, FilePlus, FileText, Truck, Settings as SettingsIcon, X, ArrowLeft, ArrowRight, Columns, Sheet } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, Loader, Save, FilePlus, FileText, Truck, Settings as SettingsIcon, X, ArrowLeft, ArrowRight, Columns, Sheet, AlertTriangle } from 'lucide-react';
 import { format } from "date-fns"
 import * as XLSX from 'xlsx';
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from './ui/textarea';
 import { Quotation, saveQuotation, QuotationLineItem, ColumnDef } from '@/services/quotationService';
 import Link from 'next/link';
@@ -81,6 +82,7 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     const [newColumnName, setNewColumnName] = useState('');
 
     const { toast } = useToast();
+    const { role, isReadOnly } = useAuth();
 
     const { subtotal, totalDiscount } = useMemo(() => {
         const sub = lineItems.reduce((acc, item) => acc + (Number(item.quantity) * Number(item.unitPrice)), 0);
@@ -251,6 +253,14 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
     };
 
     const handleSaveQuotation = async (andDownload = false) => {
+        if (isReadOnly || role === 'guest') {
+            toast({
+                variant: "destructive",
+                title: "Guest Account (Read-Only)",
+                description: "Modifications are disabled for guest users. Quotations cannot be saved or updated.",
+            });
+            return;
+        }
         if (!billToName) {
             toast({ variant: "destructive", title: "Bill To Name is required" });
             return;
@@ -537,13 +547,13 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                                 <><Sheet className="h-4 w-4" /> Import Excel</>
                             )}
                         </Button>
-                        <Button onClick={() => handleSaveQuotation(false)} disabled={isSaving} variant="secondary">
+                        <Button onClick={() => handleSaveQuotation(false)} disabled={isSaving || isReadOnly || role === 'guest'} variant="secondary" title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}>
                             {isSaving ? <Loader className="animate-spin" /> : <Save />}
-                            {initialData ? 'Update' : 'Save'}
+                            {isReadOnly || role === 'guest' ? 'Read-Only' : (initialData ? 'Update' : 'Save')}
                         </Button>
-                        <Button onClick={() => handleSaveQuotation(true)} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
+                        <Button onClick={() => handleSaveQuotation(true)} disabled={isSaving || isReadOnly || role === 'guest'} className="bg-accent text-accent-foreground hover:bg-accent/90" title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}>
                             {isSaving ? <Loader className="animate-spin" /> : <Save />}
-                            Save &amp; Download
+                            {isReadOnly || role === 'guest' ? 'Read-Only Mode' : 'Save & Download'}
                         </Button>
                     </div>
                 </div>
@@ -560,6 +570,16 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                 <CardHeader className="bg-muted/20 p-4 sm:p-6">
                     <CardTitle>Quotation Details</CardTitle>
                 </CardHeader>
+
+                {(isReadOnly || role === 'guest') && (
+                    <div className="mx-4 sm:mx-6 mt-4 flex items-center gap-3 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 text-xs sm:text-sm font-medium">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                        <div>
+                            <span className="font-bold">Guest Mode (Read-Only):</span> You can view and inspect this Quotation, but saving or updating records is disabled.
+                        </div>
+                    </div>
+                )}
+
                 <CardContent className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Left Column */}
                     <div>
@@ -965,27 +985,29 @@ export function QuotationForm({ initialData, onQuotationSave, onAddNew }: Quotat
                     <Button
                         variant="outline"
                         size="sm"
-                        className="h-10 px-3 bg-slate-800/80 hover:bg-slate-800 text-white border-slate-700 text-xs font-bold rounded-xl active:scale-95"
+                        className="h-10 px-3 bg-slate-800/80 hover:bg-slate-800 text-white border-slate-700 text-xs font-bold rounded-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={() => {
                             triggerHaptic('light');
                             handleSaveQuotation(false);
                         }}
-                        disabled={isSaving}
+                        disabled={isSaving || isReadOnly || role === 'guest'}
+                        title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
                     >
                         {isSaving ? <Loader className="animate-spin mr-1 h-3.5 w-3.5" /> : <Save className="mr-1 h-3.5 w-3.5" />}
-                        {initialData ? 'Update' : 'Save'}
+                        {isReadOnly || role === 'guest' ? 'Read-Only' : (initialData ? 'Update' : 'Save')}
                     </Button>
                     <Button
                         size="sm"
-                        className="h-10 px-3.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md active:scale-95"
+                        className="h-10 px-3.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={() => {
                             triggerHaptic('medium');
                             handleSaveQuotation(true);
                         }}
-                        disabled={isSaving}
+                        disabled={isSaving || isReadOnly || role === 'guest'}
+                        title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
                     >
                         {isSaving ? <Loader className="animate-spin mr-1 h-3.5 w-3.5" /> : <Save className="mr-1 h-3.5 w-3.5" />}
-                        Save+PDF
+                        {isReadOnly || role === 'guest' ? 'Read-Only' : 'Save+PDF'}
                     </Button>
                 </div>
             </div>

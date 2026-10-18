@@ -114,7 +114,7 @@ export function NewRelicChallanForm({
     procurementCost: initialData?.procurementCost ?? undefined,
   };
 
-  const { role, user } = useAuth();
+  const { role, user, isReadOnly } = useAuth();
   const isAdmin = role === 'admin' || role === 'superadmin';
   const isManager = role === 'manager';
   const canSeeMrp = isAdmin || isManager;
@@ -392,6 +392,14 @@ export function NewRelicChallanForm({
   };
 
   const onSubmit = async (values: FormValues, shouldDownload = true) => {
+    if (isReadOnly || role === 'guest') {
+      toast({
+        variant: 'destructive',
+        title: 'Guest Account (Read-Only)',
+        description: 'Modifications are disabled for guest users. Delivery Challans cannot be saved or updated.',
+      });
+      return;
+    }
     setIsSaving(true);
     try {
       // Ignore any trailing or incomplete rows that only have brand name (no item name)
@@ -564,6 +572,15 @@ export function NewRelicChallanForm({
           <option key={b} value={b} />
         ))}
       </datalist>
+
+      {(isReadOnly || role === 'guest') && (
+        <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs sm:text-sm font-medium">
+          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+          <div>
+            <span className="font-bold">Guest Mode (Read-Only):</span> You can explore, inspect items, and preview PDFs, but creating or updating Delivery Challans is disabled.
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between gap-2 sm:gap-4">
@@ -968,24 +985,38 @@ export function NewRelicChallanForm({
         <Button
           type="submit"
           className="w-full sm:flex-1 h-11 sm:h-10 bg-[#3b2fc9] hover:bg-[#2d23a0] text-white gap-2"
-          disabled={isSaving}
+          disabled={isSaving || isReadOnly || role === 'guest'}
+          title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
         >
           {isSaving ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <FileDown className="h-4 w-4" />
           )}
-          {isEditing ? 'Update & Download' : isDuplicating ? 'Save Duplicate & Download' : 'Save & Download PDF'}
+          {isReadOnly || role === 'guest'
+            ? 'Read-Only Mode'
+            : isEditing
+            ? 'Update & Download'
+            : isDuplicating
+            ? 'Save Duplicate & Download'
+            : 'Save & Download PDF'}
         </Button>
         <Button
           type="button"
           variant="outline"
           className="w-full sm:flex-1 h-11 sm:h-10 gap-2"
-          disabled={isSaving}
+          disabled={isSaving || isReadOnly || role === 'guest'}
+          title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
           onClick={handleSubmit((v) => onSubmit(v, false), onValidationError)}
         >
           <Save className="h-4 w-4" />
-          {isEditing ? 'Update Only' : isDuplicating ? 'Save Duplicate Only' : 'Save Only'}
+          {isReadOnly || role === 'guest'
+            ? 'Read-Only'
+            : isEditing
+            ? 'Update Only'
+            : isDuplicating
+            ? 'Save Duplicate Only'
+            : 'Save Only'}
         </Button>
       </div>
 
@@ -1126,26 +1157,27 @@ export function NewRelicChallanForm({
               <Button
                 type="button"
                 variant="outline"
-                disabled={isSaving}
+                disabled={isSaving || isReadOnly || role === 'guest'}
                 onClick={handleSubmit((v) => onSubmit(v, false), onValidationError)}
-                className="flex-1 h-11 rounded-xl bg-white/10 hover:bg-white/20 border-white/25 text-white hover:text-white font-bold text-xs gap-2 active:scale-95 transition-transform shadow-xs"
-                title="Save without downloading"
+                className="flex-1 h-11 rounded-xl bg-white/10 hover:bg-white/20 border-white/25 text-white hover:text-white font-bold text-xs gap-2 active:scale-95 transition-transform shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : 'Save without downloading'}
               >
                 <Save className="h-4 w-4 text-amber-300 shrink-0" />
-                <span>Save Draft</span>
+                <span>{isReadOnly || role === 'guest' ? 'Read-Only' : 'Save Draft'}</span>
               </Button>
 
               <Button
                 type="submit"
-                disabled={isSaving}
-                className="flex-1 h-11 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs gap-2 shadow-lg shadow-emerald-500/35 border border-emerald-400/30 active:scale-95 transition-transform"
+                disabled={isSaving || isReadOnly || role === 'guest'}
+                className="flex-1 h-11 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs gap-2 shadow-lg shadow-emerald-500/35 border border-emerald-400/30 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
               >
                 {isSaving ? (
                   <Loader2 className="h-4 w-4 animate-spin shrink-0" />
                 ) : (
                   <FileDown className="h-4 w-4 shrink-0" />
                 )}
-                <span>{isEditing ? 'Update & DL' : 'Save & Download'}</span>
+                <span>{isReadOnly || role === 'guest' ? 'Read-Only Mode' : isEditing ? 'Update & DL' : 'Save & Download'}</span>
               </Button>
             </div>
           </div>

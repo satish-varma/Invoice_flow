@@ -54,12 +54,17 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
   }, [user?.preferredLocations]);
 
   const handleDelete = async (id: string) => {
+    if (role === 'guest') {
+      alert('Read-Only Mode: Guest account cannot delete tuckshop records.');
+      return;
+    }
     if (confirm('Are you sure you want to delete this record?')) {
       await deleteTuckshopRecord(id);
     }
   };
 
   const canEditRecord = (record: NewRelicTuckshopRecord) => {
+    if (role === 'guest') return false;
     if (isOwnerOrAdmin) return true;
     if (!user) return false;
     // User or Manager who created this record can edit it
@@ -71,6 +76,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
   };
 
   const canDeleteRecord = (record: NewRelicTuckshopRecord) => {
+    if (role === 'guest') return false;
     // Only Admin or Superadmin can delete
     return isOwnerOrAdmin;
   };

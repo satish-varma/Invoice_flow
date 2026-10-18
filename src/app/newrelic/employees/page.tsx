@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 export default function EmployeesPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user, role } = useAuth();
+  const { user, role, isReadOnly } = useAuth();
   const [employees, setEmployees] = useState<NewRelicEmployee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -47,6 +47,10 @@ export default function EmployeesPage() {
   useEffect(() => { fetchData(); }, []);
 
   const handleSave = async (data: Omit<NewRelicEmployee, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (isReadOnly || role === 'guest') {
+      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot create or edit employees.' });
+      return;
+    }
     setIsSaving(true);
     try {
       await saveEmployee(data, user?.email || null, editEmployee?.id);
@@ -62,6 +66,10 @@ export default function EmployeesPage() {
   };
 
   const handleEdit = (emp: NewRelicEmployee) => {
+    if (isReadOnly || role === 'guest') {
+      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot edit employees.' });
+      return;
+    }
     triggerHaptic('light');
     setEditEmployee(emp);
     setShowForm(true);
@@ -69,6 +77,10 @@ export default function EmployeesPage() {
   };
 
   const handleDelete = async (emp: NewRelicEmployee) => {
+    if (isReadOnly || role === 'guest') {
+      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete employees.' });
+      return;
+    }
     triggerHaptic('medium');
     if (!confirm(`Delete ${emp.name}? This cannot be undone.`)) return;
     try {

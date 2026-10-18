@@ -18,7 +18,7 @@ import { format } from 'date-fns';
 import { triggerHaptic } from '@/lib/haptics';
 
 export default function StockRequestPage() {
-  const { role, user } = useAuth();
+  const { role, user, isReadOnly } = useAuth();
   const router = useRouter();
 
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
@@ -154,6 +154,10 @@ export default function StockRequestPage() {
   };
 
   const onSubmit = async (data: StockRequestFormValues) => {
+    if (isReadOnly || role === 'guest') {
+      alert('Guest Mode (Read-Only): Creating or editing stock requests is disabled.');
+      return;
+    }
     try {
       setIsSubmitting(true);
       

@@ -2,6 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
+import { assertWritePermission } from '@/lib/readOnlyGuard';
 import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc, deleteDoc, writeBatch, getDoc, Timestamp } from 'firebase/firestore';
 
 export interface OfferLetter {
@@ -61,6 +62,7 @@ async function getNextOfferNumber(prefix: string): Promise<string> {
 }
 
 export async function saveOfferLetter(offer: Omit<OfferLetter, 'offerNumber' | 'createdAt'> & {id?: string}): Promise<OfferLetter> {
+  await assertWritePermission('Saving Offer Letter');
   try {
     let finalOfferData: any;
     let newOfferNumber: string | null = null;
@@ -118,6 +120,7 @@ export async function getOfferLetters(): Promise<OfferLetter[]> {
 }
 
 export async function deleteOfferLetter(id: string): Promise<void> {
+    await assertWritePermission('Deleting Offer Letter');
     const docRef = doc(db, OFFER_LETTERS_COLLECTION, id);
     await deleteDoc(docRef);
 }

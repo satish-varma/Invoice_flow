@@ -2,6 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
+import { assertWritePermission } from '@/lib/readOnlyGuard';
 import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc, deleteDoc, getDoc, Timestamp } from 'firebase/firestore';
 
 export interface PayslipEarning {
@@ -66,6 +67,7 @@ async function getNextPayslipNumber(): Promise<string> {
 }
 
 export async function savePayslip(payslip: Omit<Payslip, 'payslipNumber' | 'createdAt'> & { id?: string }): Promise<Payslip> {
+    await assertWritePermission('Saving Payslip');
     let finalData: any;
 
     if (payslip.id) {
@@ -108,5 +110,6 @@ export async function getPayslips(): Promise<Payslip[]> {
 }
 
 export async function deletePayslip(id: string): Promise<void> {
+    await assertWritePermission('Deleting Payslip');
     await deleteDoc(doc(db, PAYSLIPS_COLLECTION, id));
 }

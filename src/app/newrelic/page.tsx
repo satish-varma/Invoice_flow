@@ -39,20 +39,20 @@ export default function NewRelicPage() {
   const [isCreatingNew, setIsCreatingNew] = useState<NewRelicLocation | null>(null);
   const [formKey, setFormKey] = useState<string>('new');
   const [activeTab, setActiveTab] = useState<'active' | 'trash' | 'insights' | 'items'>('active');
-  const { role, user } = useAuth();
+  const { role, user, isReadOnly } = useAuth();
   const isAdmin = role === 'admin' || role === 'superadmin';
 
   // Route guard: Only redirect if user does not have permission for NewRelic DC
   useEffect(() => {
-    if (user && !isAdmin && !hasPermission(user, 'newrelic_dc')) {
+    if (user && !isAdmin && role !== 'guest' && !hasPermission(user, 'newrelic_dc')) {
       router.replace('/newrelic/tuckshop');
     }
-  }, [isAdmin, user, router]);
+  }, [isAdmin, user, role, router]);
 
   // Non-blocking attendance check: If daily check-in is pending, show reminder banner without trapping user
   const [isAttendancePending, setIsAttendancePending] = useState(false);
   useEffect(() => {
-    if (!user || isAdmin) return;
+    if (!user || isAdmin || role === 'guest') return;
     let isSubscribed = true;
     checkUserCheckedInToday(user.id, user.email).then((hasCheckedIn) => {
       if (isSubscribed) {
@@ -62,7 +62,7 @@ export default function NewRelicPage() {
     return () => {
       isSubscribed = false;
     };
-  }, [isAdmin, user]);
+  }, [isAdmin, user, role]);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -217,6 +217,10 @@ export default function NewRelicPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (isReadOnly || role === 'guest') {
+      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete challans.' });
+      return;
+    }
     try {
       if (activeTab === 'trash') {
         const { permanentDeleteNewRelicChallan } = await import('@/services/newrelicChallanService');
@@ -233,6 +237,10 @@ export default function NewRelicPage() {
   };
 
   const handleRestore = async (id: string) => {
+    if (isReadOnly || role === 'guest') {
+      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot restore challans.' });
+      return;
+    }
     try {
       const { restoreNewRelicChallans } = await import('@/services/newrelicChallanService');
       await restoreNewRelicChallans([id], user?.email || null);
@@ -263,6 +271,10 @@ export default function NewRelicPage() {
   };
 
   const handleRestoreVersion = async (version: NewRelicChallan) => {
+    if (isReadOnly || role === 'guest') {
+      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot restore versions.' });
+      return;
+    }
     try {
       const challanId = version.id || historyChallan?.id;
       if (!challanId) {

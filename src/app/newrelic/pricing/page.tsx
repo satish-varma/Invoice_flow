@@ -59,7 +59,7 @@ const emptyEdit = (location: NewRelicLocation): EditRow => ({
 });
 
 export default function PricingPage() {
-  const { user, role } = useAuth();
+  const { user, role, isReadOnly } = useAuth();
   const router = useRouter();
 
   const [activeLocation, setActiveLocation] = useState<NewRelicLocation>('hyderabad');
@@ -97,7 +97,7 @@ export default function PricingPage() {
   const [historyItem, setHistoryItem] = useState<PricingItem | null>(null);
 
   useEffect(() => {
-    if (role && role !== 'admin') {
+    if (role && role !== 'admin' && role !== 'guest') {
       router.push('/newrelic');
     }
   }, [role, router]);
@@ -168,6 +168,10 @@ export default function PricingPage() {
 
   // --- Save new row ---
   async function handleSaveNew() {
+    if (isReadOnly || role === 'guest') {
+      setError('Guest Mode (Read-Only): Adding pricing items is disabled.');
+      return;
+    }
     const mrp = parseFloat(newRow.mrp);
     const disc = parseFloat(newRow.discountPercent);
     const cost = parseFloat(newRow.purchaseCost);
@@ -201,6 +205,10 @@ export default function PricingPage() {
 
   // --- Start editing a row ---
   function startEdit(item: PricingItem) {
+    if (isReadOnly || role === 'guest') {
+      alert('Guest Mode (Read-Only): Editing pricing items is disabled.');
+      return;
+    }
     setEditingId(item.id!);
     setEditRow({
       brandName: item.brandName,
@@ -214,6 +222,10 @@ export default function PricingPage() {
   }
 
   async function handleSaveEdit() {
+    if (isReadOnly || role === 'guest') {
+      setError('Guest Mode (Read-Only): Editing pricing items is disabled.');
+      return;
+    }
     const mrp = parseFloat(editRow.mrp);
     const disc = parseFloat(editRow.discountPercent);
     const cost = parseFloat(editRow.purchaseCost);
@@ -246,6 +258,10 @@ export default function PricingPage() {
 
   // --- Bulk Update Brand Pricing ---
   async function handleBulkUpdate() {
+    if (isReadOnly || role === 'guest') {
+      setError('Guest Mode (Read-Only): Bulk price updates are disabled.');
+      return;
+    }
     if (!bulkBrand.trim()) {
       setError('Please select a brand to update.');
       return;
@@ -274,6 +290,10 @@ export default function PricingPage() {
   }
 
   async function handleDelete(id: string) {
+    if (isReadOnly || role === 'guest') {
+      alert('Guest Mode (Read-Only): Deleting pricing items is disabled.');
+      return;
+    }
     if (!confirm('Delete this pricing entry?')) return;
     setSaving(true);
     try {
@@ -285,6 +305,10 @@ export default function PricingPage() {
   }
 
   async function handleCleanPricing() {
+    if (isReadOnly || role === 'guest') {
+      alert('Guest Mode (Read-Only): Cleaning pricing items is disabled.');
+      return;
+    }
     if (!confirm('This will delete all Pricing items that no longer exist in your Catalog. Continue?')) return;
     setIsCleaning(true);
     setError('');
@@ -315,7 +339,7 @@ export default function PricingPage() {
     }
   }
 
-  if (!role || role !== 'admin') return null;
+  if (!role || (role !== 'admin' && role !== 'guest')) return null;
 
   const locations: NewRelicLocation[] = ['hyderabad', 'bangalore'];
 
@@ -364,6 +388,10 @@ export default function PricingPage() {
           <button
             onClick={async () => {
               triggerHaptic('medium');
+              if (isReadOnly || role === 'guest') {
+                alert('Guest Mode (Read-Only): Seeding pricing items is disabled.');
+                return;
+              }
               if (!confirm('This will populate the Pricing table from your existing DC history (latest data wins). Continue?')) return;
               setIsSeeding(true);
               setSeedResult(null);

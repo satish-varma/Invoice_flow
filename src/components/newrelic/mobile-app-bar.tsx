@@ -44,7 +44,7 @@ export function MobileAppBar({ children }: MobileAppBarProps) {
                 The Gut Guru Tracker
               </span>
               <span className="text-[10px] text-gray-400 font-medium truncate max-w-[150px]">
-                {role === 'admin' ? 'Multi-Site DC Portal' : `${siteConfig.name} Portal`}
+                {role === 'admin' ? 'Multi-Site DC Portal' : role === 'guest' ? '👁️ Guest (Read-Only)' : `${siteConfig.name} Portal`}
               </span>
             </div>
           </Link>

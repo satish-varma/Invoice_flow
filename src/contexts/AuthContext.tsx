@@ -5,7 +5,7 @@ import { SessionProvider, useSession, signOut as nextAuthSignOut } from 'next-au
 
 import { SiteId } from '@/types/site';
 
-export type UserRole = 'admin' | 'superadmin' | 'manager' | 'user';
+export type UserRole = 'admin' | 'superadmin' | 'manager' | 'user' | 'guest';
 
 export interface AppUser {
   id: string; // The firestore doc ID
@@ -21,6 +21,7 @@ export interface AppUser {
 interface AuthContextType {
   user: AppUser | null;
   role: UserRole | null;
+  isReadOnly: boolean;
   loading: boolean;
   signOut: () => Promise<void> | void;
 }
@@ -28,6 +29,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   role: null,
+  isReadOnly: false,
   loading: true,
   signOut: () => {},
 });
@@ -38,6 +40,7 @@ function AuthProviderInner({ children }: { children: React.ReactNode }) {
   const loading = status === 'loading';
   const user = session?.user ? (session.user as unknown as AppUser) : null;
   const role = user?.role || null;
+  const isReadOnly = role === 'guest';
 
   const signOut = async () => {
     try {
@@ -51,7 +54,7 @@ function AuthProviderInner({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, signOut }}>
+    <AuthContext.Provider value={{ user, role, isReadOnly, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );

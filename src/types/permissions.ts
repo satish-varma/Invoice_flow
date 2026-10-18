@@ -254,6 +254,30 @@ export const ROLE_PRESETS: RolePreset[] = [
       'settings',
     ],
   },
+  {
+    id: 'guest_auditor',
+    name: 'Guest / Auditor (Read-Only All Features)',
+    description: 'Full inspection and view-only access across all operational, dispatch, and billing modules without write permissions',
+    defaultPage: '/delivery-challan',
+    tabs: [
+      'tuckshop',
+      'attendance',
+      'stock_request',
+      'newrelic_dc',
+      'general_dc',
+      'billing',
+      'masters',
+      'hr_docs',
+      'stock_admin',
+      'tuckshop_reconcile',
+      'pricing',
+      'catalog',
+      'payroll',
+      'employees',
+      'analytics',
+      'settings',
+    ],
+  },
 ];
 
 export const DEFAULT_LANDING_PAGES = [
@@ -274,6 +298,7 @@ export const DEFAULT_LANDING_PAGES = [
 /**
  * Checks whether a user has permission to access a given permission key.
  * Admins and Superadmins have access to everything by default.
+ * Guests have view access to all business modules (except user management).
  */
 export function hasPermission(
   user: { role?: string; allowedTabs?: string[]; assignedApps?: string[]; assignedSite?: string } | null | undefined,
@@ -281,6 +306,10 @@ export function hasPermission(
 ): boolean {
   if (!user) return false;
   if (user.role === 'admin' || user.role === 'superadmin') return true;
+  if (user.role === 'guest') {
+    if (key === 'users_admin') return false;
+    return true;
+  }
 
   // NewRelic DC is strictly blocked for non-NewRelic sites (DSM & NTT Data)
   if (key === 'newrelic_dc' && (user.assignedSite === 'dsm' || user.assignedSite === 'ntt_data')) {

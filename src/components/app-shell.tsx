@@ -209,6 +209,13 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-3">
             {isAdmin && <FinancialStatusBadge />}
 
+            {role === 'guest' && (
+              <span className="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700/60 rounded-full px-3 py-1 font-bold flex items-center gap-1.5 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                👁️ Guest Mode (Read-Only)
+              </span>
+            )}
+
             {isAdmin && (
               <Link
                 href="/admin/users"

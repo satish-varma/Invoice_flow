@@ -53,6 +53,14 @@ export default withAuth(
       return NextResponse.next();
     }
 
+    // Guest users have read-only access to all features (except modifying user credentials in /admin/users)
+    if (role === 'guest') {
+      if (pathname.startsWith('/admin/users')) {
+        return NextResponse.redirect(new URL('/delivery-challan', req.url));
+      }
+      return NextResponse.next();
+    }
+
     const rawSite = token.assignedSite as string | undefined;
     const assignedSite = rawSite === 'dsm' || rawSite === 'ntt_data' ? rawSite : 'newrelic';
     const isNewRelicSite = assignedSite === 'newrelic';

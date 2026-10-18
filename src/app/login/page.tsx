@@ -24,6 +24,10 @@ export default function LoginPage() {
   // If already logged in, check if today's check-in has happened
   useEffect(() => {
     if (user) {
+      if (user.role === 'guest') {
+        router.replace(user.defaultLandingPage || '/delivery-challan');
+        return;
+      }
       checkUserCheckedInToday(user.id, user.email).then((checkedIn) => {
         if (!checkedIn) {
           router.replace('/newrelic/attendance');
@@ -39,7 +43,7 @@ export default function LoginPage() {
     triggerHaptic('medium');
     setLoading(true);
     try {
-      const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/newrelic` : undefined;
+      const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/delivery-challan` : undefined;
       const res = await signIn('credentials', {
         redirect: false,
         email,
@@ -54,6 +58,12 @@ export default function LoginPage() {
       triggerHaptic('success');
       toast({ title: 'Welcome back!' });
       
+      // Guest users bypass attendance check-in
+      if (email.toLowerCase().trim() === 'guest@tgg.in') {
+        router.push('/delivery-challan');
+        return;
+      }
+
       // Check if user has checked in today: if not -> /newrelic/attendance, else -> /newrelic
       const checkedIn = await checkUserCheckedInToday(undefined, email);
       if (!checkedIn) {
@@ -147,7 +157,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="pt-2">
+          <div className="pt-2 space-y-2.5">
             <Button
               type="submit"
               className="w-full h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black tracking-wide text-sm shadow-lg shadow-indigo-600/25 active:scale-[0.98] transition-all"
@@ -156,6 +166,19 @@ export default function LoginPage() {
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
               Sign in to Portal
             </Button>
+
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setEmail('guest@tgg.in');
+                setPassword('guest123');
+                toast({ title: 'Guest credentials filled', description: 'Click Sign In to explore in Read-Only Mode' });
+              }}
+              className="w-full py-2 px-3 text-xs font-semibold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 bg-slate-50 dark:bg-slate-800/40 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 rounded-xl border border-slate-200/60 dark:border-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+            >
+              <span>👁️</span> Auto-fill Guest Account (View Only)
+            </button>
           </div>
         </form>
 

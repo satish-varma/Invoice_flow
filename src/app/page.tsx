@@ -52,7 +52,14 @@ export default function RootHomePage() {
     }
 
     const isAdmin = role === 'admin' || role === 'superadmin';
-    const canAccessBilling = isAdmin || hasPermission(user, 'billing');
+    const isGuest = role === 'guest';
+    const canAccessBilling = isAdmin || isGuest || hasPermission(user, 'billing');
+
+    // Guests do not require daily attendance check-in
+    if (isGuest) {
+      setRedirecting(false);
+      return;
+    }
 
     // Verify if check-in for the day has happened
     checkUserCheckedInToday(user.id, user.email).then((checkedIn) => {

@@ -51,11 +51,15 @@
 	<array>
 		<string>armv7</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>InvoiceFlow requires camera access for attendance selfie check-in and delivery receipt capture.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>InvoiceFlow requires access to photos to attach delivery receipts and save invoices.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>InvoiceFlow requires permission to save invoices and receipts to your photo library.</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>

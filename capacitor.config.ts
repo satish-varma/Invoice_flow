@@ -35,9 +35,15 @@ const config: CapacitorConfig = {
     contentInset: 'automatic',
     preferredContentMode: 'mobile',
     scheme: 'The Gut Guru Tracker',
+    backgroundColor: '#ffffff',
+    scrollEnabled: true,
+    limitsNavigationsToAppBoundDomains: false,
   },
   plugins: {
-    // Plugin-specific settings can be added here
+    StatusBar: {
+      style: 'DARK',
+      backgroundColor: '#3949ab',
+    },
   },
 };
 

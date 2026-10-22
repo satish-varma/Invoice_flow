@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { triggerHaptic } from '@/lib/haptics';
 import { NewRelicAttachmentModal } from '@/components/newrelic/newrelic-attachment-modal';
 import { NewRelicChallanPreview } from '@/components/newrelic/newrelic-challan-preview';
+import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/types/permissions';
 
 interface NewRelicChallanViewModalProps {
   isOpen: boolean;
@@ -30,6 +32,8 @@ export function NewRelicChallanViewModal({
   onDownload,
   onEdit,
 }: NewRelicChallanViewModalProps) {
+  const { user, role } = useAuth();
+  const canViewSignedCopies = role !== 'guest' && hasPermission(user, 'signed_copies');
   const [challan, setChallan] = useState<NewRelicChallan | null>(initialChallan);
   const [zoomMode, setZoomMode] = useState<'fit' | '100%'>('fit');
   const [scale, setScale] = useState<number>(0.8);
@@ -94,29 +98,31 @@ export function NewRelicChallanViewModal({
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-between sm:justify-end">
             <div className="flex items-center gap-1.5">
               {/* Signed DC Attachment Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setActiveAttachment('signed_copy');
-                }}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all active:scale-95 ${
-                  (challan.signedCopyUrls?.length ?? 0) > 0
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 shadow-2xs'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                }`}
-                title="Manage Signed Copies"
-              >
-                <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Signed DC</span>
-                {(challan.signedCopyUrls?.length ?? 0) > 0 ? (
-                  <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[9px] font-black">
-                    {challan.signedCopyUrls!.length}
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-slate-400 font-normal">+Upload</span>
-                )}
-              </button>
+              {canViewSignedCopies && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setActiveAttachment('signed_copy');
+                  }}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all active:scale-95 ${
+                    (challan.signedCopyUrls?.length ?? 0) > 0
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 shadow-2xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  }`}
+                  title="Manage Signed Copies"
+                >
+                  <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Signed DC</span>
+                  {(challan.signedCopyUrls?.length ?? 0) > 0 ? (
+                    <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[9px] font-black">
+                      {challan.signedCopyUrls!.length}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-400 font-normal">+Upload</span>
+                  )}
+                </button>
+              )}
 
               {/* Goods Received Invoice Attachment Button */}
               <button

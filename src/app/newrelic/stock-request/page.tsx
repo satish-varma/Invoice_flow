@@ -16,6 +16,8 @@ import { Plus, Minus, Trash2, CheckCircle, PackageSearch, List, Copy, Pencil, Cl
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { triggerHaptic } from '@/lib/haptics';
+import { enqueueOfflineItem } from '@/services/offlineSyncService';
+import { OfflineFormBanner } from '@/components/newrelic/OfflineFormBanner';
 
 export default function StockRequestPage() {
   const { role, user, isReadOnly } = useAuth();
@@ -170,6 +172,32 @@ export default function StockRequestPage() {
         notes: data.notes,
         createdBy: user?.email || user?.id || 'Unknown',
       }));
+
+      const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+      if (isOffline) {
+        await enqueueOfflineItem(
+          'stock-request',
+          `Stock Request (${payload.location} - ${payload.siteId})`,
+          `${payload.lineItems?.length || 0} line items requested`,
+          {
+            request: payload,
+            id: data.id,
+          }
+        );
+        triggerHaptic('success');
+        setSuccess(true);
+        reset({
+          id: undefined,
+          location: isHydOnlySite ? 'hyderabad' : data.location,
+          requestDate: new Date(),
+          status: 'PENDING',
+          lineItems: [{ brandName: '', itemName: '', orderType: 'cases', caseSize: 1, quantity: 1, totalUnits: 1 }],
+          notes: '',
+        });
+        setTimeout(() => setSuccess(false), 5000);
+        return;
+      }
       
       await saveStockRequest(payload, data.id);
       triggerHaptic('success');
@@ -183,8 +211,52 @@ export default function StockRequestPage() {
         notes: '',
       });
       setTimeout(() => setSuccess(false), 5000);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      const isNetworkIssue =
+        (typeof navigator !== 'undefined' && !navigator.onLine) ||
+        error?.message?.includes('timeout') ||
+        error?.message?.includes('network') ||
+        error?.message?.includes('Failed to fetch') ||
+        error?.message?.includes('offline');
+
+      if (isNetworkIssue) {
+        try {
+          const payload = JSON.parse(JSON.stringify({
+            siteId: activeSite,
+            location: isHydOnlySite ? 'hyderabad' : data.location,
+            requestDate: data.requestDate.toISOString(),
+            status: data.status,
+            lineItems: data.lineItems,
+            notes: data.notes,
+            createdBy: user?.email || user?.id || 'Unknown',
+          }));
+          await enqueueOfflineItem(
+            'stock-request',
+            `Stock Request (${payload.location} - ${payload.siteId})`,
+            `${payload.lineItems?.length || 0} line items requested`,
+            {
+              request: payload,
+              id: data.id,
+            }
+          );
+          triggerHaptic('success');
+          setSuccess(true);
+          reset({
+            id: undefined,
+            location: isHydOnlySite ? 'hyderabad' : data.location,
+            requestDate: new Date(),
+            status: 'PENDING',
+            lineItems: [{ brandName: '', itemName: '', orderType: 'cases', caseSize: 1, quantity: 1, totalUnits: 1 }],
+            notes: '',
+          });
+          setTimeout(() => setSuccess(false), 5000);
+          return;
+        } catch (queueErr) {
+          console.error('Failed to queue offline stock request:', queueErr);
+        }
+      }
+
       alert('Failed to submit request');
     } finally {
       setIsSubmitting(false);
@@ -194,7 +266,9 @@ export default function StockRequestPage() {
   if (!role) return null;
 
   return (
-    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-28 sm:pb-8">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-4 sm:space-y-6 pb-28 sm:pb-8">
+      <OfflineFormBanner moduleName="Stock Request" />
+
       {/* Large Title Mobile Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>

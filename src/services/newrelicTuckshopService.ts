@@ -104,7 +104,7 @@ export const saveTuckshopRecord = async (record: Partial<NewRelicTuckshopRecord>
   };
 
   const cleanData = cleanUndefined(record);
-  let finalData: any;
+  const nowIso = new Date().toISOString();
 
   if (cleanData.id) {
     const docRef = doc(db, NEWRELIC_TUCKSHOP_COLLECTION, cleanData.id);
@@ -114,25 +114,31 @@ export const saveTuckshopRecord = async (record: Partial<NewRelicTuckshopRecord>
       updatedAt: serverTimestamp(),
       updatedBy: userEmail,
     });
-    const snap = await getDoc(docRef);
-    finalData = { id: cleanData.id, ...snap.data() };
+    return {
+      id: cleanData.id,
+      ...data,
+      updatedAt: nowIso,
+      updatedBy: userEmail,
+      date: cleanData.date || nowIso,
+    } as NewRelicTuckshopRecord;
   } else {
     const { id, ...data } = cleanData;
     const completeData = {
       ...data,
       createdAt: serverTimestamp(),
       createdBy: userEmail,
+      updatedAt: serverTimestamp(),
+      updatedBy: userEmail,
     };
     const docRef = await addDoc(collection(db, NEWRELIC_TUCKSHOP_COLLECTION), completeData);
-    const snap = await getDoc(docRef);
-    finalData = { id: docRef.id, ...snap.data() };
+    return {
+      id: docRef.id,
+      ...completeData,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      date: completeData.date || nowIso,
+    } as NewRelicTuckshopRecord;
   }
-
-  return {
-    ...finalData,
-    date: finalData.date instanceof Timestamp ? finalData.date.toDate().toISOString() : finalData.date,
-    createdAt: finalData.createdAt instanceof Timestamp ? finalData.createdAt.toDate().toISOString() : finalData.createdAt,
-  } as NewRelicTuckshopRecord;
 };
 
 export const deleteTuckshopRecord = async (id: string) => {
@@ -142,15 +148,42 @@ export const deleteTuckshopRecord = async (id: string) => {
 
 export const uploadTuckshopBill = async (file: File): Promise<string> => {
   await assertWritePermission('Uploading Tuckshop Bill');
-  // Requires "import { storage } from '@/lib/firebase'" and "import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'"
   const { storage } = await import('@/lib/firebase');
   const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
   
+  let uploadPayload: Blob | File = file;
+  if (file.type.startsWith('image/')) {
+    try {
+      uploadPayload = await new Promise<Blob | File>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const dataUri = e.target?.result as string;
+          if (!dataUri) return resolve(file);
+          const { compressImage } = await import('@/lib/imageCompression');
+          const compressedUri = await compressImage(dataUri, 1200, 1200, 0.75);
+          const arr = compressedUri.split(',');
+          const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+          const bstr = atob(arr[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          resolve(new Blob([u8arr], { type: mime }));
+        };
+        reader.onerror = () => resolve(file);
+        reader.readAsDataURL(file);
+      });
+    } catch (err) {
+      console.warn('[Tuckshop] Image compression fallback to original:', err);
+    }
+  }
+
   const timestamp = Date.now();
-  const fileExtension = file.name.split('.').pop();
+  const fileExtension = file.type.startsWith('image/') ? 'jpg' : (file.name.split('.').pop() || 'dat');
   const filePath = `tuckshop_bills/${timestamp}_${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
   
   const storageRef = ref(storage, filePath);
-  await uploadBytes(storageRef, file);
+  await uploadBytes(storageRef, uploadPayload);
   return await getDownloadURL(storageRef);
 };

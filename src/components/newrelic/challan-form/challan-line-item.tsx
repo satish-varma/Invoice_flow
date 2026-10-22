@@ -1,4 +1,4 @@
-import { CatalogItem } from '@/types/challan';
+import { CatalogItem, PricingItem } from '@/types/challan';
 import React from 'react';
 import { UseFormRegister, FieldErrors, UseFieldArrayRemove, UseFormSetValue } from 'react-hook-form';
 import { Trash2 } from 'lucide-react';
@@ -19,6 +19,7 @@ interface ChallanLineItemProps {
   canSeeMrp: boolean;
   canSeePCost: boolean;
   catalog: CatalogItem[];
+  pricingItems?: PricingItem[];
   watchedLineItems: any[];
   handleItemNameChange: (index: number, selectedItemName: string, currentBrandName?: string) => void;
 }
@@ -34,16 +35,24 @@ export function ChallanLineItem({
   canSeeMrp,
   canSeePCost,
   catalog,
+  pricingItems = [],
   watchedLineItems,
   handleItemNameChange,
 }: ChallanLineItemProps) {
   const rowBrand = (watchedLineItems?.[index]?.brandName || '').trim().toLowerCase();
+  
+  // Combine items from catalog and pricing items for comprehensive autocomplete
+  const allItems = [
+    ...catalog.map((c) => ({ brandName: c.brandName, itemName: c.itemName })),
+    ...pricingItems.map((p) => ({ brandName: p.brandName, itemName: p.itemName })),
+  ];
+
   const rawFilteredItems = rowBrand
-    ? catalog.filter((c) => c.brandName.trim().toLowerCase() === rowBrand)
-    : catalog;
+    ? allItems.filter((c) => (c.brandName || '').trim().toLowerCase() === rowBrand)
+    : allItems;
     
   // Deduplicate item names for the datalist
-  const uniqueItemNames = Array.from(new Set(rawFilteredItems.map(c => c.itemName.trim())));
+  const uniqueItemNames = Array.from(new Set(rawFilteredItems.map((c) => (c.itemName || '').trim()).filter(Boolean)));
   const datalistId = `newrelic-item-list-${index}`;
 
   return (
@@ -81,12 +90,12 @@ export function ChallanLineItem({
         <Label className="text-xs text-gray-500 sm:hidden">Brand Name</Label>
         <Input
           {...register(`lineItems.${index}.brandName`, {
-            onChange: () => {
-              // Reset dependent fields when brand changes
-              setValue(`lineItems.${index}.itemName`, '');
-              setValue(`lineItems.${index}.quantity`, 1);
-              setValue(`lineItems.${index}.mrp`, undefined);
-              setValue(`lineItems.${index}.procurementCost`, undefined);
+            onChange: (e) => {
+              const newBrand = e.target.value;
+              const currentItem = watchedLineItems?.[index]?.itemName;
+              if (currentItem && currentItem.trim()) {
+                handleItemNameChange(index, currentItem, newBrand);
+              }
             },
           })}
           list="newrelic-brand-list"

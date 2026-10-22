@@ -14,7 +14,7 @@ import { ExtractInvoiceDataResponse } from '@/ai/flows/extract-invoice-flow';
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from './ui/textarea';
-import { Invoice, saveInvoice, TaxItem } from '@/services/invoiceService';
+import { Invoice, saveInvoice, TaxItem, determineInvoiceType } from '@/services/invoiceService';
 import { uploadStorageFile } from '@/services/storageService';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -400,6 +400,11 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 taxes: appliedTaxes.map(({ id, ...tax }) => tax),
                 taxTotal,
                 total,
+                invoiceType: determineInvoiceType({
+                    taxes: appliedTaxes.map(({ id, ...tax }) => tax),
+                    taxTotal,
+                    tax: taxTotal,
+                }),
                 // Deprecated fields, kept for compatibility but should be removed later
                 customerName: billToName,
                 customerAddress: billToAddress,

@@ -296,16 +296,11 @@
   animation: theme-rim-shimmer 4.5s ease infinite;
 }
 
-/* Tactile micro-press for mobile & desktop */
+/* Smooth transitions for theme styling */
 .theme-card,
 .bg-card,
 [data-card="true"] {
-  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
-}
-.theme-card:active,
-.bg-card:active,
-[data-card="true"]:active {
-  transform: scale(0.988);
+  transition: box-shadow 0.25s ease, background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 /* ── Universal Card Text & Component Adaptability for Dark/Vibrant Themes ── */

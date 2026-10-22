@@ -222,9 +222,8 @@ export default function QuotationsPage() {
 
     return (
         <AppShell>
-            <main className="min-h-screen bg-slate-50/50 dark:bg-slate-950 flex flex-col items-center p-3 sm:p-8 pb-24">
-                <div className="w-full max-w-7xl mx-auto space-y-6">
-                    {/* Header */}
+            <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-6">
+                {/* Header */}
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -278,7 +277,6 @@ export default function QuotationsPage() {
                         onDeleteSingle={handleDeleteRequest}
                     />
                 </div>
-            </main>
 
             {/* Preview Bottom Sheet */}
             <Dialog open={!!previewingQuotation} onOpenChange={(open) => !open && closePreview()}>

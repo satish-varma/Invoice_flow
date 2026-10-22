@@ -70,7 +70,7 @@ export default function TuckshopPage() {
   };
   
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-8 py-4 sm:py-8 space-y-4 sm:space-y-6">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-4 sm:space-y-6">
       {/* The Gut Guru Tracker - Tuckshop Operations Hero Banner */}
       <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#2c1d24] via-[#43232f] to-[#1e1b4b] p-4 sm:p-6 text-white shadow-xl relative overflow-hidden">
         <div className="absolute -right-10 -top-10 w-44 h-44 bg-purple-500/20 rounded-full blur-2xl pointer-events-none" />

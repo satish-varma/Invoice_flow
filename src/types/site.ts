@@ -46,3 +46,28 @@ export function resolveSiteId(siteId?: string | null): SiteId {
   if (siteId === 'dsm' || siteId === 'ntt_data') return siteId;
   return 'newrelic';
 }
+
+/**
+ * Resolves all sites allowed for a user.
+ * - Admin/superadmin: all sites ['newrelic', 'dsm', 'ntt_data']
+ * - Roaming manager with assignedSites: returns assignedSites
+ * - Single assignedSite: returns [assignedSite]
+ * - Fallback: ['newrelic']
+ */
+export function getUserAllowedSites(user?: {
+  role?: string | null;
+  assignedSites?: SiteId[];
+  assignedSite?: SiteId;
+} | null): SiteId[] {
+  if (!user) return ['newrelic'];
+  if (user.role === 'admin' || user.role === 'superadmin') {
+    return ['newrelic', 'dsm', 'ntt_data'];
+  }
+  if (user.assignedSites && Array.isArray(user.assignedSites) && user.assignedSites.length > 0) {
+    return user.assignedSites;
+  }
+  if (user.assignedSite) {
+    return [user.assignedSite];
+  }
+  return ['newrelic'];
+}

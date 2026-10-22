@@ -3,12 +3,13 @@ import { NewRelicChallan } from '@/types/challan';
 
 import React, { useState, useRef } from 'react';
 import { format } from 'date-fns';
-import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, ChevronDown, ChevronUp, FileCheck, Paperclip, Edit, Package, Calendar } from 'lucide-react';
+import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, ChevronDown, ChevronUp, FileCheck, Paperclip, Edit, Package, Calendar, AlertTriangle } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 import { useToast } from '@/hooks/use-toast';
 import { NewRelicAttachmentModal } from './newrelic-attachment-modal';
 import { RollingCashCounter } from '@/components/effects/RollingCashCounter';
 import { TiltCard } from '@/components/effects/TiltCard';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -38,6 +39,9 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {NEWRELIC_LOCATIONS} from '@/services/newrelicChallanService';
+import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/types/permissions';
+import { logAuditEvent } from '@/services/auditService';
 
 interface NewRelicChallanListProps {
   challans: NewRelicChallan[];
@@ -74,8 +78,13 @@ export function NewRelicChallanList({
   showFinancials,
 }: NewRelicChallanListProps) {
   const { toast } = useToast();
+  const { user, role: authRole, canDelete, isReadOnly } = useAuth();
+  const effectiveRole = role || authRole;
+  const canViewSignedCopies = effectiveRole !== 'guest' && hasPermission(user, 'signed_copies');
+  const hasDeleteClearance = canDelete && !isReadOnly && effectiveRole !== 'guest';
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteConfirmChallan, setDeleteConfirmChallan] = useState<NewRelicChallan | null>(null);
+  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [attachmentModal, setAttachmentModal] = useState<{
     challan: NewRelicChallan;
@@ -145,7 +154,7 @@ export function NewRelicChallanList({
   }
 
   return (
-    <div className="theme-card rounded-2xl shadow-sm overflow-hidden">
+    <div className="theme-card rounded-2xl shadow-sm overflow-hidden w-full max-w-full min-w-0">
       <div className="px-4 sm:px-6 py-4 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <h3 className="font-semibold theme-text-primary text-sm sm:text-base">Saved Challans</h3>
         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-gray-500">
@@ -179,17 +188,27 @@ export function NewRelicChallanList({
                 const profit = revenue - cost;
 
                 return (
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className="font-extrabold text-[#3b2fc9]">
-                      Total Value: ₹{totals.mrp.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md font-black bg-indigo-50 text-indigo-700 border border-indigo-200/80">
+                      Total: ₹{totals.mrp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                     </span>
                     {showFinancials && (
                       <>
-                        <span className="text-red-500/80">Comm: -₹{totals.commission.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        <span className="text-gray-600">Goods: ₹{totals.goods.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        <span className="text-gray-600">Trans: ₹{totals.transport.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        <span className={`font-semibold ${profit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                          Profit: ₹{profit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md font-semibold bg-rose-50 text-rose-700 border border-rose-200/80">
+                          Comm: -₹{totals.commission.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                        </span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                          Goods: ₹{totals.goods.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                        </span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                          Trans: ₹{totals.transport.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                        </span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md font-black border ${
+                          profit >= 0 
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
+                            : 'bg-rose-50 text-rose-800 border-rose-300'
+                        }`}>
+                          Profit: ₹{profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                         </span>
                       </>
                     )}
@@ -233,8 +252,8 @@ export function NewRelicChallanList({
         </div>
       )}
 
-      {/* Mobile Feed Style Card List (< sm) */}
-      <div className="block sm:hidden p-2.5 sm:p-3 space-y-3.5 bg-transparent">
+      {/* Mobile Feed Style Card List (< lg) */}
+      <div className="block lg:hidden p-2.5 sm:p-3 space-y-3.5 bg-transparent">
         {challans.map((challan) => {
           const mrpTotal = (challan.lineItems || []).reduce((acc, item) => acc + ((item.mrp || 0) * (item.quantity || 1)), 0);
           const topItems = (challan.lineItems || []).slice(0, 2);
@@ -429,17 +448,17 @@ export function NewRelicChallanList({
 
                   return (
                     <div className="bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/60 rounded-2xl p-3 text-xs space-y-1.5">
-                      <div className="flex justify-between text-slate-600 dark:text-slate-400 font-medium">
-                        <span>Net Revenue (less 5.5% comm):</span>
-                        <span className="font-bold font-mono text-slate-900 dark:text-slate-200">₹{revenue.toLocaleString('en-IN', { maximumFractionDigits: 1 })}</span>
+                      <div className="flex justify-between items-center text-slate-600 dark:text-slate-400 font-medium">
+                        <span className="truncate pr-2">Net Revenue (less 5.5% comm):</span>
+                        <span className="font-bold font-mono text-slate-900 dark:text-slate-200 shrink-0">₹{revenue.toLocaleString('en-IN', { maximumFractionDigits: 1 })}</span>
                       </div>
-                      <div className="flex justify-between text-slate-600 dark:text-slate-400 font-medium">
-                        <span>Total Cost (P.Cost + Transport):</span>
-                        <span className="font-bold font-mono text-slate-900 dark:text-slate-200">₹{totalCost.toLocaleString('en-IN', { maximumFractionDigits: 1 })}</span>
+                      <div className="flex justify-between items-center text-slate-600 dark:text-slate-400 font-medium">
+                        <span className="truncate pr-2">Total Cost (P.Cost + Transport):</span>
+                        <span className="font-bold font-mono text-slate-900 dark:text-slate-200 shrink-0">₹{totalCost.toLocaleString('en-IN', { maximumFractionDigits: 1 })}</span>
                       </div>
-                      <div className="flex justify-between pt-1.5 border-t border-indigo-100 dark:border-indigo-900/60 font-black">
-                        <span className={profit >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}>Est. Profit:</span>
-                        <span className={`font-mono text-sm ${profit >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+                      <div className="flex justify-between items-center pt-1.5 border-t border-indigo-100 dark:border-indigo-900/60 font-black">
+                        <span className={`truncate pr-2 ${profit >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>Est. Profit:</span>
+                        <span className={`font-mono text-sm shrink-0 ${profit >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
                           ₹{profit.toLocaleString('en-IN', { maximumFractionDigits: 1 })}
                         </span>
                       </div>
@@ -449,31 +468,33 @@ export function NewRelicChallanList({
 
                 {/* Mobile Attachment Buttons: Signed DC & Invoice */}
                 {!isTrashView && (
-                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        triggerHaptic('light');
-                        setAttachmentModal({ challan, type: 'signed_copy' });
-                      }}
-                      className={`h-10 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all active:scale-[0.98] ${
-                        (challan.signedCopyUrls?.length ?? 0) > 0
-                          ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 shadow-2xs'
-                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
-                      }`}
-                      title="Upload or view Signed Delivery Challan copy"
-                    >
-                      <FileCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <span className="truncate">Signed DC</span>
-                      {(challan.signedCopyUrls?.length ?? 0) > 0 ? (
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black shrink-0">
-                          {challan.signedCopyUrls!.length}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-slate-400 font-semibold shrink-0">+Upload</span>
-                      )}
-                    </button>
+                  <div className={`grid ${canViewSignedCopies ? 'grid-cols-2' : 'grid-cols-1'} gap-2 pt-1 border-t border-slate-100 dark:border-slate-800`}>
+                    {canViewSignedCopies && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          triggerHaptic('light');
+                          setAttachmentModal({ challan, type: 'signed_copy' });
+                        }}
+                        className={`h-10 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all active:scale-[0.98] ${
+                          (challan.signedCopyUrls?.length ?? 0) > 0
+                            ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 shadow-2xs'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
+                        }`}
+                        title="Upload or view Signed Delivery Challan copy"
+                      >
+                        <FileCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <span className="truncate">Signed DC</span>
+                        {(challan.signedCopyUrls?.length ?? 0) > 0 ? (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black shrink-0">
+                            {challan.signedCopyUrls!.length}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 font-semibold shrink-0">+Upload</span>
+                        )}
+                      </button>
+                    )}
 
                     <button
                       type="button"
@@ -509,7 +530,8 @@ export function NewRelicChallanList({
                       variant="outline"
                       size="sm"
                       className="w-full h-11 text-xs gap-1.5 border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 rounded-2xl font-bold shadow-2xs"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         triggerHaptic('medium');
                         onRestoreChallan && challan.id && onRestoreChallan(challan.id);
                       }}
@@ -523,7 +545,8 @@ export function NewRelicChallanList({
                         variant="default"
                         size="sm"
                         className="h-10 px-1 bg-gradient-to-r from-indigo-600 to-[#3b2fc9] hover:from-indigo-700 hover:to-[#2d23a0] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-xs active:scale-95 transition-transform"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           triggerHaptic('light');
                           onPreviewChallan ? onPreviewChallan(challan) : onDownloadChallan(challan);
                         }}
@@ -538,7 +561,8 @@ export function NewRelicChallanList({
                         variant="outline"
                         size="sm"
                         className="h-10 px-1 border-blue-200 dark:border-blue-800 bg-blue-50/90 dark:bg-blue-950/40 hover:bg-blue-100 text-blue-700 dark:text-blue-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform shadow-2xs"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           triggerHaptic('medium');
                           onDownloadChallan(challan);
                         }}
@@ -553,7 +577,8 @@ export function NewRelicChallanList({
                         variant="outline"
                         size="sm"
                         className="h-10 px-1 border-amber-200 dark:border-amber-800 bg-amber-50/90 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform shadow-2xs"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           triggerHaptic('light');
                           onSelectChallan(challan);
                         }}
@@ -568,7 +593,8 @@ export function NewRelicChallanList({
                         variant="outline"
                         size="sm"
                         className="h-10 px-1 border-purple-200 dark:border-purple-800 bg-purple-50/90 dark:bg-purple-950/40 hover:bg-purple-100 text-purple-800 dark:text-purple-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform shadow-2xs"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           triggerHaptic('light');
                           onDuplicateChallan(challan);
                         }}
@@ -586,9 +612,9 @@ export function NewRelicChallanList({
         })}
       </div>
 
-      {/* Desktop Table View (>= sm) */}
-      <div className="hidden sm:block overflow-x-auto">
-        <Table>
+      {/* Desktop Table View (>= lg) */}
+      <div className="hidden lg:block overflow-x-auto min-w-0 w-full max-w-full">
+        <Table className="min-w-[1050px]">
           <TableHeader>
             <TableRow className="bg-gradient-to-r from-slate-50 via-indigo-50/40 to-slate-50 border-b border-indigo-100/70 hover:bg-slate-50">
               <TableHead className="w-[40px] pl-4">
@@ -743,28 +769,30 @@ export function NewRelicChallanList({
                     ) : (
                       <>
                         {/* Attachment: Signed DC */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            triggerHaptic('light');
-                            setAttachmentModal({ challan, type: 'signed_copy' });
-                          }}
-                          className={`h-7 px-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 ${
-                            (challan.signedCopyUrls?.length ?? 0) > 0
-                              ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 shadow-2xs'
-                              : 'text-gray-400 hover:text-emerald-700 hover:bg-emerald-50'
-                          }`}
-                          title="Manage Signed Copies"
-                        >
-                          <Paperclip className="w-3 h-3 text-emerald-600" />
-                          <span className="hidden xl:inline">Signed</span>
-                          {(challan.signedCopyUrls?.length ?? 0) > 0 && (
-                            <span className="ml-0.5 px-1 py-0.2 rounded-full bg-emerald-600 text-white text-[8px] font-black">
-                              {challan.signedCopyUrls!.length}
-                            </span>
-                          )}
-                        </Button>
+                        {canViewSignedCopies && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              triggerHaptic('light');
+                              setAttachmentModal({ challan, type: 'signed_copy' });
+                            }}
+                            className={`h-7 px-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 ${
+                              (challan.signedCopyUrls?.length ?? 0) > 0
+                                ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 shadow-2xs'
+                                : 'text-gray-400 hover:text-emerald-700 hover:bg-emerald-50'
+                            }`}
+                            title="Manage Signed Copies"
+                          >
+                            <Paperclip className="w-3 h-3 text-emerald-600" />
+                            <span className="hidden xl:inline">Signed</span>
+                            {(challan.signedCopyUrls?.length ?? 0) > 0 && (
+                              <span className="ml-0.5 px-1 py-0.2 rounded-full bg-emerald-600 text-white text-[8px] font-black">
+                                {challan.signedCopyUrls!.length}
+                              </span>
+                            )}
+                          </Button>
+                        )}
 
                         {/* Attachment: Invoice */}
                         <Button
@@ -859,7 +887,7 @@ export function NewRelicChallanList({
                         )}
                       </>
                     )}
-                        {role === 'admin' && (
+                        {hasDeleteClearance && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -879,30 +907,130 @@ export function NewRelicChallanList({
       </div>
 
       {/* Shared Delete Confirmation Alert Dialog */}
-      <AlertDialog open={!!deleteConfirmChallan} onOpenChange={(open) => !open && setDeleteConfirmChallan(null)}>
+      <AlertDialog
+        open={!!deleteConfirmChallan}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteConfirmChallan(null);
+            setDeleteConfirmationInput('');
+          }
+        }}
+      >
         <AlertDialogContent className="w-[90vw] max-w-lg rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>{isTrashView ? 'Permanently Delete?' : 'Delete Challan?'}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {isTrashView ? (
-                <>This will <strong>permanently destroy</strong> challan <strong>{deleteConfirmChallan?.dcNumber}</strong>. This action cannot be undone.</>
-              ) : (
-                <>This will move challan <strong>{deleteConfirmChallan?.dcNumber}</strong> to the Trash view.</>
-              )}
+            <div className="flex items-center gap-2.5 text-red-600 mb-1">
+              <div className="p-2 rounded-xl bg-red-100 dark:bg-red-950/50">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <AlertDialogTitle className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
+                {isTrashView ? 'Permanent Destroy Safeguard' : 'Delete Challan Safeguard'}
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription asChild>
+              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 space-y-3 pt-1">
+                <p>
+                  {isTrashView ? (
+                    <>
+                      This will <strong className="text-red-600 font-bold">permanently destroy</strong> all records, line items, and audit history for this challan. This cannot be undone.
+                    </>
+                  ) : (
+                    <>
+                      This will remove challan <strong className="text-gray-900 dark:text-white font-mono">{deleteConfirmChallan?.dcNumber}</strong> and move it to Trash.
+                    </>
+                  )}
+                </p>
+                <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200/80 dark:border-gray-700 space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">DC Number:</span>
+                    <span className="font-mono font-bold text-gray-900 dark:text-gray-100 select-all">
+                      {deleteConfirmChallan?.dcNumber}
+                    </span>
+                  </div>
+                  {deleteConfirmChallan?.location && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Location:</span>
+                      <span className="font-medium text-gray-800 dark:text-gray-200">
+                        {deleteConfirmChallan.location}
+                      </span>
+                    </div>
+                  )}
+                  {deleteConfirmChallan?.dcDate && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Date:</span>
+                      <span className="font-medium text-gray-800 dark:text-gray-200">
+                        {format(new Date(deleteConfirmChallan.dcDate), 'dd MMM yyyy')}
+                      </span>
+                    </div>
+                  )}
+                  {deleteConfirmChallan?.lineItems && deleteConfirmChallan.lineItems.length > 0 && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Items:</span>
+                        <span className="font-medium text-gray-800 dark:text-gray-200">
+                          {deleteConfirmChallan.lineItems.length} items
+                        </span>
+                      </div>
+                      <div className="flex justify-between pt-1 border-t border-gray-200 dark:border-gray-700 font-bold">
+                        <span className="text-gray-500">Total MRP:</span>
+                        <span className="font-mono text-gray-900 dark:text-gray-100">
+                          ₹{deleteConfirmChallan.lineItems
+                            .reduce((acc, item) => acc + (item.mrp || 0) * (item.quantity || 1), 0)
+                            .toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block">
+                    To confirm, type <span className="font-mono font-bold text-red-600 select-all">{deleteConfirmChallan?.dcNumber}</span> below:
+                  </label>
+                  <Input
+                    value={deleteConfirmationInput}
+                    onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                    placeholder={deleteConfirmChallan?.dcNumber}
+                    className="font-mono text-sm border-red-200 focus-visible:ring-red-500/30"
+                    autoFocus
+                  />
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="gap-2 sm:gap-0 mt-2">
+            <AlertDialogCancel
+              onClick={() => {
+                setDeleteConfirmChallan(null);
+                setDeleteConfirmationInput('');
+              }}
+              className="rounded-xl text-xs font-semibold"
+            >
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600 rounded-xl"
+              className="bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={
+                deleteConfirmationInput.trim().toUpperCase() !==
+                (deleteConfirmChallan?.dcNumber || '').trim().toUpperCase()
+              }
               onClick={() => {
                 if (deleteConfirmChallan?.id) {
+                  logAuditEvent({
+                    actorEmail: user?.email || 'user',
+                    actorRole: effectiveRole || 'user',
+                    action: 'dc_deleted',
+                    actionLabel: isTrashView ? 'Permanently Destroyed DC' : 'Moved DC to Trash',
+                    targetType: 'challan',
+                    targetId: deleteConfirmChallan.id,
+                    targetLabel: deleteConfirmChallan.dcNumber,
+                    details: { location: deleteConfirmChallan.location, isTrashView: !!isTrashView },
+                  });
                   onDeleteChallan(deleteConfirmChallan.id);
                 }
                 setDeleteConfirmChallan(null);
+                setDeleteConfirmationInput('');
               }}
             >
-              {isTrashView ? 'Delete Permanently' : 'Move to Trash'}
+              {isTrashView ? 'Confirm & Destroy Permanently' : 'Confirm & Move to Trash'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

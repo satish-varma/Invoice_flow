@@ -1,20 +1,22 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Lock, Sparkles } from 'lucide-react';
+import { Loader2, Lock, Sparkles, ShieldAlert, AlertTriangle, Clock } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 
 import { checkUserCheckedInToday } from '@/services/newrelicAttendanceService';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const errorParam = searchParams.get('error');
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
@@ -121,6 +123,54 @@ export default function LoginPage() {
           </div>
         </div>
 
+        {errorParam === 'suspended' && (
+          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 flex items-start gap-3 text-rose-900 dark:text-rose-200 text-xs animate-in fade-in slide-in-from-top-2 duration-300">
+            <ShieldAlert className="h-5 w-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-bold">Account Access Suspended</p>
+              <p className="text-rose-700 dark:text-rose-300 text-[11px] leading-relaxed">
+                Your account is currently suspended by an administrator. Active sessions have been locked. Please contact your administrator to restore access.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {errorParam === 'revoked' && (
+          <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-start gap-3 text-amber-900 dark:text-amber-200 text-xs animate-in fade-in slide-in-from-top-2 duration-300">
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-bold">Session Revoked</p>
+              <p className="text-amber-700 dark:text-amber-300 text-[11px] leading-relaxed">
+                Your session was revoked or reset by an administrator. Please enter your credentials to authenticate and start a fresh session.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {errorParam === 'expired' && (
+          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 flex items-start gap-3 text-rose-900 dark:text-rose-200 text-xs animate-in fade-in slide-in-from-top-2 duration-300">
+            <Clock className="h-5 w-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-bold">Guest Access Expired</p>
+              <p className="text-rose-700 dark:text-rose-300 text-[11px] leading-relaxed">
+                Your time-bound guest access period has expired. Active sessions have been locked. Please reach out to your administrator to request an access extension.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {errorParam === 'device_revoked' && (
+          <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-start gap-3 text-amber-900 dark:text-amber-200 text-xs animate-in fade-in slide-in-from-top-2 duration-300">
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-bold">Device Session Terminated</p>
+              <p className="text-amber-700 dark:text-amber-300 text-[11px] leading-relaxed">
+                This device’s active session was remotely revoked by an administrator. Please sign in again to authorize this device.
+              </p>
+            </div>
+          </div>
+        )}
+
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div className="space-y-1.5">
@@ -157,7 +207,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="pt-2 space-y-2.5">
+          <div className="pt-2">
             <Button
               type="submit"
               className="w-full h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black tracking-wide text-sm shadow-lg shadow-indigo-600/25 active:scale-[0.98] transition-all"
@@ -166,19 +216,6 @@ export default function LoginPage() {
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
               Sign in to Portal
             </Button>
-
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setEmail('guest@tgg.in');
-                setPassword('guest123');
-                toast({ title: 'Guest credentials filled', description: 'Click Sign In to explore in Read-Only Mode' });
-              }}
-              className="w-full py-2 px-3 text-xs font-semibold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 bg-slate-50 dark:bg-slate-800/40 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 rounded-xl border border-slate-200/60 dark:border-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
-            >
-              <span>👁️</span> Auto-fill Guest Account (View Only)
-            </button>
           </div>
         </form>
 
@@ -187,5 +224,19 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+          <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

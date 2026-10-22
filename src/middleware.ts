@@ -46,18 +46,25 @@ export default withAuth(
       return NextResponse.redirect(new URL('/login', req.url));
     }
 
+    if (token.status === 'suspended') {
+      return NextResponse.redirect(new URL('/login?error=suspended', req.url));
+    }
+
+    if (
+      (token.expiresAt && new Date(token.expiresAt as string).getTime() <= Date.now()) ||
+      (token as any).isExpired
+    ) {
+      return NextResponse.redirect(new URL('/login?error=expired', req.url));
+    }
+
+    if ((token as any).isRevoked) {
+      return NextResponse.redirect(new URL('/login?error=revoked', req.url));
+    }
+
     const role = (token.role as string) || 'user';
 
     // Admins have access to everything, always.
     if (role === 'admin' || role === 'superadmin') {
-      return NextResponse.next();
-    }
-
-    // Guest users have read-only access to all features (except modifying user credentials in /admin/users)
-    if (role === 'guest') {
-      if (pathname.startsWith('/admin/users')) {
-        return NextResponse.redirect(new URL('/delivery-challan', req.url));
-      }
       return NextResponse.next();
     }
 
@@ -69,6 +76,20 @@ export default withAuth(
     const defaultLandingPage =
       (token.defaultLandingPage as string) ||
       (!isNewRelicSite ? '/newrelic/tuckshop' : '/newrelic');
+
+    // Strict security boundaries for Guest users: block admin and corporate invoices
+    if (role === 'guest') {
+      if (pathname.startsWith('/admin') || pathname === '/' || pathname.startsWith('/invoices')) {
+        const fallback =
+          defaultLandingPage &&
+          !defaultLandingPage.startsWith('/invoices') &&
+          !defaultLandingPage.startsWith('/admin') &&
+          defaultLandingPage !== '/'
+            ? defaultLandingPage
+            : '/delivery-challan';
+        return NextResponse.redirect(new URL(fallback, req.url));
+      }
+    }
 
     // Protect /admin routes from non-admins
     if (pathname.startsWith('/admin')) {
@@ -106,7 +127,7 @@ export default withAuth(
         return assignedApps.includes('/payslip') || assignedApps.includes('/offer-letter');
       }
       if (key === 'settings') return assignedApps.includes('/settings');
-      return false;
+      return role === 'guest';
     };
 
     // Map URL path to required permission key

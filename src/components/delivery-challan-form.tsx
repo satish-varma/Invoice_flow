@@ -21,6 +21,7 @@ import { getProducts, Product } from '@/services/productService';
 import * as XLSX from 'xlsx';
 import { triggerHaptic } from '@/lib/haptics';
 import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/types/permissions';
 import { ChallanCalculator } from '@/components/challan-calculator';
 import { DeliveryChallanAttachmentModal } from './delivery-challan-attachment-modal';
 
@@ -106,6 +107,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
     const { user, role, isReadOnly } = useAuth();
     const isAdmin = role === 'admin' || role === 'superadmin';
     const canSeeFinancials = isAdmin && showFinancials;
+    const canViewSignedCopies = role !== 'guest' && hasPermission(user, 'signed_copies');
 
     const subtotal = useMemo(() => {
         return lineItems.reduce((acc, item) => acc + item.total, 0);
@@ -325,6 +327,14 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
 
     const handleOpenAttachmentModal = (type: 'signed_copy' | 'invoice') => {
         triggerHaptic('light');
+        if (type === 'signed_copy' && !canViewSignedCopies) {
+            toast({
+                variant: 'destructive',
+                title: 'Access Restricted',
+                description: 'Guest accounts cannot access signed delivery challan copies.',
+            });
+            return;
+        }
         if (!initialData?.id) {
             toast({
                 title: "Save Challan First",
@@ -1269,25 +1279,27 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                             <div className="flex items-center gap-2">
                                 {Boolean(initialData?.id) && (
                                     <>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleOpenAttachmentModal('signed_copy')}
-                                            className={`h-10 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
-                                                signedCopyUrls.length > 0
-                                                    ? 'bg-blue-50 text-[#3b2fc9] border-blue-300 hover:bg-blue-100'
-                                                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                                            }`}
-                                        >
-                                            <Paperclip className="w-3.5 h-3.5 text-[#3b2fc9]" />
-                                            <span>Signed DC</span>
-                                            {signedCopyUrls.length > 0 && (
-                                                <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
-                                                    {signedCopyUrls.length}
-                                                </span>
-                                            )}
-                                        </Button>
+                                        {canViewSignedCopies && (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleOpenAttachmentModal('signed_copy')}
+                                                className={`h-10 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
+                                                    signedCopyUrls.length > 0
+                                                        ? 'bg-blue-50 text-[#3b2fc9] border-blue-300 hover:bg-blue-100'
+                                                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                <Paperclip className="w-3.5 h-3.5 text-[#3b2fc9]" />
+                                                <span>Signed DC</span>
+                                                {signedCopyUrls.length > 0 && (
+                                                    <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
+                                                        {signedCopyUrls.length}
+                                                    </span>
+                                                )}
+                                            </Button>
+                                        )}
 
                                         <Button
                                             type="button"
@@ -1572,25 +1584,27 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                             </div>
 
                             {Boolean(initialData?.id) && (
-                                <div className="grid grid-cols-2 gap-2 pt-1">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => handleOpenAttachmentModal('signed_copy')}
-                                        className={`h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs ${
-                                            signedCopyUrls.length > 0
-                                                ? 'bg-blue-50 text-[#3b2fc9] border-blue-300'
-                                                : 'bg-white border-gray-300 text-gray-700'
-                                        }`}
-                                    >
-                                        <Paperclip className="w-3.5 h-3.5 text-[#3b2fc9]" />
-                                        <span>Signed DC</span>
-                                        {signedCopyUrls.length > 0 && (
-                                            <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
-                                                {signedCopyUrls.length}
-                                            </span>
-                                        )}
-                                    </Button>
+                                <div className={`grid ${canViewSignedCopies ? 'grid-cols-2' : 'grid-cols-1'} gap-2 pt-1`}>
+                                    {canViewSignedCopies && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => handleOpenAttachmentModal('signed_copy')}
+                                            className={`h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs ${
+                                                signedCopyUrls.length > 0
+                                                    ? 'bg-blue-50 text-[#3b2fc9] border-blue-300'
+                                                    : 'bg-white border-gray-300 text-gray-700'
+                                            }`}
+                                        >
+                                            <Paperclip className="w-3.5 h-3.5 text-[#3b2fc9]" />
+                                            <span>Signed DC</span>
+                                            {signedCopyUrls.length > 0 && (
+                                                <span className="px-1.5 py-0.2 rounded-full bg-[#3b2fc9] text-white text-[10px] font-black">
+                                                    {signedCopyUrls.length}
+                                                </span>
+                                            )}
+                                        </Button>
+                                    )}
 
                                     <Button
                                         type="button"

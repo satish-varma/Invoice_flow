@@ -28,10 +28,21 @@ import { generateAndSavePdf } from "@/lib/pdf";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { hasPermission } from "@/types/permissions";
 
 
 export default function DeliveryChallansPage() {
-    const { role, isReadOnly } = useAuth();
+    const router = useRouter();
+    const { user, role, isReadOnly } = useAuth();
+    const isAdmin = role === 'admin' || role === 'superadmin';
+
+    // Route guard: Only allow access if user has general_dc permission
+    useEffect(() => {
+        if (user && !isAdmin && !hasPermission(user, 'general_dc')) {
+            router.replace(user.defaultLandingPage || '/newrelic/tuckshop');
+        }
+    }, [isAdmin, user, router]);
     const [data, setData] = useState<Challan[]>([]);
     const [settings, setSettings] = useState<Settings | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -222,9 +233,8 @@ export default function DeliveryChallansPage() {
 
     return (
         <AppShell>
-            <main className="min-h-screen bg-transparent flex flex-col items-center p-3 sm:p-8">
-                <div className="w-full max-w-7xl mx-auto space-y-6">
-                    {/* Mobile Large Title Header */}
+            <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-6 min-w-0">
+                {/* Mobile Large Title Header */}
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="space-y-1">
                             <div className="flex items-center gap-2">
@@ -275,7 +285,7 @@ export default function DeliveryChallansPage() {
                         </div>
                     </div>
 
-                    <div data-card="true" className="theme-card rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] p-3 sm:p-6">
+                    <div data-card="true" className="theme-card rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] p-3 sm:p-6 w-full max-w-full min-w-0">
                         <ChallansDataTable
                             columns={columns}
                             data={data}
@@ -287,7 +297,6 @@ export default function DeliveryChallansPage() {
                         />
                     </div>
                 </div>
-            </main>
 
             {/* Preview Bottom Sheet Dialog */}
             <Dialog open={!!previewingChallan} onOpenChange={(open) => !open && closePreview()}>

@@ -129,9 +129,11 @@ export async function saveNewRelicChallan(challan: SaveInput, userEmail: string 
   try {
     let finalData: any;
 
-    // Harvest line items into catalog for future autocomplete
+    // Harvest line items into catalog in background without blocking the response
     if (challan.lineItems?.length) {
-      await saveCatalogItems(challan.lineItems);
+      saveCatalogItems(challan.lineItems).catch((err) =>
+        console.warn('Background catalog harvest notice:', err)
+      );
     }
 
     // 1. Resolve target document ID
@@ -151,18 +153,18 @@ export async function saveNewRelicChallan(challan: SaveInput, userEmail: string 
     }
 
     if (targetDocId) {
-      // Fetch existing data for history snapshot
+      // Fetch existing data for history snapshot & optimistic update
       const docRef = doc(db, NEWRELIC_CHALLANS_COLLECTION, targetDocId);
       const oldSnap = await getDoc(docRef);
       
       if (oldSnap.exists()) {
         const historyRef = collection(docRef, 'history');
-        await addDoc(historyRef, {
+        addDoc(historyRef, {
           editedAt: serverTimestamp(),
           action: 'UPDATED',
           editedBy: userEmail,
           previousData: deepCleanUndefined({ ...oldSnap.data(), id: targetDocId }),
-        });
+        }).catch((err) => console.warn('Background history save notice:', err));
       }
 
       // Update existing
@@ -185,8 +187,7 @@ export async function saveNewRelicChallan(challan: SaveInput, userEmail: string 
         updatedBy: userEmail,
       };
       await updateDoc(docRef, updatePayload);
-      const snap = await getDoc(docRef);
-      finalData = { id: targetDocId, ...snap.data() };
+      finalData = { id: targetDocId, ...(oldSnap.exists() ? oldSnap.data() : {}), ...cleanData, updatedAt: new Date().toISOString(), updatedBy: userEmail };
     } else {
       // Create new: use specified dcNumber or generate one as fallback
       const dcNumber =

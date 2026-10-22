@@ -224,8 +224,7 @@ export function ChallansDataTable<TData, TValue>({
                         return (
                             <div
                                 key={id}
-                                data-card="true"
-                                className={`rounded-2xl border p-4 space-y-3.5 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] transition-all active:scale-[0.99] theme-card ${
+                                className={`rounded-2xl border p-4 space-y-3.5 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] theme-card ${
                                     isSelected 
                                         ? 'border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50/20 dark:bg-indigo-950/20' 
                                         : 'border-slate-200/80 dark:border-slate-800'
@@ -264,7 +263,8 @@ export function ChallansDataTable<TData, TValue>({
                                         variant="outline"
                                         size="sm"
                                         className="w-full text-xs font-bold h-10 rounded-xl bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 active:scale-95 transition-all"
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                            e.stopPropagation();
                                             triggerHaptic('selection');
                                             onPreview?.(challan);
                                         }}
@@ -275,7 +275,8 @@ export function ChallansDataTable<TData, TValue>({
                                         variant="outline"
                                         size="sm"
                                         className="w-full text-xs font-bold h-10 rounded-xl bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 active:scale-95 transition-all"
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                            e.stopPropagation();
                                             triggerHaptic('medium');
                                             onDownloadSingle?.(challan);
                                         }}
@@ -286,7 +287,8 @@ export function ChallansDataTable<TData, TValue>({
                                         variant="outline"
                                         size="sm"
                                         className="w-full text-xs font-bold h-10 rounded-xl text-rose-600 border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 active:scale-95 transition-all"
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                            e.stopPropagation();
                                             triggerHaptic('warning');
                                             onDeleteSingle?.(challan);
                                         }}

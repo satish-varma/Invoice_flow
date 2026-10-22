@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, Suspense } from 'react';
+import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Loader2, Camera, LogIn, LogOut, MapPin, Clock, CheckCircle, AlertCircle, Calendar, Users, IndianRupee, Phone, Mail, CalendarDays, ChevronDown, ChevronUp, User, FileSpreadsheet, Calculator, Lock, ShieldAlert, Settings, Sparkles } from 'lucide-react';
 import { db } from '@/lib/firebase';
@@ -34,7 +35,17 @@ import {
   ShiftRule,
 } from '@/services/newrelicAttendanceService';
 import { SelfieCapture } from '@/components/newrelic/attendance/selfie-capture';
+import { LeavesAndHolidaysTab } from '@/components/newrelic/attendance/LeavesAndHolidaysTab';
+import { CompanyHoliday, EmployeeLeave } from '@/types/leave';
+import {
+  getCompanyHolidays,
+  getEmployeeLeaves,
+  calculateAdjustedAttendance,
+} from '@/services/leaveService';
 import { triggerHaptic } from '@/lib/haptics';
+import { enqueueOfflineItem } from '@/services/offlineSyncService';
+import { OfflineFormBanner } from '@/components/newrelic/OfflineFormBanner';
+import { compressImage } from '@/lib/imageCompression';
 
 type AttendanceAction = 'check-in' | 'check-out';
 
@@ -76,7 +87,9 @@ function AttendancePageContent() {
   const { user, role, isReadOnly } = useAuth();
   const searchParams = useSearchParams();
   const isOwnerOrAdmin = role === 'admin' || role === 'superadmin';
-  const isAdmin = isOwnerOrAdmin; // Strictly restricted to admin and superadmin only
+  const isManager = role === 'manager';
+  const canManageAttendance = isOwnerOrAdmin || isManager;
+  const isAdmin = canManageAttendance;
 
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
@@ -96,11 +109,12 @@ function AttendancePageContent() {
   // --- Admin state ---
   const [todayAll, setTodayAll] = useState<NewRelicAttendance[]>([]);
   const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
-  const [adminTab, setAdminTab] = useState<'today' | 'history' | 'payroll' | 'timing'>(() => {
+  const [adminTab, setAdminTab] = useState<'today' | 'history' | 'payroll' | 'timing' | 'leaves'>(() => {
     const tabParam = searchParams?.get('tab');
     if (isOwnerOrAdmin && (tabParam === 'payroll' || tabParam === 'salaries')) return 'payroll';
     if (tabParam === 'history') return 'history';
-    if (tabParam === 'timing' || tabParam === 'shifts') return 'timing';
+    if (canManageAttendance && (tabParam === 'timing' || tabParam === 'shifts')) return 'timing';
+    if (tabParam === 'leaves' || tabParam === 'holidays') return 'leaves';
     return 'today';
   });
 
@@ -140,16 +154,20 @@ function AttendancePageContent() {
       setAdminTab('payroll');
     } else if (tabParam === 'history') {
       setAdminTab('history');
-    } else if (tabParam === 'timing' || tabParam === 'shifts') {
+    } else if (canManageAttendance && (tabParam === 'timing' || tabParam === 'shifts')) {
       setAdminTab('timing');
-    } else if (!isOwnerOrAdmin && (adminTab === 'payroll' || adminTab === 'timing')) {
+    } else if (tabParam === 'leaves' || tabParam === 'holidays') {
+      setAdminTab('leaves');
+    } else if (!isOwnerOrAdmin && (adminTab === 'payroll' || (!canManageAttendance && adminTab === 'timing'))) {
       setAdminTab('today');
     }
-  }, [searchParams, isOwnerOrAdmin, adminTab]);
+  }, [searchParams, isOwnerOrAdmin, canManageAttendance, adminTab]);
   const [adminPayrollMonth, setAdminPayrollMonth] = useState<string>(() => new Date().toISOString().substring(0, 7));
   const [adminPayrollRecords, setAdminPayrollRecords] = useState<NewRelicAttendance[]>([]);
   const [adminAdvances, setAdminAdvances] = useState<NewRelicSalaryAdvance[]>([]);
   const [adminPayments, setAdminPayments] = useState<NewRelicSalaryPayment[]>([]);
+  const [adminHolidays, setAdminHolidays] = useState<CompanyHoliday[]>([]);
+  const [adminLeaves, setAdminLeaves] = useState<EmployeeLeave[]>([]);
   const [isLoadingPayroll, setIsLoadingPayroll] = useState(false);
   const [historyStart, setHistoryStart] = useState(() => {
     const d = new Date();
@@ -334,7 +352,7 @@ function AttendancePageContent() {
       .finally(() => setIsLoadingAdmin(false));
   }, [isAdmin, isOwnerOrAdmin, user?.assignedSite]);
 
-  /* ── Admin: load payroll records, advances, and payments when month changes ── */
+  /* ── Admin: load payroll records, advances, payments, holidays, and leaves ── */
   const loadAdminPayroll = async () => {
     if (!isOwnerOrAdmin) return;
     setIsLoadingPayroll(true);
@@ -342,23 +360,28 @@ function AttendancePageContent() {
       const days = getDaysInMonth(adminPayrollMonth);
       const start = `${adminPayrollMonth}-01`;
       const end = `${adminPayrollMonth}-${String(days).padStart(2, '0')}`;
-      const [recs, advs, pymts] = await Promise.all([
+      const year = parseInt(adminPayrollMonth.substring(0, 4), 10);
+      const [recs, advs, pymts, hols, lvs] = await Promise.all([
         getAttendanceByDateRange(start, end),
         getSalaryAdvancesForMonth(adminPayrollMonth),
         getSalaryPaymentsForMonth(adminPayrollMonth),
+        getCompanyHolidays(year),
+        getEmployeeLeaves(adminPayrollMonth),
       ]);
       setAdminPayrollRecords(recs);
       setAdminAdvances(advs);
       setAdminPayments(pymts);
+      setAdminHolidays(hols);
+      setAdminLeaves(lvs);
     } catch {
-      toast({ variant: 'destructive', title: 'Failed to load payroll records' });
+      toast({ variant: 'destructive', title: 'Failed to load payroll and leave records' });
     } finally {
       setIsLoadingPayroll(false);
     }
   };
 
   useEffect(() => {
-    if (isOwnerOrAdmin && adminTab === 'payroll') {
+    if (isOwnerOrAdmin && (adminTab === 'payroll' || adminTab === 'leaves')) {
       loadAdminPayroll();
     }
   }, [isOwnerOrAdmin, adminTab, adminPayrollMonth]);
@@ -540,37 +563,38 @@ function AttendancePageContent() {
   /* ── Export All Employees Company Payroll to Excel ── */
   const exportAdminPayrollExcel = () => {
     try {
-      const totalDaysInMonth = getDaysInMonth(adminPayrollMonth);
-      const workingDaysInMonth = totalDaysInMonth;
-
       const payrollRows = payrollEmployees.map((emp) => {
         const empRecords = adminPayrollRecords.filter(r => r.employeeDocId === emp.id || r.employeeId === emp.employeeId);
-        let presentDays = 0;
-        let halfDays = 0;
         let lateDays = 0;
         let overtimeMins = 0;
 
         empRecords.forEach(r => {
-          if (r.status === 'present') presentDays++;
-          else if (r.status === 'half-day') halfDays++;
-          else if (r.status === 'missed-checkout') halfDays++;
           if (r.isLate) lateDays++;
           if (r.overtimeMinutes) overtimeMins += r.overtimeMinutes;
         });
 
-        const effectivePaidDays = presentDays + 0.5 * halfDays;
-        const absentDays = Math.max(0, workingDaysInMonth - presentDays - halfDays);
+        const sId = resolveSiteId(emp.siteId);
+        const siteName = sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic';
+        const loc = (emp.location === 'bangalore' ? 'bangalore' : 'hyderabad') as 'hyderabad' | 'bangalore';
+
+        const adjusted = calculateAdjustedAttendance({
+          yearMonth: adminPayrollMonth,
+          employeeDocId: emp.id!,
+          siteId: sId,
+          location: loc,
+          monthlySalary: emp.monthlySalary || 0,
+          attendanceRecords: empRecords.map(r => ({ date: r.date, status: r.status, employeeDocId: emp.id })),
+          holidays: adminHolidays,
+          leaves: adminLeaves,
+        });
+
         const grossSalary = emp.monthlySalary || 0;
-        const payableAmount = workingDaysInMonth > 0
-          ? Math.round((effectivePaidDays / workingDaysInMonth) * grossSalary)
-          : 0;
+        const payableAmount = adjusted.earnedSalary;
 
         const empAdvances = adminAdvances.filter(a => a.employeeDocId === emp.id || a.employeeId === emp.employeeId);
         const advancesTotal = empAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
         const netPayable = Math.max(0, payableAmount - advancesTotal);
         const existingPayment = adminPayments.find(p => p.employeeDocId === emp.id || p.employeeId === emp.employeeId);
-        const sId = resolveSiteId(emp.siteId);
-        const siteName = sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic';
 
         return {
           'Employee ID': emp.employeeId,
@@ -579,13 +603,16 @@ function AttendancePageContent() {
           'Location': emp.location,
           'Designation': emp.designation,
           'Monthly Gross (INR)': grossSalary,
-          'Total Month Days': totalDaysInMonth,
-          'Full Days': presentDays,
-          'Half Days': halfDays,
-          'Absent Days': absentDays,
+          'Total Month Days': adjusted.totalDaysInMonth,
+          'Full Days': adjusted.presentDays,
+          'Half Days': adjusted.halfDays,
+          'Paid Leaves': adjusted.paidLeaveDays,
+          'Unpaid Leaves': adjusted.unpaidLeaveDays,
+          'Paid Holidays': adjusted.paidHolidaysCount,
+          'Absent Days': adjusted.absentDays,
           'Late Count': lateDays,
           'Total OT': formatDuration(overtimeMins),
-          'Paid Days Count': effectivePaidDays,
+          'Effective Paid Days': adjusted.effectivePaidDays,
           'Attendance Earned (INR)': payableAmount,
           'Advances Deducted (INR)': advancesTotal,
           'Net Payable (INR)': netPayable,
@@ -667,9 +694,99 @@ function AttendancePageContent() {
     if (!selectedEmployee) return;
     setShowCamera(false);
     setIsSubmitting(true);
+
+    const punchTime = new Date().toISOString();
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+    // Automatically compress selfie to ~80KB to save device storage and sync rapidly
+    const optimizedSelfieUri = await compressImage(base64Uri, 800, 800, 0.75);
+
+    // Helper to queue offline punch when network is disconnected or fails
+    const queueOfflinePunch = async () => {
+      await enqueueOfflineItem(
+        'attendance-punch',
+        cameraAction === 'check-in' ? `Check-In: ${selectedEmployee.name}` : `Check-Out: ${selectedEmployee.name}`,
+        `${selectedEmployee.employeeId} at ${formatTime(punchTime)} (Offline Saved)`,
+        {
+          type: cameraAction,
+          employee: {
+            id: selectedEmployee.id!,
+            employeeId: selectedEmployee.employeeId,
+            name: selectedEmployee.name,
+            location: selectedEmployee.location,
+            siteId: selectedEmployee.siteId,
+            shiftTiming: selectedEmployee.shiftTiming,
+          },
+          attendanceId: todayRecord?.id,
+          checkInTime: todayRecord?.checkIn?.time,
+          selfieBase64: optimizedSelfieUri,
+          coordinates,
+          punchTime,
+          date: getTodayDate(),
+          checkoutOptions: cameraAction === 'check-out' ? {
+            minWorkHours: effectiveRule.minWorkHours,
+            allowEarlyCheckout: isAdmin && (authorizedEarlyCheckout || showEarlyCheckoutModal || !!earlyCheckoutReason),
+            adminOverrideReason: earlyCheckoutReason || (isAdmin ? 'Admin Authorized' : undefined),
+            expectedMinutes: effectiveRule.expectedMinutes,
+          } : undefined,
+          globalShiftRules,
+        }
+      );
+
+      triggerHaptic('success');
+      toast({
+        title: '📱 Saved to Offline Queue!',
+        description: `Your ${cameraAction === 'check-in' ? 'check-in' : 'check-out'} was recorded at ${formatTime(punchTime)} with selfie. It will automatically sync once internet returns.`,
+      });
+
+      // Optimistically update local UI so staff doesn't panic or double punch
+      if (cameraAction === 'check-in') {
+        setTodayRecord({
+          employeeId: selectedEmployee.employeeId,
+          employeeDocId: selectedEmployee.id!,
+          employeeName: selectedEmployee.name,
+          location: selectedEmployee.location as any,
+          siteId: (selectedEmployee.siteId as any) || 'newrelic',
+          date: getTodayDate(),
+          checkIn: {
+            time: punchTime,
+            selfieUrl: optimizedSelfieUri,
+            ...(coordinates ? { coordinates } : {}),
+          },
+          status: 'present',
+          isOfflineSynced: false,
+        });
+        setTimeout(() => {
+          router.push('/newrelic');
+        }, 1500);
+      } else if (todayRecord) {
+        setTodayRecord({
+          ...todayRecord,
+          checkOut: {
+            time: punchTime,
+            selfieUrl: optimizedSelfieUri,
+            ...(coordinates ? { coordinates } : {}),
+          },
+          isOfflineSynced: false,
+        });
+      }
+    };
+
+    if (isOffline) {
+      try {
+        await queueOfflinePunch();
+      } catch (err: any) {
+        triggerHaptic('warning');
+        toast({ variant: 'destructive', title: 'Failed to queue offline punch', description: err.message });
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     try {
       const folder = `${selectedEmployee.employeeId}/${getTodayDate()}`;
-      const selfieUrl = await uploadSelfie(base64Uri, folder);
+      const selfieUrl = await uploadSelfie(optimizedSelfieUri, folder);
 
       if (cameraAction === 'check-in') {
         const res = await checkInEmployee(
@@ -743,6 +860,23 @@ function AttendancePageContent() {
         setTodayAll(all);
       }
     } catch (err: any) {
+      const isNetworkIssue =
+        (typeof navigator !== 'undefined' && !navigator.onLine) ||
+        err?.message?.includes('timeout') ||
+        err?.message?.includes('network') ||
+        err?.message?.includes('Failed to fetch') ||
+        err?.message?.includes('offline');
+
+      if (isNetworkIssue) {
+        console.warn('Network issue encountered during attendance punch. Queuing offline:', err);
+        try {
+          await queueOfflinePunch();
+          return;
+        } catch (queueErr) {
+          console.error('Failed to queue offline punch after network error:', queueErr);
+        }
+      }
+
       triggerHaptic('warning');
       toast({ variant: 'destructive', title: err.message || 'Failed to record attendance' });
     } finally {
@@ -801,7 +935,9 @@ function AttendancePageContent() {
 
   return (
     <div className="min-h-screen bg-transparent">
-      <div className="max-w-4xl mx-auto px-3 sm:px-8 py-4 sm:py-8 space-y-6">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-6">
+
+        <OfflineFormBanner moduleName="Attendance Punch" />
 
         {/* Brand Hero Banner */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#2c1d24] via-[#43232f] to-[#1e1b4b] p-5 sm:p-7 text-white shadow-xl border border-white/10">
@@ -861,6 +997,17 @@ function AttendancePageContent() {
                   Salaries & Advances
                 </button>
               )}
+              <Link
+                href="/newrelic/leaves"
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  adminTab === 'leaves'
+                    ? 'bg-gradient-to-r from-teal-500 to-emerald-600 text-white shadow-md'
+                    : 'text-white/80 hover:bg-white/20'
+                }`}
+              >
+                <CalendarDays className="h-3.5 w-3.5 text-teal-200" />
+                Leaves &amp; Holidays
+              </Link>
             </div>
           </div>
         </div>
@@ -1555,8 +1702,8 @@ function AttendancePageContent() {
           )}
         </div>
 
-        {/* ─── Admin Panel ─── */}
-        {isAdmin && (
+        {/* ─── Admin / Staff Management Panel ─── */}
+        {(isAdmin || adminTab === 'leaves') && (
           <div id="admin-management-panel" className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden scroll-mt-20">
             {/* Admin tactile tabs */}
             <div className="p-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2 overflow-x-auto no-scrollbar">
@@ -1605,7 +1752,7 @@ function AttendancePageContent() {
                   Salaries & Advances
                 </button>
               )}
-              {isOwnerOrAdmin && (
+              {canManageAttendance && (
                 <button
                   type="button"
                   onClick={() => {
@@ -1622,6 +1769,21 @@ function AttendancePageContent() {
                   Shift Timings
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setAdminTab('leaves');
+                }}
+                className={`h-10 px-4 rounded-2xl text-xs sm:text-sm font-black whitespace-nowrap transition-all active:scale-95 flex items-center gap-1.5 ${
+                  adminTab === 'leaves'
+                    ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md shadow-teal-950/20'
+                    : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 shadow-2xs'
+                }`}
+              >
+                <CalendarDays className="h-4 w-4" />
+                Leaves & Holidays
+              </button>
             </div>
 
             {adminTab === 'today' && (
@@ -1799,35 +1961,39 @@ function AttendancePageContent() {
                       ) : (
                         payrollEmployees.map((emp) => {
                           const empRecords = adminPayrollRecords.filter(r => r.employeeDocId === emp.id || r.employeeId === emp.employeeId);
-                          const totalDaysInMonth = getDaysInMonth(adminPayrollMonth);
-                          let presentDays = 0;
-                          let halfDays = 0;
                           let lateDays = 0;
 
                           empRecords.forEach(r => {
-                            if (r.status === 'present') presentDays++;
-                            else if (r.status === 'half-day' || r.status === 'missed-checkout') halfDays++;
                             if (r.isLate) lateDays++;
                           });
 
-                          const effectivePaidDays = presentDays + 0.5 * halfDays;
+                          const sId = resolveSiteId(emp.siteId);
+                          const loc = (emp.location === 'bangalore' ? 'bangalore' : 'hyderabad') as 'hyderabad' | 'bangalore';
                           const gross = emp.monthlySalary || 0;
-                          const attendanceEarned = totalDaysInMonth > 0 
-                            ? Math.round((effectivePaidDays / totalDaysInMonth) * gross)
-                            : 0;
 
+                          const adjusted = calculateAdjustedAttendance({
+                            yearMonth: adminPayrollMonth,
+                            employeeDocId: emp.id!,
+                            siteId: sId,
+                            location: loc,
+                            monthlySalary: gross,
+                            attendanceRecords: empRecords.map(r => ({ date: r.date, status: r.status, employeeDocId: emp.id })),
+                            holidays: adminHolidays,
+                            leaves: adminLeaves,
+                          });
+
+                          const attendanceEarned = adjusted.earnedSalary;
                           const empAdvances = adminAdvances.filter(a => a.employeeDocId === emp.id || a.employeeId === emp.employeeId);
                           const advancesTotal = empAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
                           const netPayable = Math.max(0, attendanceEarned - advancesTotal);
                           const existingPayment = adminPayments.find(p => p.employeeDocId === emp.id || p.employeeId === emp.employeeId);
-                          const sId = resolveSiteId(emp.siteId);
 
                           const summaryObj = {
-                            totalDaysInMonth,
-                            presentDays,
-                            halfDays,
-                            absentDays: Math.max(0, totalDaysInMonth - presentDays - halfDays),
-                            effectivePaidDays,
+                            totalDaysInMonth: adjusted.totalDaysInMonth,
+                            presentDays: adjusted.presentDays,
+                            halfDays: adjusted.halfDays,
+                            absentDays: adjusted.absentDays,
+                            effectivePaidDays: adjusted.effectivePaidDays,
                             attendanceEarned,
                             advancesTotal,
                             netPayable,
@@ -1891,9 +2057,15 @@ function AttendancePageContent() {
                                 </span>
                               </div>
                               <div className="text-right">
-                                <span className="text-[11px] font-medium text-emerald-700">{presentDays} Full</span> · 
-                                <span className="text-[11px] font-medium text-amber-700 ml-1">{halfDays} Half</span>
-                                <span className="text-[10px] text-gray-400 block">{effectivePaidDays}/{totalDaysInMonth} paid days</span>
+                                <span className="text-[11px] font-medium text-emerald-700">{adjusted.presentDays} Full</span> · 
+                                <span className="text-[11px] font-medium text-amber-700 ml-1">{adjusted.halfDays} Half</span>
+                                {adjusted.paidLeaveDays > 0 && (
+                                  <span className="text-[11px] font-medium text-teal-700 ml-1">· {adjusted.paidLeaveDays} L</span>
+                                )}
+                                {adjusted.paidHolidaysCount > 0 && (
+                                  <span className="text-[11px] font-medium text-purple-700 ml-1">· {adjusted.paidHolidaysCount} H</span>
+                                )}
+                                <span className="text-[10px] text-gray-400 block">{adjusted.effectivePaidDays}/{adjusted.totalDaysInMonth} paid days</span>
                               </div>
                             </div>
 
@@ -1960,35 +2132,39 @@ function AttendancePageContent() {
                             ) : (
                               payrollEmployees.map((emp) => {
                                 const empRecords = adminPayrollRecords.filter(r => r.employeeDocId === emp.id || r.employeeId === emp.employeeId);
-                                const totalDaysInMonth = getDaysInMonth(adminPayrollMonth);
-                                let presentDays = 0;
-                                let halfDays = 0;
                                 let lateDays = 0;
 
                                 empRecords.forEach(r => {
-                                  if (r.status === 'present') presentDays++;
-                                  else if (r.status === 'half-day' || r.status === 'missed-checkout') halfDays++;
                                   if (r.isLate) lateDays++;
                                 });
 
-                                const effectivePaidDays = presentDays + 0.5 * halfDays;
+                                const sId = resolveSiteId(emp.siteId);
+                                const loc = (emp.location === 'bangalore' ? 'bangalore' : 'hyderabad') as 'hyderabad' | 'bangalore';
                                 const gross = emp.monthlySalary || 0;
-                                const attendanceEarned = totalDaysInMonth > 0 
-                                  ? Math.round((effectivePaidDays / totalDaysInMonth) * gross)
-                                  : 0;
 
+                                const adjusted = calculateAdjustedAttendance({
+                                  yearMonth: adminPayrollMonth,
+                                  employeeDocId: emp.id!,
+                                  siteId: sId,
+                                  location: loc,
+                                  monthlySalary: gross,
+                                  attendanceRecords: empRecords.map(r => ({ date: r.date, status: r.status, employeeDocId: emp.id })),
+                                  holidays: adminHolidays,
+                                  leaves: adminLeaves,
+                                });
+
+                                const attendanceEarned = adjusted.earnedSalary;
                                 const empAdvances = adminAdvances.filter(a => a.employeeDocId === emp.id || a.employeeId === emp.employeeId);
                                 const advancesTotal = empAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
                                 const netPayable = Math.max(0, attendanceEarned - advancesTotal);
                                 const existingPayment = adminPayments.find(p => p.employeeDocId === emp.id || p.employeeId === emp.employeeId);
-                                const sId = resolveSiteId(emp.siteId);
 
                                 const summaryObj = {
-                                  totalDaysInMonth,
-                                  presentDays,
-                                  halfDays,
-                                  absentDays: Math.max(0, totalDaysInMonth - presentDays - halfDays),
-                                  effectivePaidDays,
+                                  totalDaysInMonth: adjusted.totalDaysInMonth,
+                                  presentDays: adjusted.presentDays,
+                                  halfDays: adjusted.halfDays,
+                                  absentDays: adjusted.absentDays,
+                                  effectivePaidDays: adjusted.effectivePaidDays,
                                   attendanceEarned,
                                   advancesTotal,
                                   netPayable,
@@ -2020,10 +2196,16 @@ function AttendancePageContent() {
 
                                     <td className="p-3">
                                       <div className="text-[11px] text-gray-600">
-                                        <span className="font-medium text-emerald-700">{presentDays} Full</span> · 
-                                        <span className="font-medium text-amber-700 ml-1">{halfDays} Half</span>
+                                        <span className="font-medium text-emerald-700">{adjusted.presentDays} Full</span> · 
+                                        <span className="font-medium text-amber-700 ml-1">{adjusted.halfDays} Half</span>
+                                        {adjusted.paidLeaveDays > 0 && (
+                                          <span className="font-medium text-teal-700 ml-1">· {adjusted.paidLeaveDays} Leave{adjusted.paidLeaveDays > 1 ? 's' : ''}</span>
+                                        )}
+                                        {adjusted.paidHolidaysCount > 0 && (
+                                          <span className="font-medium text-purple-700 ml-1">· {adjusted.paidHolidaysCount} Hol</span>
+                                        )}
                                         <span className="block text-[10px] text-gray-400">
-                                          = {effectivePaidDays} / {totalDaysInMonth} paid days
+                                          = {adjusted.effectivePaidDays} / {adjusted.totalDaysInMonth} paid days
                                           {lateDays > 0 && ` (${lateDays} late)`}
                                         </span>
                                       </div>
@@ -2444,6 +2626,16 @@ function AttendancePageContent() {
                   </div>
                 </div>
               </div>
+            )}
+
+            {adminTab === 'leaves' && (
+              <LeavesAndHolidaysTab
+                employees={employees}
+                userEmail={user?.email || undefined}
+                isOwnerOrAdmin={canManageAttendance}
+                activeSiteFilter={adminSiteFilter}
+                onRefreshAttendance={loadAdminPayroll}
+              />
             )}
           </div>
         )}

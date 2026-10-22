@@ -6,7 +6,7 @@ export const lineItemSchema = z.object({
   id: z.any(),  // useFieldArray injects its own string id — accept any type
   brandName: z.string().optional().default(''),
   itemName: z.string().optional().default(''),
-  quantity: z.coerce.number().min(1, 'Quantity must be ≥ 1'),
+  quantity: z.coerce.number().optional().default(1),
   expiry: z.string().optional().default(''),
   mrp: z.coerce.number().optional(),
   procurementCost: z.coerce.number().optional(),
@@ -15,7 +15,7 @@ export const lineItemSchema = z.object({
 export const challanSchema = z.object({
   dcNumber: z.string().min(1, 'DC Number is required'),
   location: z.enum(['hyderabad', 'bangalore']),
-  dcDate: z.date(),
+  dcDate: z.coerce.date(),
   lineItems: z.array(lineItemSchema),
   note: z.string().optional(),
   transportCost: z.coerce.number().optional(),
@@ -83,9 +83,14 @@ export interface PricingHistoryEntry {
   mrp: number;
   discountPercent: number;
   purchaseCost: number;
+  marginAmount?: number; // MRP - purchaseCost
+  marginPercent?: number; // ((MRP - purchaseCost) / MRP) * 100
   effectiveDate: string; // YYYY-MM-DD
   updatedAt?: any;
   updatedBy?: string;
+  reason?: string; // e.g. "Vendor Annual Price Hike", "Brand Promotion", "GST Revision"
+  deltaCost?: number; // purchaseCost - prevPurchaseCost
+  deltaMrp?: number; // mrp - prevMrp
 }
 
 export interface PricingItem {

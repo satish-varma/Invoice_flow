@@ -25,30 +25,52 @@ export function calcPurchaseCost(mrp: number, discountPercent: number): number {
   return parseFloat((mrp * (1 - discountPercent / 100)).toFixed(2));
 }
 
+import { setCachedData, getCachedData } from '@/services/offlineSyncService';
+
 /** Fetch all pricing rows for a specific location */
 export async function getPricingItems(location: NewRelicLocation): Promise<PricingItem[]> {
+  const cacheKey = `pricing_items_${location}`;
+  const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+  if (isOffline) {
+    const cached = await getCachedData<PricingItem[]>(cacheKey);
+    if (cached && cached.length > 0) return cached;
+  }
+
   try {
     const q = query(collection(db, PRICING_COLLECTION), where('location', '==', location));
     const snap = await getDocs(q);
     const items: PricingItem[] = [];
     snap.forEach((d) => items.push({ id: d.id, ...d.data() } as PricingItem));
+    setCachedData(cacheKey, items).catch(() => {});
     return items;
   } catch (error) {
-    console.error('Error fetching pricing items:', error);
-    return [];
+    console.warn(`Notice: Error fetching pricing items online for ${location}, checking offline cache:`, error);
+    const cached = await getCachedData<PricingItem[]>(cacheKey);
+    return cached || [];
   }
 }
 
 /** Fetch all pricing rows across all locations */
 export async function getAllPricingItems(): Promise<PricingItem[]> {
+  const cacheKey = 'pricing_items_all';
+  const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+  if (isOffline) {
+    const cached = await getCachedData<PricingItem[]>(cacheKey);
+    if (cached && cached.length > 0) return cached;
+  }
+
   try {
     const snap = await getDocs(collection(db, PRICING_COLLECTION));
     const items: PricingItem[] = [];
     snap.forEach((d) => items.push({ id: d.id, ...d.data() } as PricingItem));
+    setCachedData(cacheKey, items).catch(() => {});
     return items;
   } catch (error) {
-    console.error('Error fetching all pricing items:', error);
-    return [];
+    console.warn('Notice: Error fetching all pricing items online, checking offline cache:', error);
+    const cached = await getCachedData<PricingItem[]>(cacheKey);
+    return cached || [];
   }
 }
 
@@ -57,7 +79,8 @@ import { getDoc } from 'firebase/firestore';
 /** Upsert a pricing row with automatic historical log tracking */
 export async function savePricingItem(
   item: Omit<PricingItem, 'id' | 'updatedAt'>,
-  userEmail?: string | null
+  userEmail?: string | null,
+  reason?: string
 ): Promise<void> {
   await assertWritePermission('Saving Pricing Item');
   const docId = getPricingDocId(item.brandName, item.itemName, item.location);
@@ -77,13 +100,23 @@ export async function savePricingItem(
       existingData.mrp !== item.mrp ||
       existingData.discountPercent !== item.discountPercent
     ) {
+      const marginAmount = parseFloat((existingData.mrp - existingData.purchaseCost).toFixed(2));
+      const marginPercent = existingData.mrp > 0 ? parseFloat((((existingData.mrp - existingData.purchaseCost) / existingData.mrp) * 100).toFixed(1)) : 0;
+      const deltaCost = parseFloat((item.purchaseCost - existingData.purchaseCost).toFixed(2));
+      const deltaMrp = parseFloat((item.mrp - existingData.mrp).toFixed(2));
+
       const historyEntry = {
         mrp: existingData.mrp,
         discountPercent: existingData.discountPercent,
         purchaseCost: existingData.purchaseCost,
+        marginAmount,
+        marginPercent,
+        deltaCost,
+        deltaMrp,
         effectiveDate: existingData.effectiveDate || today,
         updatedAt: new Date().toISOString(),
         updatedBy: userEmail || undefined,
+        reason: reason || undefined,
       };
       history = [...prevHistory, historyEntry];
     } else {
@@ -151,11 +184,114 @@ export function resolveEffectivePricing(
 export function buildPricingMap(items: PricingItem[], targetDate?: string): Map<string, number> {
   const map = new Map<string, number>();
   for (const item of items) {
-    const key = `${item.brandName.trim().toLowerCase()}__${item.itemName.trim().toLowerCase()}`;
+    const rawBrand = (item.brandName || '').trim().toLowerCase();
+    const rawName = (item.itemName || '').trim().toLowerCase();
     const resolved = resolveEffectivePricing(item, targetDate);
-    map.set(key, resolved.purchaseCost);
+    const cost = resolved.purchaseCost;
+
+    if (cost !== undefined && !isNaN(cost)) {
+      // 1. Exact "brand__item"
+      map.set(`${rawBrand}__${rawName}`, cost);
+
+      // 2. Singular / plural brand variants (e.g. Haldiram <-> Haldirams)
+      if (rawBrand.endsWith('s')) {
+        map.set(`${rawBrand.slice(0, -1)}__${rawName}`, cost);
+      } else {
+        map.set(`${rawBrand}s__${rawName}`, cost);
+      }
+
+      // 3. Normalized alphanumeric brand (e.g. Lay's <-> lays)
+      const cleanBrand = rawBrand.replace(/[^a-z0-9]/g, '');
+      const cleanName = rawName.replace(/[^a-z0-9]/g, '');
+      map.set(`${cleanBrand}__${cleanName}`, cost);
+
+      // 4. Item name alone as fallback
+      if (!map.has(rawName)) {
+        map.set(rawName, cost);
+      }
+      if (!map.has(cleanName)) {
+        map.set(cleanName, cost);
+      }
+    }
   }
   return map;
+}
+
+/** 
+ * Comprehensive pricing & MRP lookup helper for line items.
+ * Tries exact brand+item match, then fuzzy brand variations, then direct item name fallback.
+ */
+export function findPricingForItem(
+  pricingItems: PricingItem[],
+  pricingMap: Map<string, number>,
+  itemName: string,
+  brandName?: string
+): { purchaseCost?: number; mrp?: number; brandName?: string } {
+  if (!itemName || !itemName.trim()) return {};
+
+  const cleanName = itemName.trim().toLowerCase();
+  const cleanBrand = (brandName || '').trim().toLowerCase();
+  const alphaBrand = cleanBrand.replace(/[^a-z0-9]/g, '');
+  const alphaName = cleanName.replace(/[^a-z0-9]/g, '');
+
+  // 1. Check pricingMap for exact "brand__item"
+  if (cleanBrand) {
+    const cost = pricingMap.get(`${cleanBrand}__${cleanName}`) ??
+                 pricingMap.get(`${alphaBrand}__${alphaName}`);
+    if (cost !== undefined) {
+      const match = pricingItems.find(p => {
+        const pBrand = p.brandName.trim().toLowerCase();
+        const pName = p.itemName.trim().toLowerCase();
+        return (pBrand === cleanBrand || pBrand.replace(/[^a-z0-9]/g, '') === alphaBrand) &&
+               (pName === cleanName || pName.replace(/[^a-z0-9]/g, '') === alphaName);
+      });
+      return {
+        purchaseCost: cost,
+        mrp: match?.mrp,
+        brandName: match?.brandName || brandName,
+      };
+    }
+  }
+
+  // 2. Direct search in pricingItems (exact item name + brand match)
+  if (cleanBrand) {
+    const match = pricingItems.find(p => {
+      const pBrand = p.brandName.trim().toLowerCase();
+      const pName = p.itemName.trim().toLowerCase();
+      const brandMatch = pBrand === cleanBrand || 
+                         pBrand.replace(/s$/, '') === cleanBrand.replace(/s$/, '') ||
+                         pBrand.replace(/[^a-z0-9]/g, '') === alphaBrand;
+      return brandMatch && (pName === cleanName || pName.replace(/[^a-z0-9]/g, '') === alphaName);
+    });
+    if (match) {
+      return {
+        purchaseCost: match.purchaseCost,
+        mrp: match.mrp,
+        brandName: match.brandName,
+      };
+    }
+  }
+
+  // 3. Fallback: match by item name across all pricing items
+  const nameMatch = pricingItems.find(p => {
+    const pName = p.itemName.trim().toLowerCase();
+    return pName === cleanName || pName.replace(/[^a-z0-9]/g, '') === alphaName;
+  });
+  if (nameMatch) {
+    return {
+      purchaseCost: nameMatch.purchaseCost,
+      mrp: nameMatch.mrp,
+      brandName: nameMatch.brandName,
+    };
+  }
+
+  // 4. Map fallback for item name alone
+  const fallbackCost = pricingMap.get(cleanName) ?? pricingMap.get(alphaName);
+  if (fallbackCost !== undefined) {
+    return { purchaseCost: fallbackCost };
+  }
+
+  return {};
 }
 
 /**
@@ -173,6 +309,7 @@ export async function bulkUpdateBrandPricing({
   applyTo,
   effectiveDate,
   userEmail,
+  reason,
 }: {
   brandName: string;
   location: NewRelicLocation;
@@ -181,6 +318,7 @@ export async function bulkUpdateBrandPricing({
   applyTo?: 'mrp' | 'purchaseCost'; // default 'purchaseCost'
   effectiveDate?: string;
   userEmail?: string | null;
+  reason?: string;
 }): Promise<{ updatedCount: number }> {
   await assertWritePermission('Bulk Updating Brand Pricing');
   const targetBrand = brandName.trim().toLowerCase();
@@ -189,6 +327,7 @@ export async function bulkUpdateBrandPricing({
 
   let updatedCount = 0;
   const dateStr = effectiveDate || new Date().toISOString().substring(0, 10);
+  const revisionReason = reason || `Batch update (${mode.replace('_', ' ')})`;
 
   for (const item of matching) {
     let newMrp = item.mrp;
@@ -231,7 +370,8 @@ export async function bulkUpdateBrandPricing({
         purchaseCost: newCost,
         effectiveDate: dateStr,
       },
-      userEmail
+      userEmail,
+      revisionReason
     );
     updatedCount++;
   }

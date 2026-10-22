@@ -156,7 +156,22 @@ const DEFAULT_CATALOG: CatalogItem[] = [
   { brandName: 'Parle', itemName: 'Monaco', defaultQuantity: 1 }
 ];
 
+import { setCachedData, getCachedData } from '@/services/offlineSyncService';
+
 export async function getCatalogItems(siteId?: string): Promise<CatalogItem[]> {
+  const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+  if (isOffline) {
+    const cached = await getCachedData<CatalogItem[]>('newrelic_catalog_items');
+    const catalogSource = cached && cached.length > 0 ? cached : DEFAULT_CATALOG;
+    if (!siteId) return catalogSource;
+    return catalogSource.filter((item) => {
+      const sites = item.applicableSites && item.applicableSites.length > 0 ? item.applicableSites : ['newrelic'];
+      if (sites.includes('all')) return true;
+      return sites.includes(siteId as any);
+    });
+  }
+
   try {
     const q = query(collection(db, CATALOG_COLLECTION), limit(300));
     const snap = await getDocs(q);
@@ -164,6 +179,7 @@ export async function getCatalogItems(siteId?: string): Promise<CatalogItem[]> {
     // If Firestore collection has fewer items than dataset, overwrite & seed full dataset
     if (snap.size < DEFAULT_CATALOG.length) {
       await seedDefaultCatalog();
+      setCachedData('newrelic_catalog_items', DEFAULT_CATALOG).catch(() => {});
       return siteId && siteId !== 'newrelic' ? [] : DEFAULT_CATALOG;
     }
 
@@ -173,6 +189,7 @@ export async function getCatalogItems(siteId?: string): Promise<CatalogItem[]> {
     });
 
     const allItems = items.length > 0 ? items : DEFAULT_CATALOG;
+    setCachedData('newrelic_catalog_items', allItems).catch(() => {});
 
     if (!siteId) {
       return allItems;
@@ -185,8 +202,15 @@ export async function getCatalogItems(siteId?: string): Promise<CatalogItem[]> {
       return sites.includes(siteId as any);
     });
   } catch (error) {
-    console.error('Error fetching catalog items:', error);
-    return siteId && siteId !== 'newrelic' ? [] : DEFAULT_CATALOG;
+    console.warn('Notice: Error fetching catalog items online, checking offline cache:', error);
+    const cached = await getCachedData<CatalogItem[]>('newrelic_catalog_items');
+    const catalogSource = cached && cached.length > 0 ? cached : DEFAULT_CATALOG;
+    if (!siteId) return catalogSource;
+    return catalogSource.filter((item) => {
+      const sites = item.applicableSites && item.applicableSites.length > 0 ? item.applicableSites : ['newrelic'];
+      if (sites.includes('all')) return true;
+      return sites.includes(siteId as any);
+    });
   }
 }
 
@@ -195,6 +219,8 @@ export async function saveCatalogItems(
 ): Promise<void> {
   await assertWritePermission('Saving Catalog Items');
   try {
+    const batch = writeBatch(db);
+    let count = 0;
     for (const item of lineItems) {
       if (!item.brandName?.trim() || !item.itemName?.trim()) continue;
       const docId = `${item.brandName.trim().toLowerCase()}_${item.itemName
@@ -202,7 +228,7 @@ export async function saveCatalogItems(
         .toLowerCase()}`.replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
 
       const docRef = doc(db, CATALOG_COLLECTION, docId);
-      await setDoc(
+      batch.set(
         docRef,
         {
           brandName: item.brandName.trim(),
@@ -211,6 +237,10 @@ export async function saveCatalogItems(
         },
         { merge: true }
       );
+      count++;
+    }
+    if (count > 0) {
+      await batch.commit();
     }
   } catch (error) {
     console.error('Error saving catalog items:', error);

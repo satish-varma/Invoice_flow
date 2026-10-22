@@ -1,7 +1,14 @@
 
 'use client'
 
-import { Invoice, getInvoices, deleteInvoice, deleteInvoices } from "@/services/invoiceService";
+import {
+  Invoice,
+  getInvoices,
+  deleteInvoice,
+  deleteInvoices,
+  updateInvoiceStatus,
+  bulkUpdateInvoiceStatus,
+} from "@/services/invoiceService";
 import { InvoicesDataTable } from "./data-table";
 import { getColumns } from "./columns";
 import Link from 'next/link';
@@ -30,10 +37,14 @@ import { useToast } from "@/hooks/use-toast";
 import { generateAndSavePdf } from "@/lib/pdf";
 import { AppShell } from "@/components/app-shell";
 import { useAuth } from "@/contexts/AuthContext";
-
+import { hasPermission } from "@/types/permissions";
+import { ShieldAlert, AlertTriangle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { logAuditEvent } from "@/services/auditService";
 
 export default function InvoicesPage() {
-  const { role, isReadOnly } = useAuth();
+  const { user, role, isReadOnly, canDelete, loading } = useAuth();
+  const router = useRouter();
   const [data, setData] = useState<Invoice[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,9 +59,24 @@ export default function InvoicesPage() {
   const [isBulkDownloading, setIsBulkDownloading] = useState(false);
 
   const [invoicesToDelete, setInvoicesToDelete] = useState<string[] | null>(null);
+  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
   const { toast } = useToast();
 
+  const isAccessAllowed = !loading && user && role !== 'guest' && hasPermission(user, 'invoices');
+
+  useEffect(() => {
+    if (!loading && (!user || role === 'guest' || !hasPermission(user, 'invoices'))) {
+      toast({
+        variant: 'destructive',
+        title: 'Access Restricted',
+        description: 'Guest accounts and unauthorized users cannot view Tax Invoices.',
+      });
+      router.replace('/delivery-challan');
+    }
+  }, [loading, user, role, router, toast]);
+
   const loadData = async () => {
+    if (!isAccessAllowed) return;
     setIsLoading(true);
     try {
       const [invoices, settingsData] = await Promise.all([
@@ -69,11 +95,13 @@ export default function InvoicesPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (isAccessAllowed) {
+      loadData();
+    }
+  }, [isAccessAllowed]);
 
   useEffect(() => {
     if (invoiceToGenerate && settings && pdfAction) {
@@ -144,8 +172,12 @@ export default function InvoicesPage() {
   }
 
   const handleDeleteRequest = (invoice: Invoice) => {
-    if (isReadOnly || role === 'guest') {
-      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete invoices.' });
+    if (isReadOnly || role === 'guest' || !canDelete) {
+      toast({
+        variant: 'destructive',
+        title: 'Delete Clearance Required',
+        description: role === 'guest' ? 'Guest account cannot delete invoices.' : 'You do not have clearance to delete invoice records.',
+      });
       return;
     }
     if (invoice.id) {
@@ -154,8 +186,12 @@ export default function InvoicesPage() {
   }
 
   const handleBulkDeleteRequest = (ids: string[]) => {
-    if (isReadOnly || role === 'guest') {
-      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete invoices.' });
+    if (isReadOnly || role === 'guest' || !canDelete) {
+      toast({
+        variant: 'destructive',
+        title: 'Delete Clearance Required',
+        description: role === 'guest' ? 'Guest account cannot delete invoices.' : 'You do not have clearance to delete invoice records.',
+      });
       return;
     }
     setInvoicesToDelete(ids);
@@ -189,16 +225,48 @@ export default function InvoicesPage() {
   };
 
   const confirmDelete = async () => {
-    if (isReadOnly || role === 'guest') {
-      toast({ variant: 'destructive', title: 'Read-Only Mode', description: 'Guest account cannot delete invoices.' });
+    if (isReadOnly || role === 'guest' || !canDelete) {
+      toast({
+        variant: 'destructive',
+        title: 'Delete Clearance Required',
+        description: 'You do not have clearance to permanently delete invoices.',
+      });
       return;
     }
     if (!invoicesToDelete) return;
     setIsDeleting(true);
     try {
       if (invoicesToDelete.length === 1) {
-        await deleteInvoice(invoicesToDelete[0]);
+        const targetId = invoicesToDelete[0];
+        const targetInv = data.find((i) => i.id === targetId);
+        logAuditEvent({
+          actorEmail: user?.email || 'user',
+          actorRole: role || 'user',
+          action: 'invoice_deleted',
+          actionLabel: 'Deleted Invoice',
+          targetType: 'invoice',
+          targetId,
+          targetLabel: targetInv?.invoiceNumber || targetId,
+          details: {
+            customerName: targetInv?.customerName,
+            total: targetInv?.total,
+          },
+        });
+        await deleteInvoice(targetId);
       } else {
+        logAuditEvent({
+          actorEmail: user?.email || 'user',
+          actorRole: role || 'user',
+          action: 'bulk_invoices_deleted',
+          actionLabel: 'Bulk Deleted Invoices',
+          targetType: 'invoice',
+          targetId: invoicesToDelete.join(','),
+          targetLabel: `${invoicesToDelete.length} Invoices`,
+          details: {
+            count: invoicesToDelete.length,
+            invoiceIds: invoicesToDelete,
+          },
+        });
         await deleteInvoices(invoicesToDelete);
       }
       toast({
@@ -219,17 +287,87 @@ export default function InvoicesPage() {
     }
   }
 
-  const router = useRouter();
-
   const handleEdit = (invoice: Invoice) => {
     triggerHaptic('light');
     router.push(`/?edit=${invoice.id}`);
   };
 
+  const handleUpdateStatus = async (
+    invoice: Invoice,
+    newStatus: 'pending' | 'paid' | 'cancelled'
+  ) => {
+    if (!invoice.id) return;
+    try {
+      triggerHaptic('medium');
+      await updateInvoiceStatus(invoice.id, newStatus);
+      setData((prev) =>
+        prev.map((inv) => (inv.id === invoice.id ? { ...inv, status: newStatus } : inv))
+      );
+      toast({
+        title: newStatus === 'paid' ? 'Marked as Paid' : 'Status Updated',
+        description: `Invoice ${invoice.invoiceNumber} status is now ${newStatus.toUpperCase()}.`,
+      });
+    } catch (error) {
+      console.error('Error updating invoice status:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Status Update Failed',
+        description: 'Failed to update invoice status. Please try again.',
+      });
+    }
+  };
+
+  const handleBulkUpdateStatus = async (
+    ids: string[],
+    newStatus: 'pending' | 'paid' | 'cancelled'
+  ) => {
+    if (ids.length === 0) return;
+    try {
+      triggerHaptic('medium');
+      await bulkUpdateInvoiceStatus(ids, newStatus);
+      const idSet = new Set(ids);
+      setData((prev) =>
+        prev.map((inv) => (inv.id && idSet.has(inv.id) ? { ...inv, status: newStatus } : inv))
+      );
+      toast({
+        title: `Marked ${ids.length} Invoices as ${newStatus.toUpperCase()}`,
+        description: `Successfully updated status for ${ids.length} invoices.`,
+      });
+    } catch (error) {
+      console.error('Error updating invoices status in bulk:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Bulk Update Failed',
+        description: 'Failed to update invoice statuses. Please try again.',
+      });
+    }
+  };
+
   const columns = React.useMemo(
-    () => getColumns(handlePreview, handleDownload, handleDeleteRequest, handleEdit),
+    () =>
+      getColumns(
+        handlePreview,
+        handleDownload,
+        handleDeleteRequest,
+        handleEdit,
+        handleUpdateStatus
+      ),
     []
   );
+
+  if (!loading && (!user || role === 'guest' || !hasPermission(user, 'invoices'))) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 space-y-4">
+          <ShieldAlert className="h-12 w-12 text-amber-500" />
+          <h2 className="text-xl font-black text-slate-800 dark:text-white">Access Restricted</h2>
+          <p className="text-sm text-slate-500 max-w-md">
+            Viewing and generating Tax Invoices is restricted for guest accounts.
+          </p>
+        </div>
+      </AppShell>
+    );
+  }
 
   if (isLoading || isBulkDownloading) {
     return (
@@ -237,13 +375,12 @@ export default function InvoicesPage() {
         <Loader className="h-8 w-8 animate-spin" />
         {isBulkDownloading && <p className="mt-4 text-muted-foreground">Processing bulk download...</p>}
       </div>
-    )
+    );
   }
 
   return (
     <AppShell>
-      <main className="min-h-screen bg-slate-50/50 dark:bg-slate-950 flex flex-col items-center p-3 sm:p-8 pb-24">
-        <div className="w-full max-w-7xl mx-auto space-y-6">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-6 min-w-0">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -297,9 +434,10 @@ export default function InvoicesPage() {
             onDownloadSingle={handleDownload}
             onDeleteSingle={handleDeleteRequest}
             onEditSingle={handleEdit}
+            onUpdateStatus={handleUpdateStatus}
+            onBulkUpdateStatus={handleBulkUpdateStatus}
           />
         </div>
-      </main>
       {previewingInvoice && settings && (
         <InvoicePreviewDialog
           invoice={previewingInvoice}
@@ -336,27 +474,118 @@ export default function InvoicesPage() {
       )}
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!invoicesToDelete} onOpenChange={(open) => !open && setInvoicesToDelete(null)}>
+      <AlertDialog
+        open={!!invoicesToDelete}
+        onOpenChange={(open) => {
+          if (!open) {
+            setInvoicesToDelete(null);
+            setDeleteConfirmationInput('');
+          }
+        }}
+      >
         <AlertDialogContent className="w-[90vw] sm:max-w-md rounded-3xl p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg font-black tracking-tight text-slate-900 dark:text-white">Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm font-medium text-slate-500 dark:text-slate-400">
-              This action cannot be undone. This will permanently delete the selected invoice(s).
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row gap-2 mt-4 sm:justify-end">
-            <AlertDialogCancel onClick={() => setInvoicesToDelete(null)} className="flex-1 sm:flex-initial h-11 rounded-2xl font-bold border-slate-200 dark:border-slate-800">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete} 
-              disabled={isDeleting} 
-              className="flex-1 sm:flex-initial h-11 rounded-2xl font-bold bg-rose-600 hover:bg-rose-700 text-white"
-            >
-              {isDeleting ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
+          {(() => {
+            const isSingle = invoicesToDelete?.length === 1;
+            const targetInvoice = isSingle ? data.find((i) => i.id === invoicesToDelete[0]) : null;
+            const requiredText = isSingle
+              ? targetInvoice?.invoiceNumber || invoicesToDelete?.[0] || ''
+              : 'DELETE ALL';
+            const isMatch =
+              deleteConfirmationInput.trim().toUpperCase() === requiredText.trim().toUpperCase();
+
+            return (
+              <>
+                <AlertDialogHeader>
+                  <div className="flex items-center gap-2.5 text-rose-600 mb-1">
+                    <div className="p-2 rounded-xl bg-rose-100 dark:bg-rose-950/50">
+                      <AlertTriangle className="w-5 h-5" />
+                    </div>
+                    <AlertDialogTitle className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
+                      {isSingle ? 'Delete Invoice Safeguard' : 'Bulk Delete Safeguard'}
+                    </AlertDialogTitle>
+                  </div>
+                  <AlertDialogDescription asChild>
+                    <div className="text-sm font-medium text-slate-600 dark:text-slate-300 space-y-3 pt-1">
+                      <p>
+                        This action cannot be undone. This will permanently delete{' '}
+                        {isSingle ? (
+                          <>
+                            invoice <span className="font-bold font-mono text-slate-900 dark:text-white">{requiredText}</span>.
+                          </>
+                        ) : (
+                          <>
+                            <span className="font-bold text-rose-600">{invoicesToDelete?.length}</span> selected invoices.
+                          </>
+                        )}
+                      </p>
+
+                      {isSingle && targetInvoice && (
+                        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 space-y-1 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Invoice #:</span>
+                            <span className="font-mono font-bold text-slate-900 dark:text-slate-100 select-all">
+                              {targetInvoice.invoiceNumber}
+                            </span>
+                          </div>
+                          {targetInvoice.customerName && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Customer:</span>
+                              <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[200px]">
+                                {targetInvoice.customerName}
+                              </span>
+                            </div>
+                          )}
+                          {targetInvoice.total !== undefined && (
+                            <div className="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-700 font-bold">
+                              <span className="text-slate-500">Total:</span>
+                              <span className="font-mono text-slate-900 dark:text-slate-100">
+                                ₹{Number(targetInvoice.total).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="space-y-1.5 pt-1">
+                        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
+                          To confirm, type <span className="font-mono font-bold text-rose-600 select-all">{requiredText}</span> below:
+                        </label>
+                        <Input
+                          value={deleteConfirmationInput}
+                          onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                          placeholder={requiredText}
+                          className="font-mono text-sm border-rose-200 focus-visible:ring-rose-500/30"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-row gap-2 mt-4 sm:justify-end">
+                  <AlertDialogCancel
+                    onClick={() => {
+                      setInvoicesToDelete(null);
+                      setDeleteConfirmationInput('');
+                    }}
+                    className="flex-1 sm:flex-initial h-11 rounded-2xl font-bold border-slate-200 dark:border-slate-800"
+                  >
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      confirmDelete();
+                      setDeleteConfirmationInput('');
+                    }}
+                    disabled={isDeleting || !isMatch}
+                    className="flex-1 sm:flex-initial h-11 rounded-2xl font-bold bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {isDeleting ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Confirm & Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </>
+            );
+          })()}
         </AlertDialogContent>
       </AlertDialog>
 

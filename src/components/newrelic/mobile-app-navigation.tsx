@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -31,11 +31,14 @@ import {
   Plus,
   FileSpreadsheet,
   UserCheck,
+  CalendarDays,
+  CloudUpload,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { triggerHaptic } from '@/lib/haptics';
 import { hasPermission, PermissionKey } from '@/types/permissions';
 import { COMPANY_SITES } from '@/types/site';
+import { subscribeToOfflineQueue } from '@/services/offlineSyncService';
 
 interface GlowTheme {
   activePill: string;
@@ -124,6 +127,15 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
   const { role, user } = useAuth();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showCreateSheet, setShowCreateSheet] = useState(false);
+  const [offlinePendingCount, setOfflinePendingCount] = useState(0);
+
+  useEffect(() => {
+    const unsub = subscribeToOfflineQueue((items) => {
+      const pending = items.filter((i) => i.status === 'pending' || i.status === 'failed').length;
+      setOfflinePendingCount(pending);
+    });
+    return unsub;
+  }, []);
 
   const isAdmin = role === 'admin' || role === 'superadmin';
   const site = user?.assignedSite || 'newrelic';
@@ -202,7 +214,7 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
   }
 
   // Invoicing & Billing
-  if (hasPermission(user, 'billing')) {
+  if (hasPermission(user, 'invoices') && role !== 'guest') {
     allModules.push({
       id: 'billing',
       label: 'Invoices',
@@ -210,7 +222,7 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
       icon: LayoutDashboard,
       isActive: pathname === '/invoices' || pathname === '/',
       glowTheme: GLOW_THEMES.blue,
-      permissionKey: 'billing',
+      permissionKey: 'invoices',
     });
   }
 
@@ -258,7 +270,20 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
      2. ITEMS FOR "MORE" ACTION DRAWER
      ───────────────────────────────────────────────────────────── */
   // Group 1: Operations & Dispatches
-  const operationItems: Array<{ label: string; href: string; icon: any; desc: string }> = [];
+  const operationItems: Array<{ label: string; href: string; icon: any; desc: string; badge?: any; onClick?: () => void }> = [];
+  
+  // Offline Outbox & Sync tool
+  operationItems.push({
+    label: 'Offline Outbox & Sync',
+    href: '#outbox',
+    icon: CloudUpload,
+    desc: offlinePendingCount > 0 ? `${offlinePendingCount} records waiting to sync` : 'Device offline queue & auto-sync',
+    badge: offlinePendingCount > 0 ? offlinePendingCount : undefined,
+    onClick: () => {
+      window.dispatchEvent(new CustomEvent('open-offline-outbox'));
+    },
+  });
+
   if (hasPermission(user, 'newrelic_dc')) {
     operationItems.push({
       label: 'NewRelic DC Hub',
@@ -291,6 +316,14 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
       desc: 'Selfie clock-in & shift attendance verification',
     });
   }
+  if (hasPermission(user, 'attendance') || hasPermission(user, 'leaves')) {
+    operationItems.push({
+      label: 'Leaves & Holidays',
+      href: '/newrelic/leaves',
+      icon: CalendarDays,
+      desc: 'Planned staff leaves & public holiday calendar',
+    });
+  }
   if (hasPermission(user, 'stock_request')) {
     operationItems.push({
       label: 'Request Stock',
@@ -302,7 +335,7 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
 
   // Group 2: Invoicing, HR & Masters
   const billingAndHrItems: Array<{ label: string; href: string; icon: any; desc: string }> = [];
-  if (hasPermission(user, 'billing')) {
+  if (hasPermission(user, 'invoices') && role !== 'guest') {
     billingAndHrItems.push({
       label: 'Invoice Dashboard & Creator',
       href: '/',
@@ -315,6 +348,8 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
       icon: ListOrdered,
       desc: 'All tax invoices and client billing history',
     });
+  }
+  if (hasPermission(user, 'quotations')) {
     billingAndHrItems.push({
       label: 'Saved Quotations',
       href: '/quotations',
@@ -404,6 +439,14 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
       href: '/newrelic/attendance?tab=payroll',
       icon: CreditCard,
       desc: 'Attendance-based payroll and monthly payouts',
+    });
+  }
+  if (hasPermission(user, 'payroll') || hasPermission(user, 'leaves')) {
+    adminItems.push({
+      label: 'Leaves & Holiday Calendar',
+      href: '/newrelic/leaves',
+      icon: CalendarDays,
+      desc: 'Staff leave requests, approvals & site holidays',
     });
   }
   if (hasPermission(user, 'employees')) {
@@ -590,11 +633,15 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
                           : 'stroke-[1.8] text-slate-400 group-hover:text-rose-200'
                       }`}
                     />
-                    {pendingStockCount > 0 && (
+                    {offlinePendingCount > 0 ? (
+                      <span className="absolute -top-1 -right-1 bg-amber-500 text-slate-950 text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-[0_0_8px_#f59e0b] ring-2 ring-[#090b16] animate-pulse" title={`${offlinePendingCount} items in offline outbox`}>
+                        {offlinePendingCount}
+                      </span>
+                    ) : pendingStockCount > 0 ? (
                       <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-rose-600 text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-[0_0_8px_#f43f5e] ring-2 ring-[#090b16] animate-pulse">
                         {pendingStockCount}
                       </span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
                 <span
@@ -729,45 +776,49 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
             )}
 
             {/* 2. Billing & Invoicing Section */}
-            {hasPermission(user, 'billing') && (
+            {(hasPermission(user, 'invoices_create') || hasPermission(user, 'quotations_create')) && role !== 'guest' && (
               <div className="space-y-2">
                 <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider px-1">
                   Billing &amp; Quotes
                 </span>
                 <div className="grid grid-cols-1 gap-2">
-                  <button
-                    onClick={() => {
-                      setShowCreateSheet(false);
-                      triggerHaptic('light');
-                      router.push('/');
-                    }}
-                    className="w-full flex items-center gap-3.5 p-3 rounded-2xl bg-gradient-to-r from-blue-50/90 to-sky-50/70 border border-blue-200/80 text-left active:scale-[0.99] transition-transform shadow-xs"
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-sky-600 text-white flex items-center justify-center shadow-xs shrink-0">
-                      <LayoutDashboard className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-blue-950">New Tax Invoice</p>
-                      <p className="text-[11px] text-blue-700 font-medium">Create client invoice with line items</p>
-                    </div>
-                  </button>
+                  {hasPermission(user, 'invoices_create') && (
+                    <button
+                      onClick={() => {
+                        setShowCreateSheet(false);
+                        triggerHaptic('light');
+                        router.push('/');
+                      }}
+                      className="w-full flex items-center gap-3.5 p-3 rounded-2xl bg-gradient-to-r from-blue-50/90 to-sky-50/70 border border-blue-200/80 text-left active:scale-[0.99] transition-transform shadow-xs"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-sky-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                        <LayoutDashboard className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-blue-950">New Tax Invoice</p>
+                        <p className="text-[11px] text-blue-700 font-medium">Create client invoice with line items</p>
+                      </div>
+                    </button>
+                  )}
 
-                  <button
-                    onClick={() => {
-                      setShowCreateSheet(false);
-                      triggerHaptic('light');
-                      router.push('/quotation');
-                    }}
-                    className="w-full flex items-center gap-3.5 p-3 rounded-2xl bg-gradient-to-r from-violet-50/90 to-purple-50/70 border border-violet-200/80 text-left active:scale-[0.99] transition-transform shadow-xs"
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 to-purple-600 text-white flex items-center justify-center shadow-xs shrink-0">
-                      <FilePlus className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-violet-950">New Quotation / Estimate</p>
-                      <p className="text-[11px] text-violet-700 font-medium">Draft price quotation for approval</p>
-                    </div>
-                  </button>
+                  {hasPermission(user, 'quotations_create') && (
+                    <button
+                      onClick={() => {
+                        setShowCreateSheet(false);
+                        triggerHaptic('light');
+                        router.push('/quotation');
+                      }}
+                      className="w-full flex items-center gap-3.5 p-3 rounded-2xl bg-gradient-to-r from-violet-50/90 to-purple-50/70 border border-violet-200/80 text-left active:scale-[0.99] transition-transform shadow-xs"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 to-purple-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                        <FilePlus className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-violet-950">New Quotation / Estimate</p>
+                        <p className="text-[11px] text-violet-700 font-medium">Draft price quotation for approval</p>
+                      </div>
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -998,6 +1049,37 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
                   {operationItems.map((item) => {
                     const Icon = item.icon;
                     const isSelected = pathname === item.href;
+
+                    if (item.onClick) {
+                      return (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setShowMoreMenu(false);
+                            item.onClick?.();
+                          }}
+                          className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-amber-200/90 bg-amber-50/70 hover:bg-amber-100/70 text-slate-800 text-left transition-all active:scale-98 shadow-2xs"
+                        >
+                          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 shadow-2xs bg-amber-500 text-white">
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-xs font-bold truncate text-slate-900">{item.label}</p>
+                              {item.badge !== undefined && (
+                                <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                                  {item.badge}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-500 truncate">{item.desc}</p>
+                          </div>
+                        </button>
+                      );
+                    }
+
                     return (
                       <Link
                         key={item.href}

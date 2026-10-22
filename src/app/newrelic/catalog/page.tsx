@@ -9,6 +9,7 @@ import { getAllPricingItems } from '@/services/newrelicPricingService';
 import { Trash2, Plus, Pencil, Check, X, Search, Database, Download, RefreshCw, AlertTriangle, ArrowLeft, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
+import { hasPermission } from '@/types/permissions';
 
 const SITES_OPTIONS = [
   { id: 'all', label: 'All Sites' },
@@ -57,7 +58,7 @@ function renderItemSiteBadges(applicableSites?: ('newrelic' | 'dsm' | 'ntt_data'
 }
 
 export default function CatalogPage() {
-  const { role, isReadOnly } = useAuth();
+  const { user, role, isReadOnly } = useAuth();
   const router = useRouter();
 
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
@@ -90,10 +91,10 @@ export default function CatalogPage() {
   const [newSites, setNewSites] = useState<('newrelic' | 'dsm' | 'ntt_data' | 'all')[]>(['all']);
 
   useEffect(() => {
-    if (role && role !== 'admin' && role !== 'guest') {
+    if (user && role && role !== 'admin' && !hasPermission(user, 'catalog')) {
       router.push('/newrelic');
     }
-  }, [role, router]);
+  }, [user, role, router]);
 
   useEffect(() => {
     async function load() {
@@ -326,10 +327,10 @@ export default function CatalogPage() {
     }
   }
 
-  if (!role || (role !== 'admin' && role !== 'guest')) return null;
+  if (!role || (role !== 'admin' && !hasPermission(user, 'catalog'))) return null;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-8 py-6">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-6">
       {/* Read-Only Guest Notice */}
       {(isReadOnly || role === 'guest') && (
         <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-amber-700 dark:text-amber-400">

@@ -9,6 +9,8 @@ import { CalendarIcon, Plus, Trash2, FileDown, Save, Loader2, Sparkles, UploadCl
 import { MrpCalculatorModal } from '@/components/newrelic/mrp-calculator-modal';
 import { useAuth } from '@/contexts/AuthContext';
 import { triggerHaptic } from '@/lib/haptics';
+import { enqueueOfflineItem } from '@/services/offlineSyncService';
+import { OfflineFormBanner } from '@/components/newrelic/OfflineFormBanner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +37,7 @@ import {
   checkDuplicateDcNumber,
 } from '@/services/newrelicChallanService';
 import { getCatalogItems } from '@/services/newrelicCatalogService';
-import { getPricingItems, buildPricingMap } from '@/services/newrelicPricingService';
+import { getPricingItems, buildPricingMap, findPricingForItem } from '@/services/newrelicPricingService';
 import {
   NewRelicChallan,
   NewRelicChallanItem,
@@ -51,6 +53,7 @@ import {
   SAMPLE_INVOICES_LIST,
 } from '@/services/newrelicInvoiceParser';
 import { useToast } from '@/hooks/use-toast';
+import { hasPermission } from '@/types/permissions';
 import { NewRelicAttachmentModal } from '@/components/newrelic/newrelic-attachment-modal';
 import { PdfAutoParser } from './challan-form/pdf-auto-parser';
 import { ChallanSummary } from './challan-form/challan-summary';
@@ -120,6 +123,7 @@ export function NewRelicChallanForm({
   const canSeeMrp = isAdmin || isManager;
   // P.Cost is visible to admins without financial password unlock, but strictly forbidden for user/manager
   const canSeePCost = isAdmin;
+  const canViewSignedCopies = role !== 'guest' && hasPermission(user, 'signed_copies');
   const [isDockMinimized, setIsDockMinimized] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
 
@@ -170,54 +174,46 @@ export function NewRelicChallanForm({
 
   /* ── Load Pricing Map for P.Cost + MRP auto-fill (respects DC date) ── */
   useEffect(() => {
-    if (canSeeMrp) {
-      const targetDateStr = watchedDcDate instanceof Date ? watchedDcDate.toISOString().substring(0, 10) : undefined;
-      getPricingItems(watchedLocation).then((items) => {
-        setPricingItems(items);
-        setPricingMap(buildPricingMap(items, targetDateStr));
-      });
-    }
-  }, [watchedLocation, canSeeMrp, watchedDcDate]);
+    const targetDateStr = watchedDcDate instanceof Date 
+      ? watchedDcDate.toISOString().substring(0, 10) 
+      : (typeof watchedDcDate === 'string' ? (watchedDcDate as string).substring(0, 10) : undefined);
+    getPricingItems(watchedLocation).then((items) => {
+      setPricingItems(items);
+      setPricingMap(buildPricingMap(items, targetDateStr));
+    });
+  }, [watchedLocation, watchedDcDate]);
 
   /* ── In edit mode, backfill empty P.Cost & MRP cells once the pricing map is ready ── */
   useEffect(() => {
-    // Guard: only run once per form instance — never overwrite values the user has set
-    if (!canSeeMrp || pricingMap.size === 0 || hasBackfilledPCost.current) return;
+    if (pricingMap.size === 0) return;
     const items = watchedLineItems;
     if (!items || items.length === 0) return;
-    hasBackfilledPCost.current = true;
+
     items.forEach((item, index) => {
-      if (isAdmin) {
-        const cost = Number(item.procurementCost);
-        if (!cost || cost === 0) {
-          const brand = (item.brandName || '').trim().toLowerCase();
-          const name = (item.itemName || '').trim().toLowerCase();
-          if (brand && name) {
-            const key = `${brand}__${name}`;
-            const priceFromMap = pricingMap.get(key);
-            if (priceFromMap !== undefined) {
-              setValue(`lineItems.${index}.procurementCost`, priceFromMap);
-            }
-          }
-        }
+      const brand = (item.brandName || '').trim();
+      const name = (item.itemName || '').trim();
+      if (!name) return;
+
+      const pricingMatch = findPricingForItem(pricingItems, pricingMap, name, brand);
+
+      // Backfill procurementCost if missing or 0
+      const currentCost = Number(item.procurementCost);
+      if ((!currentCost || currentCost === 0) && pricingMatch.purchaseCost !== undefined && pricingMatch.purchaseCost > 0) {
+        setValue(`lineItems.${index}.procurementCost`, pricingMatch.purchaseCost);
       }
-      
-      // Also backfill MRP if empty
-      const mrp = Number(item.mrp);
-      if (!mrp || mrp === 0) {
-        const brand = (item.brandName || '').trim().toLowerCase();
-        const name = (item.itemName || '').trim().toLowerCase();
-        if (!brand || !name) return;
-        const entry = pricingItems.find(p =>
-          p.brandName.toLowerCase() === brand && p.itemName.toLowerCase() === name
-        );
-        if (entry?.mrp) {
-          setValue(`lineItems.${index}.mrp`, entry.mrp);
-        }
+
+      // Backfill MRP if missing or 0
+      const currentMrp = Number(item.mrp);
+      if ((!currentMrp || currentMrp === 0) && pricingMatch.mrp !== undefined && pricingMatch.mrp > 0) {
+        setValue(`lineItems.${index}.mrp`, pricingMatch.mrp);
+      }
+
+      // Backfill Brand if missing
+      if (!brand && pricingMatch.brandName) {
+        setValue(`lineItems.${index}.brandName`, pricingMatch.brandName);
       }
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pricingMap, isAdmin]);
+  }, [pricingMap, pricingItems, setValue, watchedLineItems]);
 
   /* ── Auto-suggest DC Number when location changes and DC field is empty ── */
   useEffect(() => {
@@ -339,56 +335,50 @@ export function NewRelicChallanForm({
   };
 
   const handleItemNameChange = (index: number, selectedItemName: string, currentBrandName?: string) => {
-    // If selected item exists in catalog, auto-fill default quantity & brand name
-    const match = catalog.find(
+    if (!selectedItemName || !selectedItemName.trim()) return;
+
+    // 1. Try finding in catalog for defaultQuantity & canonical brand name
+    const catalogMatch = catalog.find(
       (c) => 
         c.itemName.toLowerCase() === selectedItemName.trim().toLowerCase() && 
         (!currentBrandName || c.brandName.toLowerCase() === currentBrandName.trim().toLowerCase())
     );
-    if (match) {
-      if (match.brandName) {
-        setValue(`lineItems.${index}.brandName`, match.brandName);
+    if (catalogMatch) {
+      if (catalogMatch.brandName && (!currentBrandName || !currentBrandName.trim())) {
+        setValue(`lineItems.${index}.brandName`, catalogMatch.brandName);
       }
-      if (match.defaultQuantity) {
-        setValue(`lineItems.${index}.quantity`, match.defaultQuantity);
-      }
-      // Auto-fill MRP from pricing map — only when field is empty
-      const mrpKey = `${match.brandName.trim().toLowerCase()}__${selectedItemName.trim().toLowerCase()}`;
-      const pricingEntry = pricingItems.find(p =>
-        p.brandName.toLowerCase() === match.brandName.toLowerCase() &&
-        p.itemName.toLowerCase() === selectedItemName.trim().toLowerCase()
-      );
-      if (pricingEntry) {
-        const currentMrp = watchedLineItems?.[index]?.mrp;
-        if (!currentMrp || Number(currentMrp) === 0) {
-          setValue(`lineItems.${index}.mrp`, pricingEntry.mrp);
-        }
-      }
-      // Auto-fill P.Cost from pricing map — only when field is empty (never overwrite saved values)
-      if (isAdmin) {
-        const currentCost = watchedLineItems?.[index]?.procurementCost;
-        if (!currentCost || Number(currentCost) === 0) {
-          const key = `${match.brandName.trim().toLowerCase()}__${selectedItemName.trim().toLowerCase()}`;
-          const cost = pricingMap.get(key);
-          if (cost !== undefined) {
-            setValue(`lineItems.${index}.procurementCost`, cost);
-          }
-        }
-      }
-
-    } else if (isAdmin) {
-      // Also try matching just by item name across all brands in the pricing map
-      const currentCost = watchedLineItems?.[index]?.procurementCost;
-      if (!currentCost || Number(currentCost) === 0) {
-        const currentBrand = watchedLineItems?.[index]?.brandName?.trim().toLowerCase() || '';
-        const key = `${currentBrand}__${selectedItemName.trim().toLowerCase()}`;
-        const cost = pricingMap.get(key);
-        if (cost !== undefined) {
-          setValue(`lineItems.${index}.procurementCost`, cost);
+      if (catalogMatch.defaultQuantity) {
+        const curQty = watchedLineItems?.[index]?.quantity;
+        if (!curQty || Number(curQty) <= 1) {
+          setValue(`lineItems.${index}.quantity`, catalogMatch.defaultQuantity);
         }
       }
     }
 
+    // 2. Comprehensive pricing lookup using findPricingForItem
+    const effectiveBrand = currentBrandName?.trim() || catalogMatch?.brandName || watchedLineItems?.[index]?.brandName || '';
+    const pricingMatch = findPricingForItem(pricingItems, pricingMap, selectedItemName, effectiveBrand);
+
+    // Auto-fill brand name if still empty and pricingMatch has one
+    if (pricingMatch.brandName && (!watchedLineItems?.[index]?.brandName || !watchedLineItems?.[index]?.brandName.trim())) {
+      setValue(`lineItems.${index}.brandName`, pricingMatch.brandName);
+    }
+
+    // Auto-fill MRP if empty or 0
+    if (pricingMatch.mrp !== undefined && pricingMatch.mrp > 0) {
+      const currentMrp = watchedLineItems?.[index]?.mrp;
+      if (!currentMrp || Number(currentMrp) === 0) {
+        setValue(`lineItems.${index}.mrp`, pricingMatch.mrp);
+      }
+    }
+
+    // Auto-fill P.Cost if empty or 0 (store in form state for calculation and saving)
+    if (pricingMatch.purchaseCost !== undefined && pricingMatch.purchaseCost > 0) {
+      const currentCost = watchedLineItems?.[index]?.procurementCost;
+      if (!currentCost || Number(currentCost) === 0) {
+        setValue(`lineItems.${index}.procurementCost`, pricingMatch.purchaseCost);
+      }
+    }
   };
 
   const onSubmit = async (values: FormValues, shouldDownload = true) => {
@@ -400,14 +390,17 @@ export function NewRelicChallanForm({
       });
       return;
     }
+
     setIsSaving(true);
+    triggerHaptic('medium');
+    let cleanPayloadToQueue: any = null;
+
     try {
       // Ignore any trailing or incomplete rows that only have brand name (no item name)
       const validItems = (values.lineItems || [])
         .filter((item) => item.itemName && item.itemName.trim() !== '')
         .map((item, idx) => {
           const originalItem = initialData?.lineItems?.[idx] || ({} as any);
-          // z.coerce.number() already coerced strings to numbers. "" becomes 0.
           const mrp = (item.mrp !== undefined && item.mrp !== null && Number(item.mrp) > 0)
             ? Number(item.mrp)
             : (originalItem.mrp ? Number(originalItem.mrp) : undefined);
@@ -417,20 +410,20 @@ export function NewRelicChallanForm({
             : (Number(originalItem.procurementCost) || Number(originalItem.pCost) || 0);
 
           if (procurementCost === 0) {
-            const brand = (item.brandName || '').trim().toLowerCase();
-            const name = (item.itemName || '').trim().toLowerCase();
-            const key = `${brand}__${name}`;
-            const mapCost = pricingMap.get(key) || pricingMap.get(name);
-            if (mapCost !== undefined && mapCost > 0) {
-              procurementCost = mapCost;
+            const pricingMatch = findPricingForItem(pricingItems, pricingMap, item.itemName || '', item.brandName);
+            if (pricingMatch.purchaseCost !== undefined && pricingMatch.purchaseCost > 0) {
+              procurementCost = pricingMatch.purchaseCost;
             }
           }
+
+          const rawQty = Number(item.quantity);
+          const finalQty = (!rawQty || isNaN(rawQty) || rawQty < 1) ? 1 : rawQty;
 
           return {
             ...item,
             brandName: item.brandName?.trim() || '',
             itemName: item.itemName!.trim(),
-            quantity: Number(item.quantity) || 1,
+            quantity: finalQty,
             expiry: item.expiry?.trim() || '',
             mrp,
             procurementCost,
@@ -447,24 +440,34 @@ export function NewRelicChallanForm({
         return;
       }
 
-      if (duplicateError) {
-        toast({
-          variant: 'destructive',
-          title: 'Duplicate DC Number',
-          description: 'Please use a unique DC Number before saving.',
-        });
-        setIsSaving(false);
-        return;
+      const targetId = initialData?.id || currentData?.id;
+      const initialDcNum = (initialData?.dcNumber || currentData?.dcNumber)?.trim();
+
+      // Only run network query for duplicate check if the DC number was modified
+      if (values.dcNumber.trim() !== initialDcNum) {
+        const isDup = await checkDuplicateDcNumber(values.dcNumber, targetId);
+        if (isDup) {
+          setDuplicateError('⚠️ This DC Number is already in use by another active invoice.');
+          toast({
+            variant: 'destructive',
+            title: 'Duplicate DC Number',
+            description: 'Please use a unique DC Number before saving.',
+          });
+          setIsSaving(false);
+          return;
+        } else {
+          setDuplicateError(null);
+        }
       }
 
       const calculatedProcurementCost = validItems.reduce((acc, item) => acc + ((item.procurementCost || 0) * item.quantity), 0);
 
-      const targetId = initialData?.id || currentData?.id;
+      const parsedDcDate = values.dcDate instanceof Date ? values.dcDate : new Date(values.dcDate);
       const payload: any = {
         ...(targetId ? { id: targetId } : {}),
         dcNumber: values.dcNumber,
         location: values.location,
-        dcDate: values.dcDate.toISOString(),
+        dcDate: parsedDcDate.toISOString(),
         lineItems: validItems as NewRelicChallanItem[],
         note: values.note,
         transportCost: values.transportCost,
@@ -491,15 +494,69 @@ export function NewRelicChallanForm({
       };
       
       const cleanPayload = cleanUndefined(payload);
+      cleanPayloadToQueue = cleanPayload;
+      const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+      if (isOffline) {
+        await enqueueOfflineItem(
+          'challan',
+          `Challan ${cleanPayload.dcNumber || 'Draft'} (${cleanPayload.location || 'Local'})`,
+          `${cleanPayload.lineItems?.length || 0} items, Total: ₹${cleanPayload.totalAmount || 0}`,
+          {
+            challan: cleanPayload,
+            userEmail: user?.email || null,
+          }
+        );
+        triggerHaptic('success');
+        toast({
+          title: '📱 Saved to Offline Outbox!',
+          description: `DC ${cleanPayload.dcNumber || ''} is stored safely on this device and will auto-sync once internet returns.`,
+        });
+        onChallanSave(shouldDownload ? cleanPayload : undefined);
+        reset(defaultValues);
+        return;
+      }
+
       const saved = await saveNewRelicChallan(cleanPayload, user?.email || null);
       toast({
-        title: 'Challan saved',
+        title: isEditing ? 'Challan updated' : 'Challan saved',
         description: `DC No: ${saved.dcNumber}`,
       });
       onChallanSave(shouldDownload ? saved : undefined);
       reset(defaultValues);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      const isNetworkIssue =
+        (typeof navigator !== 'undefined' && !navigator.onLine) ||
+        err?.message?.includes('timeout') ||
+        err?.message?.includes('network') ||
+        err?.message?.includes('Failed to fetch') ||
+        err?.message?.includes('offline');
+
+      if (isNetworkIssue && cleanPayloadToQueue) {
+        try {
+          await enqueueOfflineItem(
+            'challan',
+            `Challan ${cleanPayloadToQueue.dcNumber || 'Draft'} (${cleanPayloadToQueue.location || 'Local'})`,
+            `${cleanPayloadToQueue.lineItems?.length || 0} items, Total: ₹${cleanPayloadToQueue.totalAmount || 0}`,
+            {
+              challan: cleanPayloadToQueue,
+              userEmail: user?.email || null,
+            }
+          );
+          triggerHaptic('success');
+          toast({
+            title: '📱 Saved to Offline Outbox!',
+            description: `Network dropped during save. DC ${cleanPayloadToQueue.dcNumber || ''} has been safely queued offline and will auto-sync when online.`,
+          });
+          onChallanSave(shouldDownload ? cleanPayloadToQueue : undefined);
+          reset(defaultValues);
+          return;
+        } catch (queueErr) {
+          console.error('Failed to queue offline challan after network drop:', queueErr);
+        }
+      }
+
       toast({
         variant: 'destructive',
         title: 'Save failed',
@@ -555,10 +612,13 @@ export function NewRelicChallanForm({
   const isDuplicating = !!initialData && !initialData.id;
   const locationConfig = NEWRELIC_LOCATIONS[watchedLocation];
 
-  // Derived unique brand names for datalist
+  // Derived unique brand names for datalist from both catalog and pricing
   const uniqueBrands = Array.from(
-    new Set(catalog.map((c) => c.brandName).filter(Boolean))
-  );
+    new Set([
+      ...catalog.map((c) => c.brandName),
+      ...pricingItems.map((p) => p.brandName),
+    ].map((b) => (b || '').trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
 
   return (
     <form
@@ -582,6 +642,8 @@ export function NewRelicChallanForm({
         </div>
       )}
 
+      <OfflineFormBanner moduleName="Delivery Challan" />
+
       {/* Header */}
       <div className="flex items-center justify-between gap-2 sm:gap-4">
         <div>
@@ -599,31 +661,33 @@ export function NewRelicChallanForm({
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           {isEditing && currentData?.id && (
             <>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setShowSignedCopyModal(true);
-                }}
-                className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
-                  (currentData.signedCopyUrls?.length ?? 0) > 0
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-                }`}
-                title="Manage Signed Copies"
-              >
-                <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden sm:inline">Signed DC</span>
-                {(currentData.signedCopyUrls?.length ?? 0) > 0 ? (
-                  <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[9px] font-black">
-                    {currentData.signedCopyUrls!.length}
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
-                )}
-              </Button>
+              {canViewSignedCopies && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setShowSignedCopyModal(true);
+                  }}
+                  className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
+                    (currentData.signedCopyUrls?.length ?? 0) > 0
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                      : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}
+                  title="Manage Signed Copies"
+                >
+                  <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="hidden sm:inline">Signed DC</span>
+                  {(currentData.signedCopyUrls?.length ?? 0) > 0 ? (
+                    <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[9px] font-black">
+                      {currentData.signedCopyUrls!.length}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-gray-400 font-normal">+Upload</span>
+                  )}
+                </Button>
+              )}
 
               <Button
                 type="button"
@@ -840,6 +904,7 @@ export function NewRelicChallanForm({
             canSeeMrp={canSeeMrp}
             canSeePCost={canSeePCost}
             catalog={catalog}
+            pricingItems={pricingItems}
             watchedLineItems={watchedLineItems}
             handleItemNameChange={handleItemNameChange}
           />
@@ -941,18 +1006,20 @@ export function NewRelicChallanForm({
       {/* Signed Copies & Goods Received Management (Available when editing) */}
       {isEditing && currentData?.id && (
         <div className="pt-2 flex flex-col sm:flex-row gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full sm:flex-1 gap-2 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-            onClick={() => {
-              triggerHaptic('light');
-              setShowSignedCopyModal(true);
-            }}
-          >
-            <FileCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            Signed DC {(currentData?.signedCopyUrls || []).length > 0 ? `(${currentData.signedCopyUrls?.length})` : '(0)'}
-          </Button>
+          {canViewSignedCopies && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:flex-1 gap-2 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+              onClick={() => {
+                triggerHaptic('light');
+                setShowSignedCopyModal(true);
+              }}
+            >
+              <FileCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              Signed DC {(currentData?.signedCopyUrls || []).length > 0 ? `(${currentData.signedCopyUrls?.length})` : '(0)'}
+            </Button>
+          )}
           
           <Button
             type="button"
@@ -1004,12 +1071,16 @@ export function NewRelicChallanForm({
         <Button
           type="button"
           variant="outline"
-          className="w-full sm:flex-1 h-11 sm:h-10 gap-2"
+          className="w-full sm:flex-1 h-11 sm:h-10 gap-2 font-bold"
           disabled={isSaving || isReadOnly || role === 'guest'}
           title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
           onClick={handleSubmit((v) => onSubmit(v, false), onValidationError)}
         >
-          <Save className="h-4 w-4" />
+          {isSaving ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
           {isReadOnly || role === 'guest'
             ? 'Read-Only'
             : isEditing
@@ -1021,7 +1092,7 @@ export function NewRelicChallanForm({
       </div>
 
       {/* Signed Copies Modal */}
-      {showSignedCopyModal && currentData && (
+      {showSignedCopyModal && currentData && canViewSignedCopies && (
         <NewRelicAttachmentModal
           isOpen={showSignedCopyModal}
           onClose={() => setShowSignedCopyModal(false)}
@@ -1162,8 +1233,12 @@ export function NewRelicChallanForm({
                 className="flex-1 h-11 rounded-xl bg-white/10 hover:bg-white/20 border-white/25 text-white hover:text-white font-bold text-xs gap-2 active:scale-95 transition-transform shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                 title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : 'Save without downloading'}
               >
-                <Save className="h-4 w-4 text-amber-300 shrink-0" />
-                <span>{isReadOnly || role === 'guest' ? 'Read-Only' : 'Save Draft'}</span>
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                ) : (
+                  <Save className="h-4 w-4 text-amber-300 shrink-0" />
+                )}
+                <span>{isReadOnly || role === 'guest' ? 'Read-Only' : isEditing ? 'Update Only' : 'Save Draft'}</span>
               </Button>
 
               <Button

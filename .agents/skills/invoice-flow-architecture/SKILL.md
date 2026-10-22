@@ -72,4 +72,33 @@ The operations and tuckshop suite supports multiple company stalls in Hyderabad 
     - The top metric cards in `/newrelic/employees` (Total Employees, Hyderabad, Bangalore, Monthly Payroll) adapt to the active site filter rather than showing company-wide totals.
     - Excel exports for monthly staff attendance (`exportMyMonthlyExcel`) enforce server-side `isOwnerOrAdmin` permission guards and append Company Site metadata.
 
+## 7. Zero-Regression Engineering Protocol (Strict Guardrails for New Features)
+
+To prevent new feature requests from breaking core business operations (saving invoices, updating challans, price auto-population):
+
+1. **Mandatory Pre-Completion Verification (`npm test`):**
+   - Before completing any task or declaring a feature done, ALWAYS run:
+     ```bash
+     npm test
+     ```
+   - This executes both TypeScript strict typechecking (`tsc --noEmit`) and the automated Critical Operations Regression Suite (`scripts/test-regression.ts`).
+   - If ANY test fails, you must resolve the regression before reporting completion.
+
+2. **Schema & Form Resilience Rules:**
+   - **Never make an existing field stricter** without checking existing Firestore document structures across Hyderabad & Bangalore.
+   - **Coercion Safety:** In HTML forms, cleared inputs send empty strings `""`. Numbers must use `z.coerce.number().optional().default(...)` rather than `.min(1)` on draft rows to prevent blocking validation.
+   - **Date Flexibility:** Always use `z.coerce.date()` rather than `z.date()` so ISO strings from Firestore and Date instances both pass without throwing.
+   - **Non-Destructive Inputs:** Never attach `onChange` handlers that blank out sibling fields (e.g. changing brand should re-lookup price, never wipe existing item names).
+
+3. **Performance & Non-Blocking Background Operations:**
+   - Background tasks (audit logging, history snapshots, catalog harvesting) must **never** block user-facing saves/updates.
+   - Use `writeBatch` for multi-item writes and run secondary tasks with `.catch(...)` in the background.
+   - Use optimistic UI updates in state so the interface responds in sub-seconds.
+
+4. **Protected Core Business Operations (Never Hamper):**
+   - **NewRelic DC Flow:** Creating/editing challans, auto-populating P.Cost from pricing, updating without lag, PDF downloads.
+   - **Invoices Directory:** Accurate MRP vs NON-MRP tax categorization, bulk actions (paid/delete), financial year & month filtering.
+   - **Role & Site Permissions:** Strict read-only for guests, financial password unlock for admins, site isolation for DSM/NTT Data.
+
+
 

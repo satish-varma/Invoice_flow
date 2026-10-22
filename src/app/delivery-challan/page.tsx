@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import {
   Loader,
@@ -59,10 +60,18 @@ export default function DeliveryChallanPage() {
   const [isBulkDownloading, setIsBulkDownloading] = useState(false);
   const [settings, setSettings] = useState<Settings | null>(null);
 
+  const router = useRouter();
   const { toast } = useToast();
   const { user, role } = useAuth();
   const isAdmin = role === 'admin' || role === 'superadmin';
   const challanPreviewRef = useRef<HTMLDivElement>(null);
+
+  // Route guard: Only allow access if user has general_dc permission
+  useEffect(() => {
+    if (user && !isAdmin && !hasPermission(user, 'general_dc')) {
+      router.replace(user.defaultLandingPage || '/newrelic/tuckshop');
+    }
+  }, [isAdmin, user, router]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -342,9 +351,8 @@ export default function DeliveryChallanPage() {
 
   return (
     <AppShell>
-      <main className="min-h-screen bg-transparent flex flex-col items-center p-2.5 sm:p-6 lg:p-8 w-full max-w-full overflow-x-hidden">
-        <div className="w-full max-w-7xl mx-auto space-y-4 sm:space-y-8">
-          {/* ── Single Merged Page Header: Title, Financials Toggle & Sync Data ── */}
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-4 sm:space-y-8 min-w-0">
+        {/* ── Single Merged Page Header: Title, Financials Toggle & Sync Data ── */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
@@ -718,7 +726,6 @@ export default function DeliveryChallanPage() {
             </div>
           )}
         </div>
-      </main>
     </AppShell>
   );
 }

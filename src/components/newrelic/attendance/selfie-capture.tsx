@@ -3,6 +3,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Camera, X, RotateCcw, Check, MapPin, AlertCircle, SwitchCamera } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
+import { compressImage } from '@/lib/imageCompression';
 
 interface Coordinates {
   lat: number;
@@ -139,10 +140,11 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const result = event.target?.result as string;
       if (result) {
-        setCapturedUri(result);
+        const compressed = await compressImage(result, 800, 800, 0.75);
+        setCapturedUri(compressed);
         stopCamera();
         setPhase('preview');
       }
@@ -151,7 +153,7 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
   };
 
   /* ── Capture ── */
-  const handleCapture = () => {
+  const handleCapture = async () => {
     if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -168,9 +170,10 @@ export function SelfieCapture({ onCapture, onCancel, title = 'Take a Selfie' }: 
     } else {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     }
-    const dataUri = canvas.toDataURL('image/jpeg', 0.85);
+    const rawDataUri = canvas.toDataURL('image/jpeg', 0.85);
     triggerHaptic('medium');
-    setCapturedUri(dataUri);
+    const compressed = await compressImage(rawDataUri, 800, 800, 0.75);
+    setCapturedUri(compressed);
     stopCamera();
     setPhase('preview');
   };

@@ -31,6 +31,7 @@ import {
   Lock,
   Unlock,
   LayoutDashboard,
+  CalendarDays,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { FinancialAuthProvider, useFinancialAuth } from '@/contexts/FinancialAuthContext';
@@ -149,7 +150,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     pathname === '/settings';
 
   return (
-    <div className="min-h-screen bg-transparent flex flex-col relative overflow-x-hidden">
+    <div className="min-h-screen bg-transparent flex flex-col relative">
       {/* Network offline/restored indicator */}
       <NetworkStatusIndicator />
 
@@ -188,6 +189,13 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               <span className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-full px-3 py-1 font-semibold flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
                 Multi-Site Operations (HYD &amp; BLR)
+              </span>
+            ) : user?.assignedSites && user.assignedSites.length > 1 ? (
+              <span
+                className="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1.5 bg-indigo-50 text-[#3b2fc9] border-indigo-200"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                📍 Multi-Stall: {user.assignedSites.map((s) => COMPANY_SITES[s]?.name || s).join(' · ')}
               </span>
             ) : (
               <span
@@ -321,7 +329,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           )}
 
           {/* Direct Tab 5: Invoicing & Billing (Dashboard, Creator & Overview) */}
-          {hasPermission(user, 'billing') && (
+          {hasPermission(user, 'invoices') && role !== 'guest' && (
             <Link
               href="/"
               className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
@@ -332,6 +340,22 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             >
               <LayoutDashboard className="h-4 w-4" />
               Invoices &amp; Dashboard
+            </Link>
+          )}
+
+          {/* Direct Tab 6: Cash & Carry Portal */}
+          {hasPermission(user, 'hungerbox_tracker') && (
+            <Link
+              href="/tracker"
+              prefetch={false}
+              className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                pathname.startsWith('/tracker')
+                  ? 'border-[#3b2fc9] text-[#3b2fc9]'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+              }`}
+            >
+              <Receipt className="h-4 w-4" />
+              Cash &amp; Carry
             </Link>
           )}
 
@@ -351,7 +375,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           )}
 
           {/* ── Dropdown 1: Records & Masters ── */}
-          {(hasPermission(user, 'billing') || hasPermission(user, 'general_dc') || hasPermission(user, 'masters')) && (
+          {(hasPermission(user, 'invoices') || hasPermission(user, 'quotations') || hasPermission(user, 'general_dc') || hasPermission(user, 'masters')) && (
             <DropdownMenu>
               <DropdownMenuTrigger
                 className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 outline-none cursor-pointer ${
@@ -368,7 +392,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                 <DropdownMenuLabel className="text-[11px] font-bold uppercase text-gray-400 px-2 py-1">
                   Master Records
                 </DropdownMenuLabel>
-                {hasPermission(user, 'billing') && (
+                {hasPermission(user, 'invoices') && role !== 'guest' && (
                   <>
                     <DropdownMenuItem asChild>
                       <Link href="/" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
@@ -400,7 +424,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                     </Link>
                   </DropdownMenuItem>
                 )}
-                {hasPermission(user, 'billing') && (
+                {hasPermission(user, 'quotations') && (
                   <>
                     <DropdownMenuItem asChild>
                       <Link href="/quotations" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
@@ -467,6 +491,12 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                       <Link href="/declarations" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
                         <FileText className="h-3.5 w-3.5 text-emerald-600" />
                         GST Declarations (URD)
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/newrelic/leaves" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                        <CalendarDays className="h-3.5 w-3.5 text-teal-600" />
+                        Leaves &amp; Holiday Calendar
                       </Link>
                     </DropdownMenuItem>
                   </>
@@ -571,6 +601,17 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                     </Link>
                   </DropdownMenuItem>
                 )}
+                {(hasPermission(user, 'payroll') || hasPermission(user, 'attendance') || hasPermission(user, 'leaves')) && (
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/newrelic/leaves"
+                      className="flex items-center gap-2 cursor-pointer font-medium text-xs"
+                    >
+                      <CalendarDays className="h-3.5 w-3.5 text-teal-600" />
+                      Leaves &amp; Holiday Calendar
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 {hasPermission(user, 'employees') && (
                   <DropdownMenuItem asChild>
                     <Link href="/newrelic/employees" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
@@ -613,7 +654,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main Page Content Body */}
-      <main className="flex-1 pb-24 sm:pb-8 max-w-full overflow-x-hidden min-w-0">
+      <main className="flex-1 pb-24 sm:pb-8 max-w-full min-w-0">
         {children}
       </main>
 
@@ -624,9 +665,5 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  return (
-    <FinancialAuthProvider>
-      <AppShellInner>{children}</AppShellInner>
-    </FinancialAuthProvider>
-  );
+  return <AppShellInner>{children}</AppShellInner>;
 }

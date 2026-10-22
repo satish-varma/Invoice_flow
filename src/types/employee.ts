@@ -62,6 +62,8 @@ export interface NewRelicAttendance {
   isMissedCheckOut?: boolean;
   overtimeMinutes?: number;
   shiftExpectedStart?: string; // e.g. "06:00"
+  isOfflineSynced?: boolean;
+  syncedAt?: string;
   createdAt?: any;
   updatedAt?: any;
 }

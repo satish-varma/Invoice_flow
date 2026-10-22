@@ -1,16 +1,26 @@
 export type PermissionKey =
   // Company Operations (Site-Scoped)
   | 'tuckshop'
+  | 'tuckshop_pos'
   | 'attendance'
+  | 'leaves'
   | 'stock_request'
   // Delivery Challans (Independent Mechanisms)
   | 'newrelic_dc'
+  | 'newrelic_dc_create'
   | 'general_dc'
+  | 'general_dc_create'
+  | 'signed_copies'
   // Billing & Documents
-  | 'billing'
+  | 'invoices'
+  | 'invoices_create'
+  | 'quotations'
+  | 'quotations_create'
+  | 'billing' // Alias / parent for invoices & quotations
   | 'masters'
   | 'hr_docs'
-  // Admin Category
+  | 'hr_docs_create'
+  // Admin & Financial Controls
   | 'stock_admin'
   | 'tuckshop_reconcile'
   | 'pricing'
@@ -18,8 +28,15 @@ export type PermissionKey =
   | 'payroll'
   | 'employees'
   | 'analytics'
+  | 'exports_download'
   | 'users_admin'
-  | 'settings';
+  | 'settings'
+  // HungerBox Remittance & Sales Portal
+  | 'hungerbox_tracker'
+  | 'hungerbox_tracker_sync'
+  | 'hungerbox_tracker_settings'
+  // Data Safety & Delete Protection
+  | 'can_delete';
 
 export interface PermissionDefinition {
   id: PermissionKey;
@@ -52,10 +69,22 @@ export const PERMISSION_CATEGORIES: PermissionCategory[] = [
         route: '/newrelic/tuckshop',
       },
       {
+        id: 'tuckshop_pos',
+        label: 'Tuckshop POS Counter',
+        description: 'Fast barcode / touch counter checkout interface for stall sales',
+        route: '/newrelic/tuckshop?view=pos',
+      },
+      {
         id: 'attendance',
         label: 'Daily Attendance',
         description: 'Staff check-in/out with selfie verification for the assigned site',
         route: '/newrelic/attendance',
+      },
+      {
+        id: 'leaves',
+        label: 'Leaves & Holiday Calendar',
+        description: 'Record planned staff leaves (Casual, Sick, Paid), review approvals, and view public holidays',
+        route: '/newrelic/leaves',
       },
       {
         id: 'stock_request',
@@ -68,7 +97,7 @@ export const PERMISSION_CATEGORIES: PermissionCategory[] = [
   {
     id: 'delivery_challans',
     name: 'Delivery Challans (Independent Mechanisms)',
-    description: 'Two separate DC systems - NewRelic cafeteria vs general client dispatches',
+    description: 'Two separate DC systems - NewRelic cafeteria vs general client dispatches, plus proof-of-delivery',
     badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     items: [
       {
@@ -79,24 +108,61 @@ export const PERMISSION_CATEGORIES: PermissionCategory[] = [
         newRelicOnly: true,
       },
       {
+        id: 'newrelic_dc_create',
+        label: 'Create & Edit NewRelic DC',
+        description: 'Draft and edit NewRelic delivery challans with line items and MRP calculations',
+        route: '/newrelic',
+        newRelicOnly: true,
+      },
+      {
         id: 'general_dc',
         label: 'General DC (Other Companies)',
         description: 'Universal delivery challans for HungerBox, The Gut Guru & other consignees',
         route: '/delivery-challan',
+      },
+      {
+        id: 'general_dc_create',
+        label: 'Create & Edit General DC',
+        description: 'Draft, save, and modify general delivery challans and consignee line items',
+        route: '/delivery-challan',
+      },
+      {
+        id: 'signed_copies',
+        label: 'Signed Copies (Proof of Delivery)',
+        description: 'View, upload, and inspect physical signed delivery challan receipts & invoices. Restricted from guests.',
+        route: '/delivery-challan/attachments',
       },
     ],
   },
   {
     id: 'billing_docs',
     name: 'Invoicing & HR Documents',
-    description: 'Corporate customer billing, estimates, and employment records',
+    description: 'Corporate customer billing, estimates, catalogs, and employment records',
     badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
     items: [
       {
-        id: 'billing',
-        label: 'Invoices & Quotations',
-        description: 'Create & manage tax invoices and customer quotations with Excel import',
+        id: 'invoices',
+        label: 'Tax Invoices List & View',
+        description: 'View corporate tax invoices, invoice history, and financial tax breakdowns. Strictly restricted from guests.',
         route: '/invoices',
+      },
+      {
+        id: 'invoices_create',
+        label: 'Create & Edit Invoices',
+        description: 'Generate, edit, and print corporate GST tax invoices with Excel item import',
+        route: '/',
+      },
+      {
+        id: 'quotations',
+        label: 'Quotations & Proposals List',
+        description: 'View customer quotations, cost estimates, and commercial proposals',
+        route: '/quotations',
+      },
+      {
+        id: 'quotations_create',
+        label: 'Create & Edit Quotations',
+        description: 'Draft, modify, and export commercial quotation documents for prospective clients',
+        route: '/quotation',
       },
       {
         id: 'masters',
@@ -106,16 +172,49 @@ export const PERMISSION_CATEGORIES: PermissionCategory[] = [
       },
       {
         id: 'hr_docs',
-        label: 'Payslips & Offer Letters',
-        description: 'Generate employment offer letters, monthly payslips, and GST declarations',
+        label: 'Payslips & Offer Letters View',
+        description: 'Inspect employment offer letters, monthly payslips, and GST declarations',
         route: '/payslip',
+      },
+      {
+        id: 'hr_docs_create',
+        label: 'Generate Payslips & Offer Letters',
+        description: 'Issue new employee offer letters, compute monthly salary slips, and generate PDF copies',
+        route: '/offer-letter',
+      },
+    ],
+  },
+  {
+    id: 'hungerbox_portal',
+    name: 'Cash & Carry Portal',
+    description: 'Bi-weekly employee-paid remittances from HungerBox to GutGuru, payment advice auditing, sales tracking, and trends',
+    badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    items: [
+      {
+        id: 'hungerbox_tracker',
+        label: 'Cash & Carry Hub',
+        description: 'View employee-paid payment invoices from HungerBox to GutGuru (received in 2 cycles per week)',
+        route: '/tracker',
+      },
+      {
+        id: 'hungerbox_tracker_sync',
+        label: 'Sync Invoices & Sales',
+        description: 'Trigger automated IMAP Gmail invoice sync and worker sales scrapes',
+        route: '/tracker/settings',
+      },
+      {
+        id: 'hungerbox_tracker_settings',
+        label: 'Cash & Carry Settings & Credentials',
+        description: 'Configure Gmail IMAP app passwords, search terms, and scraping worker keys',
+        route: '/tracker/settings',
+        adminOnly: true,
       },
     ],
   },
   {
     id: 'admin_tools',
-    name: 'Admin Category',
-    description: 'Privileged operations, approvals, financial matrices, reconciliation, and system settings',
+    name: 'Admin & Financial Controls',
+    description: 'Privileged operations, approvals, financial matrices, reconciliation, exports, and system settings',
     badgeColor: 'bg-rose-50 text-rose-700 border-rose-200',
     items: [
       {
@@ -168,6 +267,13 @@ export const PERMISSION_CATEGORIES: PermissionCategory[] = [
         adminOnly: true,
       },
       {
+        id: 'exports_download',
+        label: 'Export Data (CSV / Excel)',
+        description: 'Download bulk delivery challans, tuckshop ledgers, and inventory reports in CSV/Excel format',
+        route: '/api/export',
+        adminOnly: true,
+      },
+      {
         id: 'users_admin',
         label: 'User Management & Permissions',
         description: 'Create user credentials, assign roles, sites, default landing pages, and tabs',
@@ -180,6 +286,20 @@ export const PERMISSION_CATEGORIES: PermissionCategory[] = [
         description: 'Company profiles, GSTINs, bank accounts, and system configuration',
         route: '/settings',
         adminOnly: true,
+      },
+    ],
+  },
+  {
+    id: 'security_protection',
+    name: 'Data Safety & Delete Protection',
+    description: 'Security clearance for permanently deleting Delivery Challans, Invoices, Quotations, and Tuckshop records',
+    badgeColor: 'bg-rose-50 text-rose-700 border-rose-200',
+    items: [
+      {
+        id: 'can_delete',
+        label: 'Record Deletion Clearance',
+        description: 'Permit deleting delivery challans, invoices, quotations, and tuckshop ledger records. When unchecked, delete buttons are locked and disabled.',
+        route: '*',
       },
     ],
   },
@@ -199,35 +319,44 @@ export const ROLE_PRESETS: RolePreset[] = [
     name: 'Tuckshop Operator (DSM / NTT / NewRelic)',
     description: 'Counter sales, inventory requests, and daily attendance for assigned site',
     defaultPage: '/newrelic/tuckshop',
-    tabs: ['tuckshop', 'attendance', 'stock_request'],
+    tabs: ['tuckshop', 'tuckshop_pos', 'attendance', 'leaves', 'stock_request'],
   },
   {
     id: 'store_manager',
     name: 'Tuckshop Store Manager',
     description: 'Counter operations plus daily cash reconciliation and stock request approvals',
     defaultPage: '/newrelic/tuckshop',
-    tabs: ['tuckshop', 'attendance', 'stock_request', 'tuckshop_reconcile', 'stock_admin'],
+    tabs: ['tuckshop', 'tuckshop_pos', 'attendance', 'leaves', 'stock_request', 'tuckshop_reconcile', 'stock_admin'],
   },
   {
     id: 'general_dispatcher',
     name: 'General Dispatcher (Other Companies)',
     description: 'Create and track delivery challans for HungerBox & corporate clients',
     defaultPage: '/delivery-challan',
-    tabs: ['general_dc'],
+    tabs: ['general_dc', 'general_dc_create', 'signed_copies'],
   },
   {
     id: 'newrelic_dispatcher',
     name: 'NewRelic Dispatcher',
     description: 'Manage NewRelic cafeteria delivery challans (NewRelic site only)',
     defaultPage: '/newrelic',
-    tabs: ['newrelic_dc'],
+    tabs: ['newrelic_dc', 'newrelic_dc_create', 'signed_copies'],
   },
   {
     id: 'accountant',
     name: 'Accountant & Billing',
     description: 'Invoicing, quotations, master catalogs, and general delivery challans',
     defaultPage: '/invoices',
-    tabs: ['billing', 'masters', 'general_dc', 'hr_docs'],
+    tabs: [
+      'invoices',
+      'invoices_create',
+      'quotations',
+      'quotations_create',
+      'billing',
+      'masters',
+      'general_dc',
+      'hr_docs',
+    ],
   },
   {
     id: 'full_admin',
@@ -236,13 +365,23 @@ export const ROLE_PRESETS: RolePreset[] = [
     defaultPage: '/delivery-challan',
     tabs: [
       'tuckshop',
+      'tuckshop_pos',
       'attendance',
+      'leaves',
       'stock_request',
       'newrelic_dc',
+      'newrelic_dc_create',
       'general_dc',
+      'general_dc_create',
+      'signed_copies',
+      'invoices',
+      'invoices_create',
+      'quotations',
+      'quotations_create',
       'billing',
       'masters',
       'hr_docs',
+      'hr_docs_create',
       'stock_admin',
       'tuckshop_reconcile',
       'pricing',
@@ -250,22 +389,30 @@ export const ROLE_PRESETS: RolePreset[] = [
       'payroll',
       'employees',
       'analytics',
+      'exports_download',
       'users_admin',
       'settings',
+      'hungerbox_tracker',
+      'hungerbox_tracker_sync',
+      'hungerbox_tracker_settings',
+      'can_delete',
     ],
   },
   {
     id: 'guest_auditor',
-    name: 'Guest / Auditor (Read-Only All Features)',
-    description: 'Full inspection and view-only access across all operational, dispatch, and billing modules without write permissions',
+    name: 'Guest / Auditor (Read-Only)',
+    description:
+      'View-only access across stall operations, delivery challans, quotations, and catalogs. Invoices & signed copies strictly restricted.',
     defaultPage: '/delivery-challan',
     tabs: [
       'tuckshop',
+      'tuckshop_pos',
       'attendance',
+      'leaves',
       'stock_request',
       'newrelic_dc',
       'general_dc',
-      'billing',
+      'quotations',
       'masters',
       'hr_docs',
       'stock_admin',
@@ -283,55 +430,135 @@ export const ROLE_PRESETS: RolePreset[] = [
 export const DEFAULT_LANDING_PAGES = [
   { label: 'Tuckshop Sales & Ledger (Assigned Site)', path: '/newrelic/tuckshop', category: 'Operations' },
   { label: 'Daily Attendance (Assigned Site)', path: '/newrelic/attendance', category: 'Operations' },
+  { label: 'Leaves & Holiday Calendar (Assigned Site)', path: '/newrelic/leaves', category: 'Operations' },
   { label: 'Request Stock (Assigned Site)', path: '/newrelic/stock-request', category: 'Operations' },
   { label: 'General Delivery Challan (Other Companies)', path: '/delivery-challan', category: 'Dispatch' },
   { label: 'NewRelic Delivery Challan Hub (NewRelic only)', path: '/newrelic', category: 'Dispatch' },
+  { label: 'Customer Quotations & Proposals', path: '/quotations', category: 'Invoicing' },
   { label: 'Invoices & Billing Dashboard', path: '/invoices', category: 'Invoicing' },
   { label: 'Stock Approvals (Admin)', path: '/newrelic/stock-requests-admin', category: 'Admin' },
-  { label: 'Tuckshop Reconciliation (Admin)', path: '/newrelic/reconcile', category: 'Admin' },
-  { label: 'Salaries & Advances (Admin)', path: '/newrelic/attendance?tab=payroll', category: 'Admin' },
+  { label: 'Tuckshop Daily Reconciliation (Admin)', path: '/newrelic/reconcile', category: 'Admin' },
+  { label: 'Salaries & Advances Payroll (Admin)', path: '/newrelic/attendance?tab=payroll', category: 'Admin' },
   { label: 'Executive Analytics (Admin)', path: '/newrelic/analytics', category: 'Admin' },
-  { label: 'User Management (Admin)', path: '/admin/users', category: 'Admin' },
+  { label: 'Cash & Carry Portal', path: '/tracker', category: 'Operations' },
+  { label: 'User Management & Security (Admin)', path: '/admin/users', category: 'Admin' },
   { label: 'Company Settings (Admin)', path: '/settings', category: 'Admin' },
 ];
 
 /**
  * Checks whether a user has permission to access a given permission key.
  * Admins and Superadmins have access to everything by default.
- * Guests have view access to all business modules (except user management).
+ * Guests have view access to operational and catalog modules, but NEVER invoices, signed copies, or deletion.
  */
 export function hasPermission(
-  user: { role?: string; allowedTabs?: string[]; assignedApps?: string[]; assignedSite?: string } | null | undefined,
+  user: { role?: string; allowedTabs?: string[]; assignedApps?: string[]; assignedSite?: string; canDelete?: boolean } | null | undefined,
   key: PermissionKey
 ): boolean {
   if (!user) return false;
   if (user.role === 'admin' || user.role === 'superadmin') return true;
+
+  // Strict Delete Protection clearance
+  if (key === 'can_delete') {
+    if (user.role === 'guest') return false; // Guests CAN NEVER delete
+    if ((user as any).canDelete === true) return true;
+    if (user.allowedTabs && user.allowedTabs.includes('can_delete')) return true;
+    return false;
+  }
+
+  // Guest security enforcement & module scoping
   if (user.role === 'guest') {
-    if (key === 'users_admin') return false;
+    // Guest MUST NOT have access to user management, invoices, signed copies, or record deletion!
+    if (
+      key === 'users_admin' ||
+      key === 'invoices' ||
+      key === 'invoices_create' ||
+      key === 'billing' ||
+      key === 'signed_copies'
+    ) {
+      return false;
+    }
+
+    // Site isolation: NewRelic DC is strictly blocked for non-NewRelic sites (DSM & NTT Data)
+    if (
+      (key === 'newrelic_dc' || key === 'newrelic_dc_create') &&
+      (user.assignedSite === 'dsm' || user.assignedSite === 'ntt_data')
+    ) {
+      return false;
+    }
+
+    // If admin explicitly configured allowedTabs for this guest, strictly respect allowedTabs!
+    if (user.allowedTabs && user.allowedTabs.length > 0) {
+      if (user.allowedTabs.includes(key)) return true;
+
+      // Granular parent/child checks
+      if (key === 'tuckshop_pos' && user.allowedTabs.includes('tuckshop')) return true;
+      if (key === 'newrelic_dc_create' && user.allowedTabs.includes('newrelic_dc')) return true;
+      if (key === 'general_dc_create' && user.allowedTabs.includes('general_dc')) return true;
+      if (key === 'quotations' && user.allowedTabs.includes('billing')) return true;
+      if (key === 'quotations_create' && (user.allowedTabs.includes('quotations') || user.allowedTabs.includes('billing'))) return true;
+      if (key === 'hr_docs_create' && user.allowedTabs.includes('hr_docs')) return true;
+      if (key === 'exports_download' && (user.allowedTabs.includes('analytics') || user.allowedTabs.includes('stock_admin'))) return true;
+
+      return false;
+    }
+
+    // Backwards-compatible legacy assignedApps check for guest
+    if (user.assignedApps && user.assignedApps.length > 0) {
+      if (key === 'general_dc' && user.assignedApps.includes('/delivery-challans')) return true;
+      if (key === 'newrelic_dc' && user.assignedApps.includes('/newrelic')) return true;
+      if ((key === 'tuckshop' || key === 'tuckshop_pos') && (user.assignedApps.includes('/newrelic') || user.assignedApps.includes('/tuckshop'))) return true;
+      if (key === 'attendance' && user.assignedApps.includes('/newrelic')) return true;
+      if (key === 'stock_request' && user.assignedApps.includes('/newrelic')) return true;
+      if (key === 'quotations' && user.assignedApps.includes('/quotations')) return true;
+      if (key === 'masters' && user.assignedApps.includes('/invoices')) return true;
+      if (key === 'hr_docs' && (user.assignedApps.includes('/payslip') || user.assignedApps.includes('/offer-letter'))) return true;
+      return false;
+    }
+
+    // Default guest fallback when allowedTabs has not been configured yet
     return true;
   }
 
   // NewRelic DC is strictly blocked for non-NewRelic sites (DSM & NTT Data)
-  if (key === 'newrelic_dc' && (user.assignedSite === 'dsm' || user.assignedSite === 'ntt_data')) {
+  if (
+    (key === 'newrelic_dc' || key === 'newrelic_dc_create') &&
+    (user.assignedSite === 'dsm' || user.assignedSite === 'ntt_data')
+  ) {
     return false;
   }
 
   // Check explicit allowedTabs
   if (user.allowedTabs && user.allowedTabs.length > 0) {
-    return user.allowedTabs.includes(key);
+    if (user.allowedTabs.includes(key)) return true;
+
+    // Granular fallbacks & hierarchy
+    if (key === 'billing' && (user.allowedTabs.includes('invoices') || user.allowedTabs.includes('quotations'))) return true;
+    if (key === 'invoices' && user.allowedTabs.includes('billing')) return true;
+    if (key === 'quotations' && user.allowedTabs.includes('billing')) return true;
+    if (key === 'newrelic_dc_create' && user.allowedTabs.includes('newrelic_dc')) return true;
+    if (key === 'general_dc_create' && user.allowedTabs.includes('general_dc')) return true;
+    if (key === 'signed_copies' && (user.allowedTabs.includes('general_dc') || user.allowedTabs.includes('newrelic_dc'))) return true;
+    if (key === 'tuckshop_pos' && user.allowedTabs.includes('tuckshop')) return true;
+    if (key === 'invoices_create' && (user.allowedTabs.includes('invoices') || user.allowedTabs.includes('billing'))) return true;
+    if (key === 'quotations_create' && (user.allowedTabs.includes('quotations') || user.allowedTabs.includes('billing'))) return true;
+    if (key === 'hr_docs_create' && user.allowedTabs.includes('hr_docs')) return true;
+    if (key === 'exports_download' && (user.allowedTabs.includes('analytics') || user.allowedTabs.includes('stock_admin'))) return true;
+    if (key === 'leaves' && (user.allowedTabs.includes('attendance') || user.allowedTabs.includes('payroll') || user.allowedTabs.includes('leaves'))) return true;
   }
 
   // Backwards compatibility with legacy assignedApps
   if (user.assignedApps && user.assignedApps.length > 0) {
-    if (key === 'general_dc' && user.assignedApps.includes('/delivery-challans')) return true;
-    if (key === 'newrelic_dc' && user.assignedApps.includes('/newrelic')) return true;
-    if (key === 'tuckshop' && (user.assignedApps.includes('/newrelic') || user.assignedApps.includes('/tuckshop'))) return true;
-    if (key === 'attendance' && user.assignedApps.includes('/newrelic')) return true;
+    if ((key === 'general_dc' || key === 'general_dc_create') && user.assignedApps.includes('/delivery-challans')) return true;
+    if ((key === 'newrelic_dc' || key === 'newrelic_dc_create') && user.assignedApps.includes('/newrelic')) return true;
+    if ((key === 'tuckshop' || key === 'tuckshop_pos') && (user.assignedApps.includes('/newrelic') || user.assignedApps.includes('/tuckshop'))) return true;
+    if ((key === 'attendance' || key === 'leaves') && user.assignedApps.includes('/newrelic')) return true;
     if (key === 'stock_request' && user.assignedApps.includes('/newrelic')) return true;
-    if (key === 'billing' && user.assignedApps.includes('/invoices')) return true;
+    if ((key === 'invoices' || key === 'invoices_create' || key === 'billing') && user.assignedApps.includes('/invoices')) return true;
+    if ((key === 'quotations' || key === 'quotations_create') && (user.assignedApps.includes('/quotations') || user.assignedApps.includes('/invoices'))) return true;
     if (key === 'masters' && user.assignedApps.includes('/invoices')) return true;
-    if (key === 'hr_docs' && (user.assignedApps.includes('/payslip') || user.assignedApps.includes('/offer-letter'))) return true;
+    if ((key === 'hr_docs' || key === 'hr_docs_create') && (user.assignedApps.includes('/payslip') || user.assignedApps.includes('/offer-letter'))) return true;
     if (key === 'settings' && user.assignedApps.includes('/settings')) return true;
+    if (key === 'signed_copies') return true;
   }
 
   return false;

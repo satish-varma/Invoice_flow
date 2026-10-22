@@ -16,6 +16,7 @@ import {
   bulkUpdateBrandPricing,
 } from '@/services/newrelicPricingService';
 import { NEWRELIC_LOCATIONS } from '@/services/newrelicChallanService';
+import { hasPermission } from '@/types/permissions';
 import {
   Trash2,
   Plus,
@@ -46,6 +47,7 @@ type EditRow = {
   discountPercent: string;
   purchaseCost: string;
   effectiveDate?: string;
+  reason?: string;
 };
 
 const emptyEdit = (location: NewRelicLocation): EditRow => ({
@@ -56,6 +58,7 @@ const emptyEdit = (location: NewRelicLocation): EditRow => ({
   discountPercent: '',
   purchaseCost: '',
   effectiveDate: new Date().toISOString().substring(0, 10),
+  reason: '',
 });
 
 export default function PricingPage() {
@@ -91,16 +94,17 @@ export default function PricingPage() {
   const [bulkApplyTo, setBulkApplyTo] = useState<'purchaseCost' | 'mrp'>('purchaseCost');
   const [bulkValue, setBulkValue] = useState<number>(5);
   const [bulkEffectiveDate, setBulkEffectiveDate] = useState<string>(() => new Date().toISOString().substring(0, 10));
+  const [bulkReason, setBulkReason] = useState<string>('Vendor Annual Price Adjustment');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   // Price history modal state
   const [historyItem, setHistoryItem] = useState<PricingItem | null>(null);
 
   useEffect(() => {
-    if (role && role !== 'admin' && role !== 'guest') {
+    if (user && role && role !== 'admin' && !hasPermission(user, 'pricing')) {
       router.push('/newrelic');
     }
-  }, [role, router]);
+  }, [user, role, router]);
 
   useEffect(() => {
     async function load() {
@@ -191,7 +195,7 @@ export default function PricingPage() {
         purchaseCost: cost,
         effectiveDate: newRow.effectiveDate || new Date().toISOString().substring(0, 10),
       };
-      await savePricingItem(item, user?.email);
+      await savePricingItem(item, user?.email, newRow.reason || 'Initial pricing entry');
       const refreshed = await getAllPricingItems();
       setPricingItems(refreshed);
       setNewRow(emptyEdit(activeLocation));
@@ -245,7 +249,7 @@ export default function PricingPage() {
         purchaseCost: cost,
         effectiveDate: editRow.effectiveDate || new Date().toISOString().substring(0, 10),
       };
-      await savePricingItem(item, user?.email);
+      await savePricingItem(item, user?.email, editRow.reason || 'Manual rate adjustment');
       const refreshed = await getAllPricingItems();
       setPricingItems(refreshed);
       setEditingId(null);
@@ -277,6 +281,7 @@ export default function PricingPage() {
         applyTo: bulkApplyTo,
         effectiveDate: bulkEffectiveDate,
         userEmail: user?.email,
+        reason: bulkReason,
       });
       const refreshed = await getAllPricingItems();
       setPricingItems(refreshed);
@@ -339,12 +344,12 @@ export default function PricingPage() {
     }
   }
 
-  if (!role || (role !== 'admin' && role !== 'guest')) return null;
+  if (!role || (role !== 'admin' && !hasPermission(user, 'pricing'))) return null;
 
   const locations: NewRelicLocation[] = ['hyderabad', 'bangalore'];
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-8 py-6">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-6">
       {/* Header */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
@@ -817,24 +822,30 @@ export default function PricingPage() {
                       </div>
                     </div>
 
-                    {/* Metrics 3-box Grid */}
-                    <div className="grid grid-cols-3 gap-2 bg-slate-50/80 dark:bg-slate-800/50 rounded-2xl p-2.5 border border-slate-100 dark:border-slate-800">
+                    {/* Metrics 4-box Grid */}
+                    <div className="grid grid-cols-4 gap-1.5 bg-slate-50/80 dark:bg-slate-800/50 rounded-2xl p-2.5 border border-slate-100 dark:border-slate-800">
                       <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">MRP</p>
-                        <p className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200 mt-0.5">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">MRP</p>
+                        <p className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200 mt-0.5 truncate">
                           {item.mrp > 0 ? `₹${item.mrp.toFixed(2)}` : <span className="text-red-400">₹0.00</span>}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Discount</p>
-                        <p className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Disc</p>
+                        <p className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">
                           {item.discountPercent}%
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">P.Cost</p>
-                        <p className="text-sm font-mono font-black text-[#3b2fc9] dark:text-indigo-400 mt-0.5">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">P.Cost</p>
+                        <p className="text-xs font-mono font-black text-[#3b2fc9] dark:text-indigo-400 mt-0.5 truncate">
                           {item.purchaseCost > 0 ? `₹${item.purchaseCost.toFixed(2)}` : <span className="text-red-500">₹0.00</span>}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Margin</p>
+                        <p className="text-xs font-mono font-black text-emerald-700 dark:text-emerald-400 mt-0.5 truncate">
+                          {item.mrp > 0 && item.purchaseCost > 0 ? `₹${(item.mrp - item.purchaseCost).toFixed(1)}` : '₹0'}
                         </p>
                       </div>
                     </div>
@@ -903,6 +914,7 @@ export default function PricingPage() {
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">MRP (₹)</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Disc (%)</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">P.Cost (₹)</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Margin (₹ / %)</th>
                     <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Effective Since</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
@@ -964,6 +976,17 @@ export default function PricingPage() {
                               className="w-24 px-2 py-1 text-sm border border-blue-300 rounded text-right focus:outline-none font-semibold"
                             />
                           </td>
+                          <td className="px-3 py-2 text-right">
+                            {(() => {
+                              const m = parseFloat(editRow.mrp) - parseFloat(editRow.purchaseCost);
+                              const pct = parseFloat(editRow.mrp) > 0 ? (m / parseFloat(editRow.mrp)) * 100 : 0;
+                              return !isNaN(m) && !isNaN(pct) ? (
+                                <span className="font-mono text-xs font-bold text-emerald-600">
+                                  ₹{m.toFixed(2)} ({pct.toFixed(0)}%)
+                                </span>
+                              ) : '-';
+                            })()}
+                          </td>
                           <td className="px-3 py-2 text-center">
                             <input
                               type="date"
@@ -1010,6 +1033,35 @@ export default function PricingPage() {
                           <td className="px-4 py-3 text-right font-semibold text-[#3b2fc9]">
                             {item.purchaseCost > 0 ? `₹${item.purchaseCost.toFixed(2)}` : <span className="text-red-500 font-bold">₹0.00</span>}
                           </td>
+                          <td className="px-4 py-3 text-right">
+                            {item.mrp > 0 && item.purchaseCost > 0 ? (() => {
+                              const margin = item.mrp - item.purchaseCost;
+                              const marginPct = (margin / item.mrp) * 100;
+                              const isHealthy = marginPct >= 25;
+                              const isModerate = marginPct >= 15 && marginPct < 25;
+                              return (
+                                <div className="inline-flex flex-col items-end">
+                                  <span className="font-mono text-xs font-bold text-slate-800">
+                                    ₹{margin.toFixed(2)}
+                                  </span>
+                                  <span
+                                    className={cn(
+                                      "text-[10px] font-black px-1.5 py-0.2 rounded-full border",
+                                      isHealthy
+                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                        : isModerate
+                                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                                        : "bg-rose-50 text-rose-700 border-rose-200"
+                                    )}
+                                  >
+                                    {marginPct.toFixed(1)}%
+                                  </span>
+                                </div>
+                              );
+                            })() : (
+                              <span className="text-xs text-slate-400 font-mono">-</span>
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-center text-xs text-gray-500">
                             <span className="inline-flex items-center gap-1">
                               <Calendar className="h-3 w-3 text-gray-400" />
@@ -1023,15 +1075,13 @@ export default function PricingPage() {
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-1">
-                              {item.history && item.history.length > 0 && (
-                                <button
-                                  onClick={() => setHistoryItem(item)}
-                                  className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
-                                  title="View Price History"
-                                >
-                                  <History className="h-3.5 w-3.5" />
-                                </button>
-                              )}
+                              <button
+                                onClick={() => setHistoryItem(item)}
+                                className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                                title="View Price History & Margin Audit"
+                              >
+                                <History className="h-3.5 w-3.5" />
+                              </button>
                               <button onClick={() => startEdit(item)} className="p-1.5 text-gray-400 hover:text-[#3b2fc9] hover:bg-blue-50 rounded-md transition-colors" title="Edit">
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
@@ -1212,6 +1262,32 @@ export default function PricingPage() {
                   Historical DCs dated prior to this date will preserve their original pricing.
                 </p>
               </div>
+
+              {/* Revision Reason / Audit Note */}
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Reason for Price Revision (Audit Trail)
+                </label>
+                <input
+                  type="text"
+                  value={bulkReason}
+                  onChange={(e) => setBulkReason(e.target.value)}
+                  placeholder="e.g. Vendor annual hike, brand promotional discount..."
+                  className="w-full h-11 px-3 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                />
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {['Vendor Annual Hike', 'Brand Promo Discount', 'Distributor Inflation', 'GST Tax Revision'].map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => setBulkReason(chip)}
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-purple-100 text-slate-600 dark:text-slate-300 hover:text-purple-700 transition-colors cursor-pointer"
+                    >
+                      + {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
@@ -1267,42 +1343,149 @@ export default function PricingPage() {
               </button>
             </div>
 
-            <div className="space-y-3">
-              {/* Current active rate */}
-              <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 rounded-2xl p-3 text-xs">
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 block">Current Active Rate</span>
-                <div className="flex items-center justify-between mt-1">
-                  <div>
-                    <span className="font-mono font-black text-emerald-950 dark:text-emerald-100 text-sm">₹{historyItem.purchaseCost.toFixed(2)}</span>
-                    <span className="text-emerald-700 dark:text-emerald-300 ml-2 font-mono text-[11px]">MRP: ₹{historyItem.mrp.toFixed(2)} ({historyItem.discountPercent}% off)</span>
-                  </div>
-                  <span className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-200">Effective: {historyItem.effectiveDate || 'Initial'}</span>
-                </div>
-              </div>
+            {(() => {
+              const currentMargin = historyItem.mrp - historyItem.purchaseCost;
+              const currentMarginPct = historyItem.mrp > 0 ? (currentMargin / historyItem.mrp) * 100 : 0;
+              const isHealthy = currentMarginPct >= 25;
+              const isModerate = currentMarginPct >= 15 && currentMarginPct < 25;
 
-              {/* Historical logs */}
-              <div>
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Previous Rate Timeline</h4>
-                {(!historyItem.history || historyItem.history.length === 0) ? (
-                  <p className="text-xs text-slate-400 py-4 text-center">No previous revisions recorded.</p>
-                ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                    {historyItem.history.slice().reverse().map((h, idx) => (
-                      <div key={idx} className="border border-slate-100 dark:border-slate-800 rounded-xl p-2.5 bg-slate-50/70 dark:bg-slate-800/40 text-xs flex items-center justify-between">
-                        <div>
-                          <p className="font-mono font-bold text-slate-800 dark:text-slate-200">P.Cost: ₹{h.purchaseCost.toFixed(2)}</p>
-                          <p className="text-[11px] font-mono text-slate-500">MRP: ₹{h.mrp.toFixed(2)} · {h.discountPercent}% Disc</p>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300 block">Valid around {h.effectiveDate}</span>
-                          {h.updatedBy && <span className="text-[10px] text-slate-400 block">{h.updatedBy}</span>}
-                        </div>
+              return (
+                <div className="space-y-4">
+                  {/* Current Active Rate Card with Margin Breakdown */}
+                  <div className="bg-gradient-to-br from-indigo-50/90 to-purple-50/90 dark:from-indigo-950/40 dark:to-purple-950/40 border border-indigo-200/80 dark:border-indigo-900/60 rounded-2xl p-4 text-xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                        Current Active Pricing &amp; Margin
+                      </span>
+                      <span
+                        className={cn(
+                          "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border",
+                          isHealthy
+                            ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300"
+                            : isModerate
+                            ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300"
+                            : "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300"
+                        )}
+                      >
+                        {isHealthy ? 'Healthy Margin' : isModerate ? 'Moderate Margin' : 'Low Margin Alert'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-indigo-100 dark:border-indigo-900/60">
+                      <div>
+                        <span className="text-[10px] text-slate-500 uppercase tracking-wider block">Procurement Cost</span>
+                        <span className="font-mono font-black text-slate-900 dark:text-white text-sm">
+                          ₹{historyItem.purchaseCost.toFixed(2)}
+                        </span>
                       </div>
-                    ))}
+                      <div>
+                        <span className="text-[10px] text-slate-500 uppercase tracking-wider block">Retail MRP</span>
+                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-sm">
+                          ₹{historyItem.mrp.toFixed(2)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 uppercase tracking-wider block">Profit Margin</span>
+                        <span className="font-mono font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                          ₹{currentMargin.toFixed(2)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 uppercase tracking-wider block">Margin Rate</span>
+                        <span className="font-mono font-black text-indigo-600 dark:text-indigo-400 text-sm">
+                          {currentMarginPct.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-indigo-100 dark:border-indigo-900/40">
+                      <span>Effective Date: <strong>{historyItem.effectiveDate || 'Initial'}</strong></span>
+                      <span>Discount: <strong>{historyItem.discountPercent}%</strong></span>
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
+
+                  {/* Historical Rate & Margin Progression Timeline */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                        Price Revision &amp; Margin History
+                      </h4>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        {(historyItem.history || []).length} Recorded Revisions
+                      </span>
+                    </div>
+
+                    {(!historyItem.history || historyItem.history.length === 0) ? (
+                      <div className="p-6 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+                        <History className="w-6 h-6 text-slate-300 dark:text-slate-600 mx-auto mb-1" />
+                        <p className="text-xs text-slate-400">No previous rate revisions recorded. This is the initial baseline rate.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                        {historyItem.history.slice().reverse().map((h, idx) => {
+                          const hMargin = h.marginAmount !== undefined ? h.marginAmount : (h.mrp - h.purchaseCost);
+                          const hMarginPct = h.marginPercent !== undefined ? h.marginPercent : (h.mrp > 0 ? (hMargin / h.mrp) * 100 : 0);
+                          const isCostHike = h.deltaCost !== undefined && h.deltaCost > 0;
+                          const isCostCut = h.deltaCost !== undefined && h.deltaCost < 0;
+
+                          return (
+                            <div key={idx} className="border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3 bg-slate-50/70 dark:bg-slate-800/40 text-xs space-y-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-mono font-black text-slate-900 dark:text-white">
+                                      P.Cost: ₹{h.purchaseCost.toFixed(2)}
+                                    </span>
+                                    <span className="text-slate-400">·</span>
+                                    <span className="font-mono text-slate-600 dark:text-slate-400">
+                                      MRP: ₹{h.mrp.toFixed(2)} ({h.discountPercent}%)
+                                    </span>
+                                    {h.deltaCost !== undefined && (
+                                      <span
+                                        className={cn(
+                                          "px-2 py-0.2 rounded-full text-[9px] font-black uppercase tracking-wider border",
+                                          isCostHike
+                                            ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300"
+                                            : isCostCut
+                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                            : "bg-slate-100 text-slate-600 border-slate-200"
+                                        )}
+                                      >
+                                        {isCostHike ? `+₹${h.deltaCost.toFixed(2)} Hike` : isCostCut ? `-₹${Math.abs(h.deltaCost).toFixed(2)} Cut` : 'No Change'}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="mt-1 flex items-center gap-2 flex-wrap">
+                                    <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                                      Margin: ₹{hMargin.toFixed(2)} ({hMarginPct.toFixed(1)}%)
+                                    </span>
+                                    {h.reason && (
+                                      <span className="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-[10px] font-medium">
+                                        🏷️ {h.reason}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block">
+                                    Valid around {h.effectiveDate}
+                                  </span>
+                                  {h.updatedBy && (
+                                    <span className="text-[10px] text-slate-400 block font-mono">
+                                      {h.updatedBy.split('@')[0]}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
               <button

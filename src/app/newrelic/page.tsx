@@ -44,10 +44,10 @@ export default function NewRelicPage() {
 
   // Route guard: Only redirect if user does not have permission for NewRelic DC
   useEffect(() => {
-    if (user && !isAdmin && role !== 'guest' && !hasPermission(user, 'newrelic_dc')) {
-      router.replace('/newrelic/tuckshop');
+    if (user && !isAdmin && !hasPermission(user, 'newrelic_dc')) {
+      router.replace(user.defaultLandingPage || '/newrelic/tuckshop');
     }
-  }, [isAdmin, user, role, router]);
+  }, [isAdmin, user, router]);
 
   // Non-blocking attendance check: If daily check-in is pending, show reminder banner without trapping user
   const [isAttendancePending, setIsAttendancePending] = useState(false);
@@ -74,9 +74,8 @@ export default function NewRelicPage() {
   const [historyChallan, setHistoryChallan] = useState<NewRelicChallan | null>(null);
   const [previewChallan, setPreviewChallan] = useState<NewRelicChallan | null>(null);
   const [adminPreviewChallan, setAdminPreviewChallan] = useState<NewRelicChallan | null>(null);
-  const { isUnlocked, remainingMinutes, lockFinancials } = useFinancialAuth();
+  const { isUnlocked, remainingMinutes, lockFinancials, showFinancials, setShowFinancials } = useFinancialAuth();
   const [showFinancialModal, setShowFinancialModal] = useState(false);
-  const [showFinancials, setShowFinancials] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
@@ -202,10 +201,23 @@ export default function NewRelicPage() {
   };
 
   const handleSave = (saved?: NewRelicChallan) => {
-    fetchData();
     setSelectedChallan(null);
     setIsCreatingNew(null);
-    if (saved) handleDownload(saved);
+    if (saved) {
+      setChallans((prev) => {
+        const idx = prev.findIndex(
+          (c) => (saved.id && c.id === saved.id) || (saved.dcNumber && c.dcNumber === saved.dcNumber)
+        );
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = { ...next[idx], ...saved };
+          return next;
+        }
+        return [saved, ...prev];
+      });
+      handleDownload(saved);
+    }
+    fetchData();
   };
 
   const handleDownload = (challan: NewRelicChallan) => {
@@ -485,7 +497,7 @@ export default function NewRelicPage() {
 
   return (
     <div
-      className="min-h-screen bg-transparent"
+      className="min-h-screen bg-transparent w-full max-w-full"
       suppressHydrationWarning
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -509,7 +521,7 @@ export default function NewRelicPage() {
           </div>
         </div>
       )}
-      <div className="max-w-6xl mx-auto px-3 sm:px-8 py-3 sm:py-8 space-y-4 sm:space-y-8">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-4 sm:space-y-8 min-w-0">
 
         {/* Attendance Check-In Reminder Banner */}
         {isAttendancePending && (

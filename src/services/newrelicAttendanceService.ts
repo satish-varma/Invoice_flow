@@ -199,10 +199,11 @@ export async function checkInEmployee(
   selfieUrl: string,
   coordinates: { lat: number; lng: number; accuracy?: number } | null,
   date: string,
-  globalRules?: Record<string, ShiftRule>
+  globalRules?: Record<string, ShiftRule>,
+  overrideTime?: string
 ): Promise<{ id: string; isLate: boolean; lateMinutes: number; cutoff: string }> {
   await assertWritePermission('Checking In Employee');
-  const now = new Date().toISOString();
+  const now = overrideTime || new Date().toISOString();
   const rule = getEffectiveShiftRule(employee, globalRules);
   const { isLate, lateMinutes, cutoff } = evaluateCheckInLate(now, employee.location, rule.cutoff);
 
@@ -222,6 +223,7 @@ export async function checkInEmployee(
     lateMinutes,
     shiftExpectedStart: rule.expectedStart,
     status: 'present',
+    ...(overrideTime ? { isOfflineSynced: true, syncedAt: new Date().toISOString() } : {}),
     createdAt: serverTimestamp() as any,
     updatedAt: serverTimestamp() as any,
   };
@@ -241,10 +243,11 @@ export async function checkOutEmployee(
     allowEarlyCheckout?: boolean;
     adminOverrideReason?: string;
     expectedMinutes?: number;
+    overrideTime?: string;
   }
 ): Promise<{ durationMinutes: number; overtimeMinutes: number; status: NewRelicAttendance['status'] }> {
   await assertWritePermission('Checking Out Employee');
-  const now = new Date().toISOString();
+  const now = options?.overrideTime || new Date().toISOString();
   const durationMinutes = Math.round(
     (new Date(now).getTime() - new Date(checkInTime).getTime()) / 60000
   );
@@ -279,6 +282,7 @@ export async function checkOutEmployee(
     overtimeMinutes,
     isMissedCheckOut: false,
     status,
+    ...(options?.overrideTime ? { isOfflineSynced: true, syncedAt: new Date().toISOString() } : {}),
     ...(options?.allowEarlyCheckout ? { earlyCheckoutApproved: true, earlyCheckoutReason: options.adminOverrideReason || 'Admin Override' } : {}),
     updatedAt: serverTimestamp(),
   });

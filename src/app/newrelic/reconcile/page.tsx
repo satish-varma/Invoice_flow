@@ -9,6 +9,7 @@ import { getNewRelicChallans, NEWRELIC_LOCATIONS } from '@/services/newrelicChal
 import { getAliases, saveAlias, deleteAlias, AliasMapping } from '@/services/aliasMappingService';
 import { useAuth } from '@/contexts/AuthContext';
 import { triggerHaptic } from '@/lib/haptics';
+import { hasPermission } from '@/types/permissions';
 
 interface Difference {
   dcs: string[];
@@ -71,11 +72,11 @@ export default function ReconcilePage() {
   }, []);
 
   useEffect(() => {
-    // Strictly restrict Reconcile to admin, superadmin, and guest (read-only)
-    if (role && role !== 'admin' && role !== 'superadmin' && role !== 'guest') {
+    // Strictly restrict Reconcile to users with tuckshop_reconcile permission or admin
+    if (user && role && role !== 'admin' && role !== 'superadmin' && !hasPermission(user, 'tuckshop_reconcile')) {
       router.push('/newrelic');
     }
-  }, [role, router]);
+  }, [user, role, router]);
 
   useEffect(() => {
     if (user?.preferredLocations && user.preferredLocations.length > 0) {
@@ -389,7 +390,7 @@ export default function ReconcilePage() {
     }
   };
 
-  if (role !== 'admin' && role !== 'superadmin' && role !== 'guest') {
+  if (role !== 'admin' && role !== 'superadmin' && !hasPermission(user, 'tuckshop_reconcile')) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center">
         <p className="text-gray-500">Access Denied</p>
@@ -399,7 +400,7 @@ export default function ReconcilePage() {
 
   return (
     <div className="min-h-screen bg-transparent pb-28">
-      <div className="max-w-6xl mx-auto px-3 sm:px-8 py-4 sm:py-8 space-y-5 sm:space-y-6">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-5 sm:space-y-6">
         {(isReadOnly || role === 'guest') && (
           <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-amber-700 dark:text-amber-400">
             <div className="flex items-center gap-2 text-xs font-bold">

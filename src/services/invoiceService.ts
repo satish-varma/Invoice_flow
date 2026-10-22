@@ -23,9 +23,57 @@ export interface TaxItem {
     amount: number;
 }
 
+export type InvoiceType = 'MRP' | 'NON-MRP';
+
+export function determineInvoiceType(invoice: {
+    taxes?: TaxItem[];
+    taxTotal?: number;
+    tax?: number;
+}): InvoiceType {
+    const taxes = invoice.taxes || [];
+    const hasTaxEntries = taxes.some(t => {
+        const name = (t.name || '').toLowerCase();
+        const hasTaxName = name.includes('gst') || name.includes('cgst') || name.includes('sgst') || name.includes('cess');
+        const hasAmountOrRate = (Number(t.amount) > 0) || (Number(t.rate) > 0);
+        return hasTaxName || hasAmountOrRate;
+    });
+
+    const hasTaxTotal = (Number(invoice.taxTotal) > 0) || (Number(invoice.tax) > 0);
+
+    if (hasTaxEntries || (taxes.length > 0 && hasTaxTotal) || hasTaxTotal) {
+        return 'MRP';
+    }
+
+    return 'NON-MRP';
+}
+
+export function getFinancialYear(dateInput?: string | Date): string {
+    const d = dateInput ? new Date(dateInput) : new Date();
+    const year = !isNaN(d.getFullYear()) ? d.getFullYear() : new Date().getFullYear();
+    const month = !isNaN(d.getMonth()) ? d.getMonth() : new Date().getMonth(); // 0 = Jan, 3 = Apr
+    
+    // In India, Financial Year starts April 1 (month 3) and ends March 31 (month 2).
+    const startYear = month >= 3 ? year : year - 1;
+    const endYear = startYear + 1;
+    
+    const startYearStr = String(startYear).slice(-2);
+    const endYearStr = String(endYear).slice(-2);
+    
+    return `${startYearStr}-${endYearStr}`;
+}
+
+export function formatInvoicePrefix(prefix: string, dateInput?: string | Date): string {
+    const fy = getFinancialYear(dateInput);
+    if (/\d{2}-\d{2}/.test(prefix)) {
+        return prefix.replace(/\d{2}-\d{2}/, fy);
+    }
+    return prefix;
+}
+
 export interface Invoice {
     id?: string;
     invoiceNumber: string;
+    invoiceType?: InvoiceType;
     date: string; // Storing date as ISO string
     lineItems: LineItem[];
     subtotal: number;
@@ -99,12 +147,15 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
         let finalInvoiceData: any;
         let docRef;
 
+        const invoiceType: InvoiceType = invoice.invoiceType || determineInvoiceType(invoice);
+
         if (invoice.id) {
             // Update existing invoice
             docRef = doc(db, INVOICES_COLLECTION, invoice.id);
             const { id, ...invoiceData } = invoice;
             await updateDoc(docRef, {
                 ...invoiceData,
+                invoiceType,
             });
             const updatedDocSnap = await getDoc(docRef);
             finalInvoiceData = { id: invoice.id, ...updatedDocSnap.data() };
@@ -117,13 +168,20 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
                 if (profile?.invoicePrefix) {
                     prefix = profile.invoicePrefix;
                 }
+            } else if (settings.companyProfiles && settings.companyProfiles.length > 0) {
+                const defaultProfile = settings.companyProfiles.find(p => p.id === settings.defaultCompanyProfile) || settings.companyProfiles[0];
+                if (defaultProfile?.invoicePrefix) {
+                    prefix = defaultProfile.invoicePrefix;
+                }
             }
 
+            prefix = formatInvoicePrefix(prefix, invoice.date);
             const newInvoiceNumber = await getNextInvoiceNumber(prefix);
             const { id, ...invoiceData } = invoice;
             const completeInvoiceData = {
                 ...invoiceData,
                 invoiceNumber: newInvoiceNumber,
+                invoiceType,
                 createdAt: serverTimestamp(),
             }
             docRef = await addDoc(collection(db, INVOICES_COLLECTION), completeInvoiceData);
@@ -191,6 +249,7 @@ export async function getInvoices(): Promise<Invoice[]> {
             invoices.push({
                 id: doc.id,
                 invoiceNumber: data.invoiceNumber || "",
+                invoiceType: (data.invoiceType as InvoiceType) || determineInvoiceType(data),
                 date: dateStr,
                 lineItems: data.lineItems || [],
                 subtotal: Number(data.subtotal) || 0,
@@ -250,5 +309,31 @@ export async function deleteInvoices(ids: string[]): Promise<void> {
     } catch (e) {
         console.error("Error deleting documents in batch: ", e);
         throw new Error("Failed to delete invoices.");
+    }
+}
+
+export async function updateInvoiceStatus(id: string, status: 'pending' | 'paid' | 'cancelled'): Promise<void> {
+    await assertWritePermission('Updating Invoice Status');
+    try {
+        const docRef = doc(db, INVOICES_COLLECTION, id);
+        await updateDoc(docRef, { status });
+    } catch (e) {
+        console.error("Error updating invoice status:", e);
+        throw new Error("Failed to update invoice status.");
+    }
+}
+
+export async function bulkUpdateInvoiceStatus(ids: string[], status: 'pending' | 'paid' | 'cancelled'): Promise<void> {
+    await assertWritePermission('Bulk Updating Invoice Status');
+    try {
+        const batch = writeBatch(db);
+        ids.forEach(id => {
+            const docRef = doc(db, INVOICES_COLLECTION, id);
+            batch.update(docRef, { status });
+        });
+        await batch.commit();
+    } catch (e) {
+        console.error("Error updating invoices status in batch:", e);
+        throw new Error("Failed to update invoice statuses in bulk.");
     }
 }

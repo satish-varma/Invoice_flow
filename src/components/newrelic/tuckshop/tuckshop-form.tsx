@@ -133,6 +133,11 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
       };
 
       await saveTuckshopRecord(record, user?.email || null);
+      triggerHaptic('success');
+      
+      // Close popup immediately without waiting for reset
+      if (onSuccess) onSuccess();
+
       toast({ title: editRecord ? 'Record updated successfully' : 'Record saved successfully' });
       
       // Reset form
@@ -144,8 +149,6 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
       } else {
         setSaleAmount('');
       }
-      
-      if (onSuccess) onSuccess();
     } catch (err) {
       console.error(err);
       toast({

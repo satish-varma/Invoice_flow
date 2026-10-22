@@ -39,6 +39,7 @@ import {
   Receipt,
   Paperclip,
   FileText,
+  AlertTriangle,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { exportToCSV } from '@/lib/export';
@@ -55,6 +56,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+
+import { hasPermission } from '@/types/permissions';
+import { logAuditEvent } from '@/services/auditService';
 
 export function formatShortDcNumber(dcNumber: string): string {
   if (!dcNumber) return '';
@@ -118,9 +122,11 @@ export function ChallanList({
   isBulkDownloading = false,
   showFinancials = true,
 }: ChallanListProps) {
-  const { role } = useAuth();
+  const { user, role, canDelete, isReadOnly } = useAuth();
   const isAdmin = role === 'admin' || role === 'superadmin';
   const canSeeFinancials = isAdmin && showFinancials;
+  const canViewSignedCopies = role !== 'guest' && hasPermission(user, 'signed_copies');
+  const hasDeleteClearance = canDelete && !isReadOnly && role !== 'guest';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -140,6 +146,7 @@ export function ChallanList({
   // Confirm delete dialog state
   const [deleteDialogChallan, setDeleteDialogChallan] = useState<Challan | null>(null);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
 
   const handleCopyDcNumber = (e: React.MouseEvent, num: string) => {
     e.stopPropagation();
@@ -302,7 +309,22 @@ export function ChallanList({
   );
 
   const confirmDelete = () => {
+    if (!hasDeleteClearance) return;
     if (deleteDialogChallan) {
+      logAuditEvent({
+        actorEmail: user?.email || 'admin',
+        actorRole: role || 'user',
+        action: 'dc_deleted',
+        actionLabel: 'Deleted Delivery Challan',
+        targetType: 'challan',
+        targetId: deleteDialogChallan.id,
+        targetLabel: deleteDialogChallan.dcNumber,
+        details: {
+          consignee: deleteDialogChallan.shipToName,
+          total: deleteDialogChallan.total,
+          dcDate: deleteDialogChallan.dcDate,
+        },
+      });
       onDeleteChallan(deleteDialogChallan);
       if (deleteDialogChallan.id) {
         const next = new Set(selectedIds);
@@ -310,21 +332,34 @@ export function ChallanList({
         setSelectedIds(next);
       }
       setDeleteDialogChallan(null);
+      setDeleteConfirmationInput('');
     }
   };
 
   const confirmBulkDelete = () => {
+    if (!hasDeleteClearance) return;
     const ids = Array.from(selectedIds);
     if (ids.length > 0) {
+      logAuditEvent({
+        actorEmail: user?.email || 'admin',
+        actorRole: role || 'user',
+        action: 'bulk_dc_deleted',
+        actionLabel: 'Bulk Deleted Delivery Challans',
+        targetType: 'challan',
+        details: {
+          deletedCount: ids.length,
+        },
+      });
       onBulkDelete(ids);
       setSelectedIds(new Set());
       setIsBulkDeleteDialogOpen(false);
+      setDeleteConfirmationInput('');
     }
   };
 
   return (
     <>
-      <Card className="rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden bg-white mb-24 sm:mb-12">
+      <Card className="rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden bg-white mb-24 sm:mb-12 w-full max-w-full min-w-0">
         <CardHeader className="p-4 sm:p-5 border-b border-gray-100 bg-gray-50/50 space-y-3">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
             <div>
@@ -569,8 +604,8 @@ export function ChallanList({
             </div>
           ) : (
             <>
-              {/* ── MOBILE CARD VIEW (md:hidden) ── */}
-              <div className="md:hidden">
+              {/* ── MOBILE CARD VIEW (lg:hidden) ── */}
+              <div className="lg:hidden">
                 <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50/80 border-b border-gray-100 text-xs font-semibold text-gray-600">
                   <button
                     type="button"
@@ -630,7 +665,8 @@ export function ChallanList({
 
                             <div className="flex items-center gap-1.5 min-w-0">
                               <span
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   triggerHaptic('light');
                                   onSelectChallan(challan);
                                 }}
@@ -735,31 +771,33 @@ export function ChallanList({
                         )}
 
                         {/* Mobile Attachment Buttons: Signed DC & Invoice */}
-                        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              triggerHaptic('light');
-                              setAttachmentModal({ challan, type: 'signed_copy' });
-                            }}
-                            className={`h-10 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all active:scale-[0.98] ${
-                              (challan.signedCopyUrls?.length ?? 0) > 0
-                                ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 shadow-2xs'
-                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
-                            }`}
-                            title="Upload or view Signed Delivery Challan copy"
-                          >
-                            <FileCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                            <span className="truncate">Signed DC</span>
-                            {(challan.signedCopyUrls?.length ?? 0) > 0 ? (
-                              <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black shrink-0">
-                                {challan.signedCopyUrls!.length}
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-slate-400 font-semibold shrink-0">+Upload</span>
-                            )}
-                          </button>
+                        <div className={`grid ${canViewSignedCopies ? 'grid-cols-2' : 'grid-cols-1'} gap-2 pt-1 border-t border-slate-100 dark:border-slate-800`}>
+                          {canViewSignedCopies && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                triggerHaptic('light');
+                                setAttachmentModal({ challan, type: 'signed_copy' });
+                              }}
+                              className={`h-10 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all active:scale-[0.98] ${
+                                (challan.signedCopyUrls?.length ?? 0) > 0
+                                  ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 shadow-2xs'
+                                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
+                              }`}
+                              title="Upload or view Signed Delivery Challan copy"
+                            >
+                              <FileCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <span className="truncate">Signed DC</span>
+                              {(challan.signedCopyUrls?.length ?? 0) > 0 ? (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black shrink-0">
+                                  {challan.signedCopyUrls!.length}
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-slate-400 font-semibold shrink-0">+Upload</span>
+                              )}
+                            </button>
+                          )}
 
                           <button
                             type="button"
@@ -794,7 +832,8 @@ export function ChallanList({
                             variant="default"
                             size="sm"
                             className="h-10 px-1 bg-gradient-to-r from-indigo-600 to-[#3b2fc9] hover:from-indigo-700 hover:to-[#2d23a0] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-xs active:scale-95 transition-transform"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               triggerHaptic('light');
                               onViewChallan(challan);
                             }}
@@ -809,7 +848,8 @@ export function ChallanList({
                             variant="outline"
                             size="sm"
                             className="h-10 px-1 border-blue-200 dark:border-blue-800 bg-blue-50/90 dark:bg-blue-950/40 hover:bg-blue-100 text-blue-700 dark:text-blue-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform shadow-2xs"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               triggerHaptic('medium');
                               onDownloadChallan(challan);
                             }}
@@ -824,7 +864,8 @@ export function ChallanList({
                             variant="outline"
                             size="sm"
                             className="h-10 px-1 border-amber-200 dark:border-amber-800 bg-amber-50/90 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform shadow-2xs"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               triggerHaptic('light');
                               onSelectChallan(challan);
                             }}
@@ -839,7 +880,8 @@ export function ChallanList({
                             variant="outline"
                             size="sm"
                             className="h-10 px-1 border-purple-200 dark:border-purple-800 bg-purple-50/90 dark:bg-purple-950/40 hover:bg-purple-100 text-purple-800 dark:text-purple-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform shadow-2xs"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               triggerHaptic('light');
                               onDuplicateChallan(challan);
                             }}
@@ -855,9 +897,9 @@ export function ChallanList({
                 </div>
               </div>
 
-              {/* ── DESKTOP DATA TABLE (hidden md:block) ── */}
-              <div className="hidden md:block overflow-x-auto">
-                <Table>
+              {/* ── DESKTOP DATA TABLE (hidden lg:block) ── */}
+              <div className="hidden lg:block overflow-x-auto min-w-0 w-full max-w-full">
+                <Table className="min-w-[980px]">
                   <TableHeader>
                     <TableRow className="hover:bg-transparent bg-gray-50/70 border-b border-gray-100 text-xs font-bold text-gray-700">
                       <TableHead className="w-[36px] px-2.5">
@@ -1004,28 +1046,30 @@ export function ChallanList({
                           <TableCell className="py-2.5 text-right">
                             <div className="flex items-center justify-end gap-0.5">
                               {/* Attachment: Signed DC */}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  triggerHaptic('light');
-                                  setAttachmentModal({ challan, type: 'signed_copy' });
-                                }}
-                                className={`h-7 px-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 ${
-                                  (challan.signedCopyUrls?.length ?? 0) > 0
-                                    ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 shadow-2xs'
-                                    : 'text-gray-400 hover:text-emerald-700 hover:bg-emerald-50'
-                                }`}
-                                title="Manage Signed Copies"
-                              >
-                                <Paperclip className="w-3 h-3 text-emerald-600" />
-                                <span className="hidden xl:inline">Signed</span>
-                                {(challan.signedCopyUrls?.length ?? 0) > 0 && (
-                                  <span className="ml-0.5 px-1 py-0.2 rounded-full bg-emerald-600 text-white text-[8px] font-black">
-                                    {challan.signedCopyUrls!.length}
-                                  </span>
-                                )}
-                              </Button>
+                              {canViewSignedCopies && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    triggerHaptic('light');
+                                    setAttachmentModal({ challan, type: 'signed_copy' });
+                                  }}
+                                  className={`h-7 px-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 ${
+                                    (challan.signedCopyUrls?.length ?? 0) > 0
+                                      ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 shadow-2xs'
+                                      : 'text-gray-400 hover:text-emerald-700 hover:bg-emerald-50'
+                                  }`}
+                                  title="Manage Signed Copies"
+                                >
+                                  <Paperclip className="w-3 h-3 text-emerald-600" />
+                                  <span className="hidden xl:inline">Signed</span>
+                                  {(challan.signedCopyUrls?.length ?? 0) > 0 && (
+                                    <span className="ml-0.5 px-1 py-0.2 rounded-full bg-emerald-600 text-white text-[8px] font-black">
+                                      {challan.signedCopyUrls!.length}
+                                    </span>
+                                  )}
+                                </Button>
+                              )}
 
                               {/* Attachment: Invoice */}
                               <Button
@@ -1103,18 +1147,20 @@ export function ChallanList({
                                 <Edit className="h-3.5 w-3.5" />
                               </Button>
 
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  triggerHaptic('medium');
-                                  setDeleteDialogChallan(challan);
-                                }}
-                                className="h-7 w-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"
-                                title="Delete Challan"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
+                              {hasDeleteClearance && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    triggerHaptic('medium');
+                                    setDeleteDialogChallan(challan);
+                                  }}
+                                  className="h-7 w-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                  title="Delete Challan"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1182,19 +1228,21 @@ export function ChallanList({
               <span>Duplicate</span>
             </Button>
 
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => {
-                triggerHaptic('medium');
-                setIsBulkDeleteDialogOpen(true);
-              }}
-              className="h-8 px-2.5 rounded-xl text-xs font-bold bg-red-600/90 hover:bg-red-600 text-white flex items-center gap-1.5"
-              title="Delete selected challans"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Delete</span>
-            </Button>
+            {hasDeleteClearance && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => {
+                  triggerHaptic('medium');
+                  setIsBulkDeleteDialogOpen(true);
+                }}
+                className="h-8 px-2.5 rounded-xl text-xs font-bold bg-red-600/90 hover:bg-red-600 text-white flex items-center gap-1.5"
+                title="Delete selected challans"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete</span>
+              </Button>
+            )}
 
             <button
               type="button"
@@ -1211,33 +1259,97 @@ export function ChallanList({
       {/* ── SINGLE DELETE CONFIRMATION DIALOG ── */}
       <AlertDialog
         open={!!deleteDialogChallan}
-        onOpenChange={(open) => !open && setDeleteDialogChallan(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteDialogChallan(null);
+            setDeleteConfirmationInput('');
+          }
+        }}
       >
         <AlertDialogContent className="rounded-2xl max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base sm:text-lg font-bold text-gray-900">
-              Delete Delivery Challan?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs sm:text-sm text-gray-500">
-              Are you sure you want to delete delivery challan{' '}
-              <span className="font-mono font-bold text-gray-900">
-                {deleteDialogChallan?.dcNumber}
-              </span>
-              ? This action cannot be undone.
+            <div className="flex items-center gap-2.5 text-red-600 mb-1">
+              <div className="p-2 rounded-xl bg-red-100 dark:bg-red-950/50">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <AlertDialogTitle className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
+                Permanent Delete Safeguard
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription asChild>
+              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 space-y-3 pt-1">
+                <p>
+                  This action is irreversible. All line items, taxes, and attachments linked to this challan will be permanently deleted.
+                </p>
+                <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200/80 dark:border-gray-700 space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">DC Number:</span>
+                    <span className="font-mono font-bold text-gray-900 dark:text-gray-100 select-all">
+                      {deleteDialogChallan?.dcNumber}
+                    </span>
+                  </div>
+                  {deleteDialogChallan?.shipToName && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Consignee:</span>
+                      <span className="font-medium text-gray-800 dark:text-gray-200 truncate max-w-[200px]">
+                        {deleteDialogChallan.shipToName}
+                      </span>
+                    </div>
+                  )}
+                  {deleteDialogChallan?.dcDate && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Date:</span>
+                      <span className="font-medium text-gray-800 dark:text-gray-200">
+                        {format(new Date(deleteDialogChallan.dcDate), 'dd MMM yyyy')}
+                      </span>
+                    </div>
+                  )}
+                  {deleteDialogChallan?.total !== undefined && (
+                    <div className="flex justify-between pt-1 border-t border-gray-200 dark:border-gray-700 font-bold">
+                      <span className="text-gray-500">Total Value:</span>
+                      <span className="font-mono text-gray-900 dark:text-gray-100">
+                        ₹{Number(deleteDialogChallan.total).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block">
+                    To confirm, type <span className="font-mono font-bold text-red-600 select-all">{deleteDialogChallan?.dcNumber}</span> below:
+                  </label>
+                  <Input
+                    value={deleteConfirmationInput}
+                    onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                    placeholder={deleteDialogChallan?.dcNumber}
+                    className="font-mono text-sm border-red-200 focus-visible:ring-red-500/30"
+                    autoFocus
+                  />
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-0">
+          <AlertDialogFooter className="gap-2 sm:gap-0 mt-2">
             <AlertDialogCancel
-              onClick={() => setDeleteDialogChallan(null)}
+              onClick={() => {
+                setDeleteDialogChallan(null);
+                setDeleteConfirmationInput('');
+              }}
               className="rounded-xl text-xs font-semibold"
             >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
-              className="rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                confirmDelete();
+                setDeleteConfirmationInput('');
+              }}
+              disabled={
+                deleteConfirmationInput.trim().toUpperCase() !==
+                (deleteDialogChallan?.dcNumber || '').trim().toUpperCase()
+              }
+              className="rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Yes, Delete
+              Confirm & Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1246,29 +1358,60 @@ export function ChallanList({
       {/* ── BULK DELETE CONFIRMATION DIALOG ── */}
       <AlertDialog
         open={isBulkDeleteDialogOpen}
-        onOpenChange={setIsBulkDeleteDialogOpen}
+        onOpenChange={(open) => {
+          setIsBulkDeleteDialogOpen(open);
+          if (!open) setDeleteConfirmationInput('');
+        }}
       >
         <AlertDialogContent className="rounded-2xl max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base sm:text-lg font-bold text-gray-900">
-              Delete {selectedIds.size} Delivery Challans?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs sm:text-sm text-gray-500">
-              Are you sure you want to permanently delete{' '}
-              <span className="font-bold text-red-600">{selectedIds.size}</span> selected
-              delivery challan documents? This action cannot be undone.
+            <div className="flex items-center gap-2.5 text-red-600 mb-1">
+              <div className="p-2 rounded-xl bg-red-100 dark:bg-red-950/50">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <AlertDialogTitle className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
+                Bulk Delete Safeguard
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription asChild>
+              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 space-y-3 pt-1">
+                <p>
+                  You are about to permanently delete{' '}
+                  <span className="font-bold text-red-600">{selectedIds.size}</span> delivery challans.
+                  This action is irreversible and cannot be undone.
+                </p>
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block">
+                    To confirm, type <span className="font-mono font-bold text-red-600">DELETE ALL</span> below:
+                  </label>
+                  <Input
+                    value={deleteConfirmationInput}
+                    onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                    placeholder="DELETE ALL"
+                    className="font-mono text-sm border-red-200 focus-visible:ring-red-500/30"
+                    autoFocus
+                  />
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-0">
+          <AlertDialogFooter className="gap-2 sm:gap-0 mt-2">
             <AlertDialogCancel
-              onClick={() => setIsBulkDeleteDialogOpen(false)}
+              onClick={() => {
+                setIsBulkDeleteDialogOpen(false);
+                setDeleteConfirmationInput('');
+              }}
               className="rounded-xl text-xs font-semibold"
             >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmBulkDelete}
-              className="rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                confirmBulkDelete();
+                setDeleteConfirmationInput('');
+              }}
+              disabled={deleteConfirmationInput.trim().toUpperCase() !== 'DELETE ALL'}
+              className="rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Delete {selectedIds.size} Challans
             </AlertDialogAction>

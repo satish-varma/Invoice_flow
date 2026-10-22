@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import {addSignedCopyUrl, removeSignedCopyUrl, addGoodsReceivedUrl, removeGoodsReceivedUrl} from '@/services/newrelicChallanService';
 import { uploadStorageFile, deleteStorageFile } from '@/services/storageService';
 import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/types/permissions';
 import { Badge } from '@/components/ui/badge';
 import { triggerHaptic } from '@/lib/haptics';
 
@@ -31,6 +32,9 @@ export function NewRelicAttachmentModal({ isOpen, onClose, challan, onUpdate, ti
   const [isDragging, setIsDragging] = useState(false);
   const [deletingUrl, setDeletingUrl] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  const isSigned = type === 'signed_copy';
+  const isForbidden = isSigned && (role === 'guest' || !hasPermission(user, 'signed_copies'));
   
   // Use local state to instantly reflect uploads and deletions in the UI
   const initialUrls = type === 'signed_copy' ? challan.signedCopyUrls : challan.goodsReceivedInvoiceUrls;
@@ -42,6 +46,10 @@ export function NewRelicAttachmentModal({ isOpen, onClose, challan, onUpdate, ti
       setLocalCopies(urls || []);
     }
   }, [challan, type]);
+
+  if (isForbidden) {
+    return null;
+  }
 
   const processFiles = async (fileList: FileList | File[]) => {
     if (!challan.id || fileList.length === 0) return;

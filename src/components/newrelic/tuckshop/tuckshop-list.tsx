@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Trash2, Filter, FileText, Search, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, IndianRupee, Pencil, FileSpreadsheet, X } from 'lucide-react';
+import { Trash2, Filter, FileText, Search, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, IndianRupee, Pencil, FileSpreadsheet, X, AlertTriangle, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { NewRelicTuckshopRecord, deleteTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { TuckshopDashboard, getCategoryBadge } from './tuckshop-dashboard';
@@ -10,6 +10,18 @@ import { SiteId, resolveSiteId, SITE_OPTIONS } from '@/types/site';
 import { triggerHaptic } from '@/lib/haptics';
 import { RollingCashCounter } from '@/components/effects/RollingCashCounter';
 import { TiltCard } from '@/components/effects/TiltCard';
+import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { logAuditEvent } from '@/services/auditService';
 
 interface Props {
   records: NewRelicTuckshopRecord[];
@@ -18,7 +30,7 @@ interface Props {
 }
 
 export function TuckshopList({ records, showDashboard, onEdit }: Props) {
-  const { role, user } = useAuth();
+  const { role, user, canDelete } = useAuth();
   const isOwnerOrAdmin = role === 'admin' || role === 'superadmin';
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'sale'>('all');
   const [filterSite, setFilterSite] = useState<string>('all');
@@ -53,13 +65,48 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
     }
   }, [user?.preferredLocations]);
 
-  const handleDelete = async (id: string) => {
-    if (role === 'guest') {
-      alert('Read-Only Mode: Guest account cannot delete tuckshop records.');
+  const [recordToDelete, setRecordToDelete] = useState<NewRelicTuckshopRecord | null>(null);
+  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const promptDeleteRecord = (record: NewRelicTuckshopRecord) => {
+    if (role === 'guest' || (!isOwnerOrAdmin && !canDelete)) {
+      alert('Delete Clearance Required: You do not have permission to delete tuckshop records.');
       return;
     }
-    if (confirm('Are you sure you want to delete this record?')) {
-      await deleteTuckshopRecord(id);
+    triggerHaptic('medium');
+    setRecordToDelete(record);
+    setDeleteConfirmationInput('');
+  };
+
+  const confirmDeleteRecord = async () => {
+    if (!recordToDelete?.id) return;
+    setIsDeleting(true);
+    try {
+      logAuditEvent({
+        actorEmail: user?.email || 'user',
+        actorRole: role || 'user',
+        action: 'tuckshop_deleted',
+        actionLabel: 'Deleted Tuckshop Record',
+        targetType: 'tuckshop',
+        targetId: recordToDelete.id,
+        targetLabel: `${recordToDelete.category} - ₹${recordToDelete.amount}`,
+        details: {
+          date: recordToDelete.date,
+          category: recordToDelete.category,
+          type: recordToDelete.type,
+          amount: recordToDelete.amount,
+          siteId: recordToDelete.siteId,
+          description: recordToDelete.description,
+        },
+      });
+      await deleteTuckshopRecord(recordToDelete.id);
+    } catch (err: any) {
+      alert(`Failed to delete record: ${err.message || 'Unknown error'}`);
+    } finally {
+      setIsDeleting(false);
+      setRecordToDelete(null);
+      setDeleteConfirmationInput('');
     }
   };
 
@@ -77,8 +124,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
 
   const canDeleteRecord = (record: NewRelicTuckshopRecord) => {
     if (role === 'guest') return false;
-    // Only Admin or Superadmin can delete
-    return isOwnerOrAdmin;
+    return isOwnerOrAdmin || canDelete;
   };
 
   const locCounts = React.useMemo(() => {
@@ -464,10 +510,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                     )}
                     {canDeleteRecord(record) && (
                       <button
-                        onClick={() => {
-                          triggerHaptic('medium');
-                          handleDelete(record.id!);
-                        }}
+                        onClick={() => promptDeleteRecord(record)}
                         className="h-8 px-2 rounded-xl text-rose-500 hover:bg-rose-50 flex items-center justify-center transition-colors"
                         title="Delete record"
                       >
@@ -601,7 +644,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                         )}
                         {canDeleteRecord(record) && (
                           <button
-                            onClick={() => handleDelete(record.id!)}
+                            onClick={() => promptDeleteRecord(record)}
                             className="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors"
                             title="Delete Record"
                           >
@@ -644,6 +687,98 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
           </div>
         </div>
       )}
+
+      {/* Tuckshop Record Two-Step Deletion Safeguard Modal */}
+      <AlertDialog
+        open={!!recordToDelete}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRecordToDelete(null);
+            setDeleteConfirmationInput('');
+          }
+        }}
+      >
+        <AlertDialogContent className="w-[90vw] max-w-md rounded-2xl">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2.5 text-rose-600 mb-1">
+              <div className="p-2 rounded-xl bg-rose-100 dark:bg-rose-950/50">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <AlertDialogTitle className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
+                Delete Tuckshop Record Safeguard
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription asChild>
+              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 space-y-3 pt-1">
+                <p>
+                  This action is permanent and will remove this ledger entry and update financial balances. This cannot be undone.
+                </p>
+                {recordToDelete && (
+                  <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200/80 dark:border-gray-700 space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Date:</span>
+                      <span className="font-medium text-gray-800 dark:text-gray-200">
+                        {recordToDelete.date}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Type / Category:</span>
+                      <span className="font-semibold text-gray-800 dark:text-gray-200 uppercase">
+                        {recordToDelete.type} • {recordToDelete.category}
+                      </span>
+                    </div>
+                    {recordToDelete.description && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Description:</span>
+                        <span className="font-medium text-gray-800 dark:text-gray-200 truncate max-w-[200px]">
+                          {recordToDelete.description}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between pt-1 border-t border-gray-200 dark:border-gray-700 font-bold">
+                      <span className="text-gray-500">Amount:</span>
+                      <span className="font-mono text-gray-900 dark:text-gray-100">
+                        ₹{Number(recordToDelete.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block">
+                    To confirm, type <span className="font-mono font-bold text-rose-600 select-all">DELETE</span> below:
+                  </label>
+                  <Input
+                    value={deleteConfirmationInput}
+                    onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                    placeholder="DELETE"
+                    className="font-mono text-sm border-rose-200 focus-visible:ring-rose-500/30"
+                    autoFocus
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0 mt-2">
+            <AlertDialogCancel
+              onClick={() => {
+                setRecordToDelete(null);
+                setDeleteConfirmationInput('');
+              }}
+              className="rounded-xl text-xs font-semibold"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={isDeleting || deleteConfirmationInput.trim().toUpperCase() !== 'DELETE'}
+              onClick={confirmDeleteRecord}
+            >
+              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Confirm & Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     </div>
   );

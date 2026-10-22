@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { InvoiceForm } from '@/components/invoice-form';
 import { InvoiceList } from '@/components/invoice-list';
-import { getInvoices, deleteInvoice, Invoice } from '@/services/invoiceService';
+import { getInvoices, deleteInvoice, deleteInvoices, updateInvoiceStatus, bulkUpdateInvoiceStatus, Invoice } from '@/services/invoiceService';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Loader, ListOrdered, FilePlus, ArrowLeft, Plus, RefreshCcw } from 'lucide-react';
 import { InvoicePreview } from '@/components/invoice-preview';
@@ -42,6 +42,8 @@ export default function RootHomePage() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [downloadQueue, setDownloadQueue] = useState<Invoice[]>([]);
+  const [isBulkDownloading, setIsBulkDownloading] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -53,11 +55,12 @@ export default function RootHomePage() {
 
     const isAdmin = role === 'admin' || role === 'superadmin';
     const isGuest = role === 'guest';
-    const canAccessBilling = isAdmin || isGuest || hasPermission(user, 'billing');
+    const canAccessBilling = isAdmin || (!isGuest && hasPermission(user, 'invoices'));
 
-    // Guests do not require daily attendance check-in
+    // Guests cannot see invoices; redirect to delivery challan hub
     if (isGuest) {
-      setRedirecting(false);
+      setRedirecting(true);
+      router.replace('/delivery-challan');
       return;
     }
 
@@ -183,6 +186,17 @@ export default function RootHomePage() {
     setPdfAction('preview');
   };
 
+  const handleBulkDownload = (selectedInvoices: Invoice[]) => {
+    if (selectedInvoices.length === 0 || isBulkDownloading) return;
+    triggerHaptic('medium');
+    setIsBulkDownloading(true);
+    setDownloadQueue([...selectedInvoices]);
+    toast({
+      title: 'Starting Bulk Download',
+      description: `Preparing to download ${selectedInvoices.length} invoice PDFs...`,
+    });
+  };
+
   const handleDeleteInvoice = async (invoice: Invoice) => {
     if (!invoice.id) return;
     try {
@@ -206,6 +220,100 @@ export default function RootHomePage() {
     }
   };
 
+  const handleUpdateInvoiceStatus = async (
+    invoice: Invoice,
+    newStatus: 'pending' | 'paid' | 'cancelled'
+  ) => {
+    if (!invoice.id) return;
+    try {
+      triggerHaptic('medium');
+      await updateInvoiceStatus(invoice.id, newStatus);
+      setInvoices((prev) =>
+        prev.map((inv) => (inv.id === invoice.id ? { ...inv, status: newStatus } : inv))
+      );
+      toast({
+        title: newStatus === 'paid' ? 'Marked as Paid' : 'Status Updated',
+        description: `Invoice ${invoice.invoiceNumber} status is now ${newStatus.toUpperCase()}.`,
+      });
+    } catch (error) {
+      console.error('Error updating invoice status:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Status Update Failed',
+        description: 'Failed to update invoice status. Please try again.',
+      });
+    }
+  };
+
+  const handleBulkUpdateStatus = async (
+    selectedInvoices: Invoice[],
+    newStatus: 'pending' | 'paid' | 'cancelled'
+  ) => {
+    const ids = selectedInvoices.map((i) => i.id!).filter(Boolean);
+    if (ids.length === 0) return;
+    try {
+      triggerHaptic('medium');
+      await bulkUpdateInvoiceStatus(ids, newStatus);
+      const idSet = new Set(ids);
+      setInvoices((prev) =>
+        prev.map((inv) => (inv.id && idSet.has(inv.id) ? { ...inv, status: newStatus } : inv))
+      );
+      toast({
+        title: `Marked ${ids.length} Invoices as ${newStatus.toUpperCase()}`,
+        description: `Successfully updated status for ${ids.length} invoices.`,
+      });
+    } catch (error) {
+      console.error('Error updating invoices status in bulk:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Bulk Update Failed',
+        description: 'Failed to update invoice statuses. Please try again.',
+      });
+    }
+  };
+
+  const handleBulkDeleteInvoices = async (selectedInvoices: Invoice[]) => {
+    const ids = selectedInvoices.map((i) => i.id!).filter(Boolean);
+    if (ids.length === 0) return;
+    try {
+      triggerHaptic('warning');
+      await deleteInvoices(ids);
+      const idSet = new Set(ids);
+      setInvoices((prev) => prev.filter((i) => i.id && !idSet.has(i.id)));
+      if (selectedInvoice?.id && idSet.has(selectedInvoice.id)) {
+        setSelectedInvoice(null);
+        setActiveTab('list');
+      }
+      toast({
+        title: 'Invoices Deleted',
+        description: `Successfully deleted ${ids.length} invoices.`,
+      });
+    } catch (error) {
+      console.error('Error bulk deleting invoices:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: 'Failed to delete selected invoices. Please try again.',
+      });
+    }
+  };
+
+  // Queue pump for Bulk Download
+  useEffect(() => {
+    if (downloadQueue.length > 0 && !invoiceToGenerate && settings) {
+      const nextItem = downloadQueue[0];
+      setInvoiceToGenerate(nextItem);
+      setPdfAction('save');
+      setDownloadQueue((prev) => prev.slice(1));
+    } else if (downloadQueue.length === 0 && isBulkDownloading && !invoiceToGenerate) {
+      setIsBulkDownloading(false);
+      toast({
+        title: 'Bulk Download Complete',
+        description: 'All selected invoice PDFs have been downloaded.',
+      });
+    }
+  }, [downloadQueue, invoiceToGenerate, settings, isBulkDownloading, toast]);
+
   useEffect(() => {
     if (invoiceToGenerate && settings && pdfAction) {
       const timer = setTimeout(async () => {
@@ -226,8 +334,10 @@ export default function RootHomePage() {
                 description: 'There was an error generating the PDF for download.',
               });
             } finally {
-              setInvoiceToGenerate(null);
-              setPdfAction(null);
+              setTimeout(() => {
+                setInvoiceToGenerate(null);
+                setPdfAction(null);
+              }, isBulkDownloading ? 500 : 50);
             }
           } else {
             // 'preview'
@@ -255,7 +365,7 @@ export default function RootHomePage() {
 
       return () => clearTimeout(timer);
     }
-  }, [invoiceToGenerate, pdfAction, settings, toast]);
+  }, [invoiceToGenerate, pdfAction, settings, toast, isBulkDownloading]);
 
   if (loading || redirecting !== false) {
     return (
@@ -268,9 +378,8 @@ export default function RootHomePage() {
 
   return (
     <AppShell>
-      <div className="min-h-screen bg-transparent flex flex-col items-center p-3 sm:p-6 lg:p-8">
-        <div className="w-full max-w-7xl mx-auto space-y-6 sm:space-y-8">
-          {/* Executive Overview Banner & Stats */}
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8">
+        {/* Executive Overview Banner & Stats */}
           <DashboardOverview
             invoices={invoices}
             quotations={quotations}
@@ -385,6 +494,11 @@ export default function RootHomePage() {
                     onDownloadInvoice={handleDownload}
                     onViewInvoice={handlePreviewInvoice}
                     onDeleteInvoice={handleDeleteInvoice}
+                    onBulkDownload={handleBulkDownload}
+                    isBulkDownloading={isBulkDownloading}
+                    onUpdateStatus={handleUpdateInvoiceStatus}
+                    onBulkUpdateStatus={handleBulkUpdateStatus}
+                    onBulkDelete={handleBulkDeleteInvoices}
                   />
                 )}
               </div>
@@ -431,7 +545,6 @@ export default function RootHomePage() {
             />
           )}
         </div>
-      </div>
     </AppShell>
   );
 }

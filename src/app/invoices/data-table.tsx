@@ -39,6 +39,12 @@ import {
   Filter,
   RotateCcw,
   Paperclip,
+  Tag,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  ChevronDown,
+  CheckCheck,
 } from "lucide-react";
 import {
   Select,
@@ -47,10 +53,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { exportToCSV } from "@/lib/export";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { triggerHaptic } from "@/lib/haptics";
+
+const statusMap: Record<
+  string,
+  { label: string; class: string; dot: string }
+> = {
+  paid: {
+    label: "Paid",
+    class:
+      "bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60",
+    dot: "bg-emerald-500",
+  },
+  pending: {
+    label: "Pending",
+    class:
+      "bg-amber-50 text-amber-700 border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60",
+    dot: "bg-amber-500",
+  },
+  cancelled: {
+    label: "Cancelled",
+    class:
+      "bg-rose-50 text-rose-700 border-rose-200/80 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60",
+    dot: "bg-rose-500",
+  },
+};
 
 interface DataTableProps<TData extends Invoice, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -61,6 +97,8 @@ interface DataTableProps<TData extends Invoice, TValue> {
   onDownloadSingle?: (invoice: TData) => void;
   onDeleteSingle?: (invoice: TData) => void;
   onEditSingle?: (invoice: TData) => void;
+  onUpdateStatus?: (invoice: TData, newStatus: 'pending' | 'paid' | 'cancelled') => void;
+  onBulkUpdateStatus?: (selectedIds: string[], newStatus: 'pending' | 'paid' | 'cancelled') => void;
 }
 
 export function InvoicesDataTable<TData extends Invoice, TValue>({
@@ -72,6 +110,8 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
   onDownloadSingle,
   onDeleteSingle,
   onEditSingle,
+  onUpdateStatus,
+  onBulkUpdateStatus,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -80,15 +120,73 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
 
   // Filter states
   const [searchText, setSearchText] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState<string>("all");
-  const [periodFilter, setPeriodFilter] = React.useState<string>("all");
+  const currentYear = React.useMemo(() => new Date().getFullYear().toString(), []);
+  const MONTH_NAMES = React.useMemo(() => [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ], []);
+  const currentMonthName = React.useMemo(() => MONTH_NAMES[new Date().getMonth()], [MONTH_NAMES]);
+  const defaultPeriod = currentMonthName;
 
-  // Extract unique periods (Service Months)
+  const [yearFilter, setYearFilter] = React.useState<string>(currentYear);
+  const [statusFilter, setStatusFilter] = React.useState<string>("all");
+  const [periodFilter, setPeriodFilter] = React.useState<string>(defaultPeriod);
+  const [shipToFilter, setShipToFilter] = React.useState<string>("all");
+  const [typeFilter, setTypeFilter] = React.useState<string>("MRP");
+
+  // Extract unique years
+  const availableYears = React.useMemo(() => {
+    const set = new Set<string>();
+    set.add(currentYear);
+    data.forEach((inv) => {
+      if (inv.date) {
+        const match = String(inv.date).match(/^(\d{4})/);
+        if (match) set.add(match[1]);
+        else {
+          const d = new Date(inv.date);
+          if (!isNaN(d.getFullYear())) set.add(String(d.getFullYear()));
+        }
+      }
+    });
+    return Array.from(set).sort((a, b) => b.localeCompare(a));
+  }, [data, currentYear]);
+
+  // Extract unique periods (Service Months) in reverse chronological order with Current Month at the top
   const availablePeriods = React.useMemo(() => {
+    const currentMonthIdx = new Date().getMonth();
+    const orderedMonths: string[] = [];
+    for (let i = 0; i < 12; i++) {
+      const idx = (currentMonthIdx - i + 12) % 12;
+      orderedMonths.push(MONTH_NAMES[idx]);
+    }
+
     const set = new Set<string>();
     data.forEach((inv) => {
       if (inv.period && inv.period.trim()) {
         set.add(inv.period.trim());
+      }
+    });
+
+    const result: string[] = [];
+    orderedMonths.forEach((m) => {
+      result.push(m);
+      set.delete(m);
+    });
+
+    if (set.size > 0) {
+      result.push(...Array.from(set).sort());
+    }
+
+    return result;
+  }, [data, MONTH_NAMES]);
+
+  // Extract unique Ship To destinations
+  const availableShipTos = React.useMemo(() => {
+    const set = new Set<string>();
+    data.forEach((inv) => {
+      const name = inv.shipToName;
+      if (name && name.trim()) {
+        set.add(name.trim());
       }
     });
     return Array.from(set).sort();
@@ -101,29 +199,61 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
       const matchesSearch =
         !query ||
         (inv.invoiceNumber || "").toLowerCase().includes(query) ||
+        (inv.invoiceType || "").toLowerCase().includes(query) ||
         (inv.billToName || inv.customerName || "").toLowerCase().includes(query) ||
         (inv.shipToName || "").toLowerCase().includes(query) ||
         (inv.period || "").toLowerCase().includes(query) ||
         (inv.eventNumber || "").toLowerCase().includes(query);
 
+      const invoiceYear = (() => {
+        if (inv.date) {
+          const match = String(inv.date).match(/^(\d{4})/);
+          if (match) return match[1];
+          const d = new Date(inv.date);
+          if (!isNaN(d.getFullYear())) return String(d.getFullYear());
+        }
+        if (inv.createdAt?.toDate) {
+          return String(inv.createdAt.toDate().getFullYear());
+        }
+        return '';
+      })();
+
+      const matchesYear = yearFilter === "all" || invoiceYear === yearFilter;
+
       const matchesStatus =
         statusFilter === "all" || (inv.status || "pending") === statusFilter;
 
       const matchesPeriod =
-        periodFilter === "all" || (inv.period || "") === periodFilter;
+        periodFilter === "all" ||
+        (inv.period || "").trim().toLowerCase() === periodFilter.trim().toLowerCase();
 
-      return matchesSearch && matchesStatus && matchesPeriod;
+      const matchesShipTo =
+        shipToFilter === "all" ||
+        (inv.shipToName || "").trim().toLowerCase() === shipToFilter.trim().toLowerCase();
+
+      const matchesType =
+        typeFilter === "all" || (inv.invoiceType || "NON-MRP") === typeFilter;
+
+      return matchesSearch && matchesYear && matchesStatus && matchesPeriod && matchesShipTo && matchesType;
     });
-  }, [data, searchText, statusFilter, periodFilter]);
+  }, [data, searchText, yearFilter, statusFilter, periodFilter, shipToFilter, typeFilter]);
 
   const hasActiveFilters =
-    searchText !== "" || statusFilter !== "all" || periodFilter !== "all";
+    searchText !== "" ||
+    yearFilter !== currentYear ||
+    periodFilter !== defaultPeriod ||
+    typeFilter !== "MRP" ||
+    statusFilter !== "all" ||
+    shipToFilter !== "all";
 
   const resetFilters = () => {
     triggerHaptic("light");
     setSearchText("");
+    setYearFilter(currentYear);
+    setPeriodFilter(defaultPeriod);
+    setTypeFilter("MRP");
     setStatusFilter("all");
-    setPeriodFilter("all");
+    setShipToFilter("all");
   };
 
   const table = useReactTable({
@@ -229,6 +359,30 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
             </Select>
           </div>
 
+          {/* Year Filter */}
+          <div className="w-full sm:w-36">
+            <Select
+              value={yearFilter}
+              onValueChange={(v) => {
+                triggerHaptic("light");
+                setYearFilter(v);
+              }}
+            >
+              <SelectTrigger className="h-10 text-xs rounded-xl border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-slate-700 dark:text-slate-200 font-medium">
+                <Calendar className="h-3.5 w-3.5 mr-1 text-slate-400 shrink-0" />
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
+                <SelectItem value="all">All Years</SelectItem>
+                {availableYears.map((yr) => (
+                  <SelectItem key={yr} value={yr}>
+                    {yr === currentYear ? `${yr} (Current)` : yr}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Service Month Filter */}
           <div className="w-full sm:w-44">
             <Select
@@ -246,7 +400,52 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
                 <SelectItem value="all">All Service Months</SelectItem>
                 {availablePeriods.map((period) => (
                   <SelectItem key={period} value={period}>
-                    {period}
+                    {period === currentMonthName ? `${period} (Current)` : period}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Invoice Type Filter (MRP / NON-MRP) */}
+          <div className="w-full sm:w-40">
+            <Select
+              value={typeFilter}
+              onValueChange={(v) => {
+                triggerHaptic("light");
+                setTypeFilter(v);
+              }}
+            >
+              <SelectTrigger className="h-10 text-xs rounded-xl border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-slate-700 dark:text-slate-200 font-medium">
+                <Tag className="h-3.5 w-3.5 mr-1 text-slate-400 shrink-0" />
+                <SelectValue placeholder="Invoice Type" />
+              </SelectTrigger>
+              <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="MRP">MRP (With GST)</SelectItem>
+                <SelectItem value="NON-MRP">NON-MRP</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Ship To Filter */}
+          <div className="w-full sm:w-44">
+            <Select
+              value={shipToFilter}
+              onValueChange={(v) => {
+                triggerHaptic("light");
+                setShipToFilter(v);
+              }}
+            >
+              <SelectTrigger className="h-10 text-xs rounded-xl border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-slate-700 dark:text-slate-200 font-medium">
+                <Truck className="h-3.5 w-3.5 mr-1 text-slate-400 shrink-0" />
+                <SelectValue placeholder="Ship To" />
+              </SelectTrigger>
+              <SelectContent className="dark:bg-slate-800 dark:border-slate-700 max-h-56">
+                <SelectItem value="all">All Ship To Locations</SelectItem>
+                {availableShipTos.map((loc) => (
+                  <SelectItem key={loc} value={loc}>
+                    {loc}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -293,6 +492,25 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
               {table.getSelectedRowModel().rows.length} invoice(s) selected
             </span>
             <div className="flex items-center gap-2">
+              {onBulkUpdateStatus && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    triggerHaptic("medium");
+                    const selectedIds = table
+                      .getSelectedRowModel()
+                      .rows.map((r) => r.original.id!)
+                      .filter(Boolean);
+                    onBulkUpdateStatus(selectedIds, 'paid');
+                    table.resetRowSelection();
+                  }}
+                  className="h-8 rounded-lg font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                  title="Mark all selected invoices as Paid"
+                >
+                  <CheckCheck className="mr-1.5 h-3.5 w-3.5" />
+                  Mark Paid ({table.getSelectedRowModel().rows.length})
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -323,6 +541,20 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
             {mobileSelected.size} selected
           </span>
           <div className="flex gap-2">
+            {onBulkUpdateStatus && (
+              <Button
+                size="sm"
+                className="h-9 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95"
+                onClick={() => {
+                  triggerHaptic("medium");
+                  onBulkUpdateStatus(Array.from(mobileSelected), 'paid');
+                  setMobileSelected(new Set());
+                }}
+                title="Mark selected invoices as Paid"
+              >
+                <CheckCheck className="h-3.5 w-3.5 mr-1" /> Paid
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -388,9 +620,91 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
                       className="mt-0.5 rounded-lg h-5 w-5"
                     />
                     <div className="min-w-0">
-                      <p className="font-mono font-black text-sm text-indigo-600 dark:text-indigo-400 truncate">
-                        {invoice.invoiceNumber || "No Number"}
-                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-mono font-black text-sm text-indigo-600 dark:text-indigo-400 truncate">
+                          {invoice.invoiceNumber || "No Number"}
+                        </p>
+                        <span
+                          className={`inline-flex items-center font-mono font-bold text-[10px] px-1.5 py-0.5 rounded border ${
+                            (invoice.invoiceType || "NON-MRP") === "MRP"
+                              ? "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200/80 dark:border-emerald-800/80"
+                              : "text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60 border-purple-200/80 dark:border-purple-800/80"
+                          }`}
+                        >
+                          {invoice.invoiceType || "NON-MRP"}
+                        </span>
+                        {(() => {
+                          const status = invoice.status || "pending";
+                          const badgeStyle = statusMap[status] || statusMap.pending;
+
+                          if (!onUpdateStatus) {
+                            return (
+                              <span
+                                className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeStyle.class}`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${badgeStyle.dot}`} />
+                                {badgeStyle.label}
+                              </span>
+                            );
+                          }
+
+                          return (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border cursor-pointer hover:shadow-sm active:scale-95 transition-all ${badgeStyle.class}`}
+                                >
+                                  <span className={`w-1.5 h-1.5 rounded-full ${badgeStyle.dot}`} />
+                                  <span>{badgeStyle.label}</span>
+                                  <ChevronDown className="w-2 h-2 opacity-60 ml-0.5" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="start"
+                                className="w-40 p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-xl z-50"
+                              >
+                                <DropdownMenuItem
+                                  disabled={status === "paid"}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerHaptic("light");
+                                    onUpdateStatus(invoice, "paid");
+                                  }}
+                                  className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 focus:bg-emerald-50 dark:focus:bg-emerald-950/50 cursor-pointer rounded-lg py-1.5"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5 mr-2 text-emerald-600" />
+                                  Mark as Paid
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  disabled={status === "pending"}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerHaptic("light");
+                                    onUpdateStatus(invoice, "pending");
+                                  }}
+                                  className="text-xs font-semibold text-amber-700 dark:text-amber-400 focus:bg-amber-50 dark:focus:bg-amber-950/50 cursor-pointer rounded-lg py-1.5"
+                                >
+                                  <Clock className="w-3.5 h-3.5 mr-2 text-amber-600" />
+                                  Mark as Pending
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  disabled={status === "cancelled"}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerHaptic("light");
+                                    onUpdateStatus(invoice, "cancelled");
+                                  }}
+                                  className="text-xs font-semibold text-slate-700 dark:text-slate-300 focus:bg-slate-50 dark:focus:bg-slate-800 cursor-pointer rounded-lg py-1.5"
+                                >
+                                  <XCircle className="w-3.5 h-3.5 mr-2 text-slate-500" />
+                                  Mark as Cancelled
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          );
+                        })()}
+                      </div>
                       <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate mt-0.5">
                         {invoice.billToName || invoice.customerName || "—"}
                       </p>
@@ -455,8 +769,25 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
                   )}
                 </div>
 
-                {/* 3 Tactile Action buttons: View, Edit, Delete */}
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                {/* Action buttons: Paid (if pending), View, Edit, Delete */}
+                <div
+                  className={`grid ${
+                    onUpdateStatus && invoice.status !== "paid" ? "grid-cols-4" : "grid-cols-3"
+                  } gap-2 pt-2 border-t border-slate-100 dark:border-slate-800`}
+                >
+                  {onUpdateStatus && invoice.status !== "paid" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 rounded-xl text-xs font-bold active:scale-95 transition-all bg-emerald-50/60 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
+                      onClick={() => {
+                        triggerHaptic("medium");
+                        onUpdateStatus(invoice, "paid");
+                      }}
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-emerald-600 dark:text-emerald-400" /> Paid
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -507,7 +838,7 @@ export function InvoicesDataTable<TData extends Invoice, TValue>({
       {/* ── DESKTOP TABLE ─────────────────────────────────────── */}
       <div className="hidden md:block">
         <div data-card="true" className="rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden theme-card">
-          <Table>
+          <Table className="w-full text-xs [&_th]:px-2.5 [&_th]:py-2.5 [&_td]:px-2.5 [&_td]:py-2">
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow

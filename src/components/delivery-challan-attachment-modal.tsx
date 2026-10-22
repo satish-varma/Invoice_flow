@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Challan, addChallanAttachment, removeChallanAttachment } from '@/services/challanService';
 import { uploadStorageFile, deleteStorageFile } from '@/services/storageService';
 import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/types/permissions';
 import { triggerHaptic } from '@/lib/haptics';
 
 interface DeliveryChallanAttachmentModalProps {
@@ -67,7 +68,8 @@ export function DeliveryChallanAttachmentModal({
     }
   }, [challan, isSigned]);
 
-  if (!challan) return null;
+  const isForbidden = isSigned && (user?.role === 'guest' || !hasPermission(user, 'signed_copies'));
+  if (isForbidden || !challan) return null;
 
   const safeDcNumber = (challan.dcNumber || 'dc').replace(/[/\\?%*:|"<>#]/g, '-');
 

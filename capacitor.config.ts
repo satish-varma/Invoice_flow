@@ -31,6 +31,11 @@ const config: CapacitorConfig = {
     captureInput: true,
     webContentsDebuggingEnabled: true, // Enables Chrome remote inspection via chrome://inspect
   },
+  ios: {
+    contentInset: 'automatic',
+    preferredContentMode: 'mobile',
+    scheme: 'The Gut Guru Tracker',
+  },
   plugins: {
     // Plugin-specific settings can be added here
   },

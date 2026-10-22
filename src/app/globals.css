@@ -62,6 +62,11 @@
   * {
     @apply border-border;
   }
+  html,
+  body {
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
+  }
   body {
     @apply bg-transparent text-foreground;
   }

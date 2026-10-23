@@ -1,0 +1,467 @@
+import { db } from '@/lib/firebase';
+import {
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  limit,
+} from 'firebase/firestore';
+import {
+  AlertGatewayConfig,
+  AlertDispatchRecord,
+  SendAlertRequest,
+  AlertProviderType,
+} from '@/types/alertGateway';
+
+const SETTINGS_DOC = 'site_settings';
+const GATEWAY_KEY = 'alert_gateway';
+const LOGS_COLLECTION = 'alert_logs';
+
+export const DEFAULT_ALERT_CONFIG: AlertGatewayConfig = {
+  activeProvider: 'mock',
+  channel: 'auto',
+  meta: {
+    phoneNumberId: '',
+    accessToken: '',
+    wabaId: '',
+  },
+  twilio: {
+    accountSid: '',
+    authToken: '',
+    fromNumber: '',
+  },
+  fast2sms: {
+    apiKey: '',
+    senderId: 'GUTGRU',
+    route: 'q',
+  },
+  msg91: {
+    authKey: '',
+    senderId: 'GUTGRU',
+  },
+  webhook: {
+    webhookUrl: '',
+    secretToken: '',
+  },
+  enableAutoLateAlert: false,
+  enableAutoCheckoutReminder: false,
+  managerPhone: '',
+  managerSiteRouting: {},
+};
+
+/** Get the configured Alert Gateway settings from Firestore */
+export async function getAlertGatewayConfig(): Promise<AlertGatewayConfig> {
+  try {
+    const snap = await getDoc(doc(db, SETTINGS_DOC, GATEWAY_KEY));
+    if (snap.exists()) {
+      return { ...DEFAULT_ALERT_CONFIG, ...snap.data() } as AlertGatewayConfig;
+    }
+  } catch (err) {
+    console.warn('Error fetching alert gateway config from Firestore:', err);
+  }
+  return DEFAULT_ALERT_CONFIG;
+}
+
+/** Save updated Alert Gateway settings to Firestore */
+export async function saveAlertGatewayConfig(
+  config: AlertGatewayConfig,
+  userEmail?: string | null
+): Promise<void> {
+  const payload = {
+    ...config,
+    updatedAt: new Date().toISOString(),
+    updatedBy: userEmail || 'admin',
+  };
+  await setDoc(doc(db, SETTINGS_DOC, GATEWAY_KEY), payload, { merge: true });
+}
+
+/**
+ * Standardize phone number for Indian mobile numbers & international format
+ * Examples: "9876543210" -> "919876543210", "+91 98765 43210" -> "919876543210"
+ */
+export function formatPhoneNumber(rawPhone: string): {
+  cleanDigits: string;
+  withPlus: string;
+  tenDigits: string;
+} {
+  const digits = rawPhone.replace(/\D/g, '');
+  let normalized = digits;
+  if (digits.length === 10) {
+    normalized = `91${digits}`;
+  } else if (digits.length === 12 && digits.startsWith('91')) {
+    normalized = digits;
+  }
+  const tenDigits = normalized.slice(-10);
+  return {
+    cleanDigits: normalized,
+    withPlus: `+${normalized}`,
+    tenDigits,
+  };
+}
+
+/** Generate standardized message copy for alerts */
+export function generateAlertMessage(
+  alertType: SendAlertRequest['alertType'],
+  data: {
+    employeeName?: string;
+    siteName?: string;
+    cutoff?: string;
+    checkInTime?: string;
+    lateMinutes?: number;
+    hoursElapsed?: number;
+    date?: string;
+    presentCount?: number;
+    totalRoster?: number;
+    onDutyCount?: number;
+    absentNames?: string[];
+    customText?: string;
+  }
+): string {
+  const today = data.date || new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const site = data.siteName || 'Gut Guru Hub';
+  const name = data.employeeName || 'Staff Member';
+
+  if (data.customText) {
+    return data.customText;
+  }
+
+  switch (alertType) {
+    case 'absent_notice':
+      return `⚠️ Gut Guru Attendance Notice\n\nHello ${name},\nYou have not checked in for today's shift (${today}) at ${site}. The shift cutoff deadline was ${data.cutoff || '06:30 AM'}.\n\nPlease check in immediately via your mobile kiosk, or notify your store manager if you are taking leave.`;
+
+    case 'late_alert':
+      return `⏰ Gut Guru Check-in Notice\n\nHi ${name},\nYour check-in today (${today}) was recorded at ${data.checkInTime || 'morning'} (+${data.lateMinutes || 0} minutes past the ${data.cutoff || '06:30 AM'} deadline).\n\nPlease ensure punctual check-in for upcoming shifts.`;
+
+    case 'checkout_reminder':
+      return `🏁 Gut Guru Shift Notice\n\nHi ${name},\nYou have been on duty for ${data.hoursElapsed || 11}+ hours today. Please remember to capture your check-out selfie before ending your shift to ensure your full day attendance is logged.`;
+
+    case 'manager_digest':
+      return `📊 Gut Guru Morning Shift Digest (${today})\nSite: ${site}\n\n👥 Present: ${data.presentCount || 0} / ${data.totalRoster || 0}\n🟢 On Duty: ${data.onDutyCount || 0}\n🔴 Absent (${data.absentNames?.length || 0}): ${data.absentNames?.join(', ') || 'None (100% Present!)'}\n\nAutomated digest via Gut Guru Ops.`;
+
+    case 'test_ping':
+      return `🔔 Gut Guru Gateway Test\n\nThis is a test notification confirming your ${site} Alert Gateway is connected and operating correctly. Timestamp: ${new Date().toLocaleTimeString('en-IN')}`;
+
+    default:
+      return `Gut Guru Alert: Message for ${name}.`;
+  }
+}
+
+/** Send alert to Meta WhatsApp Cloud API */
+async function sendMetaWhatsApp(
+  config: AlertGatewayConfig,
+  recipientPhone: string,
+  message: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  const meta = config.meta;
+  if (!meta?.phoneNumberId || !meta?.accessToken) {
+    return { success: false, error: 'Meta WhatsApp credentials (phoneNumberId or accessToken) are missing.' };
+  }
+
+  const { cleanDigits } = formatPhoneNumber(recipientPhone);
+  const endpoint = `https://graph.facebook.com/v19.0/${meta.phoneNumberId}/messages`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${meta.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: cleanDigits,
+        type: 'text',
+        text: {
+          preview_url: false,
+          body: message,
+        },
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data?.error?.message || `HTTP ${res.status}: Failed to send WhatsApp` };
+    }
+    return { success: true, data };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+/** Send alert via Twilio Messaging API (SMS or WhatsApp) */
+async function sendTwilio(
+  config: AlertGatewayConfig,
+  recipientPhone: string,
+  message: string,
+  channel: 'whatsapp' | 'sms' | 'auto'
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  const twilio = config.twilio;
+  if (!twilio?.accountSid || !twilio?.authToken || !twilio?.fromNumber) {
+    return { success: false, error: 'Twilio credentials (accountSid, authToken, or fromNumber) are missing.' };
+  }
+
+  const { withPlus } = formatPhoneNumber(recipientPhone);
+  const isWhatsApp = channel === 'whatsapp' || twilio.fromNumber.startsWith('whatsapp:');
+  const to = isWhatsApp ? `whatsapp:${withPlus}` : withPlus;
+  const from = twilio.fromNumber;
+
+  const endpoint = `https://api.twilio.com/2010-04-01/Accounts/${twilio.accountSid}/Messages.json`;
+  const basicAuth = Buffer.from(`${twilio.accountSid}:${twilio.authToken}`).toString('base64');
+
+  const params = new URLSearchParams();
+  params.append('To', to);
+  params.append('From', from);
+  params.append('Body', message);
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${basicAuth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data?.message || `HTTP ${res.status}: Twilio error` };
+    }
+    return { success: true, data };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+/** Send SMS via Fast2SMS (Indian SMS Gateway) */
+async function sendFast2SMS(
+  config: AlertGatewayConfig,
+  recipientPhone: string,
+  message: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  const fast2sms = config.fast2sms;
+  if (!fast2sms?.apiKey) {
+    return { success: false, error: 'Fast2SMS API Key is missing.' };
+  }
+
+  const { tenDigits } = formatPhoneNumber(recipientPhone);
+  const endpoint = 'https://www.fast2sms.com/dev/bulkV2';
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'authorization': fast2sms.apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        route: fast2sms.route || 'q',
+        message,
+        language: 'english',
+        flash: 0,
+        numbers: tenDigits,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || data?.return === false) {
+      return { success: false, error: data?.message?.[0] || 'Fast2SMS dispatch failed' };
+    }
+    return { success: true, data };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+/** Send SMS via MSG91 */
+async function sendMSG91(
+  config: AlertGatewayConfig,
+  recipientPhone: string,
+  message: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  const msg91 = config.msg91;
+  if (!msg91?.authKey) {
+    return { success: false, error: 'MSG91 AuthKey is missing.' };
+  }
+
+  const { cleanDigits } = formatPhoneNumber(recipientPhone);
+  const endpoint = 'https://control.msg91.com/api/v5/flow/';
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'authkey': msg91.authKey,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        template_id: msg91.flowId || '',
+        short_url: '0',
+        recipients: [
+          {
+            mobiles: cleanDigits,
+            message,
+          },
+        ],
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data?.message || 'MSG91 dispatch failed' };
+    }
+    return { success: true, data };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+/** Send payload via Webhook (Zapier / Make / n8n) */
+async function sendWebhook(
+  config: AlertGatewayConfig,
+  recipientPhone: string,
+  recipientName: string | undefined,
+  alertType: string,
+  message: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  const webhook = config.webhook;
+  if (!webhook?.webhookUrl) {
+    return { success: false, error: 'Webhook URL is not configured.' };
+  }
+
+  const { cleanDigits, withPlus } = formatPhoneNumber(recipientPhone);
+
+  try {
+    const res = await fetch(webhook.webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(webhook.secretToken ? { 'X-Webhook-Token': webhook.secretToken } : {}),
+      },
+      body: JSON.stringify({
+        event: alertType,
+        recipientPhone: withPlus,
+        recipientDigits: cleanDigits,
+        recipientName: recipientName || '',
+        message,
+        timestamp: new Date().toISOString(),
+      }),
+    });
+
+    if (!res.ok) {
+      return { success: false, error: `Webhook returned status ${res.status}` };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+/** Log dispatched alert to Firestore for audit and reporting */
+export async function logAlertDispatch(record: Omit<AlertDispatchRecord, 'id'>): Promise<string> {
+  try {
+    const ref = await addDoc(collection(db, LOGS_COLLECTION), record);
+    return ref.id;
+  } catch (e) {
+    console.error('Failed to log alert dispatch to Firestore:', e);
+    return '';
+  }
+}
+
+/** Retrieve recent alert dispatch records */
+export async function getRecentAlertLogs(limitCount: number = 20): Promise<AlertDispatchRecord[]> {
+  try {
+    const q = query(
+      collection(db, LOGS_COLLECTION),
+      orderBy('timestamp', 'desc'),
+      limit(limitCount)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() } as AlertDispatchRecord));
+  } catch (err) {
+    console.warn('Error fetching recent alert logs:', err);
+    return [];
+  }
+}
+
+/** Main Alert Dispatch Orchestrator */
+export async function dispatchAlert(
+  req: SendAlertRequest,
+  configOverride?: AlertGatewayConfig,
+  senderEmail?: string | null
+): Promise<{ success: boolean; provider: AlertProviderType; error?: string }> {
+  const config = configOverride || (await getAlertGatewayConfig());
+  const provider = config.activeProvider || 'mock';
+  const message = req.customMessage || generateAlertMessage(req.alertType, {
+    employeeName: req.recipientName,
+    ...req.metadata,
+  });
+
+  const channelUsed =
+    req.channel && req.channel !== 'auto'
+      ? req.channel
+      : provider === 'meta_whatsapp'
+      ? 'whatsapp'
+      : provider === 'fast2sms' || provider === 'msg91'
+      ? 'sms'
+      : provider === 'twilio' && config.twilio?.fromNumber?.startsWith('whatsapp:')
+      ? 'whatsapp'
+      : 'sms';
+
+  let result: { success: boolean; data?: any; error?: string };
+
+  switch (provider) {
+    case 'meta_whatsapp':
+      result = await sendMetaWhatsApp(config, req.to, message);
+      break;
+
+    case 'twilio':
+      result = await sendTwilio(config, req.to, message, channelUsed as any);
+      break;
+
+    case 'fast2sms':
+      result = await sendFast2SMS(config, req.to, message);
+      break;
+
+    case 'msg91':
+      result = await sendMSG91(config, req.to, message);
+      break;
+
+    case 'webhook':
+      result = await sendWebhook(config, req.to, req.recipientName, req.alertType, message);
+      break;
+
+    case 'mock':
+    default:
+      // Simulator mode: Log successfully without charging external SMS/WhatsApp credits
+      console.log(`[AlertGateway:MOCK] Sent ${channelUsed} to ${req.to}: "${message.slice(0, 60)}..."`);
+      result = { success: true, data: { simulated: true } };
+      break;
+  }
+
+  // Record dispatch log asynchronously
+  await logAlertDispatch({
+    timestamp: new Date().toISOString(),
+    provider,
+    channel: provider === 'webhook' ? 'webhook' : (channelUsed as 'whatsapp' | 'sms'),
+    recipientPhone: req.to,
+    recipientName: req.recipientName,
+    alertType: req.alertType,
+    status: result.success ? (provider === 'mock' ? 'simulated' : 'sent') : 'failed',
+    messageBody: message,
+    providerResponse: result.data || null,
+    error: result.error,
+    sentBy: senderEmail || 'system',
+  });
+
+  return {
+    success: result.success,
+    provider,
+    error: result.error,
+  };
+}

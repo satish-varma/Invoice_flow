@@ -24,6 +24,10 @@ const LOGS_COLLECTION = 'alert_logs';
 export const DEFAULT_ALERT_CONFIG: AlertGatewayConfig = {
   activeProvider: 'mock',
   channel: 'auto',
+  ultramsg: {
+    instanceId: '',
+    token: '',
+  },
   meta: {
     phoneNumberId: '',
     accessToken: '',
@@ -147,6 +151,44 @@ export function generateAlertMessage(
 
     default:
       return `Gut Guru Alert: Message for ${name}.`;
+  }
+}
+
+/** Send WhatsApp message via UltraMsg (QR-code based bridge) */
+async function sendUltraMsg(
+  config: AlertGatewayConfig,
+  recipientPhone: string,
+  message: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  const ultramsg = config.ultramsg;
+  if (!ultramsg?.instanceId || !ultramsg?.token) {
+    return { success: false, error: 'UltraMsg credentials (Instance ID or Token) are missing.' };
+  }
+
+  const { cleanDigits } = formatPhoneNumber(recipientPhone);
+  const endpoint = `https://api.ultramsg.com/${ultramsg.instanceId}/messages/chat`;
+
+  const params = new URLSearchParams();
+  params.append('token', ultramsg.token);
+  params.append('to', cleanDigits);
+  params.append('body', message);
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    });
+
+    const data = await res.json();
+    if (!res.ok || data?.error) {
+      return { success: false, error: data?.error || `HTTP ${res.status}: UltraMsg dispatch failed` };
+    }
+    return { success: true, data };
+  } catch (err: any) {
+    return { success: false, error: err.message };
   }
 }
 
@@ -405,7 +447,7 @@ export async function dispatchAlert(
   const channelUsed =
     req.channel && req.channel !== 'auto'
       ? req.channel
-      : provider === 'meta_whatsapp'
+      : provider === 'meta_whatsapp' || provider === 'ultramsg'
       ? 'whatsapp'
       : provider === 'fast2sms' || provider === 'msg91'
       ? 'sms'
@@ -416,6 +458,10 @@ export async function dispatchAlert(
   let result: { success: boolean; data?: any; error?: string };
 
   switch (provider) {
+    case 'ultramsg':
+      result = await sendUltraMsg(config, req.to, message);
+      break;
+
     case 'meta_whatsapp':
       result = await sendMetaWhatsApp(config, req.to, message);
       break;

@@ -1,10 +1,16 @@
 export type AlertProviderType =
+  | 'ultramsg'
   | 'meta_whatsapp'
   | 'twilio'
   | 'fast2sms'
   | 'msg91'
   | 'webhook'
   | 'mock';
+
+export interface UltraMsgConfig {
+  instanceId: string;
+  token: string;
+}
 
 export interface MetaWhatsAppConfig {
   phoneNumberId: string;
@@ -38,6 +44,7 @@ export interface WebhookConfig {
 export interface AlertGatewayConfig {
   activeProvider: AlertProviderType;
   channel: 'whatsapp' | 'sms' | 'auto';
+  ultramsg?: UltraMsgConfig;
   meta?: MetaWhatsAppConfig;
   twilio?: TwilioConfig;
   fast2sms?: Fast2SMSConfig;

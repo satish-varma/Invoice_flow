@@ -18,6 +18,12 @@ export async function GET(req: NextRequest) {
     // Mask sensitive secrets for UI display
     const maskedConfig: AlertGatewayConfig = {
       ...config,
+      ultramsg: config.ultramsg
+        ? {
+            ...config.ultramsg,
+            token: config.ultramsg.token ? '••••••••' + config.ultramsg.token.slice(-4) : '',
+          }
+        : undefined,
       meta: config.meta
         ? {
             ...config.meta,
@@ -70,6 +76,12 @@ export async function POST(req: NextRequest) {
       const existing = await getAlertGatewayConfig();
       const mergedConfig: AlertGatewayConfig = {
         ...config,
+        ultramsg: {
+          instanceId: config.ultramsg?.instanceId || '',
+          token: config.ultramsg?.token?.startsWith('••••')
+            ? existing.ultramsg?.token || ''
+            : config.ultramsg?.token || '',
+        },
         meta: {
           ...config.meta,
           accessToken: config.meta?.accessToken?.startsWith('••••')

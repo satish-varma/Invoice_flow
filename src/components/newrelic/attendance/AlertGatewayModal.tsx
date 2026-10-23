@@ -219,6 +219,7 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
+                    { id: 'ultramsg', name: 'UltraMsg (QR Scan)', desc: 'Instant WhatsApp', badge: 'No Meta Req' },
                     { id: 'meta_whatsapp', name: 'Meta WhatsApp', desc: 'Cloud API', badge: 'Official' },
                     { id: 'twilio', name: 'Twilio', desc: 'WhatsApp / SMS', badge: 'Global' },
                     { id: 'fast2sms', name: 'Fast2SMS', desc: 'India SMS Gateway', badge: 'Direct SMS' },
@@ -258,6 +259,70 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
 
               {/* Provider Specific Credentials Box */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-4">
+                {config.activeProvider === 'ultramsg' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <Key className="w-3.5 h-3.5 text-emerald-600" />
+                        UltraMsg Credentials (QR Scan WhatsApp)
+                      </span>
+                      <a
+                        href="https://ultramsg.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-[#3b2fc9] hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        UltraMsg Dashboard <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </div>
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-emerald-950 text-xs space-y-1">
+                      <p className="font-bold flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                        Zero Meta Business verification required!
+                      </p>
+                      <p className="text-[11px] text-emerald-800">
+                        1. Sign up at <a href="https://ultramsg.com" target="_blank" rel="noopener noreferrer" className="underline font-bold">ultramsg.com</a>.
+                        <br />
+                        2. Scan the QR code with your phone&apos;s WhatsApp (Linked Devices).
+                        <br />
+                        3. Copy &amp; paste your <strong>Instance ID</strong> and <strong>Token</strong> below.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Instance ID</label>
+                      <input
+                        type="text"
+                        value={config.ultramsg?.instanceId || ''}
+                        onChange={(e) => setConfig((prev) => ({
+                          ...prev,
+                          ultramsg: {
+                            instanceId: e.target.value,
+                            token: prev.ultramsg?.token || '',
+                          },
+                        }))}
+                        placeholder="e.g. instance104829"
+                        className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-xl font-mono focus:ring-2 focus:ring-[#3b2fc9]/20"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Token</label>
+                      <input
+                        type="password"
+                        value={config.ultramsg?.token || ''}
+                        onChange={(e) => setConfig((prev) => ({
+                          ...prev,
+                          ultramsg: {
+                            instanceId: prev.ultramsg?.instanceId || '',
+                            token: e.target.value,
+                          },
+                        }))}
+                        placeholder="UltraMsg Token"
+                        className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-xl font-mono focus:ring-2 focus:ring-[#3b2fc9]/20"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {config.activeProvider === 'meta_whatsapp' && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">

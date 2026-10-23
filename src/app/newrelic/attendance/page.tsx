@@ -37,6 +37,7 @@ import {
 import { SelfieCapture } from '@/components/newrelic/attendance/selfie-capture';
 import { LeavesAndHolidaysTab } from '@/components/newrelic/attendance/LeavesAndHolidaysTab';
 import { AlertGatewayModal } from '@/components/newrelic/attendance/AlertGatewayModal';
+import { generateAlertMessage } from '@/services/alertGatewayService';
 import { CompanyHoliday, EmployeeLeave } from '@/types/leave';
 import {
   getCompanyHolidays,
@@ -127,6 +128,8 @@ function AttendancePageContent() {
   const [earlyCheckoutReason, setEarlyCheckoutReason] = useState('');
   const [authorizedEarlyCheckout, setAuthorizedEarlyCheckout] = useState(false);
   const [employeeTimingModal, setEmployeeTimingModal] = useState<NewRelicEmployee | null>(null);
+  const [editingPhoneEmp, setEditingPhoneEmp] = useState<{ id: string; name: string; phone: string } | null>(null);
+  const [isSavingPhone, setIsSavingPhone] = useState(false);
   const [isSavingEmpTiming, setIsSavingEmpTiming] = useState(false);
   const [empTimingForm, setEmpTimingForm] = useState<{
     expectedStart: string;
@@ -326,6 +329,44 @@ function AttendancePageContent() {
       });
     } finally {
       setSendingAlertEmpId(null);
+    }
+  };
+
+  const handleSaveEmployeePhone = async () => {
+    if (!editingPhoneEmp) return;
+    const clean = editingPhoneEmp.phone.trim().replace(/\D/g, '');
+    if (clean.length < 10) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Mobile Number',
+        description: 'Please enter a valid 10-digit mobile number.',
+      });
+      return;
+    }
+    const finalPhone = clean.slice(-10);
+    setIsSavingPhone(true);
+    try {
+      await updateDoc(doc(db, 'newrelic_employees', editingPhoneEmp.id), {
+        phone: finalPhone,
+        updatedAt: new Date().toISOString(),
+      });
+      setEmployees((prev) =>
+        prev.map((e) => (e.id === editingPhoneEmp.id ? { ...e, phone: finalPhone } : e))
+      );
+      toast({
+        title: `Phone Saved for ${editingPhoneEmp.name}`,
+        description: `Updated to +91 ${finalPhone}`,
+      });
+      setEditingPhoneEmp(null);
+      triggerHaptic('success');
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to Save Phone',
+        description: err.message,
+      });
+    } finally {
+      setIsSavingPhone(false);
     }
   };
 
@@ -2096,6 +2137,26 @@ function AttendancePageContent() {
                       <span className="hidden sm:inline">Refresh</span>
                     </button>
 
+                    {/* 1-Click WhatsApp Shift Digest (100% Free) */}
+                    <a
+                      href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                        generateAlertMessage('manager_digest', {
+                          siteName: adminSiteFilter === 'all' ? 'All Sites' : adminSiteFilter.toUpperCase(),
+                          presentCount: adminMetrics.presentCount,
+                          totalRoster: adminMetrics.totalRoster,
+                          onDutyCount: adminMetrics.onDutyList.length,
+                          absentNames: adminMetrics.absentEmployees.map((e) => e.name),
+                        })
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all whitespace-nowrap"
+                      title="Open WhatsApp with pre-filled shift attendance summary (100% Free)"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      <span>WhatsApp Digest</span>
+                    </a>
+
                     <button
                       type="button"
                       onClick={handleBroadcastDigest}
@@ -2277,8 +2338,15 @@ function AttendancePageContent() {
                       {adminMetrics.absentEmployees.length}
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1 font-medium flex items-center justify-between">
-                      <span>Not punched today</span>
-                      {todayStatusFilter === 'absent' && <span className="text-[10px] font-bold text-rose-700">Active</span>}
+                      <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded flex items-center gap-1">
+                        <MessageCircle className="w-2.5 h-2.5" />
+                        WhatsApp Alerts
+                      </span>
+                      {todayStatusFilter === 'absent' ? (
+                        <span className="text-[10px] font-black text-rose-700">Active</span>
+                      ) : (
+                        <span className="text-[10px] font-semibold text-rose-600">View →</span>
+                      )}
                     </p>
                   </button>
                 </div>
@@ -2333,13 +2401,14 @@ function AttendancePageContent() {
                   <button
                     type="button"
                     onClick={() => setTodayStatusFilter('absent')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                       todayStatusFilter === 'absent'
                         ? 'bg-rose-700 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
                     }`}
                   >
-                    Absent Staff ({adminMetrics.absentEmployees.length})
+                    <MessageCircle className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Absent Staff ({adminMetrics.absentEmployees.length})</span>
                   </button>
                 </div>
 
@@ -2412,63 +2481,96 @@ function AttendancePageContent() {
                                 </span>
                               </div>
 
-                              <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
-                                {emp.phone ? (
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <a
-                                      href={`tel:${emp.phone}`}
-                                      className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1 transition-colors"
-                                      title="Call employee"
-                                    >
-                                      <Phone className="w-3 h-3 text-slate-600" />
-                                      <span>Call</span>
-                                    </a>
-                                    <a
-                                      href={`https://wa.me/91${emp.phone.replace(/\D/g, '')}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold flex items-center gap-1 transition-colors"
-                                      title="Message on WhatsApp"
-                                    >
-                                      <MessageCircle className="w-3 h-3 text-emerald-600" />
-                                      <span>WhatsApp</span>
-                                    </a>
+                              {(() => {
+                                const absentNoticeText = generateAlertMessage('absent_notice', {
+                                  employeeName: emp.name,
+                                  cutoff: rule.cutoff + ' AM',
+                                  siteName: emp.location?.toUpperCase() || 'Hub',
+                                  date: new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }),
+                                });
+                                const cleanPhone = emp.phone ? emp.phone.replace(/\D/g, '').slice(-10) : '';
+                                const waUrl = cleanPhone
+                                  ? `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(absentNoticeText)}`
+                                  : `https://api.whatsapp.com/send?text=${encodeURIComponent(absentNoticeText)}`;
+
+                                return (
+                                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 flex-wrap">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      {/* High-visibility solid green 1-Click WhatsApp Button (100% Free) */}
+                                      <a
+                                        href={waUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all"
+                                        title={cleanPhone ? `Open WhatsApp chat with ${emp.name} (Pre-filled reminder)` : 'Open WhatsApp to share pre-filled absent reminder'}
+                                      >
+                                        <MessageCircle className="w-3.5 h-3.5 text-white" />
+                                        <span>WhatsApp</span>
+                                      </a>
+
+                                      {emp.phone ? (
+                                        <>
+                                          <a
+                                            href={`tel:${emp.phone}`}
+                                            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1 transition-colors"
+                                            title="Call employee"
+                                          >
+                                            <Phone className="w-3 h-3 text-slate-600" />
+                                            <span>Call</span>
+                                          </a>
+                                          <button
+                                            type="button"
+                                            disabled={sendingAlertEmpId === emp.id}
+                                            onClick={() => handleSendAbsentAlert(emp)}
+                                            className="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50"
+                                            title="Dispatch automated gateway alert"
+                                          >
+                                            {sendingAlertEmpId === emp.id ? (
+                                              <Loader2 className="w-3 h-3 animate-spin text-amber-700" />
+                                            ) : (
+                                              <Bell className="w-3 h-3 text-amber-700" />
+                                            )}
+                                            <span>Send Alert</span>
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingPhoneEmp({
+                                              id: emp.id!,
+                                              name: emp.name,
+                                              phone: '',
+                                            });
+                                          }}
+                                          className="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold flex items-center gap-1 transition-colors"
+                                          title="Add phone number for direct 1-click WhatsApp"
+                                        >
+                                          <Phone className="w-3 h-3 text-blue-600" />
+                                          <span>+ Add Phone</span>
+                                        </button>
+                                      )}
+                                    </div>
+
                                     <button
                                       type="button"
-                                      disabled={sendingAlertEmpId === emp.id}
-                                      onClick={() => handleSendAbsentAlert(emp)}
-                                      className="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50"
-                                      title="Dispatch automated gateway alert"
+                                      onClick={() => {
+                                        triggerHaptic('light');
+                                        setSelectedEmployeeId(emp.id!);
+                                        handleSetViewMode('kiosk');
+                                        toast({
+                                          title: `Selected ${emp.name}`,
+                                          description: 'Switched to Kiosk shutter to mark attendance.',
+                                        });
+                                      }}
+                                      className="px-3 py-1.5 rounded-xl bg-[#3b2fc9] hover:bg-[#3228a8] text-white text-xs font-bold flex items-center gap-1 shadow-2xs active:scale-95 transition-all"
                                     >
-                                      {sendingAlertEmpId === emp.id ? (
-                                        <Loader2 className="w-3 h-3 animate-spin text-amber-700" />
-                                      ) : (
-                                        <Bell className="w-3 h-3 text-amber-700" />
-                                      )}
-                                      <span>Send Alert</span>
+                                      <Camera className="w-3 h-3" />
+                                      <span>Punch In</span>
                                     </button>
                                   </div>
-                                ) : (
-                                  <span className="text-[11px] text-slate-400 italic">No phone on file</span>
-                                )}
-
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    triggerHaptic('light');
-                                    setSelectedEmployeeId(emp.id!);
-                                    handleSetViewMode('kiosk');
-                                    toast({
-                                      title: `Selected ${emp.name}`,
-                                      description: 'Switched to Kiosk shutter to mark attendance.',
-                                    });
-                                  }}
-                                  className="px-3 py-1.5 rounded-xl bg-[#3b2fc9] hover:bg-[#3228a8] text-white text-xs font-bold flex items-center gap-1 shadow-2xs active:scale-95 transition-all"
-                                >
-                                  <Camera className="w-3 h-3" />
-                                  <span>Punch In</span>
-                                </button>
-                              </div>
+                                );
+                              })()}
                             </div>
                           );
                         })}
@@ -2505,14 +2607,23 @@ function AttendancePageContent() {
                         </button>
                       )}
                     </div>
-                    {filteredTodayRecords.map((rec) => (
-                      <AdminAttendanceCard
-                        key={rec.id}
-                        record={rec}
-                        isExpanded={expandedRecord === rec.id}
-                        onToggle={() => setExpandedRecord(expandedRecord === rec.id ? null : rec.id!)}
-                      />
-                    ))}
+                    {filteredTodayRecords.map((rec) => {
+                      const empMatch = employees.find(
+                        (e) =>
+                          (rec.employeeDocId && e.id === rec.employeeDocId) ||
+                          (rec.employeeId && e.employeeId === rec.employeeId) ||
+                          (rec.employeeName && e.name.toLowerCase().trim() === rec.employeeName.toLowerCase().trim())
+                      );
+                      return (
+                        <AdminAttendanceCard
+                          key={rec.id}
+                          record={rec}
+                          employeePhone={empMatch?.phone}
+                          isExpanded={expandedRecord === rec.id}
+                          onToggle={() => setExpandedRecord(expandedRecord === rec.id ? null : rec.id!)}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -2576,14 +2687,23 @@ function AttendancePageContent() {
                       <span className="ml-2 text-[#3b2fc9]">{recs.length} record{recs.length !== 1 ? 's' : ''}</span>
                     </p>
                     <div className="space-y-2">
-                      {recs.map((rec) => (
-                        <AdminAttendanceCard
-                          key={rec.id}
-                          record={rec}
-                          isExpanded={expandedRecord === rec.id}
-                          onToggle={() => setExpandedRecord(expandedRecord === rec.id ? null : rec.id!)}
-                        />
-                      ))}
+                      {recs.map((rec) => {
+                        const empMatch = employees.find(
+                          (e) =>
+                            (rec.employeeDocId && e.id === rec.employeeDocId) ||
+                            (rec.employeeId && e.employeeId === rec.employeeId) ||
+                            (rec.employeeName && e.name.toLowerCase().trim() === rec.employeeName.toLowerCase().trim())
+                        );
+                        return (
+                          <AdminAttendanceCard
+                            key={rec.id}
+                            record={rec}
+                            employeePhone={empMatch?.phone}
+                            isExpanded={expandedRecord === rec.id}
+                            onToggle={() => setExpandedRecord(expandedRecord === rec.id ? null : rec.id!)}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -3792,6 +3912,78 @@ function AttendancePageContent() {
         />
       )}
 
+      {/* Quick Add/Edit Employee Phone Modal (100% Free 1-Click WhatsApp) */}
+      {editingPhoneEmp && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                <Phone className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Set Phone Number</h3>
+                <p className="text-xs text-slate-500 font-medium">{editingPhoneEmp.name}</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 mb-4">
+              Enter this employee's 10-digit mobile number to enable direct 1-click WhatsApp alerts and calls.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Mobile Number (India)
+                </label>
+                <div className="flex items-center border border-slate-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500">
+                  <span className="px-3 py-2 bg-slate-100 text-slate-600 font-bold text-xs border-r border-slate-200">
+                    +91
+                  </span>
+                  <input
+                    type="tel"
+                    maxLength={10}
+                    placeholder="9876543210"
+                    value={editingPhoneEmp.phone}
+                    onChange={(e) =>
+                      setEditingPhoneEmp({
+                        ...editingPhoneEmp,
+                        phone: e.target.value.replace(/\D/g, '').slice(0, 10),
+                      })
+                    }
+                    className="flex-1 px-3 py-2 text-sm font-semibold text-slate-900 focus:outline-none"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingPhoneEmp(null)}
+                  disabled={isSavingPhone}
+                  className="flex-1 h-10 rounded-xl border border-slate-200 hover:bg-slate-100 text-xs font-bold text-slate-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEmployeePhone}
+                  disabled={isSavingPhone || editingPhoneEmp.phone.trim().length !== 10}
+                  className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all disabled:opacity-50 shadow-2xs active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                  {isSavingPhone ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  )}
+                  <span>Save Phone</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Multi-Provider Alert Gateway Settings Modal */}
       <AlertGatewayModal
         isOpen={showAlertModal}
@@ -3805,10 +3997,12 @@ function AttendancePageContent() {
 /* ── Admin Attendance Card ── */
 function AdminAttendanceCard({
   record,
+  employeePhone,
   isExpanded,
   onToggle,
 }: {
   record: NewRelicAttendance;
+  employeePhone?: string;
   isExpanded: boolean;
   onToggle: () => void;
 }) {
@@ -3829,96 +4023,133 @@ function AdminAttendanceCard({
     ? Math.max(0, Math.floor((Date.now() - new Date(record.checkIn.time).getTime()) / 60000))
     : 0;
 
+  const cleanPhone = employeePhone ? employeePhone.replace(/\D/g, '').slice(-10) : '';
+  const inTimeStr = record.checkIn?.time
+    ? new Date(record.checkIn.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+    : '';
+  const outTimeStr = record.checkOut?.time
+    ? new Date(record.checkOut.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+    : '';
+  const waMsg = record.isLate
+    ? `Hi ${record.employeeName}, shift notice: Check-in recorded at ${inTimeStr} (${record.lateMinutes || 0}m past cutoff deadline).`
+    : isWorking
+    ? `Hi ${record.employeeName}, check-in recorded at ${inTimeStr} for today's shift. Have a productive shift!`
+    : record.checkOut
+    ? `Hi ${record.employeeName}, shift complete summary: Check-in ${inTimeStr}, Check-out ${outTimeStr} (${formatDuration(record.durationMinutes || 0)} worked). Thank you!`
+    : `Hi ${record.employeeName}, attendance check-in update for today.`;
+
+  const waUrl = cleanPhone
+    ? `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(waMsg)}`
+    : `https://api.whatsapp.com/send?text=${encodeURIComponent(waMsg)}`;
+
   return (
     <div className={`border rounded-2xl overflow-hidden transition-all shadow-2xs ${
       isWorking ? 'border-emerald-200 bg-white hover:border-emerald-300' : 'border-slate-200 bg-white hover:border-slate-300'
     }`}>
-      <button
+      <div
         onClick={onToggle}
-        className="w-full flex items-center gap-3 p-3.5 hover:bg-slate-50/80 text-left transition-colors"
+        className="w-full flex items-center justify-between gap-3 p-3.5 hover:bg-slate-50/80 text-left transition-colors cursor-pointer"
       >
         {/* Avatar */}
-        <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-          isWorking ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-[#3b2fc9]/10 text-[#3b2fc9]'
-        }`}>
-          {record.employeeName ? record.employeeName.charAt(0).toUpperCase() : '?'}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-bold text-slate-900 truncate">{record.employeeName}</p>
-            {record.employeeId && (
-              <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">
-                {record.employeeId}
-              </span>
-            )}
-            {(() => {
-              const sId = resolveSiteId(record.siteId);
-              return (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${
-                  sId === 'dsm'
-                    ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
-                    : sId === 'ntt_data'
-                    ? 'bg-amber-50 text-amber-800 border-amber-200'
-                    : 'bg-indigo-50 text-[#3b2fc9] border-indigo-200'
-                }`}>
-                  {sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic'}
-                </span>
-              );
-            })()}
-            {record.isLate && (
-              <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.2 rounded font-bold border border-red-200">
-                Late (+{record.lateMinutes || 0}m)
-              </span>
-            )}
-            {record.overtimeMinutes && record.overtimeMinutes > 0 ? (
-              <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.2 rounded font-semibold border border-purple-200">
-                +{formatDuration(record.overtimeMinutes)} OT
-              </span>
-            ) : null}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+            isWorking ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-[#3b2fc9]/10 text-[#3b2fc9]'
+          }`}>
+            {record.employeeName ? record.employeeName.charAt(0).toUpperCase() : '?'}
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            <span className="capitalize font-medium text-slate-600 mr-1.5">{record.location} ·</span>
-            {record.checkIn ? (
-              <span>
-                In: <strong className="text-slate-700">{new Date(record.checkIn.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</strong>
-              </span>
-            ) : 'Not checked in'}
-            {record.checkOut ? (
-              <span>
-                {' '}· Out: <strong className="text-slate-700">{new Date(record.checkOut.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</strong>
-              </span>
-            ) : null}
-            {isWorking && record.checkIn && (
-              <span className="text-emerald-700 font-bold ml-1.5">
-                ({formatDuration(elapsedMinutes)} elapsed)
-              </span>
-            )}
-            {record.durationMinutes ? ` · ${formatDuration(record.durationMinutes)} shift` : ''}
-          </p>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-sm font-bold text-slate-900 truncate">{record.employeeName}</p>
+              {record.employeeId && (
+                <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">
+                  {record.employeeId}
+                </span>
+              )}
+              {(() => {
+                const sId = resolveSiteId(record.siteId);
+                return (
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${
+                    sId === 'dsm'
+                      ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
+                      : sId === 'ntt_data'
+                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                      : 'bg-indigo-50 text-[#3b2fc9] border-indigo-200'
+                  }`}>
+                    {sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic'}
+                  </span>
+                );
+              })()}
+              {record.isLate && (
+                <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.2 rounded font-bold border border-red-200">
+                  Late (+{record.lateMinutes || 0}m)
+                </span>
+              )}
+              {record.overtimeMinutes && record.overtimeMinutes > 0 ? (
+                <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.2 rounded font-semibold border border-purple-200">
+                  +{formatDuration(record.overtimeMinutes)} OT
+                </span>
+              ) : null}
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              <span className="capitalize font-medium text-slate-600 mr-1.5">{record.location} ·</span>
+              {record.checkIn ? (
+                <span>
+                  In: <strong className="text-slate-700">{new Date(record.checkIn.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</strong>
+                </span>
+              ) : 'Not checked in'}
+              {record.checkOut ? (
+                <span>
+                  {' '}· Out: <strong className="text-slate-700">{new Date(record.checkOut.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</strong>
+                </span>
+              ) : null}
+              {isWorking && record.checkIn && (
+                <span className="text-emerald-700 font-bold ml-1.5">
+                  ({formatDuration(elapsedMinutes)} elapsed)
+                </span>
+              )}
+              {record.durationMinutes ? ` · ${formatDuration(record.durationMinutes)} shift` : ''}
+            </p>
+          </div>
         </div>
-        <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold shrink-0 ${statusColor}`}>
-          {isWorking ? (
-            <span className="flex items-center gap-1.5">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {/* 1-Click WhatsApp Button (100% Free) */}
+          <a
+            href={waUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="h-7 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-2xs transition-all active:scale-95"
+            title={cleanPhone ? `Chat with ${record.employeeName} on WhatsApp (100% Free)` : 'Share status update on WhatsApp (100% Free)'}
+          >
+            <MessageCircle className="h-3.5 w-3.5 text-white" />
+            <span className="hidden sm:inline">WhatsApp</span>
+          </a>
+
+          <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold shrink-0 ${statusColor}`}>
+            {isWorking ? (
+              <span className="flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                On Duty
               </span>
-              On Duty
-            </span>
-          ) : record.checkOut ? (
-            <span className="flex items-center gap-1">
-              <CheckCircle className="h-3 w-3 text-emerald-600" />
-              Completed
-            </span>
-          ) : record.status === 'present'
-            ? 'Full Day'
-            : record.status === 'half-day'
-            ? 'Half Day'
-            : record.status === 'missed-checkout'
-            ? 'Pending Check-Out'
-            : 'Absent'}
-        </span>
-      </button>
+            ) : record.checkOut ? (
+              <span className="flex items-center gap-1">
+                <CheckCircle className="h-3 w-3 text-emerald-600" />
+                Completed
+              </span>
+            ) : record.status === 'present'
+              ? 'Full Day'
+              : record.status === 'half-day'
+              ? 'Half Day'
+              : record.status === 'missed-checkout'
+              ? 'Pending Check-Out'
+              : 'Absent'}
+          </span>
+        </div>
+      </div>
 
       {isExpanded && (
         <div className="border-t border-gray-100 p-3 bg-gray-50 flex flex-wrap gap-3">

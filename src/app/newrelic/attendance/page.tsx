@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Loader2, Camera, LogIn, LogOut, MapPin, Clock, CheckCircle, AlertCircle, Calendar, Users, IndianRupee, Phone, Mail, CalendarDays, ChevronDown, ChevronUp, User, FileSpreadsheet, Calculator, Lock, ShieldAlert, Settings, Sparkles } from 'lucide-react';
+import { Loader2, Camera, LogIn, LogOut, MapPin, Clock, CheckCircle, CheckCircle2, AlertCircle, Calendar, Users, IndianRupee, Phone, Mail, CalendarDays, ChevronDown, ChevronUp, User, UserX, UserCheck, FileSpreadsheet, Calculator, Lock, ShieldAlert, Settings, Sparkles, Search, Filter, RefreshCw, MessageCircle, ArrowRight } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
@@ -215,6 +215,98 @@ function AttendancePageContent() {
     );
   }, [employees, adminSiteFilter]);
 
+  // --- Admin View Mode: 'admin' (command overview) vs 'kiosk' (self-service shutter) ---
+  const [viewMode, setViewMode] = useState<'admin' | 'kiosk'>('admin');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('nr_attendance_view_mode');
+      if (saved === 'admin' || saved === 'kiosk') {
+        setViewMode(saved);
+      }
+    }
+  }, []);
+
+  const handleSetViewMode = (mode: 'admin' | 'kiosk') => {
+    triggerHaptic('light');
+    setViewMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nr_attendance_view_mode', mode);
+    }
+  };
+
+  const effectiveViewMode = isAdmin ? viewMode : 'kiosk';
+
+  // --- Admin Filter & Search for Today ---
+  const [adminSearchQuery, setAdminSearchQuery] = useState('');
+  const [todayStatusFilter, setTodayStatusFilter] = useState<'all' | 'on_duty' | 'checked_out' | 'late' | 'absent'>('all');
+
+  const adminMetrics = useMemo(() => {
+    const totalRoster = payrollEmployees.length;
+    const presentList = displayTodayAll;
+    const presentCount = displayTodayAll.length;
+    const onDutyList = displayTodayAll.filter((r) => r.checkIn && !r.checkOut);
+    const checkedOutList = displayTodayAll.filter((r) => Boolean(r.checkOut));
+    const lateList = displayTodayAll.filter((r) => Boolean(r.isLate));
+
+    // Compute absent active employees
+    const presentEmpIds = new Set(displayTodayAll.map((r) => r.employeeId));
+    const presentDocIds = new Set(displayTodayAll.map((r) => r.employeeDocId).filter(Boolean));
+    const presentNames = new Set(displayTodayAll.map((r) => r.employeeName?.toLowerCase().trim()));
+
+    const absentEmployees = payrollEmployees.filter((emp) => {
+      if (emp.id && presentDocIds.has(emp.id)) return false;
+      if (emp.employeeId && presentEmpIds.has(emp.employeeId)) return false;
+      if (emp.name && presentNames.has(emp.name.toLowerCase().trim())) return false;
+      return true;
+    });
+
+    const attendanceRate = totalRoster > 0 ? Math.round((presentCount / totalRoster) * 100) : 0;
+
+    return {
+      totalRoster,
+      presentList,
+      presentCount,
+      onDutyList,
+      checkedOutList,
+      lateList,
+      absentEmployees,
+      attendanceRate,
+    };
+  }, [payrollEmployees, displayTodayAll]);
+
+  const filteredTodayRecords = useMemo(() => {
+    let list: NewRelicAttendance[] = [];
+    if (todayStatusFilter === 'on_duty') {
+      list = adminMetrics.onDutyList;
+    } else if (todayStatusFilter === 'checked_out') {
+      list = adminMetrics.checkedOutList;
+    } else if (todayStatusFilter === 'late') {
+      list = adminMetrics.lateList;
+    } else {
+      list = adminMetrics.presentList;
+    }
+
+    if (!adminSearchQuery.trim()) return list;
+    const q = adminSearchQuery.toLowerCase().trim();
+    return list.filter((r) =>
+      r.employeeName?.toLowerCase().includes(q) ||
+      r.employeeId?.toLowerCase().includes(q) ||
+      (r.location && r.location.toLowerCase().includes(q))
+    );
+  }, [adminMetrics, todayStatusFilter, adminSearchQuery]);
+
+  const filteredAbsentEmployees = useMemo(() => {
+    if (!adminSearchQuery.trim()) return adminMetrics.absentEmployees;
+    const q = adminSearchQuery.toLowerCase().trim();
+    return adminMetrics.absentEmployees.filter((emp) =>
+      emp.name?.toLowerCase().includes(q) ||
+      emp.employeeId?.toLowerCase().includes(q) ||
+      (emp.designation && emp.designation.toLowerCase().includes(q)) ||
+      (emp.location && emp.location.toLowerCase().includes(q))
+    );
+  }, [adminMetrics.absentEmployees, adminSearchQuery]);
+
   /* ── Load employees list and auto-bind logged-in user ── */
   useEffect(() => {
     const siteParam = isOwnerOrAdmin ? undefined : assignedSite;
@@ -342,6 +434,23 @@ function AttendancePageContent() {
   }, [selectedEmployeeId, selectedMonth]);
 
   /* ── Admin: load today's all attendance ── */
+  const refreshAdminAttendance = async () => {
+    if (!isAdmin) return;
+    setIsLoadingAdmin(true);
+    triggerHaptic('light');
+    try {
+      const assignedSite = user?.assignedSite || 'newrelic';
+      const siteParam = isOwnerOrAdmin ? undefined : assignedSite;
+      const recs = await getTodayAllAttendance(getTodayDate(), siteParam);
+      setTodayAll(recs);
+      toast({ title: 'Attendance Refreshed', description: `Loaded ${recs.length} record(s) for today.` });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Failed to refresh', description: e.message });
+    } finally {
+      setIsLoadingAdmin(false);
+    }
+  };
+
   useEffect(() => {
     if (!isAdmin) return;
     setIsLoadingAdmin(true);
@@ -966,51 +1075,115 @@ function AttendancePageContent() {
               </p>
             </div>
 
-            {/* Quick tab switcher between Mark Attendance and Salaries/Admin tabs */}
-            <div className="flex items-center gap-1.5 p-1.5 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15">
-              <button
-                type="button"
-                onClick={() => {
-                  const el = document.getElementById('self-service-section');
-                  el?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold text-white hover:bg-white/20 transition-all flex items-center gap-1.5"
-              >
-                <Camera className="h-3.5 w-3.5 text-amber-300" />
-                Mark Attendance
-              </button>
-              {isOwnerOrAdmin && (
+            {/* Admin View Mode Switcher vs Employee Quick Actions */}
+            {isAdmin ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1 p-1 bg-black/30 backdrop-blur-md rounded-2xl border border-white/15">
+                  <button
+                    type="button"
+                    onClick={() => handleSetViewMode('admin')}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      effectiveViewMode === 'admin'
+                        ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-md'
+                        : 'text-white/80 hover:bg-white/10'
+                    }`}
+                  >
+                    <Users className="h-3.5 w-3.5" />
+                    Admin Command
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSetViewMode('kiosk')}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      effectiveViewMode === 'kiosk'
+                        ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
+                        : 'text-white/80 hover:bg-white/10'
+                    }`}
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+                    Kiosk Shutter
+                  </button>
+                </div>
+
+                {isOwnerOrAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSetViewMode('admin');
+                      setAdminTab('payroll');
+                      const el = document.getElementById('admin-management-panel');
+                      el?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      adminTab === 'payroll' && effectiveViewMode === 'admin'
+                        ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
+                        : 'bg-white/10 text-white/90 hover:bg-white/20 border border-white/15'
+                    }`}
+                  >
+                    <Calculator className="h-3.5 w-3.5 text-amber-200" />
+                    Salaries
+                  </button>
+                )}
+
+                <Link
+                  href="/newrelic/leaves"
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    adminTab === 'leaves' && effectiveViewMode === 'admin'
+                      ? 'bg-gradient-to-r from-teal-500 to-emerald-600 text-white shadow-md'
+                      : 'bg-white/10 text-white/90 hover:bg-white/20 border border-white/15'
+                  }`}
+                >
+                  <CalendarDays className="h-3.5 w-3.5 text-teal-200" />
+                  Leaves
+                </Link>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 p-1.5 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15">
                 <button
                   type="button"
                   onClick={() => {
-                    setAdminTab('payroll');
-                    const el = document.getElementById('admin-management-panel');
+                    const el = document.getElementById('self-service-section');
                     el?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    adminTab === 'payroll'
-                      ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
-                      : 'text-white/80 hover:bg-white/20'
-                  }`}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold text-white hover:bg-white/20 transition-all flex items-center gap-1.5"
                 >
-                  <Calculator className="h-3.5 w-3.5 text-amber-200" />
-                  Salaries & Advances
+                  <Camera className="h-3.5 w-3.5 text-amber-300" />
+                  Mark Attendance
                 </button>
-              )}
-              <Link
-                href="/newrelic/leaves"
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  adminTab === 'leaves'
-                    ? 'bg-gradient-to-r from-teal-500 to-emerald-600 text-white shadow-md'
-                    : 'text-white/80 hover:bg-white/20'
-                }`}
-              >
-                <CalendarDays className="h-3.5 w-3.5 text-teal-200" />
-                Leaves &amp; Holidays
-              </Link>
-            </div>
+                <Link
+                  href="/newrelic/leaves"
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold text-white/80 hover:bg-white/20 transition-all flex items-center gap-1.5"
+                >
+                  <CalendarDays className="h-3.5 w-3.5 text-teal-200" />
+                  My Leaves
+                </Link>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* ── Native Mobile Camera / Selfie Quick-Action Hero Card & Self-service ── */}
+        {effectiveViewMode === 'kiosk' && (
+          <>
+            {isAdmin && (
+              <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-900 text-white px-4 py-3 rounded-2xl border border-indigo-400/30 flex items-center justify-between gap-3 shadow-md">
+                <div className="flex items-center gap-2.5">
+                  <Camera className="h-5 w-5 text-amber-300 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold">Kiosk / Selfie Shutter Active</p>
+                    <p className="text-[11px] text-slate-300">Direct camera check-in mode. Return anytime to view live dashboard metrics.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleSetViewMode('admin')}
+                  className="px-3 py-1.5 rounded-xl bg-white text-indigo-950 font-bold text-xs hover:bg-indigo-50 transition-all flex items-center gap-1.5 shrink-0 shadow-xs active:scale-95"
+                >
+                  <Users className="h-3.5 w-3.5 text-[#3b2fc9]" />
+                  Command Center
+                </button>
+              </div>
+            )}
 
         {/* ── Native Mobile Camera / Selfie Quick-Action Hero Card ── */}
         <div className="sm:hidden">
@@ -1701,10 +1874,17 @@ function AttendancePageContent() {
             </>
           )}
         </div>
+          </>
+        )}
 
         {/* ─── Admin / Staff Management Panel ─── */}
         {(isAdmin || adminTab === 'leaves') && (
-          <div id="admin-management-panel" className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden scroll-mt-20">
+          <div
+            id="admin-management-panel"
+            className={`bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden scroll-mt-20 ${
+              isAdmin && effectiveViewMode !== 'admin' ? 'hidden' : ''
+            }`}
+          >
             {/* Admin tactile tabs */}
             <div className="p-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2 overflow-x-auto no-scrollbar">
               <button
@@ -1787,29 +1967,418 @@ function AttendancePageContent() {
             </div>
 
             {adminTab === 'today' && (
-              <div className="p-4 space-y-3">
-                {isOwnerOrAdmin && (
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs font-semibold text-gray-600">Company Site:</label>
-                    <select
-                      value={adminSiteFilter}
-                      onChange={(e) => setAdminSiteFilter(e.target.value)}
-                      className="h-8 px-2.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
+              <div className="p-4 sm:p-6 space-y-6">
+                {/* 1. Header Control Bar (Site Filter, Search Input, Refresh, Launch Kiosk) */}
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {isOwnerOrAdmin && (
+                      <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1.5 rounded-xl shadow-2xs">
+                        <label className="text-xs font-bold text-slate-600">Site:</label>
+                        <select
+                          value={adminSiteFilter}
+                          onChange={(e) => setAdminSiteFilter(e.target.value)}
+                          className="text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+                        >
+                          <option value="all">All Sites ({payrollEmployees.length})</option>
+                          {SITE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    
+                    {/* Live Clock / Auto-sync Badge */}
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      <span>Live Sync:</span>
+                      <span className="font-mono font-bold text-slate-700" suppressHydrationWarning>{currentTime || '00:00'}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={refreshAdminAttendance}
+                      disabled={isLoadingAdmin}
+                      title="Refresh attendance records"
+                      className="h-8 px-2.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all"
                     >
-                      <option value="all">All Sites</option>
-                      {SITE_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
+                      <RefreshCw className={`h-3.5 w-3.5 text-slate-600 ${isLoadingAdmin ? 'animate-spin' : ''}`} />
+                      <span className="hidden sm:inline">Refresh</span>
+                    </button>
                   </div>
-                )}
+
+                  <div className="flex items-center gap-2">
+                    {/* Search query input */}
+                    <div className="relative flex-1 sm:w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={adminSearchQuery}
+                        onChange={(e) => setAdminSearchQuery(e.target.value)}
+                        placeholder="Search employee or ID..."
+                        className="w-full h-9 pl-8 pr-3 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9]"
+                      />
+                    </div>
+
+                    {/* Launch Kiosk Shutter Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleSetViewMode('kiosk')}
+                      className="h-9 px-3.5 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs whitespace-nowrap active:scale-95 transition-all"
+                    >
+                      <Camera className="h-3.5 w-3.5" />
+                      <span>Kiosk Shutter</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Live KPI Metrics Cards Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {/* Card 1: On Duty Now */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setTodayStatusFilter('on_duty');
+                    }}
+                    className={`p-3.5 rounded-2xl border text-left transition-all active:scale-95 relative overflow-hidden ${
+                      todayStatusFilter === 'on_duty'
+                        ? 'bg-gradient-to-br from-emerald-500/15 via-emerald-50 to-white border-emerald-400 ring-2 ring-emerald-400/30 shadow-md'
+                        : 'bg-white hover:bg-emerald-50/40 border-slate-200 hover:border-emerald-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">On Duty</span>
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                      </span>
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-mono">
+                      {adminMetrics.onDutyList.length}
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 font-medium flex items-center justify-between">
+                      <span>Working shift now</span>
+                      {todayStatusFilter === 'on_duty' && <span className="text-[10px] font-bold text-emerald-700">Active</span>}
+                    </p>
+                  </button>
+
+                  {/* Card 2: Total Present */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setTodayStatusFilter('all');
+                    }}
+                    className={`p-3.5 rounded-2xl border text-left transition-all active:scale-95 relative overflow-hidden ${
+                      todayStatusFilter === 'all'
+                        ? 'bg-gradient-to-br from-indigo-500/15 via-indigo-50 to-white border-indigo-400 ring-2 ring-indigo-400/30 shadow-md'
+                        : 'bg-white hover:bg-indigo-50/40 border-slate-200 hover:border-indigo-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-800">Present</span>
+                      <Users className="h-4 w-4 text-indigo-600" />
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-mono">
+                      {adminMetrics.presentCount} <span className="text-sm font-semibold text-slate-400">/ {adminMetrics.totalRoster}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 font-medium flex items-center justify-between">
+                      <span>{adminMetrics.attendanceRate}% turn-out</span>
+                      {todayStatusFilter === 'all' && <span className="text-[10px] font-bold text-indigo-700">Active</span>}
+                    </p>
+                  </button>
+
+                  {/* Card 3: Shift Complete */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setTodayStatusFilter('checked_out');
+                    }}
+                    className={`p-3.5 rounded-2xl border text-left transition-all active:scale-95 relative overflow-hidden ${
+                      todayStatusFilter === 'checked_out'
+                        ? 'bg-gradient-to-br from-teal-500/15 via-teal-50 to-white border-teal-400 ring-2 ring-teal-400/30 shadow-md'
+                        : 'bg-white hover:bg-teal-50/40 border-slate-200 hover:border-teal-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-teal-800">Completed</span>
+                      <CheckCircle2 className="h-4 w-4 text-teal-600" />
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-mono">
+                      {adminMetrics.checkedOutList.length}
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 font-medium flex items-center justify-between">
+                      <span>Checked out shifts</span>
+                      {todayStatusFilter === 'checked_out' && <span className="text-[10px] font-bold text-teal-700">Active</span>}
+                    </p>
+                  </button>
+
+                  {/* Card 4: Late Check-Ins */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setTodayStatusFilter('late');
+                    }}
+                    className={`p-3.5 rounded-2xl border text-left transition-all active:scale-95 relative overflow-hidden ${
+                      todayStatusFilter === 'late'
+                        ? 'bg-gradient-to-br from-amber-500/15 via-amber-50 to-white border-amber-400 ring-2 ring-amber-400/30 shadow-md'
+                        : 'bg-white hover:bg-amber-50/40 border-slate-200 hover:border-amber-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">Late Check-In</span>
+                      <AlertCircle className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-mono">
+                      {adminMetrics.lateList.length}
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 font-medium flex items-center justify-between">
+                      <span>{adminMetrics.lateList.length > 0 ? 'Exceeded cutoff' : 'All on schedule'}</span>
+                      {todayStatusFilter === 'late' && <span className="text-[10px] font-bold text-amber-700">Active</span>}
+                    </p>
+                  </button>
+
+                  {/* Card 5: Absent Today */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setTodayStatusFilter('absent');
+                    }}
+                    className={`col-span-2 sm:col-span-1 p-3.5 rounded-2xl border text-left transition-all active:scale-95 relative overflow-hidden ${
+                      todayStatusFilter === 'absent'
+                        ? 'bg-gradient-to-br from-rose-500/15 via-rose-50 to-white border-rose-400 ring-2 ring-rose-400/30 shadow-md'
+                        : 'bg-white hover:bg-rose-50/40 border-slate-200 hover:border-rose-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-rose-800">Absent / Pending</span>
+                      <UserX className="h-4 w-4 text-rose-600" />
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-mono">
+                      {adminMetrics.absentEmployees.length}
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 font-medium flex items-center justify-between">
+                      <span>Not punched today</span>
+                      {todayStatusFilter === 'absent' && <span className="text-[10px] font-bold text-rose-700">Active</span>}
+                    </p>
+                  </button>
+                </div>
+
+                {/* 3. Interactive Filter Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar border-b border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setTodayStatusFilter('all')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                      todayStatusFilter === 'all'
+                        ? 'bg-indigo-900 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    All Punched ({adminMetrics.presentCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTodayStatusFilter('on_duty')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                      todayStatusFilter === 'on_duty'
+                        ? 'bg-emerald-700 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    On Duty ({adminMetrics.onDutyList.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTodayStatusFilter('checked_out')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                      todayStatusFilter === 'checked_out'
+                        ? 'bg-teal-700 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Shift Complete ({adminMetrics.checkedOutList.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTodayStatusFilter('late')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                      todayStatusFilter === 'late'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Late Arrivals ({adminMetrics.lateList.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTodayStatusFilter('absent')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                      todayStatusFilter === 'absent'
+                        ? 'bg-rose-700 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Absent Staff ({adminMetrics.absentEmployees.length})
+                  </button>
+                </div>
+
+                {/* 4. Filtered List Content */}
                 {isLoadingAdmin ? (
-                  <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
-                ) : displayTodayAll.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-8">No attendance marked today yet.</p>
+                  <div className="flex flex-col items-center justify-center py-12 text-slate-400 space-y-2">
+                    <Loader2 className="h-8 w-8 animate-spin text-[#3b2fc9]" />
+                    <p className="text-xs font-medium">Fetching real-time attendance...</p>
+                  </div>
+                ) : todayStatusFilter === 'absent' ? (
+                  // Absent Employees Roster
+                  filteredAbsentEmployees.length === 0 ? (
+                    <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-8 text-center space-y-2">
+                      <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-2">
+                        <CheckCircle className="w-6 h-6" />
+                      </div>
+                      <h4 className="text-sm font-bold text-emerald-900">100% Attendance Rate!</h4>
+                      <p className="text-xs text-emerald-700 max-w-md mx-auto">
+                        All active team members have clocked in today. Zero absent employees for the selected site filter.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
+                        <span>Showing {filteredAbsentEmployees.length} staff member(s) who haven&apos;t punched in yet today</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {filteredAbsentEmployees.map((emp) => {
+                          const sId = resolveSiteId(emp.siteId);
+                          const rule = getEffectiveShiftRule(emp, globalShiftRules);
+                          return (
+                            <div
+                              key={emp.id}
+                              className="bg-white border border-slate-200 hover:border-slate-300 rounded-2xl p-4 shadow-2xs flex flex-col justify-between gap-3 transition-all"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-bold text-sm flex items-center justify-center shrink-0">
+                                    {emp.name.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h4 className="text-sm font-bold text-slate-900">{emp.name}</h4>
+                                      <span className="text-[10px] font-mono font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                                        {emp.employeeId}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-0.5">{emp.designation}</p>
+                                  </div>
+                                </div>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${
+                                  sId === 'dsm'
+                                    ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
+                                    : sId === 'ntt_data'
+                                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                    : 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                                }`}>
+                                  {sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic'}
+                                </span>
+                              </div>
+
+                              <div className="bg-slate-50 rounded-xl p-2.5 text-xs text-slate-600 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5 text-[11px]">
+                                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>Expected: <strong className="text-slate-800">{rule.expectedStart}</strong></span>
+                                  <span>· Cutoff: <strong className="text-amber-700">{rule.cutoff}</strong></span>
+                                </div>
+                                <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                                  Pending Check-In
+                                </span>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
+                                {emp.phone ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <a
+                                      href={`tel:${emp.phone}`}
+                                      className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1 transition-colors"
+                                      title="Call employee"
+                                    >
+                                      <Phone className="w-3 h-3 text-slate-600" />
+                                      <span>Call</span>
+                                    </a>
+                                    <a
+                                      href={`https://wa.me/91${emp.phone.replace(/\D/g, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold flex items-center gap-1 transition-colors"
+                                      title="Message on WhatsApp"
+                                    >
+                                      <MessageCircle className="w-3 h-3 text-emerald-600" />
+                                      <span>WhatsApp</span>
+                                    </a>
+                                  </div>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 italic">No phone on file</span>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    triggerHaptic('light');
+                                    setSelectedEmployeeId(emp.id!);
+                                    handleSetViewMode('kiosk');
+                                    toast({
+                                      title: `Selected ${emp.name}`,
+                                      description: 'Switched to Kiosk shutter to mark attendance.',
+                                    });
+                                  }}
+                                  className="px-3 py-1.5 rounded-xl bg-[#3b2fc9] hover:bg-[#3228a8] text-white text-xs font-bold flex items-center gap-1 shadow-2xs active:scale-95 transition-all"
+                                >
+                                  <Camera className="w-3 h-3" />
+                                  <span>Punch In</span>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )
+                ) : filteredTodayRecords.length === 0 ? (
+                  <div className="bg-slate-50 rounded-2xl p-8 text-center space-y-2 border border-dashed border-slate-200">
+                    <p className="text-sm font-semibold text-slate-700">No records found for this filter.</p>
+                    <p className="text-xs text-slate-500">
+                      {adminSearchQuery ? `No employees match "${adminSearchQuery}". Try clearing your search.` : 'No punches recorded under this category today.'}
+                    </p>
+                    {adminSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setAdminSearchQuery('')}
+                        className="mt-2 text-xs font-bold text-[#3b2fc9] hover:underline"
+                      >
+                        Clear search
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div className="space-y-3">
-                    {displayTodayAll.map((rec) => (
+                    <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
+                      <span>Showing {filteredTodayRecords.length} record(s)</span>
+                      {todayStatusFilter !== 'all' && (
+                        <button
+                          type="button"
+                          onClick={() => setTodayStatusFilter('all')}
+                          className="text-xs text-[#3b2fc9] hover:underline font-semibold"
+                        >
+                          View all today
+                        </button>
+                      )}
+                    </div>
+                    {filteredTodayRecords.map((rec) => (
                       <AdminAttendanceCard
                         key={rec.id}
                         record={rec}
@@ -3109,28 +3678,45 @@ function AdminAttendanceCard({
   isExpanded: boolean;
   onToggle: () => void;
 }) {
-  const statusColor =
-    record.status === 'present'
-      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold'
-      : record.status === 'half-day'
-      ? 'bg-amber-100 text-amber-900 border border-amber-300 font-bold'
-      : record.status === 'missed-checkout'
-      ? 'bg-amber-100 text-amber-900 border border-amber-300 font-bold'
-      : 'bg-red-100 text-red-700 border border-red-300 font-bold';
+  const isWorking = Boolean(record.checkIn && !record.checkOut);
+  const statusColor = isWorking
+    ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold'
+    : record.checkOut
+    ? 'bg-slate-100 text-slate-700 border border-slate-300 font-bold'
+    : record.status === 'present'
+    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold'
+    : record.status === 'half-day'
+    ? 'bg-amber-100 text-amber-900 border border-amber-300 font-bold'
+    : record.status === 'missed-checkout'
+    ? 'bg-amber-100 text-amber-900 border border-amber-300 font-bold'
+    : 'bg-red-100 text-red-700 border border-red-300 font-bold';
+
+  const elapsedMinutes = record.checkIn?.time
+    ? Math.max(0, Math.floor((Date.now() - new Date(record.checkIn.time).getTime()) / 60000))
+    : 0;
 
   return (
-    <div className="border border-gray-100 rounded-xl overflow-hidden">
+    <div className={`border rounded-2xl overflow-hidden transition-all shadow-2xs ${
+      isWorking ? 'border-emerald-200 bg-white hover:border-emerald-300' : 'border-slate-200 bg-white hover:border-slate-300'
+    }`}>
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 text-left"
+        className="w-full flex items-center gap-3 p-3.5 hover:bg-slate-50/80 text-left transition-colors"
       >
         {/* Avatar */}
-        <div className="h-8 w-8 rounded-full bg-[#3b2fc9]/10 flex items-center justify-center text-[#3b2fc9] font-bold text-xs shrink-0">
-          {record.employeeName.charAt(0)}
+        <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+          isWorking ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-[#3b2fc9]/10 text-[#3b2fc9]'
+        }`}>
+          {record.employeeName ? record.employeeName.charAt(0).toUpperCase() : '?'}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-medium text-gray-800 truncate">{record.employeeName}</p>
+            <p className="text-sm font-bold text-slate-900 truncate">{record.employeeName}</p>
+            {record.employeeId && (
+              <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">
+                {record.employeeId}
+              </span>
+            )}
             {(() => {
               const sId = resolveSiteId(record.siteId);
               return (
@@ -3146,25 +3732,51 @@ function AdminAttendanceCard({
               );
             })()}
             {record.isLate && (
-              <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.2 rounded font-bold">
+              <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.2 rounded font-bold border border-red-200">
                 Late (+{record.lateMinutes || 0}m)
               </span>
             )}
             {record.overtimeMinutes && record.overtimeMinutes > 0 ? (
-              <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.2 rounded font-semibold">
+              <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.2 rounded font-semibold border border-purple-200">
                 +{formatDuration(record.overtimeMinutes)} OT
               </span>
             ) : null}
           </div>
-          <p className="text-xs text-gray-400">
-            <span className="capitalize font-medium text-gray-500 mr-1.5">{record.location} ·</span>
-            {record.checkIn ? `In: ${new Date(record.checkIn.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}` : 'Not checked in'}
-            {record.checkOut ? ` · Out: ${new Date(record.checkOut.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}` : ''}
-            {record.durationMinutes ? ` · ${formatDuration(record.durationMinutes)}` : ''}
+          <p className="text-xs text-slate-500 mt-0.5">
+            <span className="capitalize font-medium text-slate-600 mr-1.5">{record.location} ·</span>
+            {record.checkIn ? (
+              <span>
+                In: <strong className="text-slate-700">{new Date(record.checkIn.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</strong>
+              </span>
+            ) : 'Not checked in'}
+            {record.checkOut ? (
+              <span>
+                {' '}· Out: <strong className="text-slate-700">{new Date(record.checkOut.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</strong>
+              </span>
+            ) : null}
+            {isWorking && record.checkIn && (
+              <span className="text-emerald-700 font-bold ml-1.5">
+                ({formatDuration(elapsedMinutes)} elapsed)
+              </span>
+            )}
+            {record.durationMinutes ? ` · ${formatDuration(record.durationMinutes)} shift` : ''}
           </p>
         </div>
-        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${statusColor}`}>
-          {record.status === 'present'
+        <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold shrink-0 ${statusColor}`}>
+          {isWorking ? (
+            <span className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              On Duty
+            </span>
+          ) : record.checkOut ? (
+            <span className="flex items-center gap-1">
+              <CheckCircle className="h-3 w-3 text-emerald-600" />
+              Completed
+            </span>
+          ) : record.status === 'present'
             ? 'Full Day'
             : record.status === 'half-day'
             ? 'Half Day'

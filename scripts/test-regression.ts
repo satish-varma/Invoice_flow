@@ -10,6 +10,7 @@
 
 import { challanSchema, lineItemSchema, PricingItem } from '../src/types/challan';
 import { buildPricingMap, findPricingForItem } from '../src/services/newrelicPricingService';
+import { detectDuplicateCatalogGroups } from '../src/services/newrelicDuplicateDetector';
 
 let passed = 0;
 let failed = 0;
@@ -128,6 +129,32 @@ async function runRegressionSuite() {
       []
     );
     assert(nonMrpInvoice === 'NON-MRP', 'Invoices without GST tax entries correctly classify as NON-MRP');
+  }
+
+  // --- SUITE 4: Catalog Duplicate Detection & Keeper Scoring ---
+  console.log('\n🔍 4. Catalog Duplicate Detection & Smart Keeper Selection:');
+  {
+    const sampleCatalog = [
+      { id: '1', brandName: 'Britannia', itemName: 'Marie Gold', defaultQuantity: 1, mrp: 10, caseSize: 48 },
+      { id: '2', brandName: 'Britannia', itemName: 'Mariegold', defaultQuantity: 1 },
+      { id: '3', brandName: 'Haldiram', itemName: 'Soya Sticks', defaultQuantity: 1, mrp: 50 },
+      { id: '4', brandName: 'Haldirams', itemName: 'Soya Sticks', defaultQuantity: 1 },
+      { id: '5', brandName: 'Tropicana', itemName: 'Pomegranate', defaultQuantity: 1 },
+      { id: '6', brandName: 'Tropicana', itemName: 'Pomegranate Juice', defaultQuantity: 1, mrp: 25 },
+      { id: '7', brandName: 'Amul', itemName: 'Buttermilk', defaultQuantity: 1, mrp: 15 },
+    ];
+
+    const groups = detectDuplicateCatalogGroups(sampleCatalog as any);
+    assert(groups.length === 3, 'Detects exact 3 duplicate clusters from sample dataset');
+
+    const marieGroup = groups.find(g => g.items.some(i => i.itemName.includes('Marie')));
+    assert(Boolean(marieGroup && marieGroup.suggestedKeeperId === '1'), 'Selects higher-metadata candidate as suggested keeper (Marie Gold)');
+
+    const haldiramGroup = groups.find(g => g.primaryReason.includes('Brand spelling'));
+    assert(Boolean(haldiramGroup && haldiramGroup.suggestedKeeperId === '3'), 'Detects brand plural variant and suggests configured MRP keeper (Haldiram)');
+
+    const pomegranateGroup = groups.find(g => g.items.some(i => i.itemName.includes('Pomegranate')));
+    assert(Boolean(pomegranateGroup && pomegranateGroup.suggestedKeeperId === '6'), 'Detects noise word difference and suggests keeper with defined MRP');
   }
 
   // --- Summary ---

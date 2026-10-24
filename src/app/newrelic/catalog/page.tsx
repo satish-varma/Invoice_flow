@@ -11,6 +11,7 @@ import {
   bulkSaveCatalogItems,
   bulkDeleteCatalogItems,
   bulkUpdateCatalogSites,
+  getCatalogDocId,
 } from '@/services/newrelicCatalogService';
 import { getAllPricingItems } from '@/services/newrelicPricingService';
 import {
@@ -34,11 +35,14 @@ import {
   Square,
   Loader2,
   Building2,
+  GitMerge,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
 import { hasPermission } from '@/types/permissions';
 import { CatalogCsvImportModal } from '@/components/newrelic/catalog/CatalogCsvImportModal';
+import { CatalogDuplicateModal } from '@/components/newrelic/catalog/CatalogDuplicateModal';
+import { detectDuplicateCatalogGroups } from '@/services/newrelicDuplicateDetector';
 
 const SITES_OPTIONS = [
   { id: 'all', label: 'All Sites' },
@@ -111,6 +115,8 @@ export default function CatalogPage() {
 
   // Modals & Progress
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const duplicateGroups = useMemo(() => detectDuplicateCatalogGroups(catalog), [catalog]);
   const [syncProgress, setSyncProgress] = useState<{
     current: number;
     total: number;
@@ -601,6 +607,27 @@ export default function CatalogPage() {
           </button>
           <button
             onClick={() => {
+              triggerHaptic('light');
+              setShowDuplicateModal(true);
+            }}
+            className={cn(
+              "flex-1 sm:flex-initial h-11 sm:h-10 px-3.5 rounded-2xl sm:rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-xs active:scale-95 cursor-pointer",
+              duplicateGroups.length > 0
+                ? "bg-rose-50/80 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 hover:bg-rose-100/70"
+                : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+            )}
+            title="Scan near-duplicate items, spelling variations, and plural brand inconsistencies"
+          >
+            <GitMerge className={cn("h-4 w-4", duplicateGroups.length > 0 ? "text-rose-600 dark:text-rose-400" : "text-indigo-600 dark:text-indigo-400")} />
+            <span>Smart Merger</span>
+            {duplicateGroups.length > 0 && (
+              <span className="px-1.5 py-0.5 text-[10px] font-black rounded-full bg-rose-600 text-white leading-none">
+                {duplicateGroups.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => {
               triggerHaptic('medium');
               setShowAdd(true);
               setNewBrand('');
@@ -634,9 +661,25 @@ export default function CatalogPage() {
               <Package className="h-4 w-4" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-            {catalog.length}
-          </p>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+              {catalog.length}
+            </p>
+            {duplicateGroups.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowDuplicateModal(true);
+                }}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition cursor-pointer"
+                title="View and merge duplicates"
+              >
+                <GitMerge className="h-3 w-3" />
+                <span>{duplicateGroups.length} duplicates</span>
+              </button>
+            )}
+          </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
             Active cross-site item definitions
           </p>
@@ -1886,6 +1929,42 @@ export default function CatalogPage() {
           triggerHaptic('success');
         }}
         existingCatalog={catalog}
+      />
+
+      {/* Duplicate Detector & Smart Merger Modal */}
+      <CatalogDuplicateModal
+        isOpen={showDuplicateModal}
+        onClose={() => setShowDuplicateModal(false)}
+        catalogItems={catalog}
+        isReadOnly={isReadOnly || role === 'guest'}
+        onMergedSuccess={(updatedItem, deletedIds) => {
+          setCatalog((prev) => {
+            const deletedSet = new Set(deletedIds);
+            const targetId = updatedItem.id || getCatalogDocId(updatedItem.brandName, updatedItem.itemName);
+            return prev
+              .filter((i) => !deletedSet.has(i.id || getCatalogDocId(i.brandName, i.itemName)))
+              .map((i) => {
+                const currentId = i.id || getCatalogDocId(i.brandName, i.itemName);
+                return currentId === targetId ? updatedItem : i;
+              });
+          });
+          triggerHaptic('success');
+        }}
+        onBatchMergedSuccess={(updatedItems, allDeletedIds) => {
+          setCatalog((prev) => {
+            const deletedSet = new Set(allDeletedIds);
+            const updatedMap = new Map(
+              updatedItems.map((u) => [u.id || getCatalogDocId(u.brandName, u.itemName), u])
+            );
+            return prev
+              .filter((i) => !deletedSet.has(i.id || getCatalogDocId(i.brandName, i.itemName)))
+              .map((i) => {
+                const currentId = i.id || getCatalogDocId(i.brandName, i.itemName);
+                return updatedMap.has(currentId) ? updatedMap.get(currentId)! : i;
+              });
+          });
+          triggerHaptic('success');
+        }}
       />
     </div>
   );

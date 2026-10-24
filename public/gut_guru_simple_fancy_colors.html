@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Gut Guru — Simple & Fancy Color TGG Concepts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=Cinzel:wght@700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-outfit { font-family: 'Outfit', sans-serif; }
+    .font-cinzel { font-family: 'Cinzel', serif; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+
+  <!-- Header -->
+  <header class="border-b border-slate-200 bg-white/95 backdrop-blur-md sticky top-0 z-50 px-6 py-4 shadow-xs">
+    <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-amber-400 flex items-center justify-center text-white shadow-md font-black text-sm font-outfit">
+          TGG
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-black tracking-tight text-slate-900 font-outfit">THE GUT GURU</h1>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
+              Simple &amp; Fancy Colors
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 font-medium">Hospitality Services • Refined TGG Monograms with Eye-Catching Colorways</p>
+        </div>
+      </div>
+
+      <!-- Controls: Canvas Background & Global Colorway Switcher -->
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Palette Dropdown / Quick Buttons -->
+        <span class="text-xs text-slate-500 font-bold mr-1">Canvas:</span>
+        <button onclick="setCanvas('white')" class="canvas-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 border border-slate-300 shadow-xs">White</button>
+        <button onclick="setCanvas('cream')" class="canvas-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900">Pearl Cream</button>
+        <button onclick="setCanvas('dark')" class="canvas-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900">Obsidian Dark</button>
+        <button onclick="setCanvas('emerald')" class="canvas-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900">Deep Jade</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero introduction -->
+  <section class="max-w-7xl mx-auto px-6 pt-10 pb-4 text-center space-y-2">
+    <span class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
+      ✦ Clean Vector Perfection
+    </span>
+    <h2 class="text-2xl sm:text-4xl font-black text-slate-900 font-outfit tracking-tight">
+      Simple, Eye-Catchy TGG Monograms
+    </h2>
+    <p class="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto">
+      Based on your reference designs: clean geometric curves, balanced line weights, distinct leaf accents, and <strong>fancy, vibrant, high-end colorways</strong> (Electric Emerald &amp; Gold, Royal Amethyst &amp; Champagne, Sunset Coral, Rose Gold, and Cyber Mint).
+    </p>
+
+    <!-- Color Palette Filter Bar -->
+    <div class="pt-4 flex flex-wrap items-center justify-center gap-2">
+      <span class="text-xs font-bold text-slate-400 mr-2 uppercase tracking-wider">Fancy Colorways:</span>
+      <button onclick="switchPalette('emerald-gold')" class="pal-btn px-3 py-1.5 rounded-full text-xs font-bold bg-slate-900 text-white shadow-xs border border-slate-700">1. Emerald &amp; Sun Gold</button>
+      <button onclick="switchPalette('peacock-lime')" class="pal-btn px-3 py-1.5 rounded-full text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200">2. Peacock &amp; Vivid Lime</button>
+      <button onclick="switchPalette('amethyst-gold')" class="pal-btn px-3 py-1.5 rounded-full text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200">3. Royal Purple &amp; Gold</button>
+      <button onclick="switchPalette('rose-emerald')" class="pal-btn px-3 py-1.5 rounded-full text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200">4. Rose Gold &amp; Jade</button>
+      <button onclick="switchPalette('sunset-coral')" class="pal-btn px-3 py-1.5 rounded-full text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200">5. Sunset Coral &amp; Mint</button>
+      <button onclick="switchPalette('cyber-teal')" class="pal-btn px-3 py-1.5 rounded-full text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200">6. Cyber Mint &amp; Indigo</button>
+    </div>
+  </section>
+
+  <!-- Showcase Cards Grid -->
+  <main class="max-w-7xl mx-auto px-6 py-8 space-y-12">
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+      <!-- ================= DESIGN 01: THE HORIZONTAL INFINITY LOOP WITH TOP SPROUT ================= -->
+      <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800">
+              Archetype 1 • Most Popular
+            </span>
+            <h3 class="text-base font-bold text-slate-900 mt-1 font-outfit">Horizontal T + Infinity GG Loop (Top Sprout)</h3>
+            <p class="text-xs text-slate-500">From Reference 2 &amp; 5: Clean linear T with interlocking GG infinity knot &amp; leaf.</p>
+          </div>
+          <button onclick="downloadSvg('svg-design-1', 'TGG_Simple_01_Horizontal_Sprout')" class="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-slate-900 hover:bg-emerald-600 text-white transition">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="card-canvas p-10 flex items-center justify-center min-h-[300px] transition-colors bg-white">
+          <svg id="svg-design-1" class="w-full max-w-[360px] h-auto drop-shadow-sm" viewBox="0 0 420 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="d1-grad-t" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#0f766e" class="color-stop-1" />
+                <stop offset="100%" stop-color="#047857" class="color-stop-1b" />
+              </linearGradient>
+              <linearGradient id="d1-grad-g1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#0f766e" class="color-stop-1" />
+                <stop offset="100%" stop-color="#10b981" class="color-stop-2" />
+              </linearGradient>
+              <linearGradient id="d1-grad-g2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#10b981" class="color-stop-2" />
+                <stop offset="100%" stop-color="#f59e0b" class="color-stop-3" />
+              </linearGradient>
+            </defs>
+
+            <!-- Letter T -->
+            <path d="M45 42 L130 42" stroke="url(#d1-grad-t)" stroke-width="12" stroke-linecap="round"/>
+            <path d="M85 42 L85 130" stroke="url(#d1-grad-t)" stroke-width="12" stroke-linecap="round"/>
+
+            <!-- Left G of the Infinity Loop -->
+            <path d="M210 52 C185 40 145 45 130 75 C115 105 130 135 165 135 C195 135 215 115 215 90 L165 90" 
+                  stroke="url(#d1-grad-g1)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+            <!-- Right G of the Infinity Loop -->
+            <path d="M210 52 C235 40 275 45 290 75 C305 105 290 135 255 135 C225 135 205 115 205 90 L255 90" 
+                  stroke="url(#d1-grad-g2)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+            <!-- Delicate Sprout Leaf at Nexus -->
+            <path d="M212 50 C216 30 234 18 245 18 C242 32 230 46 212 50 Z" fill="#10b981" class="leaf-fill" />
+            <path d="M218 43 C224 35 233 28 238 25" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+
+            <!-- Typography -->
+            <text x="210" y="178" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="24" letter-spacing="4" class="title-text" fill="#0f172a">
+              THE GUT GURU
+            </text>
+            <text x="210" y="202" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="9.5" letter-spacing="6" class="sub-text" fill="#0f766e">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+          <span><strong>Features:</strong> Balanced stroke weights, clean rounded terminals, high legibility.</span>
+          <span class="text-emerald-700 font-bold">100% Vector</span>
+        </div>
+      </div>
+
+      <!-- ================= DESIGN 02: THE CROWN T ATOP INTERLOCKING GG ================= -->
+      <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800">
+              Archetype 2 • Symmetrical Crown
+            </span>
+            <h3 class="text-base font-bold text-slate-900 mt-1 font-outfit">Crown T Atop Interlocking GG Loop</h3>
+            <p class="text-xs text-slate-500">From Reference 1 &amp; 4: Golden T canopy nestled atop symmetrical infinity G loops.</p>
+          </div>
+          <button onclick="downloadSvg('svg-design-2', 'TGG_Simple_02_Crown_Loop')" class="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-slate-900 hover:bg-emerald-600 text-white transition">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="card-canvas p-10 flex items-center justify-center min-h-[300px] transition-colors bg-white">
+          <svg id="svg-design-2" class="w-full max-w-[340px] h-auto drop-shadow-sm" viewBox="0 0 380 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="d2-grad-t" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#f59e0b" class="color-stop-3" />
+                <stop offset="100%" stop-color="#d97706" class="color-stop-3b" />
+              </linearGradient>
+              <linearGradient id="d2-grad-gg" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#0f766e" class="color-stop-1" />
+                <stop offset="50%" stop-color="#10b981" class="color-stop-2" />
+                <stop offset="100%" stop-color="#f59e0b" class="color-stop-3" />
+              </linearGradient>
+            </defs>
+
+            <!-- Crown T at Top Center -->
+            <path d="M140 38 C145 32 155 30 190 30 C225 30 235 32 240 38" stroke="url(#d2-grad-t)" stroke-width="12" stroke-linecap="round"/>
+            <path d="M190 30 L190 85" stroke="url(#d2-grad-t)" stroke-width="12" stroke-linecap="round"/>
+
+            <!-- Left G Loop -->
+            <path d="M190 82 C165 72 125 75 110 105 C95 135 110 165 145 165 C175 165 195 145 195 120 L150 120" 
+                  stroke="url(#d2-grad-gg)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+            <!-- Right G Loop -->
+            <path d="M190 82 C215 72 255 75 270 105 C285 135 270 165 235 165 C205 165 185 145 185 120 L230 120" 
+                  stroke="url(#d2-grad-gg)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+            <!-- Tiny Sun/Seed Accent -->
+            <circle cx="190" cy="18" r="4" fill="#f59e0b" class="accent-dot" />
+
+            <!-- Typography -->
+            <text x="190" y="210" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="24" letter-spacing="4" class="title-text" fill="#0f172a">
+              THE GUT GURU
+            </text>
+            <text x="190" y="235" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="9.5" letter-spacing="6" class="sub-text" fill="#0f766e">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+          <span><strong>Features:</strong> Regal symmetry, iconic app icon / stamp fit.</span>
+          <span class="text-amber-700 font-bold">Signature Emblem</span>
+        </div>
+      </div>
+
+      <!-- ================= DESIGN 03: THE LEAF-BAR EMBEDDED GG ================= -->
+      <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-100 text-teal-800">
+              Archetype 3 • Organic Leaf Bar
+            </span>
+            <h3 class="text-base font-bold text-slate-900 mt-1 font-outfit">TGG with Embedded Living Leaf</h3>
+            <p class="text-xs text-slate-500">From Reference 3: The second G incorporates a botanical leaf directly as its horizontal shelf.</p>
+          </div>
+          <button onclick="downloadSvg('svg-design-3', 'TGG_Simple_03_Embedded_Leaf')" class="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-slate-900 hover:bg-emerald-600 text-white transition">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="card-canvas p-10 flex items-center justify-center min-h-[300px] transition-colors bg-white">
+          <svg id="svg-design-3" class="w-full max-w-[360px] h-auto drop-shadow-sm" viewBox="0 0 420 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="d3-grad-loop" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#0f766e" class="color-stop-1" />
+                <stop offset="60%" stop-color="#f59e0b" class="color-stop-3" />
+                <stop offset="100%" stop-color="#10b981" class="color-stop-2" />
+              </linearGradient>
+            </defs>
+
+            <!-- Elegant Scripted T with Soft Wave Serifs -->
+            <path d="M45 48 C55 42 75 42 85 45 C95 48 115 48 125 42" stroke="url(#d1-grad-t)" stroke-width="11" stroke-linecap="round"/>
+            <path d="M85 45 L85 130" stroke="url(#d1-grad-t)" stroke-width="11" stroke-linecap="round"/>
+
+            <!-- First G (Golden Amber Curve) -->
+            <path d="M205 60 C185 42 145 45 130 75 C115 105 130 135 165 135 C190 135 210 118 210 92 L165 92" 
+                  stroke="url(#d2-grad-t)" stroke-width="11" stroke-linecap="round" fill="none"/>
+
+            <!-- Second G (Deep Emerald with Leaf Inlay) -->
+            <path d="M210 60 C230 42 270 45 285 75 C300 105 285 135 250 135 C225 135 208 120 208 95" 
+                  stroke="url(#d1-grad-t)" stroke-width="11" stroke-linecap="round" fill="none"/>
+
+            <!-- Living Leaf as the G's Crossbar -->
+            <path d="M222 92 C235 78 265 78 275 92 C265 106 235 106 222 92 Z" fill="#10b981" class="leaf-fill" />
+            <path d="M225 92 L270 92" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+
+            <!-- Typography -->
+            <text x="210" y="178" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="24" letter-spacing="4" class="title-text" fill="#0f172a">
+              THE GUT GURU
+            </text>
+            <text x="210" y="202" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="9.5" letter-spacing="6" class="sub-text" fill="#0f766e">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+          <span><strong>Features:</strong> Organic storytelling, direct nutritional metaphor.</span>
+          <span class="text-teal-700 font-bold">Chef &amp; Wellness Favorite</span>
+        </div>
+      </div>
+
+      <!-- ================= DESIGN 04: THE ULTRA-SLEEK MODERN MINIMALIST (Reference 5) ================= -->
+      <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-800">
+              Archetype 4 • Modern Minimal
+            </span>
+            <h3 class="text-base font-bold text-slate-900 mt-1 font-outfit">Precision Monoline TGG (Nordic Minimal)</h3>
+            <p class="text-xs text-slate-500">From Reference 5: High-end monoline geometry with negative space leaf inside the upper curve.</p>
+          </div>
+          <button onclick="downloadSvg('svg-design-4', 'TGG_Simple_04_Monoline')" class="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-slate-900 hover:bg-emerald-600 text-white transition">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="card-canvas p-10 flex items-center justify-center min-h-[300px] transition-colors bg-white">
+          <svg id="svg-design-4" class="w-full max-w-[360px] h-auto drop-shadow-sm" viewBox="0 0 420 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Sleek Architectural T -->
+            <path d="M45 45 L125 45" stroke="url(#d1-grad-t)" stroke-width="10" stroke-linecap="square"/>
+            <path d="M85 45 L85 130" stroke="url(#d1-grad-t)" stroke-width="10" stroke-linecap="square"/>
+
+            <!-- First G with Organic Leaf Arch -->
+            <path d="M210 60 C190 42 145 45 130 75 C115 105 130 135 165 135 C195 135 212 118 212 92 L165 92" 
+                  stroke="url(#d1-grad-t)" stroke-width="10" stroke-linecap="round" fill="none"/>
+            
+            <!-- Leaf carved seamlessly in top arch -->
+            <path d="M152 52 C168 45 186 52 190 65 C176 68 158 62 152 52 Z" fill="#10b981" class="leaf-fill" />
+
+            <!-- Second G echoing in lighter tone -->
+            <path d="M215 52 C240 38 280 45 295 75 C310 105 295 135 260 135 C230 135 212 115 212 92 L260 92" 
+                  stroke="url(#d2-grad-t)" stroke-width="10" stroke-linecap="round" fill="none"/>
+
+            <!-- Typography -->
+            <text x="210" y="178" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="24" letter-spacing="4" class="title-text" fill="#0f172a">
+              THE GUT GURU
+            </text>
+            <text x="210" y="202" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="9.5" letter-spacing="6" class="sub-text" fill="#0f766e">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+          <span><strong>Features:</strong> Contemporary Scandinavian simplicity, crisp at tiny sizes.</span>
+          <span class="text-blue-700 font-bold">Ultra Modern</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Live Colorway Demonstration Matrix -->
+    <div class="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm space-y-6">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+        <div>
+          <h3 class="text-lg font-black text-slate-900 font-outfit">Explore All 6 Fancy Color Palettes Side-by-Side</h3>
+          <p class="text-xs text-slate-500">Click any palette above to immediately see all logos update in real time, or compare the palettes below.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
+        <div onclick="switchPalette('emerald-gold')" class="cursor-pointer p-4 rounded-2xl border border-slate-200 hover:border-emerald-500 transition hover:shadow-md bg-slate-50">
+          <div class="flex justify-center -space-x-2 mb-2">
+            <span class="w-6 h-6 rounded-full bg-[#0f766e] border-2 border-white shadow-xs"></span>
+            <span class="w-6 h-6 rounded-full bg-[#10b981] border-2 border-white shadow-xs"></span>
+            <span class="w-6 h-6 rounded-full bg-[#f59e0b] border-2 border-white shadow-xs"></span>
+          </div>
+          <div class="text-xs font-bold text-slate-800">Emerald &amp; Sun Gold</div>
+          <div class="text-[10px] text-slate-500">Classic Wellness</div>
+        </div>
+
+        <div onclick="switchPalette('peacock-lime')" class="cursor-pointer p-4 rounded-2xl border border-slate-200 hover:border-emerald-500 transition hover:shadow-md bg-slate-50">
+          <div class="flex justify-center -space-x-2 mb-2">
+            <span class="w-6 h-6 rounded-full bg-[#0284c7] border-2 border-white shadow-xs"></span>
+            <span class="w-6 h-6 rounded-full bg-[#059669] border-2 border-white shadow-xs"></span>
+            <span class="w-6 h-6 rounded-full bg-[#84cc16] border-2 border-white shadow-xs"></span>
+          </div>
+          <div class="text-xs font-bold text-slate-800">Peacock &amp; Lime</div>
+          <div class="text-[10px] text-slate-500">Vivid &amp; Punchy</div>
+        </div>
+
+        <div onclick="switchPalette('amethyst-gold')" class="cursor-pointer p-4 rounded-2xl border border-slate-200 hover:border-emerald-500 transition hover:shadow-md bg-slate-50">
+          <div class="flex justify-center -space-x-2 mb-2">
+            <span class="w-6 h-6 rounded-full bg-[#6b21a8] border-2 border-white shadow-xs"></span>
+            <span class="w-6 h-6 rounded-full bg-[#a855f7] border-2 border-white shadow-xs"></span>
+            <span class="w-6 h-6 rounded-full bg-[#fbbf24] border-2 border-white shadow-xs"></span>
+          </div>
+          <div class="text-xs font-bold text-slate-800">Royal Purple &amp; Gold</div>
+          <div class="text-[10px] text-slate-500">Haute Prestige</div>
+        </div>
+
+        <div onclick="switchPalette('rose-emerald')" class="cursor-pointer p-4 rounded-2xl border border-slate-200 hover:border-emerald-500 transition hover:shadow-md bg-slate-50">
+          <div class="flex justify-center -space-x-2 mb-2">
+            <span class="w-6 h-6 rounded-full bg-[#e11d48] border-2 border-white shadow-xs"></span>
+            <span class="w-6 h-6 rounded-full bg-[#fb7185] border-2 border-white shadow-xs"></span>
+            <span class="w-6 h-6 rounded-full bg-[#047857] border-2 border-white shadow-xs"></span>
+          </div>
+          <div class="text-xs font-bold text-slate-800">Rose Gold &amp; Jade</div>
+          <div class="text-[10px] text-slate-500">Luxury Hospitality</div>
+        </div>
+
+        <div onclick="switchPalette('sunset-coral')" class="cursor-pointer p-4 rounded-2xl border border-slate-200 hover:border-emerald-500 transition hover:shadow-md bg-slate-50">
+          <div class="flex justify-center -space-x-2 mb-2">
+            <span class="w-6 h-6 rounded-full bg-[#f97316] border-2 border-white shadow-xs"></span>
+            <span class="w-6 h-6 rounded-full bg-[#fb923c] border-2 border-white shadow-xs"></span>
+            <span class="w-6 h-6 rounded-full bg-[#14b8a6] border-2 border-white shadow-xs"></span>
+          </div>
+          <div class="text-xs font-bold text-slate-800">Sunset Coral &amp; Mint</div>
+          <div class="text-[10px] text-slate-500">Fresh &amp; Appetizing</div>
+        </div>
+
+        <div onclick="switchPalette('cyber-teal')" class="cursor-pointer p-4 rounded-2xl border border-slate-200 hover:border-emerald-500 transition hover:shadow-md bg-slate-50">
+          <div class="flex justify-center -space-x-2 mb-2">
+            <span class="w-6 h-6 rounded-full bg-[#1e1b4b] border-2 border-white shadow-xs"></span>
+            <span class="w-6 h-6 rounded-full bg-[#06b6d4] border-2 border-white shadow-xs"></span>
+            <span class="w-6 h-6 rounded-full bg-[#10b981] border-2 border-white shadow-xs"></span>
+          </div>
+          <div class="text-xs font-bold text-slate-800">Cyber Mint &amp; Navy</div>
+          <div class="text-[10px] text-slate-500">Tech &amp; Precision</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Interactive JavaScript Engine -->
+  <script>
+    const PALETTES = {
+      'emerald-gold': {
+        c1: '#0f766e', c1b: '#047857', c2: '#10b981', c3: '#f59e0b', c3b: '#d97706',
+        leaf: '#10b981', sub: '#0f766e', dot: '#f59e0b'
+      },
+      'peacock-lime': {
+        c1: '#0284c7', c1b: '#0369a1', c2: '#059669', c3: '#84cc16', c3b: '#65a30d',
+        leaf: '#84cc16', sub: '#0284c7', dot: '#84cc16'
+      },
+      'amethyst-gold': {
+        c1: '#6b21a8', c1b: '#581c87', c2: '#a855f7', c3: '#fbbf24', c3b: '#d97706',
+        leaf: '#34d399', sub: '#6b21a8', dot: '#fbbf24'
+      },
+      'rose-emerald': {
+        c1: '#e11d48', c1b: '#be123c', c2: '#fb7185', c3: '#047857', c3b: '#064e3b',
+        leaf: '#047857', sub: '#e11d48', dot: '#fb7185'
+      },
+      'sunset-coral': {
+        c1: '#f97316', c1b: '#c2410c', c2: '#fb923c', c3: '#14b8a6', c3b: '#0f766e',
+        leaf: '#14b8a6', sub: '#c2410c', dot: '#14b8a6'
+      },
+      'cyber-teal': {
+        c1: '#1e1b4b', c1b: '#0f172a', c2: '#06b6d4', c3: '#10b981', c3b: '#059669',
+        leaf: '#10b981', sub: '#06b6d4', dot: '#06b6d4'
+      }
+    };
+
+    function switchPalette(name) {
+      const p = PALETTES[name];
+      if (!p) return;
+
+      // Update button styles
+      document.querySelectorAll('.pal-btn').forEach(btn => {
+        btn.className = 'pal-btn px-3 py-1.5 rounded-full text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition';
+      });
+      event.target.className = 'pal-btn px-3 py-1.5 rounded-full text-xs font-bold bg-slate-900 text-white shadow-xs border border-slate-700 transition';
+
+      // Update SVG stops
+      document.querySelectorAll('.color-stop-1').forEach(s => s.setAttribute('stop-color', p.c1));
+      document.querySelectorAll('.color-stop-1b').forEach(s => s.setAttribute('stop-color', p.c1b));
+      document.querySelectorAll('.color-stop-2').forEach(s => s.setAttribute('stop-color', p.c2));
+      document.querySelectorAll('.color-stop-3').forEach(s => s.setAttribute('stop-color', p.c3));
+      document.querySelectorAll('.color-stop-3b').forEach(s => s.setAttribute('stop-color', p.c3b));
+      document.querySelectorAll('.leaf-fill').forEach(s => s.setAttribute('fill', p.leaf));
+      document.querySelectorAll('.sub-text').forEach(s => s.setAttribute('fill', p.sub));
+      document.querySelectorAll('.accent-dot').forEach(s => s.setAttribute('fill', p.dot));
+    }
+
+    function setCanvas(theme) {
+      const canvases = document.querySelectorAll('.card-canvas');
+      const titleTexts = document.querySelectorAll('.title-text');
+      const buttons = document.querySelectorAll('.canvas-btn');
+
+      buttons.forEach(b => {
+        b.className = 'canvas-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition';
+      });
+      event.target.className = 'canvas-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 border border-slate-300 shadow-xs transition';
+
+      canvases.forEach(c => {
+        c.className = 'card-canvas p-10 flex items-center justify-center min-h-[300px] transition-colors';
+        if (theme === 'white') {
+          c.classList.add('bg-white');
+          titleTexts.forEach(t => t.setAttribute('fill', '#0f172a'));
+        } else if (theme === 'cream') {
+          c.classList.add('bg-[#fbf7ee]');
+          titleTexts.forEach(t => t.setAttribute('fill', '#1c1917'));
+        } else if (theme === 'dark') {
+          c.classList.add('bg-[#0f172a]');
+          titleTexts.forEach(t => t.setAttribute('fill', '#f8fafc'));
+        } else if (theme === 'emerald') {
+          c.classList.add('bg-[#064e3b]');
+          titleTexts.forEach(t => t.setAttribute('fill', '#ecfdf5'));
+        }
+      });
+    }
+
+    function downloadSvg(svgId, filename) {
+      const svg = document.getElementById(svgId);
+      const serializer = new XMLSerializer();
+      let source = serializer.serializeToString(svg);
+
+      if (!source.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {
+        source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+      }
+
+      const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename + '.svg';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>

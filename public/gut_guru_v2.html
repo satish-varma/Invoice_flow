@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Gut Guru — Premium Brand Identity</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --teal: #0f766e;
+      --teal-light: #14b8a6;
+      --gold: #d97706;
+      --gold-light: #f59e0b;
+      --green: #15803d;
+      --green-light: #22c55e;
+      --bg: #f8f7f4;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ========== HEADER ========== */
+    header {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 18px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-dot {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #0f766e, #f59e0b);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .header-title { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; color: #0f172a; }
+    .header-sub { font-size: 11px; color: var(--muted); font-weight: 500; margin-top: 1px; }
+
+    .canvas-controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .canvas-label { font-size: 11px; font-weight: 700; color: var(--muted); margin-right: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ctrl-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1.5px solid var(--border);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: #fff;
+      color: var(--muted);
+      letter-spacing: 0.3px;
+    }
+    .ctrl-btn:hover { border-color: var(--teal); color: var(--teal); }
+    .ctrl-btn.active { background: #0f172a; color: #fff; border-color: #0f172a; }
+
+    /* ========== MAIN ========== */
+    main { max-width: 1200px; margin: 0 auto; padding: 60px 40px; }
+
+    .section-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--teal);
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      padding: 4px 12px;
+      border-radius: 100px;
+      margin-bottom: 16px;
+    }
+    h1.section-title {
+      font-size: 36px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      color: #0f172a;
+      line-height: 1.1;
+      margin-bottom: 10px;
+    }
+    .section-desc {
+      font-size: 14px;
+      color: var(--muted);
+      max-width: 480px;
+      line-height: 1.6;
+      font-weight: 400;
+    }
+    .section-header {
+      margin-bottom: 48px;
+    }
+
+    /* ========== LOGO GRID ========== */
+    .logo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    @media(max-width: 900px) { .logo-grid { grid-template-columns: 1fr 1fr; } }
+    @media(max-width: 600px) { .logo-grid { grid-template-columns: 1fr; } }
+
+    .logo-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+      display: flex;
+      flex-direction: column;
+    }
+    .logo-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px -12px rgba(0,0,0,0.12);
+      border-color: #cbd5e1;
+    }
+
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .concept-num {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+    .concept-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 2px;
+    }
+    .dl-btn {
+      padding: 5px 12px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: #fff;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .dl-btn:hover { background: #0f172a; color: #fff; border-color: #0f172a; }
+
+    .card-canvas {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 32px;
+      min-height: 240px;
+      transition: background 0.3s;
+      background: #ffffff;
+    }
+    .card-canvas svg { width: 100%; max-width: 220px; height: auto; }
+
+    .card-footer {
+      padding: 14px 20px;
+      background: #fafafa;
+      border-top: 1px solid var(--border);
+    }
+    .card-footer-label { font-size: 11px; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
+    .card-footer-desc { font-size: 10px; color: var(--muted); line-height: 1.5; }
+
+    /* ========== FEATURED HERO ========== */
+    .hero-card {
+      grid-column: 1 / -1;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border-radius: 24px;
+      padding: 60px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 40px;
+      border: 1px solid #334155;
+      margin-bottom: 8px;
+    }
+    .hero-text h2 {
+      font-size: 28px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .hero-text p { font-size: 13px; color: #94a3b8; max-width: 360px; line-height: 1.6; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px;
+      color: #f59e0b; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
+      padding: 4px 12px; border-radius: 100px; margin-bottom: 14px;
+    }
+    .hero-logos { display: flex; gap: 24px; }
+    .hero-logo-pill {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 20px;
+      width: 120px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .hero-logo-pill:hover { background: rgba(255,255,255,0.1); transform: scale(1.04); }
+    .hero-logo-pill svg { width: 80px; height: 80px; }
+
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-brand">
+      <div class="header-dot">🥗</div>
+      <div>
+        <div class="header-title">The Gut Guru Hospitality Services</div>
+        <div class="header-sub">Brand Identity Studio — v2.0 Premium Collection</div>
+      </div>
+    </div>
+    <div class="canvas-controls">
+      <span class="canvas-label">Canvas:</span>
+      <button class="ctrl-btn active" onclick="setCanvas('white', this)">White</button>
+      <button class="ctrl-btn" onclick="setCanvas('dark', this)">Dark</button>
+      <button class="ctrl-btn" onclick="setCanvas('kraft', this)">Kraft</button>
+      <button class="ctrl-btn" onclick="setCanvas('teal', this)">Teal</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="section-header">
+      <div class="section-eyebrow">✦ Premium Collection</div>
+      <h1 class="section-title">Innovative. Simple. Iconic.</h1>
+      <p class="section-desc">6 refined, world-class logo concepts for The Gut Guru Hospitality Services — built for premium packaging, corporate spaces, and digital platforms.</p>
+    </div>
+
+    <div class="logo-grid">
+
+      <!-- ===== CONCEPT 01: SPIRAL LEAF ===== -->
+      <div class="logo-card">
+        <div class="card-header">
+          <div>
+            <div class="concept-num">01 — Organic Motion</div>
+            <div class="concept-name">The Spiral Leaf</div>
+          </div>
+          <button class="dl-btn" onclick="downloadSvg('c01', 'TGG_01_SpiralLeaf')">↓ SVG</button>
+        </div>
+        <div class="card-canvas" id="canvas-c01">
+          <svg id="c01" viewBox="0 0 240 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="g01a" x1="0" y1="1" x2="1" y2="0" gradientUnits="objectBoundingBox">
+                <stop offset="0%" stop-color="#0f766e"/>
+                <stop offset="100%" stop-color="#d97706"/>
+              </linearGradient>
+            </defs>
+            <!-- Spiral that opens into a leaf tip -->
+            <!-- Outer spiral arc -->
+            <path d="M120 155 C75 155 50 130 50 100 C50 60 80 40 120 40 C165 40 190 70 185 105 C180 135 160 148 140 148 C122 148 112 138 112 125 C112 112 122 108 130 110"
+                  stroke="url(#g01a)" stroke-width="8" stroke-linecap="round" fill="none"/>
+            <!-- Leaf growing from spiral terminus -->
+            <path d="M130 110 C145 90 160 78 165 65" stroke="url(#g01a)" stroke-width="8" stroke-linecap="round" fill="none"/>
+            <!-- Leaf shape at top -->
+            <path d="M155 52 C160 40 175 35 180 38 C180 52 170 62 155 62 Z" fill="#15803d"/>
+            <path d="M163 54 C165 46 172 40 177 40 C175 50 168 59 163 54 Z" fill="#22c55e" opacity="0.7"/>
+            <!-- Leaf vein -->
+            <path d="M167 56 L172 43" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+
+            <!-- Brand text -->
+            <text x="120" y="208" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="17" letter-spacing="3" fill="#0f172a" class="brand-text">THE GUT GURU</text>
+            <text x="120" y="226" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="500" font-size="7.5" letter-spacing="4.5" fill="#0f766e" class="sub-text">HOSPITALITY SERVICES</text>
+          </svg>
+        </div>
+        <div class="card-footer">
+          <div class="card-footer-label">DNA of nourishment</div>
+          <div class="card-footer-desc">A golden teal spiral unfurling into a leaf — the gut microbiome meeting nature's growth.</div>
+        </div>
+      </div>
+
+      <!-- ===== CONCEPT 02: THE RISING SPOON ===== -->
+      <div class="logo-card">
+        <div class="card-header">
+          <div>
+            <div class="concept-num">02 — Culinary Dawn</div>
+            <div class="concept-name">The Rising Spoon</div>
+          </div>
+          <button class="dl-btn" onclick="downloadSvg('c02', 'TGG_02_RisingSpoon')">↓ SVG</button>
+        </div>
+        <div class="card-canvas" id="canvas-c02">
+          <svg id="c02" viewBox="0 0 240 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="g02a" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stop-color="#0f766e"/>
+                <stop offset="100%" stop-color="#d97706"/>
+              </linearGradient>
+            </defs>
+            <!-- Spoon handle -->
+            <path d="M120 165 L120 100" stroke="url(#g02a)" stroke-width="7" stroke-linecap="round"/>
+            <!-- Spoon bowl (lower half circle) -->
+            <path d="M95 100 C95 78 145 78 145 100" stroke="url(#g02a)" stroke-width="7" stroke-linecap="round" fill="none"/>
+            <!-- Sunrise rays inside spoon bowl -->
+            <line x1="120" y1="96" x2="120" y2="84" stroke="#d97706" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="108" y1="99" x2="103" y2="89" stroke="#d97706" stroke-width="3" stroke-linecap="round"/>
+            <line x1="132" y1="99" x2="137" y2="89" stroke="#d97706" stroke-width="3" stroke-linecap="round"/>
+            <line x1="101" y1="107" x2="93" y2="101" stroke="#d97706" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+            <line x1="139" y1="107" x2="147" y2="101" stroke="#d97706" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+            <!-- Sun core dot -->
+            <circle cx="120" cy="100" r="5" fill="#d97706"/>
+
+            <!-- Brand text -->
+            <text x="120" y="208" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="17" letter-spacing="3" fill="#0f172a" class="brand-text">THE GUT GURU</text>
+            <text x="120" y="226" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="500" font-size="7.5" letter-spacing="4.5" fill="#0f766e" class="sub-text">HOSPITALITY SERVICES</text>
+          </svg>
+        </div>
+        <div class="card-footer">
+          <div class="card-footer-label">Every meal, a fresh start</div>
+          <div class="card-footer-desc">A premium dining spoon where the bowl transforms into a rising sun — warmth in every serving.</div>
+        </div>
+      </div>
+
+      <!-- ===== CONCEPT 03: THE INFINITE LEAF ===== -->
+      <div class="logo-card">
+        <div class="card-header">
+          <div>
+            <div class="concept-num">03 — Endless Vitality</div>
+            <div class="concept-name">The Infinite Leaf</div>
+          </div>
+          <button class="dl-btn" onclick="downloadSvg('c03', 'TGG_03_InfiniteLeaf')">↓ SVG</button>
+        </div>
+        <div class="card-canvas" id="canvas-c03">
+          <svg id="c03" viewBox="0 0 240 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="g03leaf" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#15803d"/>
+                <stop offset="100%" stop-color="#22c55e"/>
+              </linearGradient>
+            </defs>
+            <!-- Left circle (teal) -->
+            <circle cx="95" cy="105" r="32" stroke="#0f766e" stroke-width="9" fill="none"/>
+            <!-- Right organic leaf shape -->
+            <!-- Leaf drawn as a bold organic form matching circle proportions -->
+            <path d="M127 105 C127 80 145 68 163 72 C175 75 180 88 177 100 C174 115 162 137 127 105 Z"
+                  fill="url(#g03leaf)"/>
+            <!-- Leaf midrib vein -->
+            <path d="M132 105 C145 98 160 88 170 78" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity="0.4"/>
+            <!-- Center connector knot (shared) -->
+            <circle cx="127" cy="105" r="5" fill="#0f766e"/>
+
+            <!-- Brand text -->
+            <text x="120" y="208" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="17" letter-spacing="3" fill="#0f172a" class="brand-text">THE GUT GURU</text>
+            <text x="120" y="226" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="500" font-size="7.5" letter-spacing="4.5" fill="#0f766e" class="sub-text">HOSPITALITY SERVICES</text>
+          </svg>
+        </div>
+        <div class="card-footer">
+          <div class="card-footer-label">Circular wellness loop</div>
+          <div class="card-footer-desc">The infinity symbol reborn — one side a bold circle, the other an organic leaf. Science meets nature.</div>
+        </div>
+      </div>
+
+      <!-- ===== CONCEPT 04: BLOOM MARK ===== -->
+      <div class="logo-card">
+        <div class="card-header">
+          <div>
+            <div class="concept-num">04 — Microbiome Art</div>
+            <div class="concept-name">The Bloom Mark</div>
+          </div>
+          <button class="dl-btn" onclick="downloadSvg('c04', 'TGG_04_BloomMark')">↓ SVG</button>
+        </div>
+        <div class="card-canvas" id="canvas-c04">
+          <svg id="c04" viewBox="0 0 240 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="g04" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#0f766e"/>
+                <stop offset="60%" stop-color="#14b8a6"/>
+                <stop offset="100%" stop-color="#d97706"/>
+              </linearGradient>
+            </defs>
+            <!-- 8 petal arcs arranged in bloom — perfectly geometric -->
+            <!-- Each petal is a short thick arc, rotated around center 120,105 -->
+            <g transform="translate(120,105)">
+              <!-- Petal 1 -->
+              <path d="M0,-20 C8,-38 22,-38 22,-20 C22,-8 12,0 0,0" fill="url(#g04)" opacity="0.95"/>
+              <!-- Petal 2 (45deg) -->
+              <path d="M0,-20 C8,-38 22,-38 22,-20 C22,-8 12,0 0,0" fill="url(#g04)" opacity="0.85" transform="rotate(45)"/>
+              <!-- Petal 3 (90deg) -->
+              <path d="M0,-20 C8,-38 22,-38 22,-20 C22,-8 12,0 0,0" fill="url(#g04)" opacity="0.9" transform="rotate(90)"/>
+              <!-- Petal 4 (135deg) -->
+              <path d="M0,-20 C8,-38 22,-38 22,-20 C22,-8 12,0 0,0" fill="url(#g04)" opacity="0.8" transform="rotate(135)"/>
+              <!-- Petal 5 (180deg) -->
+              <path d="M0,-20 C8,-38 22,-38 22,-20 C22,-8 12,0 0,0" fill="url(#g04)" opacity="0.95" transform="rotate(180)"/>
+              <!-- Petal 6 (225deg) -->
+              <path d="M0,-20 C8,-38 22,-38 22,-20 C22,-8 12,0 0,0" fill="url(#g04)" opacity="0.85" transform="rotate(225)"/>
+              <!-- Petal 7 (270deg) -->
+              <path d="M0,-20 C8,-38 22,-38 22,-20 C22,-8 12,0 0,0" fill="url(#g04)" opacity="0.9" transform="rotate(270)"/>
+              <!-- Petal 8 (315deg) -->
+              <path d="M0,-20 C8,-38 22,-38 22,-20 C22,-8 12,0 0,0" fill="url(#g04)" opacity="0.8" transform="rotate(315)"/>
+              <!-- Center core -->
+              <circle cx="0" cy="0" r="7" fill="#fff"/>
+              <circle cx="0" cy="0" r="4" fill="#0f766e"/>
+            </g>
+
+            <!-- Brand text -->
+            <text x="120" y="208" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="17" letter-spacing="3" fill="#0f172a" class="brand-text">THE GUT GURU</text>
+            <text x="120" y="226" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="500" font-size="7.5" letter-spacing="4.5" fill="#0f766e" class="sub-text">HOSPITALITY SERVICES</text>
+          </svg>
+        </div>
+        <div class="card-footer">
+          <div class="card-footer-label">Life in bloom</div>
+          <div class="card-footer-desc">8 organic petal arcs radiating from a pure center — the gut microbiome as an abstract art icon.</div>
+        </div>
+      </div>
+
+      <!-- ===== CONCEPT 05: G SPROUT ===== -->
+      <div class="logo-card">
+        <div class="card-header">
+          <div>
+            <div class="concept-num">05 — Wordmark</div>
+            <div class="concept-name">The G Sprout</div>
+          </div>
+          <button class="dl-btn" onclick="downloadSvg('c05', 'TGG_05_GSprout')">↓ SVG</button>
+        </div>
+        <div class="card-canvas" id="canvas-c05">
+          <svg id="c05" viewBox="0 0 240 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="g05" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#0f766e"/>
+                <stop offset="100%" stop-color="#14b8a6"/>
+              </linearGradient>
+            </defs>
+            <!-- Bold geometric G letterform -->
+            <!-- Outer arc (the full C of the G) -->
+            <path d="M152 75 C135 52 98 52 80 72 C62 92 62 118 80 138 C98 158 138 162 158 140 C165 130 165 118 165 118 L130 118" 
+                  stroke="url(#g05)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <!-- The G's horizontal bar — ends in a sprout -->
+            <path d="M130 118 L148 118" stroke="url(#g05)" stroke-width="11" stroke-linecap="round" fill="none"/>
+            
+            <!-- Sprout growing from G terminal (top right of G) -->
+            <!-- Stem from end of G arc -->
+            <path d="M152 75 L152 52" stroke="#15803d" stroke-width="5" stroke-linecap="round"/>
+            <!-- Left leaf -->
+            <path d="M152 62 C138 55 134 43 140 38 C148 38 155 48 152 62 Z" fill="#15803d"/>
+            <!-- Right leaf -->
+            <path d="M152 62 C166 55 170 43 164 38 C156 38 149 48 152 62 Z" fill="#22c55e"/>
+            <!-- Tiny seed dot at top -->
+            <circle cx="152" cy="35" r="3.5" fill="#d97706"/>
+
+            <!-- Brand text -->
+            <text x="120" y="208" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="17" letter-spacing="3" fill="#0f172a" class="brand-text">THE GUT GURU</text>
+            <text x="120" y="226" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="500" font-size="7.5" letter-spacing="4.5" fill="#0f766e" class="sub-text">HOSPITALITY SERVICES</text>
+          </svg>
+        </div>
+        <div class="card-footer">
+          <div class="card-footer-label">Genius of the letter</div>
+          <div class="card-footer-desc">A bold geometric G where the terminal blossoms into an upward living sprout — growth is the brand.</div>
+        </div>
+      </div>
+
+      <!-- ===== CONCEPT 06: THE NOURISH MARK ===== -->
+      <div class="logo-card">
+        <div class="card-header">
+          <div>
+            <div class="concept-num">06 — Fine Dining</div>
+            <div class="concept-name">The Nourish Mark</div>
+          </div>
+          <button class="dl-btn" onclick="downloadSvg('c06', 'TGG_06_NourishMark')">↓ SVG</button>
+        </div>
+        <div class="card-canvas" id="canvas-c06">
+          <svg id="c06" viewBox="0 0 240 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="g06" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#92400e"/>
+                <stop offset="100%" stop-color="#d97706"/>
+              </linearGradient>
+            </defs>
+            <!-- Clean plate circle -->
+            <circle cx="120" cy="103" r="48" stroke="#0f172a" stroke-width="2" fill="none" class="plate-circle"/>
+            <circle cx="120" cy="103" r="38" stroke="#0f172a" stroke-width="1" fill="none" opacity="0.15" class="plate-circle"/>
+
+            <!-- Single diagonal fork/chopstick elegant line -->
+            <path d="M89 132 L151 74" stroke="url(#g06)" stroke-width="5" stroke-linecap="round"/>
+            
+            <!-- Fork tines (tiny, at top end) -->
+            <path d="M148 70 L152 62" stroke="url(#g06)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M152 72 L158 65" stroke="url(#g06)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M156 76 L163 70" stroke="url(#g06)" stroke-width="3" stroke-linecap="round"/>
+
+            <!-- Tiny leaf on the fork handle -->
+            <path d="M104 117 C96 108 96 96 104 92 C109 99 108 112 104 117 Z" fill="#15803d"/>
+            <path d="M104 117 C112 108 112 96 104 92 C99 99 100 112 104 117 Z" fill="#22c55e"/>
+            <path d="M104 92 L104 117" stroke="#fff" stroke-width="1" stroke-linecap="round" opacity="0.4"/>
+
+            <!-- Brand text -->
+            <text x="120" y="208" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="17" letter-spacing="3" fill="#0f172a" class="brand-text">THE GUT GURU</text>
+            <text x="120" y="226" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="500" font-size="7.5" letter-spacing="4.5" fill="#0f766e" class="sub-text">HOSPITALITY SERVICES</text>
+          </svg>
+        </div>
+        <div class="card-footer">
+          <div class="card-footer-label">Fine dining, pure greens</div>
+          <div class="card-footer-desc">Michelin-grade plate icon — a golden fork with a living leaf. Understated luxury for corporate dining.</div>
+        </div>
+      </div>
+
+    </div><!-- /logo-grid -->
+
+  </main>
+
+  <script>
+    function setCanvas(mode, btn) {
+      // Update button states
+      document.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const canvases = document.querySelectorAll('.card-canvas');
+      const brandTexts = document.querySelectorAll('.brand-text');
+      const subTexts = document.querySelectorAll('.sub-text');
+      const plateCircles = document.querySelectorAll('.plate-circle');
+
+      canvases.forEach(c => {
+        c.style.background = {
+          white: '#ffffff',
+          dark: '#0f172a',
+          kraft: '#e8dcce',
+          teal: '#0f4c45'
+        }[mode];
+      });
+
+      const textColor = {
+        white: '#0f172a',
+        dark: '#f1f5f9',
+        kraft: '#2d1a0e',
+        teal: '#f0fdf4'
+      }[mode];
+
+      brandTexts.forEach(t => t.setAttribute('fill', textColor));
+      plateCircles.forEach(t => t.setAttribute('stroke', textColor));
+      subTexts.forEach(t => {
+        t.setAttribute('fill', mode === 'dark' || mode === 'teal' ? '#5eead4' : '#0f766e');
+      });
+    }
+
+    function downloadSvg(svgId, filename) {
+      const svg = document.getElementById(svgId);
+      const serializer = new XMLSerializer();
+      let source = serializer.serializeToString(svg);
+      if (!source.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {
+        source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+      }
+      const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename + '.svg';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>

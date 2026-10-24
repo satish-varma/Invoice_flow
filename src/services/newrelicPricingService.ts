@@ -297,20 +297,12 @@ export function findPricingForItem(
 /**
  * Bulk update pricing for all items belonging to a specific Brand & Location.
  * Supports:
- * - 'percentage': Add X% inflation multiplier to MRP or purchaseCost (e.g. +5% across all Amul items)
- * - 'discount': Set uniform discount % across all items for that brand
- * - 'fixed_adjustment': Add or subtract flat ₹ to MRP or P.Cost
+ * - 'percentage_increase': Add X% inflation multiplier to MRP or purchaseCost (e.g. +5% across all Amul items)
+ * - 'set_discount': Set uniform discount % across all items for that brand
+ * - 'fixed_increase': Add or subtract flat ₹ to MRP or P.Cost
+ * Uses fast chunked parallel writes with safety timeouts and optional progress tracking.
  */
-export async function bulkUpdateBrandPricing({
-  brandName,
-  location,
-  mode,
-  value,
-  applyTo,
-  effectiveDate,
-  userEmail,
-  reason,
-}: {
+export interface BulkUpdateBrandPricingOptions {
   brandName: string;
   location: NewRelicLocation;
   mode: 'percentage_increase' | 'set_discount' | 'fixed_increase';
@@ -319,15 +311,60 @@ export async function bulkUpdateBrandPricing({
   effectiveDate?: string;
   userEmail?: string | null;
   reason?: string;
-}): Promise<{ updatedCount: number }> {
+  onProgress?: (progress: {
+    current: number;
+    total: number;
+    percent: number;
+    statusText: string;
+  }) => void;
+}
+
+export async function bulkUpdateBrandPricing({
+  brandName,
+  location,
+  mode,
+  value,
+  applyTo = 'purchaseCost',
+  effectiveDate,
+  userEmail,
+  reason,
+  onProgress,
+}: BulkUpdateBrandPricingOptions): Promise<{ updatedCount: number }> {
   await assertWritePermission('Bulk Updating Brand Pricing');
   const targetBrand = brandName.trim().toLowerCase();
+
+  if (onProgress) {
+    onProgress({ current: 0, total: 0, percent: 0, statusText: 'Fetching existing items...' });
+  }
+
   const allItems = await getPricingItems(location);
   const matching = allItems.filter(i => i.brandName.trim().toLowerCase() === targetBrand);
 
-  let updatedCount = 0;
-  const dateStr = effectiveDate || new Date().toISOString().substring(0, 10);
-  const revisionReason = reason || `Batch update (${mode.replace('_', ' ')})`;
+  if (matching.length === 0) {
+    if (onProgress) {
+      onProgress({ current: 0, total: 0, percent: 100, statusText: 'No matching items found.' });
+    }
+    return { updatedCount: 0 };
+  }
+
+  const today = new Date().toISOString().substring(0, 10);
+  const dateStr = effectiveDate || today;
+  const revisionReason = reason || `Batch update (${mode.replace(/_/g, ' ')})`;
+
+  if (onProgress) {
+    onProgress({
+      current: 0,
+      total: matching.length,
+      percent: 5,
+      statusText: `Preparing calculations for ${matching.length} items...`,
+    });
+  }
+
+  type PreparedUpdate = {
+    docRef: any;
+    data: any;
+  };
+  const preparedUpdates: PreparedUpdate[] = [];
 
   for (const item of matching) {
     let newMrp = item.mrp;
@@ -360,8 +397,40 @@ export async function bulkUpdateBrandPricing({
       }
     }
 
-    await savePricingItem(
-      {
+    const prevHistory = item.history || [];
+    let updatedHistory = prevHistory;
+    if (
+      item.purchaseCost !== newCost ||
+      item.mrp !== newMrp ||
+      item.discountPercent !== newDiscount
+    ) {
+      const marginAmount = parseFloat((item.mrp - item.purchaseCost).toFixed(2));
+      const marginPercent = item.mrp > 0 ? parseFloat((((item.mrp - item.purchaseCost) / item.mrp) * 100).toFixed(1)) : 0;
+      const deltaCost = parseFloat((newCost - item.purchaseCost).toFixed(2));
+      const deltaMrp = parseFloat((newMrp - item.mrp).toFixed(2));
+
+      const historyEntry = {
+        mrp: item.mrp,
+        discountPercent: item.discountPercent,
+        purchaseCost: item.purchaseCost,
+        marginAmount,
+        marginPercent,
+        deltaCost,
+        deltaMrp,
+        effectiveDate: item.effectiveDate || today,
+        updatedAt: new Date().toISOString(),
+        updatedBy: userEmail || undefined,
+        reason: revisionReason,
+      };
+      updatedHistory = [...prevHistory, historyEntry];
+    }
+
+    const docId = item.id || getPricingDocId(item.brandName, item.itemName, item.location);
+    const docRef = doc(db, PRICING_COLLECTION, docId);
+
+    preparedUpdates.push({
+      docRef,
+      data: {
         brandName: item.brandName,
         itemName: item.itemName,
         location: item.location,
@@ -369,11 +438,71 @@ export async function bulkUpdateBrandPricing({
         discountPercent: newDiscount,
         purchaseCost: newCost,
         effectiveDate: dateStr,
+        history: updatedHistory,
+        updatedAt: serverTimestamp(),
       },
-      userEmail,
-      revisionReason
-    );
-    updatedCount++;
+    });
+  }
+
+  let updatedCount = 0;
+  const CHUNK_SIZE = 12;
+  const total = preparedUpdates.length;
+
+  for (let i = 0; i < total; i += CHUNK_SIZE) {
+    const chunk = preparedUpdates.slice(i, i + CHUNK_SIZE);
+    const chunkIndex = Math.floor(i / CHUNK_SIZE) + 1;
+    const totalChunks = Math.ceil(total / CHUNK_SIZE);
+
+    if (onProgress) {
+      onProgress({
+        current: i,
+        total,
+        percent: Math.round((i / total) * 90) + 5,
+        statusText: `Saving batch ${chunkIndex} of ${totalChunks} (${i}/${total} items)...`,
+      });
+    }
+
+    await Promise.race([
+      Promise.all(chunk.map(entry => setDoc(entry.docRef, entry.data, { merge: true }))),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout saving batch ${chunkIndex} of pricing items.`)), 15000)
+      ),
+    ]);
+
+    updatedCount += chunk.length;
+
+    if (onProgress) {
+      onProgress({
+        current: updatedCount,
+        total,
+        percent: Math.round((updatedCount / total) * 90) + 5,
+        statusText: `Processed ${updatedCount} of ${total} items...`,
+      });
+    }
+  }
+
+  // Update offline cache with the newly updated items
+  try {
+    const updatedMap = new Map(preparedUpdates.map(u => [u.docRef.id, u.data]));
+    const newItems = allItems.map(it => {
+      const docId = it.id || getPricingDocId(it.brandName, it.itemName, it.location);
+      if (updatedMap.has(docId)) {
+        return { ...it, ...updatedMap.get(docId), id: docId } as PricingItem;
+      }
+      return it;
+    });
+    setCachedData(`pricing_items_${location}`, newItems).catch(() => {});
+  } catch (err) {
+    // Non-fatal
+  }
+
+  if (onProgress) {
+    onProgress({
+      current: total,
+      total,
+      percent: 100,
+      statusText: `Done! Successfully updated ${updatedCount} items.`,
+    });
   }
 
   return { updatedCount };

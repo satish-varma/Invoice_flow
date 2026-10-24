@@ -35,6 +35,7 @@ import {
   Percent,
   ArrowLeft,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
@@ -98,6 +99,12 @@ export default function PricingPage() {
   const [bulkEffectiveDate, setBulkEffectiveDate] = useState<string>(() => new Date().toISOString().substring(0, 10));
   const [bulkReason, setBulkReason] = useState<string>('Vendor Annual Price Adjustment');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{
+    current: number;
+    total: number;
+    percent: number;
+    statusText: string;
+  } | null>(null);
 
   // Price history modal state
   const [historyItem, setHistoryItem] = useState<PricingItem | null>(null);
@@ -273,6 +280,7 @@ export default function PricingPage() {
       return;
     }
     setIsBulkUpdating(true);
+    setBulkProgress({ current: 0, total: 0, percent: 0, statusText: 'Starting price updates...' });
     setError('');
     try {
       const res = await bulkUpdateBrandPricing({
@@ -284,15 +292,26 @@ export default function PricingPage() {
         effectiveDate: bulkEffectiveDate,
         userEmail: user?.email,
         reason: bulkReason,
+        onProgress: (p) => {
+          setBulkProgress(p);
+        },
+      });
+      setBulkProgress({
+        current: res.updatedCount,
+        total: res.updatedCount,
+        percent: 100,
+        statusText: 'Refreshing catalog data...',
       });
       const refreshed = await getAllPricingItems();
       setPricingItems(refreshed);
       setShowBulkModal(false);
+      setBulkProgress(null);
       setSeedResult(`✓ Successfully updated ${res.updatedCount} item(s) for ${bulkBrand} in ${NEWRELIC_LOCATIONS[activeLocation].label}!`);
     } catch (e: any) {
       setError(e.message || 'Failed to perform bulk update.');
     } finally {
       setIsBulkUpdating(false);
+      setBulkProgress(null);
     }
   }
 
@@ -1111,32 +1130,79 @@ export default function PricingPage() {
                 </div>
               </div>
               <button
+                disabled={isBulkUpdating}
                 onClick={() => {
+                  if (isBulkUpdating) return;
                   triggerHaptic('light');
                   setShowBulkModal(false);
                 }}
-                className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
+
+            {/* Live Progress Bar during active Bulk Update */}
+            {isBulkUpdating && bulkProgress && (
+              <div className="p-3.5 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-2xl space-y-2 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-600 dark:text-purple-400" />
+                    Updating {bulkBrand} pricing...
+                  </span>
+                  <span className="font-bold text-purple-700 dark:text-purple-300">
+                    {bulkProgress.percent}%
+                  </span>
+                </div>
+                <div className="w-full bg-purple-200/60 dark:bg-purple-900/60 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600 h-2 rounded-full transition-all duration-200 ease-out"
+                    style={{ width: `${bulkProgress.percent}%` }}
+                  />
+                </div>
+                <div className="flex justify-between items-center text-[11px] text-purple-700/80 dark:text-purple-300/80">
+                  <span className="truncate pr-2">{bulkProgress.statusText}</span>
+                  {bulkProgress.total > 0 && (
+                    <span className="font-mono font-medium shrink-0">{bulkProgress.current} / {bulkProgress.total}</span>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-3.5 text-xs">
               {/* Select Brand */}
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Target Brand</label>
                 <select
+                  disabled={isBulkUpdating}
                   value={bulkBrand}
                   onChange={(e) => setBulkBrand(e.target.value)}
-                  className="w-full h-11 px-3 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600"
+                  className="w-full h-11 px-3 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 disabled:opacity-50"
                 >
                   <option value="">-- Choose Brand --</option>
                   {availableBrands.map((b) => (
                     <option key={b} value={b}>{b}</option>
                   ))}
                 </select>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Affects all {locationItems.filter(i => i.brandName.toLowerCase() === bulkBrand.toLowerCase()).length} items currently configured under this brand.
+                <p className="text-[11px] mt-1">
+                  {bulkBrand ? (
+                    (() => {
+                      const count = locationItems.filter(i => i.brandName.toLowerCase() === bulkBrand.toLowerCase()).length;
+                      return count > 0 ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                          Affects all {count} items currently configured under {bulkBrand} in {NEWRELIC_LOCATIONS[activeLocation].label}.
+                        </span>
+                      ) : (
+                        <span className="text-amber-600 dark:text-amber-400 font-medium">
+                          No items found for {bulkBrand} in {NEWRELIC_LOCATIONS[activeLocation].label}.
+                        </span>
+                      );
+                    })()
+                  ) : (
+                    <span className="text-slate-400">
+                      Affects all items currently configured under the chosen brand in {NEWRELIC_LOCATIONS[activeLocation].label}.
+                    </span>
+                  )}
                 </p>
               </div>
 
@@ -1284,11 +1350,12 @@ export default function PricingPage() {
             <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
+                disabled={isBulkUpdating}
                 onClick={() => {
                   triggerHaptic('light');
                   setShowBulkModal(false);
                 }}
-                className="flex-1 h-11 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 transition-all active:scale-95"
+                className="flex-1 h-11 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1298,10 +1365,21 @@ export default function PricingPage() {
                   triggerHaptic('medium');
                   handleBulkUpdate();
                 }}
-                disabled={isBulkUpdating || !bulkBrand}
-                className="flex-1 h-11 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-all active:scale-95"
+                disabled={
+                  isBulkUpdating ||
+                  !bulkBrand ||
+                  locationItems.filter(i => i.brandName.toLowerCase() === bulkBrand.toLowerCase()).length === 0
+                }
+                className="flex-1 h-11 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-all active:scale-95 flex items-center justify-center gap-1.5"
               >
-                {isBulkUpdating ? 'Updating…' : 'Apply Batch Update'}
+                {isBulkUpdating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                    <span>{bulkProgress ? `${bulkProgress.percent}% Updating...` : 'Updating…'}</span>
+                  </>
+                ) : (
+                  'Apply Batch Update'
+                )}
               </button>
             </div>
           </div>

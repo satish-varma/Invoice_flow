@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Gut Guru — Next-Gen Modern UI / UX Showcase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              900: '#064e3b',
+            },
+            accent: {
+              gold: '#f59e0b',
+              amber: '#d97706',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
+    
+    .glass-card {
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    
+    .glow-hover:hover {
+      box-shadow: 0 0 35px -5px rgba(16, 185, 129, 0.2);
+    }
+
+    /* Tabular numbers for financial precision */
+    .num-tabular {
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen antialiased transition-colors duration-300 font-sans">
+
+  <!-- Top Floating Experience Selector Bar -->
+  <div class="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800 px-6 py-3">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="h-8 w-8 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-black text-sm">
+          ⚡
+        </div>
+        <div>
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Live Interactive Prototype</span>
+          <h1 class="text-sm font-black text-white flex items-center gap-2">
+            The Gut Guru Modern Platform 2.0
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              Interactive Sample
+            </span>
+          </h1>
+        </div>
+      </div>
+
+      <!-- View Selector Tabs -->
+      <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 p-1 rounded-xl">
+        <button onclick="setView('dashboard')" id="btn-view-dashboard" class="view-btn active px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600 transition shadow-xs flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          1. Bento Executive Dashboard
+        </button>
+        <button onclick="setView('tables')" id="btn-view-tables" class="view-btn px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+          2. Modern Smart Tables
+        </button>
+        <button onclick="setView('mobile')" id="btn-view-mobile" class="view-btn px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+          3. Mobile Drawer &amp; Gestures
+        </button>
+      </div>
+
+      <!-- Theme Switcher & Command Palette Trigger -->
+      <div class="flex items-center gap-2">
+        <button onclick="openCommandPalette()" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold border border-slate-700 flex items-center gap-2 transition">
+          <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <span>Search...</span>
+          <kbd class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] text-slate-400 font-mono">⌘K</kbd>
+        </button>
+        <button onclick="toggleTheme()" id="theme-toggle-btn" class="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-amber-300 border border-slate-700 transition" title="Toggle Light / Dark Mode">
+          ☀️
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP CONTAINER (Simulates Complete Application Shell) -->
+  <div class="max-w-[1600px] mx-auto flex min-h-[calc(100vh-61px)]">
+
+    <!-- NEXT-GEN SIDEBAR (Linear / Stripe Style) -->
+    <aside class="w-64 bg-slate-950/80 border-r border-slate-800/80 p-4 hidden lg:flex flex-col justify-between shrink-0">
+      <div class="space-y-6">
+        <!-- Brand & Site Selector -->
+        <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-amber-500 flex items-center justify-center font-black text-white text-xs">
+              TG
+            </div>
+            <div>
+              <div class="text-xs font-bold text-white">The Gut Guru</div>
+              <div class="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                New Relic Site
+              </div>
+            </div>
+          </div>
+          <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+
+        <!-- Navigation Groups -->
+        <nav class="space-y-5">
+          <!-- Operations Group -->
+          <div class="space-y-1">
+            <div class="px-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Operations</div>
+            <a href="#" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Delivery Challans
+              </span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 font-mono">18</span>
+            </a>
+            <a href="#" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-900 transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                Catalog &amp; Pricing
+              </span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-400">142</span>
+            </a>
+            <a href="#" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-900 transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                Tuckshop Inventory
+              </span>
+            </a>
+          </div>
+
+          <!-- Finance Group -->
+          <div class="space-y-1">
+            <div class="px-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Finance &amp; Margins</div>
+            <a href="#" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-900 transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                Margin Analytics (🔒 Admin)
+              </span>
+              <span class="text-[10px] text-amber-400 font-bold font-mono">24.8%</span>
+            </a>
+            <a href="#" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-900 transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Invoices &amp; Billing
+              </span>
+            </a>
+          </div>
+
+          <!-- HR & Attendance -->
+          <div class="space-y-1">
+            <div class="px-3 text-[10px] font-black uppercase tracking-wider text-slate-400">People &amp; Staff</div>
+            <a href="#" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-900 transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                Attendance Check-In
+              </span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400">16/17</span>
+            </a>
+          </div>
+        </nav>
+      </div>
+
+      <!-- User Profile Card -->
+      <div class="pt-4 border-t border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="h-8 w-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-white">
+            SV
+          </div>
+          <div>
+            <div class="text-xs font-bold text-white">Satish Varma</div>
+            <div class="text-[10px] text-amber-400 font-semibold">Administrator</div>
+          </div>
+        </div>
+        <button class="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-900">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 p-6 md:p-8 space-y-8 overflow-y-auto">
+
+      <!-- ======================================================= -->
+      <!-- VIEW 1: BENTO EXECUTIVE DASHBOARD (Stripe/Linear style) -->
+      <!-- ======================================================= -->
+      <div id="view-dashboard" class="view-panel space-y-6">
+
+        <!-- Header / Breadcrumb & Primary Actions -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 text-xs text-slate-400 font-semibold">
+              <span>Operations</span>
+              <span>/</span>
+              <span class="text-white">Executive Command Center</span>
+            </div>
+            <h2 class="text-2xl font-black text-white tracking-tight mt-1 font-outfit">Today's Hospitality Pulse</h2>
+          </div>
+
+          <div class="flex items-center gap-2.5">
+            <button class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+              Export Report
+            </button>
+            <button class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition flex items-center gap-2 shadow-lg shadow-emerald-500/20">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              Create New DC
+            </button>
+          </div>
+        </div>
+
+        <!-- Bento Grid: Modern Modular Layout -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+
+          <!-- Card 1: Today's DC Volume -->
+          <div class="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 hover:border-slate-700 transition relative overflow-hidden group">
+            <div class="flex items-center justify-between text-xs text-slate-400">
+              <span class="font-bold uppercase tracking-wider">Active Challans</span>
+              <span class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">📦</span>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+              <span class="text-3xl font-black text-white num-tabular">18</span>
+              <span class="text-xs font-bold text-emerald-400 flex items-center">
+                ↑ 12% vs y'day
+              </span>
+            </div>
+            <div class="text-xs text-slate-400 mt-1">₹1,42,850 Total Value</div>
+            <!-- Progress bar -->
+            <div class="w-full bg-slate-800 rounded-full h-1.5 mt-4 overflow-hidden">
+              <div class="bg-emerald-500 h-1.5 rounded-full" style="width: 78%"></div>
+            </div>
+          </div>
+
+          <!-- Card 2: Admin Real-Time Margin % (Strictly Admin) -->
+          <div class="p-5 rounded-2xl bg-slate-950/60 border border-amber-500/30 hover:border-amber-500/60 transition relative overflow-hidden glow-hover">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🔒</span> Overall Margin %
+              </span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300">Admin Live</span>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+              <span class="text-3xl font-black text-amber-300 num-tabular">24.8%</span>
+              <span class="text-xs font-bold text-emerald-400">Healthy</span>
+            </div>
+            <div class="text-xs text-slate-400 mt-1">₹35,420 net gross margin today</div>
+            <!-- Sparkline visualization -->
+            <div class="mt-4 flex items-end gap-1 h-6">
+              <div class="flex-1 bg-amber-500/20 rounded-t h-[40%]"></div>
+              <div class="flex-1 bg-amber-500/30 rounded-t h-[55%]"></div>
+              <div class="flex-1 bg-amber-500/40 rounded-t h-[70%]"></div>
+              <div class="flex-1 bg-amber-500/50 rounded-t h-[60%]"></div>
+              <div class="flex-1 bg-amber-500/70 rounded-t h-[85%]"></div>
+              <div class="flex-1 bg-amber-400 rounded-t h-[95%]"></div>
+            </div>
+          </div>
+
+          <!-- Card 3: Stock Velocity / Urgent Requests -->
+          <div class="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 hover:border-slate-700 transition">
+            <div class="flex items-center justify-between text-xs text-slate-400">
+              <span class="font-bold uppercase tracking-wider">Pending Stock</span>
+              <span class="p-2 rounded-lg bg-blue-500/10 text-blue-400">⚡</span>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+              <span class="text-3xl font-black text-white num-tabular">3</span>
+              <span class="text-xs font-bold text-amber-400">Action Required</span>
+            </div>
+            <div class="text-xs text-slate-400 mt-1">Coca Cola, Almond Milk, Chips</div>
+            <button class="mt-3.5 text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1">
+              Review Stock Requests →
+            </button>
+          </div>
+
+          <!-- Card 4: Staff Attendance On Duty -->
+          <div class="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 hover:border-slate-700 transition">
+            <div class="flex items-center justify-between text-xs text-slate-400">
+              <span class="font-bold uppercase tracking-wider">Staff On Duty</span>
+              <span class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">👨‍🍳</span>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+              <span class="text-3xl font-black text-white num-tabular">16/17</span>
+              <span class="text-xs font-bold text-emerald-400">94%</span>
+            </div>
+            <div class="text-xs text-slate-400 mt-1">1 on approved sick leave</div>
+            <div class="mt-3.5 flex -space-x-2">
+              <span class="inline-block h-6 w-6 rounded-full bg-slate-700 border-2 border-slate-900 text-[10px] font-bold flex items-center justify-center">RK</span>
+              <span class="inline-block h-6 w-6 rounded-full bg-slate-700 border-2 border-slate-900 text-[10px] font-bold flex items-center justify-center">AS</span>
+              <span class="inline-block h-6 w-6 rounded-full bg-slate-700 border-2 border-slate-900 text-[10px] font-bold flex items-center justify-center">MD</span>
+              <span class="inline-block h-6 w-6 rounded-full bg-emerald-700 border-2 border-slate-900 text-[10px] font-bold flex items-center justify-center text-white">+13</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bento Lower Row: Live Margin Health + Quick Actions Matrix -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <!-- Big Analytics Graph Container -->
+          <div class="lg:col-span-2 p-6 rounded-3xl bg-slate-950/60 border border-slate-800 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-black text-white">Daily Revenue &amp; Margin Velocity</h3>
+                <p class="text-xs text-slate-400">Rolling 7-day intake across Tuckshops &amp; Deliveries</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 text-xs text-slate-400">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Revenue
+                </span>
+                <span class="inline-flex items-center gap-1.5 text-xs text-slate-400">
+                  <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Margin
+                </span>
+              </div>
+            </div>
+
+            <!-- Simulated SVG Modern Wave Chart -->
+            <div class="h-48 w-full flex items-end pt-8">
+              <svg class="w-full h-full" viewBox="0 0 500 150" fill="none" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="chart-rev" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#10b981" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="#10b981" stop-opacity="0.0"/>
+                  </linearGradient>
+                  <linearGradient id="chart-margin" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.0"/>
+                  </linearGradient>
+                </defs>
+                <!-- Area -->
+                <path d="M0,110 Q80,60 160,80 T320,40 T500,20 L500,150 L0,150 Z" fill="url(#chart-rev)"/>
+                <!-- Line -->
+                <path d="M0,110 Q80,60 160,80 T320,40 T500,20" stroke="#10b981" stroke-width="3" stroke-linecap="round" fill="none"/>
+                <!-- Margin Line -->
+                <path d="M0,130 Q80,100 160,115 T320,95 T500,75" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="4 4" fill="none"/>
+              </svg>
+            </div>
+            <div class="flex justify-between text-[11px] text-slate-400 font-mono">
+              <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Today</span>
+            </div>
+          </div>
+
+          <!-- Quick Action Bento Card -->
+          <div class="p-6 rounded-3xl bg-slate-950/60 border border-slate-800 space-y-4 flex flex-col justify-between">
+            <div>
+              <h3 class="text-sm font-black text-white">Daily Operational Shortcuts</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Frequent admin workflows in 1-click</p>
+            </div>
+
+            <div class="space-y-2.5">
+              <button class="w-full p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-between text-xs font-bold text-slate-200 transition">
+                <span class="flex items-center gap-2.5">
+                  <span class="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">⚡</span>
+                  Bulk Verify Pending Challans
+                </span>
+                <span class="text-slate-400">→</span>
+              </button>
+              <button class="w-full p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-between text-xs font-bold text-slate-200 transition">
+                <span class="flex items-center gap-2.5">
+                  <span class="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">🔍</span>
+                  Catalog Duplicate Merger
+                </span>
+                <span class="text-slate-400">→</span>
+              </button>
+              <button class="w-full p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-between text-xs font-bold text-slate-200 transition">
+                <span class="flex items-center gap-2.5">
+                  <span class="p-1.5 rounded-lg bg-blue-500/10 text-blue-400">📊</span>
+                  Generate Monthly Billing PDF
+                </span>
+                <span class="text-slate-400">→</span>
+              </button>
+            </div>
+
+            <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center gap-2">
+              <span>💡</span>
+              <span>All 18 challans today match MRP compliance guidelines.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- VIEW 2: MODERN SMART DATA GRID (Tables & Inline Edit)   -->
+      <!-- ======================================================= -->
+      <div id="view-tables" class="view-panel space-y-6 hidden">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-black text-white tracking-tight font-outfit">Delivery Challans &amp; Catalog Grid</h2>
+            <p class="text-xs text-slate-400">Interactive live table with instant filter pills, inline cell editing, and floating bulk dock.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="simulateToast('Exported 142 records to CSV successfully!')" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition flex items-center gap-2">
+              Export to CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Pills Bar (Fast Faceted Search) -->
+        <div class="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-slate-950/60 border border-slate-800">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button onclick="filterTable('all', this)" class="table-filter-btn active px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 transition">
+              All Records <span class="ml-1 opacity-75 font-mono">142</span>
+            </button>
+            <button onclick="filterTable('pending', this)" class="table-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition">
+              Pending Verification <span class="ml-1 px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 font-mono">8</span>
+            </button>
+            <button onclick="filterTable('verified', this)" class="table-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition">
+              Verified <span class="ml-1 opacity-75 font-mono">120</span>
+            </button>
+            <button onclick="filterTable('low-margin', this)" class="table-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition">
+              Low Margin (&lt;10%) <span class="ml-1 px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-300 font-mono">14</span>
+            </button>
+          </div>
+
+          <!-- Quick Search input -->
+          <div class="relative w-full sm:w-64">
+            <input type="text" placeholder="Filter by item, vendor..." class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <!-- Modern Data Grid Container -->
+        <div class="rounded-3xl border border-slate-800 overflow-hidden bg-slate-950/60 shadow-xl relative">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900/80 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider sticky top-0">
+                <tr>
+                  <th class="p-4 w-10">
+                    <input type="checkbox" onchange="toggleSelectAll(this)" class="rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-0">
+                  </th>
+                  <th class="p-4">Challan / Item</th>
+                  <th class="p-4">Category</th>
+                  <th class="p-4">Quantity (Click to edit)</th>
+                  <th class="p-4">Purchase Cost</th>
+                  <th class="p-4">MRP (Selling)</th>
+                  <th class="p-4">Margin % (Admin)</th>
+                  <th class="p-4">Status</th>
+                  <th class="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60 text-slate-300" id="sample-table-body">
+                
+                <!-- Row 1 -->
+                <tr class="hover:bg-slate-900/40 transition group" data-category="verified">
+                  <td class="p-4">
+                    <input type="checkbox" onchange="onRowCheck()" class="row-checkbox rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-0">
+                  </td>
+                  <td class="p-4 font-bold text-white flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <div>
+                      <div>Coca Cola 300ml Can</div>
+                      <div class="text-[10px] text-slate-400 font-normal">DC #1042 • Vendor: Swastik Ent</div>
+                    </div>
+                  </td>
+                  <td class="p-4 text-slate-400">Beverages</td>
+                  <td class="p-4">
+                    <span class="inline-cell-edit font-mono px-2 py-1 rounded bg-slate-900 border border-slate-800 hover:border-emerald-500 cursor-pointer" onclick="editCell(this)">
+                      48 units
+                    </span>
+                  </td>
+                  <td class="p-4 font-mono">₹28.00</td>
+                  <td class="p-4 font-mono font-bold text-white">₹40.00</td>
+                  <td class="p-4">
+                    <span class="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono">
+                      30.0% (₹12/u)
+                    </span>
+                  </td>
+                  <td class="p-4">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400">Verified</span>
+                  </td>
+                  <td class="p-4 text-right">
+                    <button class="text-xs text-slate-400 hover:text-white font-bold p-1">View ↗</button>
+                  </td>
+                </tr>
+
+                <!-- Row 2 (Low Margin Alert) -->
+                <tr class="hover:bg-slate-900/40 transition group bg-rose-950/10" data-category="low-margin">
+                  <td class="p-4">
+                    <input type="checkbox" onchange="onRowCheck()" class="row-checkbox rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-0">
+                  </td>
+                  <td class="p-4 font-bold text-white flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+                    <div>
+                      <div>Epigamia Greek Yogurt 90g</div>
+                      <div class="text-[10px] text-slate-400 font-normal">DC #1042 • Vendor: Drums Food</div>
+                    </div>
+                  </td>
+                  <td class="p-4 text-slate-400">Dairy &amp; Protein</td>
+                  <td class="p-4">
+                    <span class="inline-cell-edit font-mono px-2 py-1 rounded bg-slate-900 border border-slate-800 hover:border-emerald-500 cursor-pointer" onclick="editCell(this)">
+                      24 units
+                    </span>
+                  </td>
+                  <td class="p-4 font-mono">₹46.50</td>
+                  <td class="p-4 font-mono font-bold text-white">₹50.00</td>
+                  <td class="p-4">
+                    <span class="px-2.5 py-1 rounded-full text-xs font-black bg-rose-500/20 text-rose-300 border border-rose-500/30 font-mono">
+                      7.0% (₹3.5/u)
+                    </span>
+                  </td>
+                  <td class="p-4">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-300">Flagged</span>
+                  </td>
+                  <td class="p-4 text-right">
+                    <button class="text-xs text-slate-400 hover:text-white font-bold p-1">Adjust Price</button>
+                  </td>
+                </tr>
+
+                <!-- Row 3 -->
+                <tr class="hover:bg-slate-900/40 transition group" data-category="pending">
+                  <td class="p-4">
+                    <input type="checkbox" onchange="onRowCheck()" class="row-checkbox rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-0">
+                  </td>
+                  <td class="p-4 font-bold text-white flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                    <div>
+                      <div>Raw Pressery Valencia Orange 200ml</div>
+                      <div class="text-[10px] text-slate-400 font-normal">DC #1043 • Vendor: Cold Pressed Co</div>
+                    </div>
+                  </td>
+                  <td class="p-4 text-slate-400">Cold Pressed Juice</td>
+                  <td class="p-4">
+                    <span class="inline-cell-edit font-mono px-2 py-1 rounded bg-slate-900 border border-slate-800 hover:border-emerald-500 cursor-pointer" onclick="editCell(this)">
+                      36 units
+                    </span>
+                  </td>
+                  <td class="p-4 font-mono">₹62.00</td>
+                  <td class="p-4 font-mono font-bold text-white">₹85.00</td>
+                  <td class="p-4">
+                    <span class="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono">
+                      27.1% (₹23/u)
+                    </span>
+                  </td>
+                  <td class="p-4">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400">Unverified</span>
+                  </td>
+                  <td class="p-4 text-right">
+                    <button class="text-xs text-emerald-400 hover:text-emerald-300 font-bold p-1">Verify Now ✓</button>
+                  </td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Bottom Summary Footer with Live Totals -->
+          <div class="p-4 bg-slate-900/90 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs">
+            <span class="text-slate-400">Showing 3 of 142 records</span>
+            <div class="flex items-center gap-6 font-mono">
+              <span class="text-slate-400">Total Purchase: <strong class="text-white">₹4,692</strong></span>
+              <span class="text-slate-400">Total Selling (MRP): <strong class="text-white">₹6,180</strong></span>
+              <span class="text-emerald-400 font-bold">Total Margin: ₹1,488 (24.1%)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Bulk Action Dock (appears when rows checked) -->
+        <div id="bulk-action-dock" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-950 border border-slate-700 shadow-2xl rounded-2xl px-5 py-3 flex items-center gap-4 z-40 transition-all duration-300 translate-y-24 opacity-0 pointer-events-none">
+          <span class="text-xs font-bold text-white flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span id="bulk-count">0</span> items selected
+          </span>
+          <div class="h-4 w-px bg-slate-800"></div>
+          <button onclick="simulateToast('Bulk Verified selected challans!')" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition">
+            ✓ Bulk Verify
+          </button>
+          <button onclick="simulateToast('Exporting selected records to CSV...')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition">
+            Export Selected
+          </button>
+          <button onclick="clearSelection()" class="text-xs text-slate-400 hover:text-white">
+            Cancel
+          </button>
+        </div>
+
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- VIEW 3: MOBILE APP EXPERIENCE (Phone Frame Simulation)  -->
+      <!-- ======================================================= -->
+      <div id="view-mobile" class="view-panel space-y-6 hidden">
+
+        <div class="text-center max-w-xl mx-auto space-y-2">
+          <h2 class="text-2xl font-black text-white font-outfit">Touch-First Mobile Experience</h2>
+          <p class="text-xs text-slate-400">
+            For cafeteria staff &amp; supervisors: Pull-up bottom sheet drawers, tactile swipe gestures, and clean floating docks.
+          </p>
+        </div>
+
+        <!-- Mobile Phone Mockup Frame -->
+        <div class="max-w-sm mx-auto rounded-[40px] border-8 border-slate-800 bg-slate-950 shadow-2xl overflow-hidden relative min-h-[640px] flex flex-col justify-between">
+          
+          <!-- Phone Status Bar -->
+          <div class="px-6 pt-3 pb-2 flex justify-between items-center text-[11px] text-slate-400 font-mono">
+            <span>9:41</span>
+            <div class="flex items-center gap-1.5">
+              <span>5G</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <!-- Mobile App Header -->
+          <div class="p-4 border-b border-slate-800/80 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="h-7 w-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                TG
+              </div>
+              <div>
+                <div class="text-xs font-bold text-white">The Gut Guru</div>
+                <div class="text-[10px] text-emerald-400">New Relic Site</div>
+              </div>
+            </div>
+            <button onclick="openBottomSheet()" class="p-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-white">
+              + Quick Add
+            </button>
+          </div>
+
+          <!-- Mobile Body Content (Cards with swipe simulation) -->
+          <div class="p-4 space-y-3 flex-1 overflow-y-auto">
+            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Today's Challans (Swipe to verify)</div>
+
+            <!-- Mobile Card 1 -->
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2 relative group overflow-hidden">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-white">DC #1042 — Swastik Ent</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400">Verified</span>
+              </div>
+              <div class="text-xs text-slate-400">48 Items • Beverages</div>
+              <div class="flex items-center justify-between pt-2 border-t border-slate-800/60 font-mono text-xs">
+                <span>Total: ₹1,920</span>
+                <span class="text-amber-400 font-bold">Margin: 30.0%</span>
+              </div>
+            </div>
+
+            <!-- Mobile Card 2 (Unverified) -->
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-white">DC #1043 — Cold Pressed Co</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300">Pending</span>
+              </div>
+              <div class="text-xs text-slate-400">36 Items • Juices</div>
+              <div class="flex items-center justify-between pt-2 border-t border-slate-800/60 font-mono text-xs">
+                <span>Total: ₹3,060</span>
+                <span class="text-emerald-400 font-bold">Margin: 27.1%</span>
+              </div>
+            </div>
+
+            <button onclick="openBottomSheet()" class="w-full py-3 rounded-2xl border-2 border-dashed border-slate-800 hover:border-emerald-500/50 text-xs font-bold text-slate-400 hover:text-white transition">
+              + Tap to test slide-up drawer
+            </button>
+          </div>
+
+          <!-- Bottom Sheet Drawer Simulation -->
+          <div id="mobile-drawer" class="absolute inset-x-0 bottom-0 bg-slate-900 border-t border-slate-700 rounded-t-[32px] p-5 shadow-2xl transition-transform duration-300 translate-y-full z-30">
+            <!-- Pull Bar -->
+            <div class="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-4"></div>
+            <div class="flex items-center justify-between mb-4">
+              <h4 class="text-sm font-bold text-white">New Fast Challan Item</h4>
+              <button onclick="closeBottomSheet()" class="text-xs text-slate-400 hover:text-white font-bold">✕ Close</button>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <label class="text-[10px] text-slate-400 uppercase font-bold">Select Item</label>
+                <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white mt-1">Coca Cola 300ml</div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-[10px] text-slate-400 uppercase font-bold">Quantity</label>
+                  <input type="number" value="24" class="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white mt-1">
+                </div>
+                <div>
+                  <label class="text-[10px] text-slate-400 uppercase font-bold">Price / Unit</label>
+                  <input type="text" value="₹28.00" class="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white mt-1">
+                </div>
+              </div>
+              <button onclick="simulateToast('Item added to Challan!'); closeBottomSheet()" class="w-full py-3 rounded-xl bg-emerald-500 font-bold text-slate-950 text-xs mt-2">
+                Save Item (Tactile Haptic)
+              </button>
+            </div>
+          </div>
+
+          <!-- Native Floating Bottom Bar -->
+          <div class="p-3 bg-slate-950/90 border-t border-slate-800 flex justify-around items-center text-[10px] font-bold text-slate-400">
+            <span class="text-emerald-400 flex flex-col items-center">
+              <span>📦</span>
+              <span>Challans</span>
+            </span>
+            <span class="flex flex-col items-center hover:text-white">
+              <span>📋</span>
+              <span>Catalog</span>
+            </span>
+            <span class="flex flex-col items-center hover:text-white">
+              <span>👨‍🍳</span>
+              <span>Staff</span>
+            </span>
+            <span class="flex flex-col items-center hover:text-white">
+              <span>🔒</span>
+              <span>Margins</span>
+            </span>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- COMMAND PALETTE MODAL (Cmd + K Universal Search)        -->
+  <!-- ======================================================= -->
+  <div id="cmd-palette" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-start justify-center pt-24 px-4 hidden" onclick="closeCommandPalette(event)">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200" onclick="event.stopPropagation()">
+      <div class="p-3 border-b border-slate-800 flex items-center gap-3">
+        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" id="cmd-input" placeholder="Type a command, challan #, or item name..." class="bg-transparent w-full text-xs text-white placeholder-slate-500 focus:outline-none">
+        <kbd class="px-2 py-0.5 rounded bg-slate-800 text-[10px] text-slate-400 font-mono">ESC</kbd>
+      </div>
+
+      <div class="p-2 space-y-1 text-xs">
+        <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Quick Actions</div>
+        <div class="p-2.5 rounded-xl hover:bg-slate-800 cursor-pointer flex items-center justify-between text-slate-200 hover:text-white" onclick="simulateToast('Navigating to New Delivery Challan...'); closeCommandPalette()">
+          <span class="flex items-center gap-2">
+            <span>⚡</span> Create New Delivery Challan
+          </span>
+          <span class="text-slate-500 font-mono text-[10px]">Jump</span>
+        </div>
+        <div class="p-2.5 rounded-xl hover:bg-slate-800 cursor-pointer flex items-center justify-between text-slate-200 hover:text-white" onclick="simulateToast('Opening Catalog Duplicate Detector...'); closeCommandPalette()">
+          <span class="flex items-center gap-2">
+            <span>🔍</span> Open Catalog Duplicate Detector
+          </span>
+          <span class="text-slate-500 font-mono text-[10px]">Smart Tool</span>
+        </div>
+        <div class="p-2.5 rounded-xl hover:bg-slate-800 cursor-pointer flex items-center justify-between text-slate-200 hover:text-white" onclick="simulateToast('Opening Admin Quick Margin View...'); closeCommandPalette()">
+          <span class="flex items-center gap-2">
+            <span>🔒</span> View DC Margin % Summary (Admin Only)
+          </span>
+          <span class="text-amber-400 font-mono text-[10px]">Margin %</span>
+        </div>
+
+        <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-2">Recent Challans</div>
+        <div class="p-2.5 rounded-xl hover:bg-slate-800 cursor-pointer flex items-center justify-between text-slate-200 hover:text-white" onclick="simulateToast('Opened DC #1042'); closeCommandPalette()">
+          <span class="flex items-center gap-2">
+            <span>📦</span> DC #1042 — Swastik Ent (₹1,920)
+          </span>
+          <span class="text-emerald-400 font-mono text-[10px]">Verified</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Stacker -->
+  <div id="toast-box" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Interactive JavaScript -->
+  <script>
+    // Tab View Switching
+    function setView(viewName) {
+      document.querySelectorAll('.view-panel').forEach(p => p.classList.add('hidden'));
+      document.getElementById('view-' + viewName).classList.remove('hidden');
+
+      document.querySelectorAll('.view-btn').forEach(b => {
+        b.className = 'view-btn px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition flex items-center gap-1.5';
+      });
+      document.getElementById('btn-view-' + viewName).className = 'view-btn active px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600 transition shadow-xs flex items-center gap-1.5';
+    }
+
+    // Filter Table Rows
+    function filterTable(category, btn) {
+      document.querySelectorAll('.table-filter-btn').forEach(b => {
+        b.className = 'table-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition';
+      });
+      btn.className = 'table-filter-btn active px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 transition';
+
+      const rows = document.querySelectorAll('#sample-table-body tr');
+      rows.forEach(r => {
+        if (category === 'all' || r.getAttribute('data-category') === category) {
+          r.style.display = '';
+        } else {
+          r.style.display = 'none';
+        }
+      });
+    }
+
+    // Inline cell editing demonstration
+    function editCell(el) {
+      const current = el.innerText.trim();
+      const newVal = prompt("Quick Edit Quantity (Optimistic update):", current);
+      if (newVal !== null && newVal !== '') {
+        el.innerText = newVal;
+        simulateToast("Saved: " + newVal + " ✓");
+      }
+    }
+
+    // Bulk selection dock
+    function onRowCheck() {
+      const checked = document.querySelectorAll('.row-checkbox:checked').length;
+      const dock = document.getElementById('bulk-action-dock');
+      const countEl = document.getElementById('bulk-count');
+      countEl.innerText = checked;
+      if (checked > 0) {
+        dock.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+      } else {
+        dock.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+      }
+    }
+
+    function toggleSelectAll(master) {
+      document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = master.checked);
+      onRowCheck();
+    }
+
+    function clearSelection() {
+      document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+      const master = document.querySelector('thead input[type="checkbox"]');
+      if (master) master.checked = false;
+      onRowCheck();
+    }
+
+    // Mobile Bottom Sheet Drawer
+    function openBottomSheet() {
+      document.getElementById('mobile-drawer').classList.remove('translate-y-full');
+    }
+    function closeBottomSheet() {
+      document.getElementById('mobile-drawer').classList.add('translate-y-full');
+    }
+
+    // Command Palette
+    function openCommandPalette() {
+      document.getElementById('cmd-palette').classList.remove('hidden');
+      document.getElementById('cmd-input').focus();
+    }
+    function closeCommandPalette(e) {
+      document.getElementById('cmd-palette').classList.add('hidden');
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        openCommandPalette();
+      }
+      if (e.key === 'Escape') {
+        closeCommandPalette();
+      }
+    });
+
+    // Theme toggle
+    let isDark = true;
+    function toggleTheme() {
+      isDark = !isDark;
+      const body = document.body;
+      const btn = document.getElementById('theme-toggle-btn');
+      if (isDark) {
+        body.className = "bg-slate-900 text-slate-100 min-h-screen antialiased transition-colors duration-300 font-sans";
+        btn.innerText = "☀️";
+      } else {
+        body.className = "bg-slate-100 text-slate-900 min-h-screen antialiased transition-colors duration-300 font-sans";
+        btn.innerText = "🌙";
+      }
+    }
+
+    // Simulated Toast notification
+    function simulateToast(msg) {
+      const box = document.getElementById('toast-box');
+      const toast = document.createElement('div');
+      toast.className = "pointer-events-auto bg-slate-950 border border-emerald-500/40 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300";
+      toast.innerHTML = `<span>✓</span><span>${msg}</span>`;
+      box.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

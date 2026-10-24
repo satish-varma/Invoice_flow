@@ -450,9 +450,6 @@ function getDocDateMs(data: any): number {
 export async function previewSeedPricingFromChallans(
   options?: SeedPricingOptions
 ): Promise<SeedPricingPreview> {
-  const { db } = await import('@/lib/firebase');
-  const { collection, getDocs } = await import('firebase/firestore');
-
   const CHALLANS_COLLECTION = 'newrelic_challans';
   const cutoffMs = getCutoffTimestamp(options?.dateRange);
 
@@ -475,7 +472,7 @@ export async function previewSeedPricingFromChallans(
 
   docs.sort((a, b) => getDocDateMs(b.data()) - getDocDateMs(a.data()));
 
-  const seen = new Set<string>();
+  const seenDocIds = new Set<string>();
   const sampleItems: SeedPricingPreviewItem[] = [];
   const brandSummary: Record<string, number> = {};
   let newItemsCount = 0;
@@ -496,11 +493,10 @@ export async function previewSeedPricingFromChallans(
 
       if (!brand || !name || !(pCost > 0)) continue;
 
-      const seenKey = `${brand.toLowerCase()}__${name.toLowerCase()}__${location}`;
-      if (seen.has(seenKey)) continue;
-      seen.add(seenKey);
-
       const docId = getPricingDocId(brand, name, location);
+      if (seenDocIds.has(docId)) continue;
+      seenDocIds.add(docId);
+
       const isNew = !existingDocIds.has(docId);
 
       if (isNew) {
@@ -512,14 +508,15 @@ export async function previewSeedPricingFromChallans(
       brandSummary[brand] = (brandSummary[brand] || 0) + 1;
 
       if (sampleItems.length < 40) {
-        const discountPercent = mrp > 0 ? parseFloat(((1 - pCost / mrp) * 100).toFixed(2)) : 0;
+        const validMrp = Number.isFinite(mrp) && mrp > 0 ? mrp : pCost;
+        const discountPercent = validMrp > 0 ? parseFloat(((1 - pCost / validMrp) * 100).toFixed(2)) : 0;
         sampleItems.push({
           brandName: brand,
           itemName: name,
           location,
-          mrp: mrp || pCost,
+          mrp: validMrp,
           purchaseCost: pCost,
-          discountPercent,
+          discountPercent: Number.isFinite(discountPercent) ? discountPercent : 0,
           isNew,
           dcNumber: data.dcNumber || 'DC',
           dcDate: data.dcDate || 'Recent',
@@ -531,7 +528,7 @@ export async function previewSeedPricingFromChallans(
   return {
     totalChallansScanned: docs.length,
     totalLineItemsFound,
-    uniqueKeysFound: seen.size,
+    uniqueKeysFound: seenDocIds.size,
     newItemsCount,
     updateItemsCount,
     brandSummary,
@@ -541,7 +538,8 @@ export async function previewSeedPricingFromChallans(
 
 /**
  * Seeds the newrelic_pricing collection from existing challan history.
- * Uses high-performance batch commits (writeBatch) to write hundreds of items in ~1 second.
+ * Uses high-performance chunked parallel writes (setDoc) with timeouts.
+ * Never hangs or deadlocks in browser Web SDK with memoryLocalCache.
  * Safely handles deleted challans, location filters, date boundaries, and safe modes.
  */
 export async function seedPricingFromChallans(
@@ -549,9 +547,6 @@ export async function seedPricingFromChallans(
 ): Promise<SeedPricingResult> {
   await assertWritePermission('Seeding Pricing from Challans');
   const startTime = Date.now();
-
-  const { db } = await import('@/lib/firebase');
-  const { collection, getDocs, doc, serverTimestamp, writeBatch } = await import('firebase/firestore');
 
   const CHALLANS_COLLECTION = 'newrelic_challans';
   const cutoffMs = getCutoffTimestamp(options?.dateRange);
@@ -593,11 +588,11 @@ export async function seedPricingFromChallans(
         current: docs.length,
         total: docs.length,
         percent: 30,
-        statusText: `Analyzed ${docs.length} challans. Deduplicating line items...`,
+        statusText: `Analyzed ${docs.length} challans. Deduplicating items...`,
       });
     }
 
-    const seen = new Set<string>();
+    const seenDocIds = new Set<string>();
     const itemsToCommit: { docId: string; payload: any; isNew: boolean }[] = [];
     let skipped = 0;
     let seeded = 0;
@@ -616,14 +611,13 @@ export async function seedPricingFromChallans(
 
         if (!brand || !name || !(pCost > 0)) continue;
 
-        const seenKey = `${brand.toLowerCase()}__${name.toLowerCase()}__${location}`;
-        if (seen.has(seenKey)) {
+        const docId = getPricingDocId(brand, name, location);
+        if (seenDocIds.has(docId)) {
           skipped++;
           continue; // Later (older) DC — latest already processed
         }
-        seen.add(seenKey);
+        seenDocIds.add(docId);
 
-        const docId = getPricingDocId(brand, name, location);
         const isNew = !existingDocIds.has(docId);
 
         // If safe strategy is chosen: skip existing items
@@ -632,8 +626,9 @@ export async function seedPricingFromChallans(
           continue;
         }
 
+        const validMrp = Number.isFinite(mrp) && mrp > 0 ? mrp : pCost;
         const discountPercent =
-          mrp > 0 ? parseFloat(((1 - pCost / mrp) * 100).toFixed(2)) : 0;
+          validMrp > 0 ? parseFloat(((1 - pCost / validMrp) * 100).toFixed(2)) : 0;
 
         itemsToCommit.push({
           docId,
@@ -642,10 +637,10 @@ export async function seedPricingFromChallans(
             brandName: brand,
             itemName: name,
             location,
-            mrp: mrp || pCost,
-            discountPercent,
+            mrp: validMrp,
+            discountPercent: Number.isFinite(discountPercent) ? discountPercent : 0,
             purchaseCost: pCost,
-            updatedAt: serverTimestamp(),
+            updatedAt: new Date().toISOString(),
             source: 'challan_seed',
             lastSeededFromDc: data.dcNumber || null,
             lastSeededDcDate: data.dcDate || null,
@@ -660,35 +655,65 @@ export async function seedPricingFromChallans(
       }
     }
 
-    // High-performance batch writing (400 items per batch)
-    const BATCH_SIZE = 400;
-    const totalBatches = Math.max(1, Math.ceil(itemsToCommit.length / BATCH_SIZE));
+    // If no items to commit (everything already exists or skipped)
+    if (itemsToCommit.length === 0) {
+      if (options?.onProgress) {
+        options.onProgress({
+          stage: 'complete',
+          current: 0,
+          total: 0,
+          percent: 100,
+          statusText: 'All items in history are already covered in pricing table.',
+        });
+      }
+      return {
+        seeded: 0,
+        updated: 0,
+        skipped,
+        totalProcessed: 0,
+        durationMs: Date.now() - startTime,
+      };
+    }
 
-    for (let i = 0; i < itemsToCommit.length; i += BATCH_SIZE) {
-      const chunk = itemsToCommit.slice(i, i + BATCH_SIZE);
-      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+    // Fast chunked parallel writes with timeout safeguards
+    const CHUNK_SIZE = 12;
+    const totalChunks = Math.ceil(itemsToCommit.length / CHUNK_SIZE);
+
+    for (let i = 0; i < itemsToCommit.length; i += CHUNK_SIZE) {
+      const chunk = itemsToCommit.slice(i, i + CHUNK_SIZE);
+      const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
 
       if (options?.onProgress) {
-        const pct = 30 + Math.round((i / (itemsToCommit.length || 1)) * 65);
+        const pct = 30 + Math.round((i / itemsToCommit.length) * 65);
         options.onProgress({
           stage: 'saving',
           current: i,
           total: itemsToCommit.length,
           percent: pct,
-          statusText: `Writing batch ${batchNum} of ${totalBatches} (${chunk.length} items)...`,
+          statusText: `Saving items ${i + 1}–${Math.min(i + chunk.length, itemsToCommit.length)} of ${itemsToCommit.length} (Batch ${chunkNum}/${totalChunks})...`,
         });
       }
 
-      const batch = writeBatch(db);
-      for (const entry of chunk) {
-        batch.set(doc(db, PRICING_COLLECTION, entry.docId), entry.payload, { merge: true });
-      }
-      await batch.commit();
+      await Promise.all(
+        chunk.map((entry) => {
+          const writePromise = setDoc(
+            doc(db, PRICING_COLLECTION, entry.docId),
+            entry.payload,
+            { merge: true }
+          );
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`Timeout saving item ${entry.docId}`)), 10000)
+          );
+          return Promise.race([writePromise, timeoutPromise]);
+        })
+      );
     }
 
     // Bust client cache so refreshed data is immediately visible
-    setCachedData('pricing_items_hyderabad', null).catch(() => {});
-    setCachedData('pricing_items_bangalore', null).catch(() => {});
+    if (typeof window !== 'undefined' && 'indexedDB' in window) {
+      setCachedData('pricing_items_hyderabad', null).catch(() => {});
+      setCachedData('pricing_items_bangalore', null).catch(() => {});
+    }
 
     if (options?.onProgress) {
       options.onProgress({

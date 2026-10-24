@@ -397,15 +397,21 @@ export default function SeedHistoryModal({
               <Loader2 className="w-5 h-5 animate-spin mx-auto text-indigo-600" />
               <p className="text-xs">Analyzing historical delivery challans...</p>
             </div>
-          ) : previewError ? (
-            <div className="flex items-center gap-2 text-rose-600 text-xs p-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{previewError}</span>
-            </div>
           ) : (
             <p className="text-xs text-slate-500 text-center py-4">No challan data found for this filter.</p>
           )}
         </div>
+
+        {/* Prominent Error Alert */}
+        {previewError && (
+          <div className="mt-4 bg-rose-50 dark:bg-rose-950/40 p-3.5 rounded-2xl border border-rose-200 dark:border-rose-800 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+            <div className="text-xs space-y-0.5">
+              <p className="font-bold text-rose-950 dark:text-rose-200">Seeding Notice</p>
+              <p className="text-rose-700 dark:text-rose-300">{previewError}</p>
+            </div>
+          </div>
+        )}
 
         {/* Progress Bar (Visible while seeding) */}
         {isSeeding && (

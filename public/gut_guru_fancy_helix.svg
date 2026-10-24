@@ -1,0 +1,32 @@
+<svg viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad2-loop1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="grad2-loop2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="70%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#f97316" />
+    </linearGradient>
+  </defs>
+
+  <!-- Left G Ribbon -->
+  <path d="M195 100 C160 70 120 90 120 125 C120 160 160 175 195 145 L195 125 L165 125" 
+        stroke="url(#grad2-loop1)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  
+  <!-- Right G Ribbon (Intertwined Inversion) -->
+  <path d="M205 150 C240 180 280 160 280 125 C280 90 240 75 205 105 L205 125 L235 125" 
+        stroke="url(#grad2-loop2)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+
+  <!-- Center Core Sparkle -->
+  <circle cx="200" cy="125" r="4" fill="#10b981" />
+
+  <!-- Brand Typography Modern Geometric -->
+  <text x="200" y="228" text-anchor="middle" font-family="'Outfit', system-ui, sans-serif" font-weight="900" font-size="29" letter-spacing="3" fill="#0f172a">
+    GUT GURU
+  </text>
+  <text x="200" y="250" text-anchor="middle" font-family="'Outfit', system-ui, sans-serif" font-weight="700" font-size="11" letter-spacing="5" fill="#0f766e">
+    MICROBIOME FOOD LABS
+  </text>
+</svg>

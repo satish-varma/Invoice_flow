@@ -1,0 +1,49 @@
+<svg viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad1-leaf" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+    <linearGradient id="grad1-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d97706" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#fbbf24" />
+    </linearGradient>
+    <linearGradient id="grad1-aura" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Glowing Aura Rings -->
+  <circle cx="200" cy="115" r="75" fill="url(#grad1-aura)" />
+  <circle cx="200" cy="115" r="55" stroke="url(#grad1-gold)" stroke-width="1.5" stroke-dasharray="3 3" opacity="0.6" />
+
+  <!-- Guru Head / Sun Dot -->
+  <circle cx="200" cy="72" r="14" fill="url(#grad1-gold)" />
+
+  <!-- Bodhi Flora Leaves (Guru Silhouette) -->
+  <path d="M200 95 C170 100 135 125 145 155 C155 170 178 170 200 152 C190 140 185 120 200 95 Z" fill="url(#grad1-leaf)" />
+  <path d="M200 95 C230 100 265 125 255 155 C245 170 222 170 200 152 C210 140 215 120 200 95 Z" fill="url(#grad1-leaf)" opacity="0.9" />
+  <path d="M200 90 C194 110 196 135 200 160 C204 135 206 110 200 90 Z" fill="#ffffff" opacity="0.75" />
+
+  <!-- Sacred Digestive Flow Spiral -->
+  <path d="M165 160 C175 180 225 180 235 160 C242 145 230 135 215 138 C202 141 198 152 205 160 C210 165 220 163 218 155" 
+        stroke="url(#grad1-gold)" stroke-width="3.5" stroke-linecap="round" fill="none" />
+
+  <!-- Dynamic Microbe Dots / Vitality Sparkles -->
+  <circle cx="160" cy="95" r="3" fill="#10b981" />
+  <circle cx="240" cy="95" r="3" fill="#f59e0b" />
+  <circle cx="135" cy="130" r="2.5" fill="#34d399" />
+  <circle cx="265" cy="130" r="2.5" fill="#f59e0b" />
+
+  <!-- Brand Typography -->
+  <text x="200" y="225" text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-weight="900" font-size="28" letter-spacing="4" fill="#0f172a">
+    THE GUT GURU
+  </text>
+  <text x="200" y="248" text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-weight="700" font-size="10.5" letter-spacing="6" fill="#059669">
+    NUTRITION &amp; VITALITY
+  </text>
+  <line x1="130" y1="262" x2="270" y2="262" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="4 4" />
+</svg>

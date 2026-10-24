@@ -1,0 +1,38 @@
+<svg viewBox="0 0 400 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad3-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b45309" />
+      <stop offset="50%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <path id="circlePathTop" d="M 95 180 A 105 105 0 0 1 305 180" fill="none" />
+    <path id="circlePathBottom" d="M 305 180 A 105 105 0 0 1 95 180" fill="none" />
+  </defs>
+
+  <!-- Outer Concentric Seals -->
+  <circle cx="200" cy="180" r="135" stroke="url(#grad3-gold)" stroke-width="2" />
+  <circle cx="200" cy="180" r="128" stroke="url(#grad3-gold)" stroke-width="1" stroke-dasharray="4 2" />
+  <circle cx="200" cy="180" r="92" stroke="#10b981" stroke-width="1.5" />
+
+  <!-- Arched Typography -->
+  <text font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="900" font-size="13" letter-spacing="3.5" fill="#1e293b">
+    <textPath href="#circlePathTop" startOffset="50%" text-anchor="middle">
+      THE GUT GURU
+    </textPath>
+  </text>
+  <text font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="700" font-size="9" letter-spacing="3" fill="#b45309">
+    <textPath href="#circlePathBottom" startOffset="50%" text-anchor="middle">
+      • WHOLESOME NUTRITION •
+    </textPath>
+  </text>
+
+  <!-- Central Botanical Sprout & Shield -->
+  <path d="M200 135 C185 145 180 165 200 195 C220 165 215 145 200 135 Z" fill="#10b981" />
+  <path d="M200 165 C175 160 165 175 175 195 C190 195 195 180 200 165 Z" fill="url(#grad3-gold)" />
+  <path d="M200 165 C225 160 235 175 225 195 C210 195 205 180 200 165 Z" fill="url(#grad3-gold)" />
+  <circle cx="200" cy="205" r="3.5" fill="#047857" />
+
+  <!-- Heritage Star Accents -->
+  <polygon points="85,180 87,175 92,175 88,183 90,188 85,185 80,188 82,183 78,175 83,175" fill="#f59e0b" />
+  <polygon points="315,180 317,175 322,175 318,183 320,188 315,185 310,188 312,183 308,175 313,175" fill="#f59e0b" />
+</svg>

@@ -539,7 +539,7 @@ export function NewRelicChallanList({
                       <RefreshCcw className="h-4 w-4 text-emerald-600" /> Restore Challan
                     </Button>
                   ) : (
-                    <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+                    <div className={`grid ${role === 'admin' && onAdminPreviewChallan ? 'grid-cols-5' : 'grid-cols-4'} gap-1.5 sm:gap-2`}>
                       {/* View Document */}
                       <Button
                         variant="default"
@@ -603,6 +603,24 @@ export function NewRelicChallanList({
                         <Copy className="h-4 w-4 shrink-0 text-purple-600 dark:text-purple-400" />
                         <span className="truncate">Copy</span>
                       </Button>
+
+                      {/* Admin Quick View (Admin Only) */}
+                      {role === 'admin' && onAdminPreviewChallan && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-10 px-1 border-rose-200 dark:border-rose-800 bg-rose-50/90 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-700 dark:text-rose-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform shadow-2xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerHaptic('light');
+                            onAdminPreviewChallan(challan);
+                          }}
+                          title="Admin Quick View (Margins & Costs)"
+                        >
+                          <Receipt className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                          <span className="truncate">Margin</span>
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>

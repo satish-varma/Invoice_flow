@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Gut Guru — Fancy TGG Luxury Logo Collection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;0,900;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-cinzel { font-family: 'Cinzel', serif; }
+    .font-serif { font-family: 'Playfair Display', serif; }
+    .font-outfit { font-family: 'Outfit', sans-serif; }
+
+    /* Custom luxury gold shimmering effect */
+    .gold-shimmer {
+      background: linear-gradient(135deg, #fce0ad 0%, #dfac4a 25%, #c68c28 50%, #f9dc9f 75%, #a8721c 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  </style>
+</head>
+<body class="bg-[#0b0f17] text-slate-100 min-h-screen antialiased selection:bg-amber-500 selection:text-black">
+
+  <!-- Shared Global SVG Filters & Gradients (Hidden) -->
+  <svg width="0" height="0" class="absolute">
+    <defs>
+      <!-- Multi-stop Luxury Metallic Gold Gradient -->
+      <linearGradient id="fancy-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#fff1cf" />
+        <stop offset="25%" stop-color="#e5b85a" />
+        <stop offset="50%" stop-color="#b88426" />
+        <stop offset="75%" stop-color="#f5d68b" />
+        <stop offset="100%" stop-color="#9d6913" />
+      </linearGradient>
+
+      <!-- Soft Champagne Gold Gradient -->
+      <linearGradient id="champagne-gold" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#fdf3dc" />
+        <stop offset="50%" stop-color="#e0be75" />
+        <stop offset="100%" stop-color="#b68936" />
+      </linearGradient>
+
+      <!-- Royal Emerald Gradient -->
+      <linearGradient id="royal-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#34d399" />
+        <stop offset="50%" stop-color="#059669" />
+        <stop offset="100%" stop-color="#064e3b" />
+      </linearGradient>
+
+      <!-- Royal Teal / Jewel Tone -->
+      <linearGradient id="jewel-teal" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#2dd4bf" />
+        <stop offset="50%" stop-color="#0f766e" />
+        <stop offset="100%" stop-color="#134e4a" />
+      </linearGradient>
+
+      <!-- Luxury Drop Shadow Filter -->
+      <filter id="gold-glow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#f59e0b" flood-opacity="0.35" />
+      </filter>
+      <filter id="subtle-shadow" x="-10%" y="-10%" width="120%" height="120%">
+        <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000000" flood-opacity="0.5" />
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- Sticky Luxury Header -->
+  <header class="border-b border-amber-900/30 bg-[#0c121d]/90 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="h-11 w-11 rounded-xl bg-gradient-to-tr from-amber-600 via-amber-400 to-yellow-200 p-[1.5px] shadow-[0_0_20px_rgba(245,158,11,0.25)]">
+          <div class="h-full w-full bg-[#0a0f18] rounded-[10px] flex items-center justify-center font-cinzel font-black text-amber-300 text-sm tracking-widest">
+            TGG
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-black tracking-widest uppercase font-cinzel text-white">THE GUT GURU</h1>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-300 border border-amber-500/30">
+              Haute Monograms
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 font-medium">Hospitality Services • 12 Bespoke Luxury TGG Monogram Emblems</p>
+        </div>
+      </div>
+
+      <!-- Canvas Theme Switcher -->
+      <div class="flex items-center gap-2 bg-slate-900/90 border border-slate-800 p-1.5 rounded-xl shadow-inner">
+        <span class="text-[11px] font-bold text-slate-400 px-2 uppercase tracking-wider">Canvas:</span>
+        <button onclick="setCanvas('obsidian', this)" class="theme-btn active px-3 py-1.5 rounded-lg text-xs font-bold transition bg-amber-500/20 text-amber-300 border border-amber-500/40">Obsidian Night</button>
+        <button onclick="setCanvas('emerald', this)" class="theme-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">Royal Emerald</button>
+        <button onclick="setCanvas('burgundy', this)" class="theme-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">Imperial Wine</button>
+        <button onclick="setCanvas('champagne', this)" class="theme-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">Champagne Pearl</button>
+        <button onclick="setCanvas('white', this)" class="theme-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">Pure White</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Banner -->
+  <section class="max-w-7xl mx-auto px-6 pt-12 pb-6 text-center space-y-3">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-[2.5px] bg-amber-500/10 text-amber-300 border border-amber-500/20">
+      ✦ Bespoke Brand Identity
+    </div>
+    <h2 class="text-3xl md:text-5xl font-black font-cinzel tracking-tight text-white">
+      The Fancy <span class="gold-shimmer">TGG</span> Collection
+    </h2>
+    <p class="text-sm md:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+      Each design meticulously integrates the letters <strong class="text-amber-200">T, G, and G</strong> into prestige monograms, fine-dining crests, royal signets, and interlocking luxury emblems tailored for elite corporate hospitality.
+    </p>
+  </section>
+
+  <!-- Main Grid: 12 Distinct Fancy TGG Logos -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+      <!-- ================= LOGO 01: THE IMPERIAL INTERLOCK (Royal Gold & Emerald) ================= -->
+      <div class="luxury-card group bg-[#111726]/80 rounded-3xl border border-slate-800/80 hover:border-amber-500/50 transition-all duration-300 overflow-hidden shadow-xl hover:shadow-[0_10px_40px_rgba(245,158,11,0.15)] flex flex-col">
+        <div class="p-4 border-b border-slate-800/60 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-[2px] text-amber-400">Concept 01 • High Fashion Monogram</span>
+            <h3 class="text-sm font-bold font-cinzel text-white">The Imperial Interlock</h3>
+          </div>
+          <button onclick="downloadSvg('svg-tgg-1', 'TGG_01_Imperial_Interlock')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500/10 hover:bg-amber-500 hover:text-black transition border border-amber-500/30 text-amber-300">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="canvas-box p-8 flex items-center justify-center min-h-[300px] transition-colors bg-[#0b101a]">
+          <svg id="svg-tgg-1" class="w-full max-w-[270px] h-auto" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g filter="url(#gold-glow)">
+              <!-- Top Crown Sprout Finial -->
+              <path d="M160 30 C155 42 146 50 160 62 C174 50 165 42 160 30 Z" fill="url(#fancy-gold)"/>
+              <circle cx="160" cy="24" r="3.5" fill="#fef08a" />
+              <path d="M148 48 C140 40 144 32 153 38 C153 45 150 47 148 48 Z" fill="url(#fancy-gold)" opacity="0.8"/>
+              <path d="M172 48 C180 40 176 32 167 38 C167 45 170 47 172 48 Z" fill="url(#fancy-gold)" opacity="0.8"/>
+
+              <!-- Central Majestic "T" Letterform with Serif Bars -->
+              <path d="M100 68 L220 68 L220 80 L170 80 L170 195 L150 195 L150 80 L100 80 Z" fill="url(#fancy-gold)"/>
+              <!-- T Crossbar Carved Inlay Line -->
+              <line x1="108" y1="74" x2="212" y2="74" stroke="#fff" stroke-width="1.5" stroke-opacity="0.6"/>
+              
+              <!-- First Intertwining "G" Loop (Left Anchor) -->
+              <path d="M148 100 C110 100 85 125 85 155 C85 185 112 210 148 210 C175 210 190 195 190 175 L150 175 L150 162 L204 162 L204 178 C204 204 180 224 148 224 C100 224 70 192 70 155 C70 118 100 86 148 86 C168 86 186 94 198 108 L187 118 C177 107 164 100 148 100 Z" fill="url(#fancy-gold)"/>
+
+              <!-- Second Intertwining "G" Loop (Right Offset Harmony) -->
+              <path d="M172 110 C205 110 225 130 225 155 C225 180 205 200 172 200 C154 200 140 192 132 180 L144 172 C150 180 160 186 172 186 C194 186 210 172 210 155 C210 138 194 124 172 124 C158 124 146 130 138 140 L126 130 C138 118 154 110 172 110 Z" fill="url(#royal-emerald)"/>
+            </g>
+
+            <!-- Bottom Prestige Accent Pinstripes -->
+            <line x1="90" y1="242" x2="230" y2="242" stroke="url(#fancy-gold)" stroke-width="1.5" stroke-linecap="round"/>
+            <polygon points="160,238 164,242 160,246 156,242" fill="#fef08a"/>
+
+            <!-- Elegant Typography -->
+            <text x="160" y="272" text-anchor="middle" font-family="'Cinzel', serif" font-weight="900" font-size="18" letter-spacing="4" fill="url(#fancy-gold)" class="svg-title">
+              THE GUT GURU
+            </text>
+            <text x="160" y="292" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="8.5" letter-spacing="6" fill="#cbd5e1" class="svg-sub">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-900/60 border-t border-slate-800/60 text-xs text-slate-400">
+          <strong class="text-amber-200">The Vibe:</strong> Haute couture interlocking monogram. The commanding golden 'T' anchors two intertwined 'G's with a subtle botanical crown finial.
+        </div>
+      </div>
+
+      <!-- ================= LOGO 02: THE GRAND LUXURY MEDALLION (Circular Royal Seal) ================= -->
+      <div class="luxury-card group bg-[#111726]/80 rounded-3xl border border-slate-800/80 hover:border-amber-500/50 transition-all duration-300 overflow-hidden shadow-xl hover:shadow-[0_10px_40px_rgba(245,158,11,0.15)] flex flex-col">
+        <div class="p-4 border-b border-slate-800/60 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-[2px] text-amber-400">Concept 02 • Artisan Medallion</span>
+            <h3 class="text-sm font-bold font-cinzel text-white">The Grand Seal Monogram</h3>
+          </div>
+          <button onclick="downloadSvg('svg-tgg-2', 'TGG_02_Grand_Medallion')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500/10 hover:bg-amber-500 hover:text-black transition border border-amber-500/30 text-amber-300">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="canvas-box p-8 flex items-center justify-center min-h-[300px] transition-colors bg-[#0b101a]">
+          <svg id="svg-tgg-2" class="w-full max-w-[270px] h-auto" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g filter="url(#gold-glow)">
+              <!-- Outer Beaded Guilloché Ring -->
+              <circle cx="160" cy="150" r="110" stroke="url(#fancy-gold)" stroke-width="2" stroke-dasharray="4 6"/>
+              <circle cx="160" cy="150" r="102" stroke="url(#fancy-gold)" stroke-width="3" fill="none"/>
+              <circle cx="160" cy="150" r="76" stroke="url(#fancy-gold)" stroke-width="1.5" stroke-dasharray="2 4"/>
+
+              <!-- Medallion Centerpiece: Bespoke Calligraphic TGG Lockup -->
+              <!-- Stylized Serpentine 'T' -->
+              <path d="M120 105 C140 100 180 100 200 105 L196 114 C180 111 166 112 166 122 L166 195 C166 200 162 204 154 204 C146 204 142 200 142 195 L142 122 C142 112 128 111 124 114 Z" fill="url(#fancy-gold)"/>
+              
+              <!-- Left Calligraphic Swirl 'G' -->
+              <path d="M142 125 C118 125 102 140 102 160 C102 180 118 195 140 195 L140 184 C124 184 114 174 114 160 C114 146 124 136 142 136 Z" fill="url(#royal-emerald)"/>
+              <rect x="130" y="156" width="16" height="8" rx="2" fill="url(#royal-emerald)"/>
+
+              <!-- Right Calligraphic Swirl 'G' -->
+              <path d="M178 125 C202 125 218 140 218 160 C218 180 202 195 180 195 L180 184 C196 184 206 174 206 160 C206 146 196 136 178 136 Z" fill="url(#royal-emerald)"/>
+              <rect x="174" y="156" width="16" height="8" rx="2" fill="url(#royal-emerald)"/>
+
+              <!-- Four Corner Star Accents -->
+              <polygon points="160,52 163,60 171,63 163,66 160,74 157,66 149,63 157,60" fill="#fef08a"/>
+              <polygon points="160,226 163,234 171,237 163,240 160,248 157,240 149,237 157,234" fill="#fef08a"/>
+              <circle cx="72" cy="150" r="3.5" fill="url(#fancy-gold)"/>
+              <circle cx="248" cy="150" r="3.5" fill="url(#fancy-gold)"/>
+            </g>
+
+            <!-- Arched Text Emulation / Base Brand -->
+            <text x="160" y="280" text-anchor="middle" font-family="'Cinzel', serif" font-weight="900" font-size="17" letter-spacing="4" fill="url(#fancy-gold)" class="svg-title">
+              THE GUT GURU
+            </text>
+            <text x="160" y="298" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="8" letter-spacing="5" fill="#cbd5e1" class="svg-sub">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-900/60 border-t border-slate-800/60 text-xs text-slate-400">
+          <strong class="text-amber-200">The Vibe:</strong> British royal warrant & luxury coin medallion. Concentric guilloché rings encase an intertwined heraldic TGG.
+        </div>
+      </div>
+
+      <!-- ================= LOGO 03: THE MICHELIN CLOCHE & HERALDIC CREST ================= -->
+      <div class="luxury-card group bg-[#111726]/80 rounded-3xl border border-slate-800/80 hover:border-amber-500/50 transition-all duration-300 overflow-hidden shadow-xl hover:shadow-[0_10px_40px_rgba(245,158,11,0.15)] flex flex-col">
+        <div class="p-4 border-b border-slate-800/60 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-[2px] text-amber-400">Concept 03 • Fine Dining Crest</span>
+            <h3 class="text-sm font-bold font-cinzel text-white">The Michelin Cloche Crest</h3>
+          </div>
+          <button onclick="downloadSvg('svg-tgg-3', 'TGG_03_Cloche_Crest')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500/10 hover:bg-amber-500 hover:text-black transition border border-amber-500/30 text-amber-300">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="canvas-box p-8 flex items-center justify-center min-h-[300px] transition-colors bg-[#0b101a]">
+          <svg id="svg-tgg-3" class="w-full max-w-[270px] h-auto" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g filter="url(#gold-glow)">
+              <!-- Shield Silhouette with Double Outline -->
+              <path d="M160 40 L235 68 C235 155 198 198 160 224 C122 198 85 155 85 68 Z" stroke="url(#fancy-gold)" stroke-width="3" fill="none"/>
+              <path d="M160 48 L225 72 C225 148 192 188 160 212 C128 188 95 148 95 72 Z" stroke="url(#fancy-gold)" stroke-width="1" stroke-dasharray="4 4" fill="none"/>
+
+              <!-- Fine Dining Cloche at Crest Top -->
+              <path d="M130 92 C130 72 190 72 190 92 Z" fill="url(#fancy-gold)" opacity="0.9"/>
+              <circle cx="160" cy="68" r="4.5" fill="#fef08a"/>
+              <line x1="120" y1="94" x2="200" y2="94" stroke="url(#fancy-gold)" stroke-width="2.5" stroke-linecap="round"/>
+
+              <!-- Internal Sculpted TGG Monogram -->
+              <!-- Crown Letter 'T' forming architectural vault -->
+              <path d="M125 110 L195 110 L195 120 L166 120 L166 178 L154 178 L154 120 L125 120 Z" fill="url(#fancy-gold)"/>
+              
+              <!-- Twin Mirrored 'G' Letters nestled inside the shield arches -->
+              <path d="M150 130 C135 130 120 140 120 156 C120 172 135 182 150 182 L150 168 L140 168 L140 158 L156 158 L156 186 C144 190 128 188 112 174 C104 162 108 144 118 132 C126 124 138 120 150 120 Z" fill="url(#royal-emerald)"/>
+              
+              <path d="M170 130 C185 130 200 140 200 156 C200 172 185 182 170 182 L170 168 L180 168 L180 158 L164 158 L164 186 C176 190 192 188 208 174 C216 162 212 144 202 132 C194 124 182 120 170 120 Z" fill="url(#royal-emerald)"/>
+
+              <!-- Laurel Leaf Branches Cradling Base of Crest -->
+              <path d="M80 170 C70 195 90 220 115 230" stroke="url(#fancy-gold)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <path d="M240 170 C250 195 230 220 205 230" stroke="url(#fancy-gold)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            </g>
+
+            <!-- Brand Typography -->
+            <text x="160" y="268" text-anchor="middle" font-family="'Cinzel', serif" font-weight="900" font-size="18" letter-spacing="4" fill="url(#fancy-gold)" class="svg-title">
+              THE GUT GURU
+            </text>
+            <text x="160" y="288" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="8.5" letter-spacing="5" fill="#cbd5e1" class="svg-sub">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-900/60 border-t border-slate-800/60 text-xs text-slate-400">
+          <strong class="text-amber-200">The Vibe:</strong> Institutional fine dining authority. A culinary dome cloche crowns an armored heraldic shield bearing an integrated TGG.
+        </div>
+      </div>
+
+      <!-- ================= LOGO 04: THE ART DECO GATSBY (Geometric 1920s Grand Hotel) ================= -->
+      <div class="luxury-card group bg-[#111726]/80 rounded-3xl border border-slate-800/80 hover:border-amber-500/50 transition-all duration-300 overflow-hidden shadow-xl hover:shadow-[0_10px_40px_rgba(245,158,11,0.15)] flex flex-col">
+        <div class="p-4 border-b border-slate-800/60 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-[2px] text-amber-400">Concept 04 • 1920s Heritage</span>
+            <h3 class="text-sm font-bold font-cinzel text-white">The Art Deco Grand Hotel</h3>
+          </div>
+          <button onclick="downloadSvg('svg-tgg-4', 'TGG_04_Art_Deco')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500/10 hover:bg-amber-500 hover:text-black transition border border-amber-500/30 text-amber-300">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="canvas-box p-8 flex items-center justify-center min-h-[300px] transition-colors bg-[#0b101a]">
+          <svg id="svg-tgg-4" class="w-full max-w-[270px] h-auto" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g filter="url(#gold-glow)">
+              <!-- Art Deco Diamond & Stepped Arch Outer Geometry -->
+              <polygon points="160,25 245,85 245,195 160,240 75,195 75,85" stroke="url(#fancy-gold)" stroke-width="2.5" fill="none"/>
+              <polygon points="160,38 232,88 232,188 160,226 88,188 88,88" stroke="url(#fancy-gold)" stroke-width="1" stroke-dasharray="3 3" fill="none"/>
+
+              <!-- Stepped Pyramid Pylons Top Chevron -->
+              <path d="M125 55 L160 30 L195 55" stroke="url(#fancy-gold)" stroke-width="2" fill="none"/>
+
+              <!-- Central Architectural TGG -->
+              <!-- Monumental 'T' Letterform -->
+              <path d="M105 75 L215 75 L215 88 L168 88 L168 185 L152 185 L152 88 L105 88 Z" fill="url(#fancy-gold)"/>
+
+              <!-- Geometric Art Deco Left 'G' (Hexagonal Loop) -->
+              <path d="M145 105 L115 105 L100 120 L100 160 L115 175 L145 175 L145 145 L125 145 L125 133 L157 133 L157 185 L110 185 L90 165 L90 115 L110 95 L145 95 Z" fill="url(#fancy-gold)" opacity="0.95"/>
+
+              <!-- Geometric Art Deco Right 'G' (Mirrored Overlap) -->
+              <path d="M175 105 L205 105 L220 120 L220 160 L205 175 L175 175 L175 145 L195 145 L195 133 L163 133 L163 185 L210 185 L230 165 L230 115 L210 95 L175 95 Z" fill="url(#fancy-gold)" opacity="0.95"/>
+
+              <!-- Central Emerald Gem Inset -->
+              <polygon points="160,115 168,125 160,135 152,125" fill="url(#royal-emerald)"/>
+            </g>
+
+            <!-- Brand Typography -->
+            <text x="160" y="270" text-anchor="middle" font-family="'Cinzel', serif" font-weight="900" font-size="18" letter-spacing="4" fill="url(#fancy-gold)" class="svg-title">
+              THE GUT GURU
+            </text>
+            <text x="160" y="290" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="8.5" letter-spacing="5" fill="#cbd5e1" class="svg-sub">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-900/60 border-t border-slate-800/60 text-xs text-slate-400">
+          <strong class="text-amber-200">The Vibe:</strong> 1920s high-society luxury hotel (The Ritz / Savoy aesthetic). Clean stepped geometry uniting T with two geometric Gs.
+        </div>
+      </div>
+
+      <!-- ================= LOGO 05: THE FLUID RIBBON OF INFINITY (3D Liquid Gold Monogram) ================= -->
+      <div class="luxury-card group bg-[#111726]/80 rounded-3xl border border-slate-800/80 hover:border-amber-500/50 transition-all duration-300 overflow-hidden shadow-xl hover:shadow-[0_10px_40px_rgba(245,158,11,0.15)] flex flex-col">
+        <div class="p-4 border-b border-slate-800/60 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-[2px] text-amber-400">Concept 05 • Liquid Motion</span>
+            <h3 class="text-sm font-bold font-cinzel text-white">The Sculptural Ribbon TGG</h3>
+          </div>
+          <button onclick="downloadSvg('svg-tgg-5', 'TGG_05_Ribbon_Infinity')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500/10 hover:bg-amber-500 hover:text-black transition border border-amber-500/30 text-amber-300">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="canvas-box p-8 flex items-center justify-center min-h-[300px] transition-colors bg-[#0b101a]">
+          <svg id="svg-tgg-5" class="w-full max-w-[270px] h-auto" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g filter="url(#gold-glow)">
+              <!-- Sculpted 3D Ribbon: Top Bar forms T, swoops into Left G, twists to Right G -->
+              
+              <!-- Left G Ribbon Loop -->
+              <path d="M160 70 C110 70 80 100 80 145 C80 190 115 215 155 215 C185 215 205 195 205 170 L155 170" 
+                    stroke="url(#fancy-gold)" stroke-width="14" stroke-linecap="round" fill="none"/>
+              
+              <!-- Right G Ribbon Harmonious Echo -->
+              <path d="M160 85 C200 85 230 110 230 145 C230 180 205 205 170 205 C145 205 130 190 130 170 L170 170" 
+                    stroke="url(#royal-emerald)" stroke-width="12" stroke-linecap="round" fill="none"/>
+
+              <!-- Dynamic T Roof Canopy with Sprout Tip -->
+              <path d="M95 62 L225 62" stroke="url(#fancy-gold)" stroke-width="12" stroke-linecap="round"/>
+              <path d="M160 62 L160 115" stroke="url(#fancy-gold)" stroke-width="12" stroke-linecap="round"/>
+              
+              <!-- Organic Growth Leaf Accent sprouting from ribbon fold -->
+              <path d="M225 62 C238 52 245 35 240 28 C230 35 225 48 225 62 Z" fill="#34d399"/>
+              <circle cx="160" cy="42" r="5" fill="#fef08a"/>
+            </g>
+
+            <!-- Brand Typography -->
+            <text x="160" y="268" text-anchor="middle" font-family="'Cinzel', serif" font-weight="900" font-size="18" letter-spacing="4" fill="url(#fancy-gold)" class="svg-title">
+              THE GUT GURU
+            </text>
+            <text x="160" y="288" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="8.5" letter-spacing="5" fill="#cbd5e1" class="svg-sub">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-900/60 border-t border-slate-800/60 text-xs text-slate-400">
+          <strong class="text-amber-200">The Vibe:</strong> Modern fluid luxury. A continuous ribbon of molten gold traces the 'T' canopy and twists into dual harmonious 'G' loops.
+        </div>
+      </div>
+
+      <!-- ================= LOGO 06: THE GOLDEN SKELETON KEY (Master of Hospitality) ================= -->
+      <div class="luxury-card group bg-[#111726]/80 rounded-3xl border border-slate-800/80 hover:border-amber-500/50 transition-all duration-300 overflow-hidden shadow-xl hover:shadow-[0_10px_40px_rgba(245,158,11,0.15)] flex flex-col">
+        <div class="p-4 border-b border-slate-800/60 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-[2px] text-amber-400">Concept 06 • Concierge Symbol</span>
+            <h3 class="text-sm font-bold font-cinzel text-white">The Golden Key of Hospitality</h3>
+          </div>
+          <button onclick="downloadSvg('svg-tgg-6', 'TGG_06_Golden_Key')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500/10 hover:bg-amber-500 hover:text-black transition border border-amber-500/30 text-amber-300">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="canvas-box p-8 flex items-center justify-center min-h-[300px] transition-colors bg-[#0b101a]">
+          <svg id="svg-tgg-6" class="w-full max-w-[270px] h-auto" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g filter="url(#gold-glow)">
+              <!-- Key Bow (Ornate TGG Filigree Medallion at top) -->
+              <circle cx="160" cy="85" r="48" stroke="url(#fancy-gold)" stroke-width="4" fill="none"/>
+              <circle cx="160" cy="85" r="40" stroke="url(#fancy-gold)" stroke-width="1.5" stroke-dasharray="3 3"/>
+              
+              <!-- Intricate TGG Centerpiece inside Bow -->
+              <path d="M140 64 L180 64 L180 72 L164 72 L164 110 L156 110 L156 72 L140 72 Z" fill="url(#fancy-gold)"/>
+              <!-- Mirrored G Arches inside Key Bow -->
+              <path d="M152 76 C136 76 128 84 128 94 C128 104 136 110 152 110 L152 102 L142 102 C136 102 134 98 134 94 C134 90 136 84 150 84 Z" fill="url(#fancy-gold)"/>
+              <path d="M168 76 C184 76 192 84 192 94 C192 104 184 110 168 110 L168 102 L178 102 C184 102 186 98 186 94 C186 90 184 84 170 84 Z" fill="url(#fancy-gold)"/>
+
+              <!-- Key Collar Ring -->
+              <rect x="150" y="133" width="20" height="7" rx="3.5" fill="url(#fancy-gold)"/>
+
+              <!-- Key Shaft (Stout Golden Fluting) -->
+              <line x1="160" y1="140" x2="160" y2="215" stroke="url(#fancy-gold)" stroke-width="6" stroke-linecap="round"/>
+
+              <!-- Key Bit / Wards (Stylized Culinary Fork & Sprout) -->
+              <path d="M160 185 L186 185 L186 195 L160 195" stroke="url(#fancy-gold)" stroke-width="3" fill="none"/>
+              <path d="M160 202 L186 202 L186 212 L160 212" stroke="url(#fancy-gold)" stroke-width="3" fill="none"/>
+              <circle cx="186" cy="180" r="3" fill="#34d399"/>
+            </g>
+
+            <!-- Brand Typography -->
+            <text x="160" y="268" text-anchor="middle" font-family="'Cinzel', serif" font-weight="900" font-size="18" letter-spacing="4" fill="url(#fancy-gold)" class="svg-title">
+              THE GUT GURU
+            </text>
+            <text x="160" y="288" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="8.5" letter-spacing="5" fill="#cbd5e1" class="svg-sub">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-900/60 border-t border-slate-800/60 text-xs text-slate-400">
+          <strong class="text-amber-200">The Vibe:</strong> The master key of luxury hospitality. The key's filigree bow contains the TGG lockup, while the wards resemble fine dining elements.
+        </div>
+      </div>
+
+      <!-- ================= LOGO 07: THE ROYAL BOTANICAL WREATH (Prestige Laurel) ================= -->
+      <div class="luxury-card group bg-[#111726]/80 rounded-3xl border border-slate-800/80 hover:border-amber-500/50 transition-all duration-300 overflow-hidden shadow-xl hover:shadow-[0_10px_40px_rgba(245,158,11,0.15)] flex flex-col">
+        <div class="p-4 border-b border-slate-800/60 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-[2px] text-amber-400">Concept 07 • Botanical Laurel</span>
+            <h3 class="text-sm font-bold font-cinzel text-white">The Royal Botanical Wreath</h3>
+          </div>
+          <button onclick="downloadSvg('svg-tgg-7', 'TGG_07_Royal_Wreath')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500/10 hover:bg-amber-500 hover:text-black transition border border-amber-500/30 text-amber-300">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="canvas-box p-8 flex items-center justify-center min-h-[300px] transition-colors bg-[#0b101a]">
+          <svg id="svg-tgg-7" class="w-full max-w-[270px] h-auto" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g filter="url(#gold-glow)">
+              <!-- Laurel Wreath Leaves (Left & Right) -->
+              <!-- Left Branch -->
+              <path d="M100 185 C80 155 80 105 125 70" stroke="url(#fancy-gold)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <ellipse cx="85" cy="140" rx="6" ry="12" transform="rotate(-35 85 140)" fill="url(#fancy-gold)" opacity="0.8"/>
+              <ellipse cx="98" cy="110" rx="6" ry="12" transform="rotate(-15 98 110)" fill="url(#fancy-gold)" opacity="0.8"/>
+              <ellipse cx="118" cy="85" rx="6" ry="12" transform="rotate(15 118 85)" fill="url(#fancy-gold)" opacity="0.8"/>
+
+              <!-- Right Branch -->
+              <path d="M220 185 C240 155 240 105 195 70" stroke="url(#fancy-gold)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <ellipse cx="235" cy="140" rx="6" ry="12" transform="rotate(35 235 140)" fill="url(#fancy-gold)" opacity="0.8"/>
+              <ellipse cx="222" cy="110" rx="6" ry="12" transform="rotate(15 222 110)" fill="url(#fancy-gold)" opacity="0.8"/>
+              <ellipse cx="202" cy="85" rx="6" ry="12" transform="rotate(-15 202 85)" fill="url(#fancy-gold)" opacity="0.8"/>
+
+              <!-- Center Serif TGG Lockup with Diamond Piercing -->
+              <text x="160" y="145" text-anchor="middle" font-family="'Cinzel', serif" font-weight="900" font-size="44" fill="url(#fancy-gold)" letter-spacing="1">
+                TGG
+              </text>
+              <line x1="125" y1="165" x2="195" y2="165" stroke="url(#fancy-gold)" stroke-width="2"/>
+              <polygon points="160,161 164,165 160,169 156,165" fill="#fef08a"/>
+
+              <!-- Tied Silk Ribbon at Wreath Base -->
+              <path d="M145 195 C155 190 165 190 175 195 L185 215 L170 210 L160 218 L150 210 L135 215 Z" fill="url(#royal-emerald)"/>
+            </g>
+
+            <!-- Brand Typography -->
+            <text x="160" y="268" text-anchor="middle" font-family="'Cinzel', serif" font-weight="900" font-size="18" letter-spacing="4" fill="url(#fancy-gold)" class="svg-title">
+              THE GUT GURU
+            </text>
+            <text x="160" y="288" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="8.5" letter-spacing="5" fill="#cbd5e1" class="svg-sub">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-900/60 border-t border-slate-800/60 text-xs text-slate-400">
+          <strong class="text-amber-200">The Vibe:</strong> Regal excellence & culinary triumph. Organic golden laurel branches frame a bold Cinzel serif TGG with silk ribbon tie.
+        </div>
+      </div>
+
+      <!-- ================= LOGO 08: THE WAX SEAL OF THE GURU (Artisan Stamp) ================= -->
+      <div class="luxury-card group bg-[#111726]/80 rounded-3xl border border-slate-800/80 hover:border-amber-500/50 transition-all duration-300 overflow-hidden shadow-xl hover:shadow-[0_10px_40px_rgba(245,158,11,0.15)] flex flex-col">
+        <div class="p-4 border-b border-slate-800/60 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-[2px] text-amber-400">Concept 08 • Wax Seal Emblem</span>
+            <h3 class="text-sm font-bold font-cinzel text-white">The Handcrafted Wax Seal</h3>
+          </div>
+          <button onclick="downloadSvg('svg-tgg-8', 'TGG_08_Wax_Seal')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500/10 hover:bg-amber-500 hover:text-black transition border border-amber-500/30 text-amber-300">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="canvas-box p-8 flex items-center justify-center min-h-[300px] transition-colors bg-[#0b101a]">
+          <svg id="svg-tgg-8" class="w-full max-w-[270px] h-auto" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g filter="url(#gold-glow)">
+              <!-- Organic Melted Wax Outer Silhouette with Subtle Indents -->
+              <path d="M160 38 C195 36 220 50 245 75 C270 100 272 135 265 165 C258 195 245 225 215 245 C185 265 140 262 110 248 C80 234 55 205 52 170 C48 135 60 100 85 75 C110 50 130 40 160 38 Z" fill="#042f2e" stroke="url(#fancy-gold)" stroke-width="3"/>
+              
+              <!-- Debossed Inner Ring -->
+              <circle cx="160" cy="150" r="78" stroke="url(#fancy-gold)" stroke-width="2" stroke-dasharray="6 4" opacity="0.6"/>
+              <circle cx="160" cy="150" r="70" stroke="url(#fancy-gold)" stroke-width="1.5"/>
+
+              <!-- Deep Embossed Gold TGG Monogram -->
+              <text x="160" y="166" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="52" fill="url(#fancy-gold)" letter-spacing="1">
+                TGG
+              </text>
+              
+              <!-- Micro Stars & Year Stamp -->
+              <text x="160" y="112" text-anchor="middle" font-family="'Cinzel', serif" font-weight="700" font-size="9" fill="url(#fancy-gold)" letter-spacing="3">
+                ★ HAUTE CUISINE ★
+              </text>
+              <text x="160" y="200" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="8" fill="#5eead4" letter-spacing="4">
+                AUTHENTIC &amp; PURE
+              </text>
+            </g>
+
+            <!-- Brand Typography -->
+            <text x="160" y="280" text-anchor="middle" font-family="'Cinzel', serif" font-weight="900" font-size="18" letter-spacing="4" fill="url(#fancy-gold)" class="svg-title">
+              THE GUT GURU
+            </text>
+            <text x="160" y="298" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="8.5" letter-spacing="5" fill="#cbd5e1" class="svg-sub">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-900/60 border-t border-slate-800/60 text-xs text-slate-400">
+          <strong class="text-amber-200">The Vibe:</strong> Hand-stamped artisan luxury. Deep imperial emerald wax with a debossed metallic gold TGG seal of authenticity.
+        </div>
+      </div>
+
+      <!-- ================= LOGO 09: THE SUNLIT MANDALA OF VITALITY (Aura of the Guru) ================= -->
+      <div class="luxury-card group bg-[#111726]/80 rounded-3xl border border-slate-800/80 hover:border-amber-500/50 transition-all duration-300 overflow-hidden shadow-xl hover:shadow-[0_10px_40px_rgba(245,158,11,0.15)] flex flex-col">
+        <div class="p-4 border-b border-slate-800/60 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-[2px] text-amber-400">Concept 09 • Guru's Aura</span>
+            <h3 class="text-sm font-bold font-cinzel text-white">The Sunlit Mandala TGG</h3>
+          </div>
+          <button onclick="downloadSvg('svg-tgg-9', 'TGG_09_Sunlit_Mandala')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500/10 hover:bg-amber-500 hover:text-black transition border border-amber-500/30 text-amber-300">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="canvas-box p-8 flex items-center justify-center min-h-[300px] transition-colors bg-[#0b101a]">
+          <svg id="svg-tgg-9" class="w-full max-w-[270px] h-auto" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g filter="url(#gold-glow)">
+              <!-- 16 Sunburst Corona Rays -->
+              <g stroke="url(#fancy-gold)" stroke-width="2" stroke-linecap="round" opacity="0.75">
+                <line x1="160" y1="45" x2="160" y2="30"/>
+                <line x1="160" y1="235" x2="160" y2="250"/>
+                <line x1="65" y1="140" x2="50" y2="140"/>
+                <line x1="255" y1="140" x2="270" y2="140"/>
+                <line x1="93" y1="73" x2="82" y2="62"/>
+                <line x1="227" y1="207" x2="238" y2="218"/>
+                <line x1="93" y1="207" x2="82" y2="218"/>
+                <line x1="227" y1="73" x2="238" y2="62"/>
+              </g>
+
+              <!-- Concentric Gold Rings -->
+              <circle cx="160" cy="140" r="75" stroke="url(#fancy-gold)" stroke-width="2.5" fill="none"/>
+              <circle cx="160" cy="140" r="68" stroke="url(#fancy-gold)" stroke-width="1" stroke-dasharray="3 3"/>
+
+              <!-- Central Crowned TGG Monogram with Sprout Stem -->
+              <text x="160" y="154" text-anchor="middle" font-family="'Cinzel', serif" font-weight="900" font-size="38" fill="url(#fancy-gold)" letter-spacing="2">
+                TGG
+              </text>
+
+              <!-- Sprouting Leaf from Center Top of T -->
+              <path d="M160 115 C155 102 148 95 160 85 C172 95 165 102 160 115 Z" fill="#34d399"/>
+              <circle cx="160" cy="80" r="3.5" fill="#fef08a"/>
+
+              <!-- Underline Arc of Digestive Harmony -->
+              <path d="M130 170 C145 180 175 180 190 170" stroke="url(#fancy-gold)" stroke-width="3" stroke-linecap="round" fill="none"/>
+            </g>
+
+            <!-- Brand Typography -->
+            <text x="160" y="272" text-anchor="middle" font-family="'Cinzel', serif" font-weight="900" font-size="18" letter-spacing="4" fill="url(#fancy-gold)" class="svg-title">
+              THE GUT GURU
+            </text>
+            <text x="160" y="292" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="8.5" letter-spacing="5" fill="#cbd5e1" class="svg-sub">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-900/60 border-t border-slate-800/60 text-xs text-slate-400">
+          <strong class="text-amber-200">The Vibe:</strong> Cosmic wellness & hospitality radiance. A sacred sunburst mandala surrounding a crowned TGG with digestive harmony arc.
+        </div>
+      </div>
+
+      <!-- ================= LOGO 10: THE GOURMET FORK & SPROUT MONOGRAM ================= -->
+      <div class="luxury-card group bg-[#111726]/80 rounded-3xl border border-slate-800/80 hover:border-amber-500/50 transition-all duration-300 overflow-hidden shadow-xl hover:shadow-[0_10px_40px_rgba(245,158,11,0.15)] flex flex-col">
+        <div class="p-4 border-b border-slate-800/60 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-[2px] text-amber-400">Concept 10 • Culinary Fusion</span>
+            <h3 class="text-sm font-bold font-cinzel text-white">The Gourmet Fork &amp; Sprout TGG</h3>
+          </div>
+          <button onclick="downloadSvg('svg-tgg-10', 'TGG_10_Gourmet_Fork')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500/10 hover:bg-amber-500 hover:text-black transition border border-amber-500/30 text-amber-300">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="canvas-box p-8 flex items-center justify-center min-h-[300px] transition-colors bg-[#0b101a]">
+          <svg id="svg-tgg-10" class="w-full max-w-[270px] h-auto" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g filter="url(#gold-glow)">
+              <!-- Central Fork Stem forming the 'T' -->
+              <line x1="160" y1="75" x2="160" y2="195" stroke="url(#fancy-gold)" stroke-width="8" stroke-linecap="round"/>
+              <line x1="120" y1="75" x2="200" y2="75" stroke="url(#fancy-gold)" stroke-width="8" stroke-linecap="round"/>
+              
+              <!-- Fork Tines that double as Growth Sprout -->
+              <line x1="135" y1="75" x2="135" y2="45" stroke="url(#fancy-gold)" stroke-width="4.5" stroke-linecap="round"/>
+              <line x1="160" y1="75" x2="160" y2="35" stroke="url(#fancy-gold)" stroke-width="4.5" stroke-linecap="round"/>
+              <line x1="185" y1="75" x2="185" y2="45" stroke="url(#fancy-gold)" stroke-width="4.5" stroke-linecap="round"/>
+
+              <!-- Twin Interlocking 'G' loops extending symmetrically from the fork shaft -->
+              <path d="M160 115 C130 115 105 130 105 155 C105 180 130 195 160 195 L160 178 L140 178 L140 166 L160 166" 
+                    stroke="url(#fancy-gold)" stroke-width="7" stroke-linecap="round" fill="none"/>
+
+              <path d="M160 115 C190 115 215 130 215 155 C215 180 190 195 160 195 L160 178 L180 178 L180 166 L160 166" 
+                    stroke="url(#royal-emerald)" stroke-width="7" stroke-linecap="round" fill="none"/>
+
+              <!-- Radiant Golden Seed at Apex -->
+              <circle cx="160" cy="25" r="4.5" fill="#fef08a"/>
+            </g>
+
+            <!-- Brand Typography -->
+            <text x="160" y="268" text-anchor="middle" font-family="'Cinzel', serif" font-weight="900" font-size="18" letter-spacing="4" fill="url(#fancy-gold)" class="svg-title">
+              THE GUT GURU
+            </text>
+            <text x="160" y="288" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="8.5" letter-spacing="5" fill="#cbd5e1" class="svg-sub">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-900/60 border-t border-slate-800/60 text-xs text-slate-400">
+          <strong class="text-amber-200">The Vibe:</strong> True culinary fusion. The letter 'T' is forged as a fine dining fork whose tines sprout upward, cradling symmetrical 'G' loops.
+        </div>
+      </div>
+
+      <!-- ================= LOGO 11: THE DIAMOND FACET CREST (Fine Jewelry Quality) ================= -->
+      <div class="luxury-card group bg-[#111726]/80 rounded-3xl border border-slate-800/80 hover:border-amber-500/50 transition-all duration-300 overflow-hidden shadow-xl hover:shadow-[0_10px_40px_rgba(245,158,11,0.15)] flex flex-col">
+        <div class="p-4 border-b border-slate-800/60 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-[2px] text-amber-400">Concept 11 • Haute Joaillerie</span>
+            <h3 class="text-sm font-bold font-cinzel text-white">The Diamond Facet Crest</h3>
+          </div>
+          <button onclick="downloadSvg('svg-tgg-11', 'TGG_11_Diamond_Facet')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500/10 hover:bg-amber-500 hover:text-black transition border border-amber-500/30 text-amber-300">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="canvas-box p-8 flex items-center justify-center min-h-[300px] transition-colors bg-[#0b101a]">
+          <svg id="svg-tgg-11" class="w-full max-w-[270px] h-auto" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g filter="url(#gold-glow)">
+              <!-- Brilliant Cut Diamond Silhouette Outline -->
+              <polygon points="110,70 210,70 250,110 160,215 70,110" stroke="url(#fancy-gold)" stroke-width="2.5" fill="none"/>
+              <line x1="70" y1="110" x2="250" y2="110" stroke="url(#fancy-gold)" stroke-width="1.5"/>
+              <line x1="110" y1="70" x2="160" y2="215" stroke="url(#fancy-gold)" stroke-width="1" opacity="0.5"/>
+              <line x1="210" y1="70" x2="160" y2="215" stroke="url(#fancy-gold)" stroke-width="1" opacity="0.5"/>
+
+              <!-- Central Faceted TGG Cutout Monogram -->
+              <rect x="110" y="105" width="100" height="42" rx="6" fill="#0b101a" stroke="url(#fancy-gold)" stroke-width="2"/>
+              <text x="160" y="136" text-anchor="middle" font-family="'Cinzel', serif" font-weight="900" font-size="28" fill="url(#fancy-gold)" letter-spacing="3">
+                TGG
+              </text>
+
+              <!-- Subtle Emerald Heart Accent -->
+              <circle cx="160" cy="180" r="4.5" fill="#34d399"/>
+            </g>
+
+            <!-- Brand Typography -->
+            <text x="160" y="268" text-anchor="middle" font-family="'Cinzel', serif" font-weight="900" font-size="18" letter-spacing="4" fill="url(#fancy-gold)" class="svg-title">
+              THE GUT GURU
+            </text>
+            <text x="160" y="288" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="8.5" letter-spacing="5" fill="#cbd5e1" class="svg-sub">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-900/60 border-t border-slate-800/60 text-xs text-slate-400">
+          <strong class="text-amber-200">The Vibe:</strong> Fine jewelry precision. A brilliant-cut diamond contour enclosing a faceted gold plaque with clean serif TGG.
+        </div>
+      </div>
+
+      <!-- ================= LOGO 12: THE CONTEMPORARY MINIMALIST LUXURY (Ultra Sleek) ================= -->
+      <div class="luxury-card group bg-[#111726]/80 rounded-3xl border border-slate-800/80 hover:border-amber-500/50 transition-all duration-300 overflow-hidden shadow-xl hover:shadow-[0_10px_40px_rgba(245,158,11,0.15)] flex flex-col">
+        <div class="p-4 border-b border-slate-800/60 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-[2px] text-amber-400">Concept 12 • Modern Pure Luxury</span>
+            <h3 class="text-sm font-bold font-cinzel text-white">The Ultra-Sleek Modern TGG</h3>
+          </div>
+          <button onclick="downloadSvg('svg-tgg-12', 'TGG_12_Modern_Luxury')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500/10 hover:bg-amber-500 hover:text-black transition border border-amber-500/30 text-amber-300">
+            ↓ SVG
+          </button>
+        </div>
+
+        <div class="canvas-box p-8 flex items-center justify-center min-h-[300px] transition-colors bg-[#0b101a]">
+          <svg id="svg-tgg-12" class="w-full max-w-[270px] h-auto" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g filter="url(#gold-glow)">
+              <!-- Dual Concentric Minimal Pinstripe Rings -->
+              <circle cx="160" cy="140" r="76" stroke="url(#fancy-gold)" stroke-width="2" fill="none"/>
+              <circle cx="160" cy="140" r="71" stroke="url(#fancy-gold)" stroke-width="1" stroke-dasharray="2 6" fill="none"/>
+
+              <!-- Ultra-Refined Geometric TGG Monogram -->
+              <!-- Slender T standing as a central pillar -->
+              <path d="M125 105 L195 105 L195 113 L164 113 L164 175 L156 175 L156 113 L125 113 Z" fill="url(#fancy-gold)"/>
+
+              <!-- Seamless Minimal Left G -->
+              <path d="M152 116 C130 116 114 128 114 144 C114 160 130 172 152 172 L152 163 L138 163 C128 163 123 155 123 144 C123 133 130 125 148 125 Z" fill="url(#fancy-gold)"/>
+
+              <!-- Seamless Minimal Right G -->
+              <path d="M168 116 C190 116 206 128 206 144 C206 160 190 172 168 172 L168 163 L182 163 C192 163 197 155 197 144 C197 133 190 125 172 125 Z" fill="url(#fancy-gold)"/>
+
+              <!-- Single Botanical Green Seed Dot -->
+              <circle cx="160" cy="92" r="3.5" fill="#34d399"/>
+            </g>
+
+            <!-- Brand Typography -->
+            <text x="160" y="268" text-anchor="middle" font-family="'Cinzel', serif" font-weight="900" font-size="18" letter-spacing="4" fill="url(#fancy-gold)" class="svg-title">
+              THE GUT GURU
+            </text>
+            <text x="160" y="288" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="8.5" letter-spacing="5" fill="#cbd5e1" class="svg-sub">
+              HOSPITALITY SERVICES
+            </text>
+          </svg>
+        </div>
+
+        <div class="p-4 bg-slate-900/60 border-t border-slate-800/60 text-xs text-slate-400">
+          <strong class="text-amber-200">The Vibe:</strong> Quiet luxury / Old money elegance. Razor-thin geometric lines, perfectly proportioned whitespace, and pure restraint.
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Interactive JavaScript for Theme Switcher & SVG Export -->
+  <script>
+    function setCanvas(theme, btn) {
+      document.querySelectorAll('.theme-btn').forEach(b => {
+        b.className = 'theme-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition';
+      });
+      btn.className = 'theme-btn active px-3 py-1.5 rounded-lg text-xs font-bold transition bg-amber-500/20 text-amber-300 border border-amber-500/40';
+
+      const canvasBoxes = document.querySelectorAll('.canvas-box');
+      const titles = document.querySelectorAll('.svg-title');
+      const subs = document.querySelectorAll('.svg-sub');
+
+      canvasBoxes.forEach(box => {
+        box.className = 'canvas-box p-8 flex items-center justify-center min-h-[300px] transition-colors';
+        if (theme === 'obsidian') {
+          box.classList.add('bg-[#0b101a]');
+          subs.forEach(s => s.setAttribute('fill', '#cbd5e1'));
+        } else if (theme === 'emerald') {
+          box.classList.add('bg-[#042f2e]');
+          subs.forEach(s => s.setAttribute('fill', '#a7f3d0'));
+        } else if (theme === 'burgundy') {
+          box.classList.add('bg-[#3b0716]');
+          subs.forEach(s => s.setAttribute('fill', '#fecdd3'));
+        } else if (theme === 'champagne') {
+          box.classList.add('bg-[#fbf7ee]');
+          subs.forEach(s => s.setAttribute('fill', '#57534e'));
+        } else if (theme === 'white') {
+          box.classList.add('bg-[#ffffff]');
+          subs.forEach(s => s.setAttribute('fill', '#0f172a'));
+        }
+      });
+    }
+
+    function downloadSvg(svgId, filename) {
+      const svg = document.getElementById(svgId);
+      const serializer = new XMLSerializer();
+      let source = serializer.serializeToString(svg);
+
+      // Ensure namespaces
+      if (!source.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {
+        source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+      }
+
+      // Inject global defs so download works independently
+      const globalDefs = `
+      <defs>
+        <linearGradient id="fancy-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#fff1cf" />
+          <stop offset="25%" stop-color="#e5b85a" />
+          <stop offset="50%" stop-color="#b88426" />
+          <stop offset="75%" stop-color="#f5d68b" />
+          <stop offset="100%" stop-color="#9d6913" />
+        </linearGradient>
+        <linearGradient id="royal-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#34d399" />
+          <stop offset="50%" stop-color="#059669" />
+          <stop offset="100%" stop-color="#064e3b" />
+        </linearGradient>
+        <filter id="gold-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#f59e0b" flood-opacity="0.35" />
+        </filter>
+      </defs>`;
+      
+      source = source.replace(/<svg([^>]*)>/, `<svg$1>${globalDefs}`);
+
+      const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename + '.svg';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>

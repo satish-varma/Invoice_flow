@@ -1,0 +1,63 @@
+<svg viewBox="0 0 620 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="h-grad-teal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="h-grad-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="60%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <linearGradient id="h-grad-crown" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#fbbf24" />
+    </linearGradient>
+  </defs>
+
+  <!-- Left Side: TGG Monogram Icon -->
+  <g transform="translate(10, 0)">
+    <!-- Left G Ribbon -->
+    <path d="M57 40 C36 22 10 35 10 58 C10 81 36 90 57 73 L57 60 L38 60" 
+          stroke="url(#h-grad-teal)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    
+    <!-- Right G Ribbon -->
+    <path d="M63 73 C84 90 110 77 110 54 C110 31 84 22 63 39 L63 52 L82 52" 
+          stroke="url(#h-grad-gold)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+
+    <!-- Center T Crown -->
+    <path d="M48 24 L72 24" stroke="url(#h-grad-crown)" stroke-width="4" stroke-linecap="round" />
+    <path d="M60 24 L60 38" stroke="url(#h-grad-crown)" stroke-width="4" stroke-linecap="round" />
+
+    <!-- "THE" Micro Badge -->
+    <rect x="49" y="11" width="22" height="10" rx="5" fill="#0f766e" />
+    <text x="60" y="18.5" text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="900" font-size="6" letter-spacing="1" fill="#ffffff">
+      THE
+    </text>
+
+    <!-- Center Sparkle -->
+    <circle cx="60" cy="56" r="3" fill="#ffffff" />
+    <circle cx="60" cy="56" r="1.5" fill="#10b981" />
+  </g>
+
+  <!-- Divider Line -->
+  <line x1="140" y1="20" x2="140" y2="100" stroke="#e2e8f0" stroke-width="1.5" />
+
+  <!-- Right Side: Full Brand Typography -->
+  <g transform="translate(160, 0)">
+    <!-- Primary Name -->
+    <text x="0" y="55" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="900" font-size="34" letter-spacing="2.5" fill="#0f172a">
+      THE GUT GURU
+    </text>
+
+    <!-- Subtitle: Hospitality Services -->
+    <text x="2" y="80" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="700" font-size="13" letter-spacing="6" fill="#0f766e">
+      HOSPITALITY SERVICES
+    </text>
+
+    <!-- Pill Tag -->
+    <text x="2" y="98" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="600" font-size="9" letter-spacing="2" fill="#94a3b8">
+      CORPORATE PANTRY • CATERING • REFRESHMENTS
+    </text>
+  </g>
+</svg>

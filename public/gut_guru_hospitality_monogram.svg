@@ -1,0 +1,82 @@
+<svg viewBox="0 0 500 380" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Left G Teal-to-Emerald Gradient -->
+    <linearGradient id="grad-teal-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e" />
+      <stop offset="60%" stop-color="#0d9488" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+
+    <!-- Right G Emerald-to-Gold Gradient -->
+    <linearGradient id="grad-emerald-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="50%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+
+    <!-- Crown "T" Pure Warm Gold -->
+    <linearGradient id="grad-gold-crown" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#fbbf24" />
+    </linearGradient>
+
+    <!-- Subtle Drop Glow -->
+    <filter id="glow" x="-10%" y="-10%" width="120%" height="120%" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- ================= MONOGRAM EMBLEM (T + GG LOOP) ================= -->
+  <g transform="translate(50, 10)">
+    <!-- Ambient Aura -->
+    <circle cx="200" cy="115" r="85" fill="#10b981" opacity="0.04" />
+
+    <!-- Left Interlocking Ribbon (First G) -->
+    <path d="M195 90 C155 58 110 82 110 122 C110 162 155 178 195 146 L195 124 L162 124" 
+          stroke="url(#grad-teal-emerald)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    
+    <!-- Right Interlocking Ribbon (Second G) -->
+    <path d="M205 146 C245 178 290 154 290 114 C290 74 245 58 205 90 L205 112 L238 112" 
+          stroke="url(#grad-emerald-gold)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+
+    <!-- Central Nexus: Stylized Golden "T" uniting the two loops -->
+    <!-- T Horizontal Top Bar -->
+    <path d="M182 62 L218 62" stroke="url(#grad-gold-crown)" stroke-width="6" stroke-linecap="round" />
+    <!-- T Vertical Stem descending into the loop crossing -->
+    <path d="M200 62 L200 86" stroke="url(#grad-gold-crown)" stroke-width="6" stroke-linecap="round" />
+    
+    <!-- Micro "THE" Badge inside the T apex -->
+    <rect x="184" y="44" width="32" height="13" rx="6.5" fill="#0f766e" />
+    <text x="200" y="53.5" text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="900" font-size="7.5" letter-spacing="1.5" fill="#ffffff">
+      THE
+    </text>
+
+    <!-- Center Radiance Core -->
+    <circle cx="200" cy="118" r="4.5" fill="#ffffff" filter="url(#glow)" />
+    <circle cx="200" cy="118" r="2.5" fill="#10b981" />
+  </g>
+
+  <!-- ================= LUXURY HOSPITALITY TYPOGRAPHY ================= -->
+  <!-- Primary Brand Name -->
+  <text x="250" y="260" text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="900" font-size="32" letter-spacing="4" fill="#0f172a">
+    THE GUT GURU
+  </text>
+
+  <!-- Hospitality Services Subtitle -->
+  <text x="250" y="288" text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="700" font-size="12" letter-spacing="8" fill="#0f766e">
+    HOSPITALITY SERVICES
+  </text>
+
+  <!-- Luxury Accent Lines & Star -->
+  <g transform="translate(0, 5)">
+    <line x1="120" y1="305" x2="225" y2="305" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" />
+    <!-- Center Diamond / Star -->
+    <polygon points="250,302 253,305 250,308 247,305" fill="#f59e0b" />
+    <line x1="275" y1="305" x2="380" y2="305" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" />
+  </g>
+
+  <text x="250" y="332" text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="600" font-size="9" letter-spacing="3" fill="#94a3b8">
+    PANTRY • CATERING • CORPORATE WELLNESS
+  </text>
+</svg>

@@ -125,18 +125,17 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   }, [isAdmin, user, pathname]);
 
   // Active check helpers
-  const isRecordsActive =
+  const isRecordsAndHrActive =
     pathname === '/invoices' ||
     pathname === '/delivery-challans' ||
     pathname === '/quotations' ||
     pathname === '/quotation' ||
-    pathname === '/products';
-
-  const isHrActive =
+    pathname === '/products' ||
     pathname === '/payslip' ||
     pathname === '/offer-letter' ||
     pathname === '/declarations' ||
-    pathname === '/clients';
+    pathname === '/clients' ||
+    pathname === '/newrelic/leaves';
 
   const isAdminActive =
     pathname.startsWith('/newrelic/stock-requests-admin') ||
@@ -374,142 +373,133 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             </Link>
           )}
 
-          {/* ── Dropdown 1: Records & Masters ── */}
-          {(hasPermission(user, 'invoices') || hasPermission(user, 'quotations') || hasPermission(user, 'general_dc') || hasPermission(user, 'masters')) && (
+          {/* ── Dropdown: Records, HR & Legal ── */}
+          {(hasPermission(user, 'invoices') ||
+            hasPermission(user, 'quotations') ||
+            hasPermission(user, 'general_dc') ||
+            hasPermission(user, 'masters') ||
+            hasPermission(user, 'hr_docs')) && (
             <DropdownMenu>
               <DropdownMenuTrigger
                 className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 outline-none cursor-pointer ${
-                  isRecordsActive
+                  isRecordsAndHrActive
                     ? 'border-[#3b2fc9] text-[#3b2fc9]'
                     : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                 }`}
               >
                 <Package className="h-4 w-4" />
-                Records &amp; Masters
+                Records, HR &amp; Legal
                 <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56 p-1.5">
-                <DropdownMenuLabel className="text-[11px] font-bold uppercase text-gray-400 px-2 py-1">
-                  Master Records
-                </DropdownMenuLabel>
-                {hasPermission(user, 'invoices') && role !== 'guest' && (
+                {/* ── Section: Records & Masters ── */}
+                {(hasPermission(user, 'invoices') || hasPermission(user, 'quotations') || hasPermission(user, 'general_dc') || hasPermission(user, 'masters')) && (
                   <>
-                    <DropdownMenuItem asChild>
-                      <Link href="/" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
-                        <LayoutDashboard className="h-3.5 w-3.5 text-indigo-600" />
-                        Invoice Dashboard &amp; New
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/invoices" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
-                        <ListOrdered className="h-3.5 w-3.5 text-blue-600" />
-                        Saved Invoices
-                      </Link>
-                    </DropdownMenuItem>
+                    <DropdownMenuLabel className="text-[11px] font-bold uppercase text-gray-400 px-2 py-1">
+                      Records &amp; Masters
+                    </DropdownMenuLabel>
+                    {hasPermission(user, 'invoices') && role !== 'guest' && (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link href="/" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                            <LayoutDashboard className="h-3.5 w-3.5 text-indigo-600" />
+                            Invoice Dashboard &amp; New
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/invoices" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                            <ListOrdered className="h-3.5 w-3.5 text-blue-600" />
+                            Saved Invoices
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {hasPermission(user, 'newrelic_dc') && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/newrelic" prefetch={false} className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                          <FileText className="h-3.5 w-3.5 text-purple-600" />
+                          NewRelic DC Hub
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    {hasPermission(user, 'general_dc') && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/delivery-challans" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                          <Truck className="h-3.5 w-3.5 text-blue-600" />
+                          Saved General Challans
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    {hasPermission(user, 'quotations') && (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link href="/quotations" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                            <FileSearch className="h-3.5 w-3.5 text-amber-600" />
+                            Saved Quotations
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/quotation" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                            <FilePlus className="h-3.5 w-3.5 text-emerald-600" />
+                            New Quotation / Proposal
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {hasPermission(user, 'masters') && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/products" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                          <Package className="h-3.5 w-3.5 text-purple-600" />
+                          Products Master
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                   </>
                 )}
-                {hasPermission(user, 'newrelic_dc') && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/newrelic" prefetch={false} className="flex items-center gap-2 cursor-pointer font-medium text-xs">
-                      <FileText className="h-3.5 w-3.5 text-purple-600" />
-                      NewRelic DC Hub
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                {hasPermission(user, 'general_dc') && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/delivery-challans" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
-                      <Truck className="h-3.5 w-3.5 text-blue-600" />
-                      Saved General Challans
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                {hasPermission(user, 'quotations') && (
-                  <>
-                    <DropdownMenuItem asChild>
-                      <Link href="/quotations" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
-                        <FileSearch className="h-3.5 w-3.5 text-amber-600" />
-                        Saved Quotations
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/quotation" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
-                        <FilePlus className="h-3.5 w-3.5 text-emerald-600" />
-                        New Quotation / Proposal
-                      </Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
-                {hasPermission(user, 'masters') && (
-                  <>
-                    <DropdownMenuSeparator className="my-1" />
-                    <DropdownMenuItem asChild>
-                      <Link href="/products" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
-                        <Package className="h-3.5 w-3.5 text-purple-600" />
-                        Products Master
-                      </Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
 
-          {/* ── Dropdown 2: HR & Legal (Rarely Used Documents) ── */}
-          {(hasPermission(user, 'hr_docs') || hasPermission(user, 'masters')) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 outline-none cursor-pointer ${
-                  isHrActive
-                    ? 'border-[#3b2fc9] text-[#3b2fc9]'
-                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-                }`}
-              >
-                <Briefcase className="h-4 w-4" />
-                HR &amp; Legal
-                <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56 p-1.5">
-                <DropdownMenuLabel className="text-[11px] font-bold uppercase text-gray-400 px-2 py-1">
-                  HR &amp; Compliance Documents
-                </DropdownMenuLabel>
-                {hasPermission(user, 'hr_docs') && (
-                  <>
-                    <DropdownMenuItem asChild>
-                      <Link href="/payslip" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
-                        <Receipt className="h-3.5 w-3.5 text-amber-600" />
-                        Staff Payslips
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/offer-letter" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
-                        <Briefcase className="h-3.5 w-3.5 text-blue-600" />
-                        Offer Letters
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/declarations" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
-                        <FileText className="h-3.5 w-3.5 text-emerald-600" />
-                        GST Declarations (URD)
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/newrelic/leaves" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
-                        <CalendarDays className="h-3.5 w-3.5 text-teal-600" />
-                        Leaves &amp; Holiday Calendar
-                      </Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
-                {hasPermission(user, 'masters') && (
+                {/* ── Section: HR & Legal ── */}
+                {(hasPermission(user, 'hr_docs') || hasPermission(user, 'masters')) && (
                   <>
                     <DropdownMenuSeparator className="my-1" />
-                    <DropdownMenuItem asChild>
-                      <Link href="/clients" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
-                        <Users className="h-3.5 w-3.5 text-indigo-600" />
-                        Clients Directory
-                      </Link>
-                    </DropdownMenuItem>
+                    <DropdownMenuLabel className="text-[11px] font-bold uppercase text-gray-400 px-2 py-1">
+                      HR &amp; Legal
+                    </DropdownMenuLabel>
+                    {hasPermission(user, 'hr_docs') && (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link href="/payslip" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                            <Receipt className="h-3.5 w-3.5 text-amber-600" />
+                            Staff Payslips
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/offer-letter" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                            <Briefcase className="h-3.5 w-3.5 text-blue-600" />
+                            Offer Letters
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/declarations" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                            <FileText className="h-3.5 w-3.5 text-emerald-600" />
+                            GST Declarations (URD)
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/newrelic/leaves" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                            <CalendarDays className="h-3.5 w-3.5 text-teal-600" />
+                            Leaves &amp; Holiday Calendar
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {hasPermission(user, 'masters') && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/clients" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                          <Users className="h-3.5 w-3.5 text-indigo-600" />
+                          Clients Directory
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                   </>
                 )}
               </DropdownMenuContent>

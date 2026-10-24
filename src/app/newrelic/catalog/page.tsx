@@ -4,12 +4,41 @@ import { CatalogItem } from '@/types/challan';
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { getCatalogItems, saveCatalogItem, deleteCatalogItem } from '@/services/newrelicCatalogService';
+import {
+  getCatalogItems,
+  saveCatalogItem,
+  deleteCatalogItem,
+  bulkSaveCatalogItems,
+  bulkDeleteCatalogItems,
+  bulkUpdateCatalogSites,
+} from '@/services/newrelicCatalogService';
 import { getAllPricingItems } from '@/services/newrelicPricingService';
-import { Trash2, Plus, Pencil, Check, X, Search, Database, Download, RefreshCw, AlertTriangle, ArrowLeft, Sparkles } from 'lucide-react';
+import {
+  Trash2,
+  Plus,
+  Pencil,
+  Check,
+  X,
+  Search,
+  Database,
+  Download,
+  Upload,
+  RefreshCw,
+  AlertTriangle,
+  ArrowLeft,
+  Sparkles,
+  Package,
+  Layers,
+  ArrowUpDown,
+  CheckSquare,
+  Square,
+  Loader2,
+  Building2,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
 import { hasPermission } from '@/types/permissions';
+import { CatalogCsvImportModal } from '@/components/newrelic/catalog/CatalogCsvImportModal';
 
 const SITES_OPTIONS = [
   { id: 'all', label: 'All Sites' },
@@ -67,9 +96,27 @@ export default function CatalogPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Missing alerts filter tab: 'all' | 'missing-mrp' | 'missing-case'
+  // Filters & Sorting
   const [filterMode, setFilterMode] = useState<'all' | 'missing-mrp' | 'missing-case'>('all');
   const [siteFilter, setSiteFilter] = useState<string>('all');
+  const [brandFilter, setBrandFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<
+    'brand_asc' | 'brand_desc' | 'item_asc' | 'item_desc' | 'case_asc' | 'case_desc' | 'mrp_asc' | 'mrp_desc'
+  >('brand_asc');
+
+  // Multi-selection for bulk operations
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBatchSitesModal, setShowBatchSitesModal] = useState(false);
+  const [batchSitesSelection, setBatchSitesSelection] = useState<('newrelic' | 'dsm' | 'ntt_data' | 'all')[]>(['all']);
+
+  // Modals & Progress
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<{
+    current: number;
+    total: number;
+    percent: number;
+    statusText: string;
+  } | null>(null);
 
   // Inline editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -96,14 +143,15 @@ export default function CatalogPage() {
     }
   }, [user, role, router]);
 
+  async function loadData() {
+    setLoading(true);
+    const catalogData = await getCatalogItems();
+    setCatalog(catalogData);
+    setLoading(false);
+  }
+
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      const catalogData = await getCatalogItems();
-      setCatalog(catalogData);
-      setLoading(false);
-    }
-    load();
+    loadData();
   }, []);
 
   const missingMrpCount = useMemo(() =>
@@ -115,6 +163,17 @@ export default function CatalogPage() {
     catalog.filter(c => !c.caseSize || c.caseSize <= 0).length,
     [catalog]
   );
+
+  const uniqueBrands = useMemo(() => {
+    const map = new Map<string, number>();
+    catalog.forEach((item) => {
+      const b = item.brandName.trim();
+      if (b) map.set(b, (map.get(b) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([brand, count]) => ({ brand, count }))
+      .sort((a, b) => a.brand.localeCompare(b.brand));
+  }, [catalog]);
 
   const filteredItems = useMemo(() => {
     let list = catalog;
@@ -131,14 +190,79 @@ export default function CatalogPage() {
       });
     }
 
-    if (!search.trim()) return list;
-    const s = search.toLowerCase();
-    return list.filter(
-      (c) =>
-        c.brandName.toLowerCase().includes(s) ||
-        c.itemName.toLowerCase().includes(s)
-    );
-  }, [catalog, search, filterMode, siteFilter]);
+    if (brandFilter !== 'all') {
+      const target = brandFilter.toLowerCase();
+      list = list.filter((item) => item.brandName.trim().toLowerCase() === target);
+    }
+
+    if (search.trim()) {
+      const s = search.toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.brandName.toLowerCase().includes(s) ||
+          c.itemName.toLowerCase().includes(s)
+      );
+    }
+
+    // Sort list
+    return [...list].sort((a, b) => {
+      if (sortBy === 'brand_asc') {
+        const cmp = a.brandName.localeCompare(b.brandName);
+        return cmp !== 0 ? cmp : a.itemName.localeCompare(b.itemName);
+      }
+      if (sortBy === 'brand_desc') {
+        const cmp = b.brandName.localeCompare(a.brandName);
+        return cmp !== 0 ? cmp : a.itemName.localeCompare(b.itemName);
+      }
+      if (sortBy === 'item_asc') {
+        return a.itemName.localeCompare(b.itemName);
+      }
+      if (sortBy === 'item_desc') {
+        return b.itemName.localeCompare(a.itemName);
+      }
+      if (sortBy === 'case_asc') {
+        return (a.caseSize || 0) - (b.caseSize || 0);
+      }
+      if (sortBy === 'case_desc') {
+        return (b.caseSize || 0) - (a.caseSize || 0);
+      }
+      if (sortBy === 'mrp_asc') {
+        return (a.mrp || 0) - (b.mrp || 0);
+      }
+      if (sortBy === 'mrp_desc') {
+        return (b.mrp || 0) - (a.mrp || 0);
+      }
+      return 0;
+    });
+  }, [catalog, search, filterMode, siteFilter, brandFilter, sortBy]);
+
+  // Selection toggle handlers
+  const isAllSelected =
+    filteredItems.length > 0 &&
+    filteredItems.every((item) => item.id && selectedIds.has(item.id));
+
+  function toggleSelectAll() {
+    triggerHaptic('light');
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      const allIds = new Set<string>();
+      filteredItems.forEach((item) => {
+        if (item.id) allIds.add(item.id);
+      });
+      setSelectedIds(allIds);
+    }
+  }
+
+  function toggleSelectItem(id: string) {
+    triggerHaptic('light');
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   async function handleSaveNew() {
     if (isReadOnly || role === 'guest') {
@@ -259,19 +383,24 @@ export default function CatalogPage() {
   }
 
   function handleExportCsv() {
-    const headers = ['Brand Name', 'Item Name', 'Case Size', 'Reference MRP'];
-    const rows = filteredItems.map(i => [
-      `"${i.brandName.replace(/"/g, '""')}"`,
-      `"${i.itemName.replace(/"/g, '""')}"`,
-      i.caseSize || '',
-      i.mrp || ''
-    ]);
-    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    triggerHaptic('light');
+    const headers = ['Brand Name', 'Item Name', 'Case Size', 'Reference MRP', 'Sites'];
+    const rows = filteredItems.map((i) => {
+      const sitesStr = (i.applicableSites && i.applicableSites.length > 0 ? i.applicableSites : ['newrelic']).join('|');
+      return [
+        `"${i.brandName.replace(/"/g, '""')}"`,
+        `"${i.itemName.replace(/"/g, '""')}"`,
+        i.caseSize || '',
+        i.mrp || '',
+        `"${sitesStr}"`,
+      ];
+    });
+    const csvContent = [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `catalog_export_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute('download', `catalog_export_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -284,44 +413,107 @@ export default function CatalogPage() {
     }
     if (!confirm('This will pull MRPs from the Procurement Pricing table to populate the Catalog Reference MRPs. Continue?')) return;
     setSaving(true);
+    setSyncProgress({ current: 0, total: 0, percent: 0, statusText: 'Fetching pricing records...' });
     setError('');
     try {
       const pricingItems = await getAllPricingItems();
-      
+
       const mrpMap = new Map<string, number>();
-      pricingItems.forEach(p => {
-         const key = `${(p.brandName || '').trim().toLowerCase()}__${(p.itemName || '').trim().toLowerCase()}`;
-         const mrpNum = Number(p.mrp);
-         if (mrpNum > 0) mrpMap.set(key, mrpNum);
+      pricingItems.forEach((p) => {
+        const key = `${(p.brandName || '').trim().toLowerCase()}__${(p.itemName || '').trim().toLowerCase()}`;
+        const mrpNum = Number(p.mrp);
+        if (mrpNum > 0) mrpMap.set(key, mrpNum);
       });
 
-      let updatedCount = 0;
+      const itemsToUpdate: Array<{
+        id?: string;
+        brandName: string;
+        itemName: string;
+        defaultQuantity?: number;
+        caseSize?: number;
+        mrp?: number;
+        applicableSites?: ('newrelic' | 'dsm' | 'ntt_data' | 'all')[];
+      }> = [];
+
       for (const cat of catalog) {
-         const key = `${(cat.brandName || '').trim().toLowerCase()}__${(cat.itemName || '').trim().toLowerCase()}`;
-         const pricingMrp = mrpMap.get(key);
-         if (pricingMrp !== undefined && Number(cat.mrp) !== pricingMrp) {
-            await saveCatalogItem({ 
-              brandName: cat.brandName,
-              itemName: cat.itemName,
-              defaultQuantity: cat.defaultQuantity,
-              caseSize: cat.caseSize,
-              mrp: pricingMrp,
-              applicableSites: cat.applicableSites,
-            }, cat.id);
-            updatedCount++;
-         }
+        const key = `${(cat.brandName || '').trim().toLowerCase()}__${(cat.itemName || '').trim().toLowerCase()}`;
+        const pricingMrp = mrpMap.get(key);
+        if (pricingMrp !== undefined && Number(cat.mrp) !== pricingMrp) {
+          itemsToUpdate.push({
+            id: cat.id,
+            brandName: cat.brandName,
+            itemName: cat.itemName,
+            defaultQuantity: cat.defaultQuantity,
+            caseSize: cat.caseSize,
+            mrp: pricingMrp,
+            applicableSites: cat.applicableSites,
+          });
+        }
       }
-      
-      if (updatedCount > 0) {
+
+      if (itemsToUpdate.length > 0) {
+        setSyncProgress({
+          current: 0,
+          total: itemsToUpdate.length,
+          percent: 5,
+          statusText: `Syncing ${itemsToUpdate.length} items with Pricing...`,
+        });
+        const res = await bulkSaveCatalogItems(itemsToUpdate, (p) => {
+          setSyncProgress(p);
+        });
         const refreshed = await getCatalogItems();
         setCatalog(refreshed);
-        alert(`Successfully synced ${updatedCount} items with MRP from the Pricing table!`);
+        setSyncProgress(null);
+        alert(`✓ Successfully synced ${res.savedCount} items with MRP from the Pricing table!`);
       } else {
-        alert(`0 items synced.\n\nDebug Info:\n- Pricing Items found: ${pricingItems.length}\n- Valid MRPs found: ${mrpMap.size}\n- Catalog Items found: ${catalog.length}\n\n(This means either your Pricing table is empty, or all matching items already have the exact same MRP in the Catalog).`);
+        setSyncProgress(null);
+        alert(`All ${catalog.length} catalog items already have matching MRPs with the Pricing table.`);
       }
-    } catch(e) {
+    } catch (e: any) {
       console.error(e);
-      setError('Failed to sync MRPs. Please try again.');
+      setError(e.message || 'Failed to sync MRPs. Please try again.');
+    } finally {
+      setSaving(false);
+      setSyncProgress(null);
+    }
+  }
+
+  async function handleBatchDelete() {
+    if (isReadOnly || role === 'guest') {
+      alert('Read-Only Mode: Guest account cannot delete catalog items.');
+      return;
+    }
+    const ids = Array.from(selectedIds);
+    if (!confirm(`Are you sure you want to delete ${ids.length} selected catalog item(s)?`)) return;
+    setSaving(true);
+    try {
+      await bulkDeleteCatalogItems(ids);
+      setCatalog((prev) => prev.filter((i) => !selectedIds.has(i.id!)));
+      setSelectedIds(new Set());
+      triggerHaptic('success');
+    } catch (e: any) {
+      alert('Failed to delete selected items.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleBatchAssignSites() {
+    if (isReadOnly || role === 'guest') {
+      alert('Read-Only Mode: Guest account cannot edit catalog items.');
+      return;
+    }
+    const ids = Array.from(selectedIds);
+    setSaving(true);
+    try {
+      await bulkUpdateCatalogSites(ids, batchSitesSelection);
+      const refreshed = await getCatalogItems();
+      setCatalog(refreshed);
+      setSelectedIds(new Set());
+      setShowBatchSitesModal(false);
+      triggerHaptic('success');
+    } catch (e: any) {
+      alert('Failed to update sites for selected items.');
     } finally {
       setSaving(false);
     }
@@ -382,7 +574,7 @@ export default function CatalogPage() {
               handleSyncMrp();
             }}
             disabled={saving}
-            className="flex-1 sm:flex-initial h-11 sm:h-10 px-3.5 rounded-2xl sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-xs active:scale-95"
+            className="flex-1 sm:flex-initial h-11 sm:h-10 px-3.5 rounded-2xl sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-xs active:scale-95 cursor-pointer"
           >
             <RefreshCw className={`h-4 w-4 ${saving ? 'animate-spin' : ''}`} />
             <span>Sync from Pricing</span>
@@ -390,9 +582,19 @@ export default function CatalogPage() {
           <button
             onClick={() => {
               triggerHaptic('light');
+              setShowImportModal(true);
+            }}
+            className="flex-1 sm:flex-initial h-11 sm:h-10 px-3.5 rounded-2xl sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all flex items-center justify-center gap-2 shadow-xs active:scale-95 cursor-pointer"
+          >
+            <Upload className="h-4 w-4 text-emerald-600" />
+            <span>Import CSV</span>
+          </button>
+          <button
+            onClick={() => {
+              triggerHaptic('light');
               handleExportCsv();
             }}
-            className="flex-1 sm:flex-initial h-11 sm:h-10 px-3.5 rounded-2xl sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all flex items-center justify-center gap-2 shadow-xs active:scale-95"
+            className="flex-1 sm:flex-initial h-11 sm:h-10 px-3.5 rounded-2xl sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all flex items-center justify-center gap-2 shadow-xs active:scale-95 cursor-pointer"
           >
             <Download className="h-4 w-4" />
             <span>Export CSV</span>
@@ -407,7 +609,7 @@ export default function CatalogPage() {
               setNewMrp('');
               setError('');
             }}
-            className="w-full sm:w-auto h-11 sm:h-10 px-4 rounded-2xl sm:rounded-xl bg-gradient-to-r from-[#3b2fc9] to-indigo-600 hover:from-[#2f25a8] hover:to-indigo-700 text-white text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-md shadow-indigo-500/20 active:scale-95"
+            className="w-full sm:w-auto h-11 sm:h-10 px-4 rounded-2xl sm:rounded-xl bg-gradient-to-r from-[#3b2fc9] to-indigo-600 hover:from-[#2f25a8] hover:to-indigo-700 text-white text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-md shadow-indigo-500/20 active:scale-95 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             <span>Add Item</span>
@@ -421,40 +623,210 @@ export default function CatalogPage() {
         </div>
       )}
 
-      {/* Search & Audit Filters */}
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search catalog by brand or item name..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-12 sm:h-10 pl-10 pr-10 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] transition-all shadow-xs text-slate-900 dark:text-white"
-          />
-          {search && (
-            <button
-              onClick={() => {
-                triggerHaptic('light');
-                setSearch('');
-              }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              title="Clear search"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+      {/* Summary Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              Total Catalog Items
+            </span>
+            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-[#3b2fc9] dark:text-indigo-400">
+              <Package className="h-4 w-4" />
+            </div>
+          </div>
+          <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+            {catalog.length}
+          </p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+            Active cross-site item definitions
+          </p>
         </div>
 
-        {/* Filter Pills & Site Select */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              Configured Brands
+            </span>
+            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
+              <Layers className="h-4 w-4" />
+            </div>
+          </div>
+          <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+            {uniqueBrands.length}
+          </p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+            {brandFilter === 'all' ? 'All brands shown' : `Filtered: ${brandFilter}`}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic('light');
+            setFilterMode(filterMode === 'missing-mrp' ? 'all' : 'missing-mrp');
+          }}
+          className={cn(
+            "p-4 sm:p-5 rounded-2xl sm:rounded-3xl border text-left transition-all active:scale-95 space-y-1 shadow-xs cursor-pointer",
+            filterMode === 'missing-mrp'
+              ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+              : missingMrpCount > 0
+              ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/60 hover:bg-amber-100/60'
+              : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800'
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <span className={cn(
+              "text-[11px] font-bold uppercase tracking-wider",
+              filterMode === 'missing-mrp' ? 'text-amber-100' : 'text-slate-400 dark:text-slate-500'
+            )}>
+              Missing Ref MRP
+            </span>
+            <div className={cn(
+              "p-2 rounded-xl",
+              filterMode === 'missing-mrp' ? 'bg-white/20 text-white' : 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+            )}>
+              <AlertTriangle className="h-4 w-4" />
+            </div>
+          </div>
+          <p className={cn(
+            "text-2xl sm:text-3xl font-black",
+            filterMode === 'missing-mrp' ? 'text-white' : missingMrpCount > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-slate-900 dark:text-white'
+          )}>
+            {missingMrpCount}
+          </p>
+          <p className={cn(
+            "text-[11px] truncate",
+            filterMode === 'missing-mrp' ? 'text-amber-100' : 'text-slate-500 dark:text-slate-400'
+          )}>
+            {missingMrpCount > 0 ? 'Click to filter missing MRPs' : 'All items have MRP'}
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic('light');
+            setFilterMode(filterMode === 'missing-case' ? 'all' : 'missing-case');
+          }}
+          className={cn(
+            "p-4 sm:p-5 rounded-2xl sm:rounded-3xl border text-left transition-all active:scale-95 space-y-1 shadow-xs cursor-pointer",
+            filterMode === 'missing-case'
+              ? 'bg-blue-600 text-white border-blue-700 shadow-sm'
+              : missingCaseCount > 0
+              ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900/60 hover:bg-blue-100/60'
+              : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800'
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <span className={cn(
+              "text-[11px] font-bold uppercase tracking-wider",
+              filterMode === 'missing-case' ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'
+            )}>
+              Missing Case Size
+            </span>
+            <div className={cn(
+              "p-2 rounded-xl",
+              filterMode === 'missing-case' ? 'bg-white/20 text-white' : 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300'
+            )}>
+              <AlertTriangle className="h-4 w-4" />
+            </div>
+          </div>
+          <p className={cn(
+            "text-2xl sm:text-3xl font-black",
+            filterMode === 'missing-case' ? 'text-white' : missingCaseCount > 0 ? 'text-blue-700 dark:text-blue-400' : 'text-slate-900 dark:text-white'
+          )}>
+            {missingCaseCount}
+          </p>
+          <p className={cn(
+            "text-[11px] truncate",
+            filterMode === 'missing-case' ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'
+          )}>
+            {missingCaseCount > 0 ? 'Click to filter missing cases' : 'All items have case size'}
+          </p>
+        </button>
+      </div>
+
+      {/* Live Sync Progress Banner */}
+      {syncProgress && (
+        <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-3xl space-y-2 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-[#3b2fc9] dark:text-indigo-400" />
+              Syncing Reference MRPs with Pricing Table...
+            </span>
+            <span className="font-bold text-[#3b2fc9] dark:text-indigo-300">
+              {syncProgress.percent}%
+            </span>
+          </div>
+          <div className="w-full bg-indigo-200/60 dark:bg-indigo-900/60 rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-[#3b2fc9] to-indigo-500 h-2 rounded-full transition-all duration-200 ease-out"
+              style={{ width: `${syncProgress.percent}%` }}
+            />
+          </div>
+          <div className="flex justify-between items-center text-[11px] text-indigo-700 dark:text-indigo-300">
+            <span>{syncProgress.statusText}</span>
+            {syncProgress.total > 0 && (
+              <span className="font-mono font-medium">
+                {syncProgress.current} / {syncProgress.total} items
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Search, Brand Filter, Site Select & Sort */}
+      <div className="mb-4 flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          {/* Search Box */}
+          <div className="relative flex-1">
+            <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search by brand or item name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-11 pl-10 pr-10 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] transition-all shadow-xs text-slate-900 dark:text-white"
+            />
+            {search && (
+              <button
+                onClick={() => {
+                  triggerHaptic('light');
+                  setSearch('');
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                title="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Brand Filter Dropdown */}
+          <select
+            value={brandFilter}
+            onChange={(e) => {
+              triggerHaptic('light');
+              setBrandFilter(e.target.value);
+            }}
+            className="h-11 px-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 shadow-xs cursor-pointer"
+          >
+            <option value="all">🏷️ All Brands ({uniqueBrands.length})</option>
+            {uniqueBrands.map(({ brand, count }) => (
+              <option key={brand} value={brand}>
+                {brand} ({count})
+              </option>
+            ))}
+          </select>
+
+          {/* Site Filter Dropdown */}
           <select
             value={siteFilter}
             onChange={(e) => {
               triggerHaptic('light');
               setSiteFilter(e.target.value);
             }}
-            className="h-10 sm:h-9 px-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 shrink-0 shadow-xs"
+            className="h-11 px-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 shadow-xs cursor-pointer"
           >
             <option value="all">🏢 All Sites</option>
             <option value="newrelic">NewRelic</option>
@@ -462,56 +834,100 @@ export default function CatalogPage() {
             <option value="ntt_data">NTT Data</option>
           </select>
 
-          <button
-            onClick={() => {
+          {/* Sort By Dropdown */}
+          <select
+            value={sortBy}
+            onChange={(e) => {
               triggerHaptic('light');
-              setFilterMode('all');
+              setSortBy(e.target.value as any);
             }}
-            className={cn(
-              "h-10 sm:h-9 px-3.5 rounded-2xl text-xs font-black whitespace-nowrap transition-all shrink-0 active:scale-95 shadow-xs",
-              filterMode === 'all'
-                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
-                : 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-            )}
+            className="h-11 px-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 shadow-xs cursor-pointer"
           >
-            All Items ({catalog.length})
-          </button>
+            <option value="brand_asc">Sort: Brand (A to Z)</option>
+            <option value="brand_desc">Sort: Brand (Z to A)</option>
+            <option value="item_asc">Sort: Item Name (A to Z)</option>
+            <option value="item_desc">Sort: Item Name (Z to A)</option>
+            <option value="case_desc">Sort: Case Size (High to Low)</option>
+            <option value="case_asc">Sort: Case Size (Low to High)</option>
+            <option value="mrp_desc">Sort: Ref MRP (High to Low)</option>
+            <option value="mrp_asc">Sort: Ref MRP (Low to High)</option>
+          </select>
+        </div>
 
-          <button
-            onClick={() => {
-              triggerHaptic('light');
-              setFilterMode('missing-mrp');
-            }}
-            className={cn(
-              "h-10 sm:h-9 px-3.5 rounded-2xl text-xs font-black whitespace-nowrap flex items-center gap-1.5 transition-all shrink-0 active:scale-95 shadow-xs",
-              filterMode === 'missing-mrp'
-                ? 'bg-amber-600 text-white shadow-sm'
-                : missingMrpCount > 0
-                ? 'bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-700 dark:text-amber-300 hover:bg-amber-100'
-                : 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-400 opacity-60'
-            )}
-          >
-            <AlertTriangle className="h-3.5 w-3.5" />
-            <span>Missing MRP ({missingMrpCount})</span>
-          </button>
+        {/* Quick Filter Pills & Selection Counter */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setFilterMode('all');
+              }}
+              className={cn(
+                "h-9 px-3.5 rounded-2xl text-xs font-black whitespace-nowrap transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer",
+                filterMode === 'all'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                  : 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+              )}
+            >
+              All Items ({catalog.length})
+            </button>
 
-          <button
-            onClick={() => {
-              triggerHaptic('light');
-              setFilterMode('missing-case');
-            }}
-            className={cn(
-              "h-10 sm:h-9 px-3.5 rounded-2xl text-xs font-black whitespace-nowrap flex items-center gap-1.5 transition-all shrink-0 active:scale-95 shadow-xs",
-              filterMode === 'missing-case'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : missingCaseCount > 0
-                ? 'bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100'
-                : 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-400 opacity-60'
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setFilterMode('missing-mrp');
+              }}
+              className={cn(
+                "h-9 px-3.5 rounded-2xl text-xs font-black whitespace-nowrap flex items-center gap-1.5 transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer",
+                filterMode === 'missing-mrp'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : missingMrpCount > 0
+                  ? 'bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-700 dark:text-amber-300 hover:bg-amber-100'
+                  : 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-400 opacity-60'
+              )}
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span>Missing MRP ({missingMrpCount})</span>
+            </button>
+
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setFilterMode('missing-case');
+              }}
+              className={cn(
+                "h-9 px-3.5 rounded-2xl text-xs font-black whitespace-nowrap flex items-center gap-1.5 transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer",
+                filterMode === 'missing-case'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : missingCaseCount > 0
+                  ? 'bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100'
+                  : 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-400 opacity-60'
+              )}
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span>Missing Case ({missingCaseCount})</span>
+            </button>
+
+            {(brandFilter !== 'all' || siteFilter !== 'all' || search) && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setBrandFilter('all');
+                  setSiteFilter('all');
+                  setSearch('');
+                  setFilterMode('all');
+                }}
+                className="text-xs font-bold text-red-600 hover:underline px-2 shrink-0 cursor-pointer"
+              >
+                Reset Filters
+              </button>
             )}
-          >
-            <AlertTriangle className="h-3.5 w-3.5" />
-            <span>Missing Case ({missingCaseCount})</span>
-          </button>
+          </div>
+
+          <div className="text-xs text-slate-500 font-medium">
+            Showing <span className="font-bold text-slate-900 dark:text-white">{filteredItems.length}</span> of {catalog.length} items
+          </div>
         </div>
       </div>
 
@@ -796,11 +1212,28 @@ export default function CatalogPage() {
             return (
               <div
                 key={item.id}
-                className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl sm:rounded-3xl p-4 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all space-y-3"
+                className={cn(
+                  "bg-white dark:bg-slate-900 border rounded-2xl sm:rounded-3xl p-4 shadow-xs transition-all space-y-3",
+                  item.id && selectedIds.has(item.id)
+                    ? 'border-[#3b2fc9] bg-indigo-50/20 dark:bg-indigo-950/20 ring-1 ring-[#3b2fc9]'
+                    : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                )}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                      <button
+                        type="button"
+                        onClick={() => item.id && toggleSelectItem(item.id)}
+                        className="p-0.5 text-slate-400 hover:text-[#3b2fc9] transition-colors cursor-pointer"
+                        title={item.id && selectedIds.has(item.id) ? 'Deselect' : 'Select'}
+                      >
+                        {item.id && selectedIds.has(item.id) ? (
+                          <CheckSquare className="h-4 w-4 text-[#3b2fc9]" />
+                        ) : (
+                          <Square className="h-4 w-4 text-slate-300 dark:text-slate-600" />
+                        )}
+                      </button>
                       <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/60 text-[#3b2fc9] dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/60">
                         {item.brandName}
                       </span>
@@ -987,25 +1420,67 @@ export default function CatalogPage() {
       </div>
 
       {/* Desktop Table (hidden md:block) */}
-      <div className="hidden md:block bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left min-w-[700px]">
-            <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
+            <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-wider">
               <tr>
-                <th className="px-4 py-3 min-w-[150px]">Brand Name</th>
-                <th className="px-4 py-3 min-w-[180px]">Item Name</th>
+                <th className="px-3 py-3 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={toggleSelectAll}
+                    className="rounded border-slate-300 text-[#3b2fc9] focus:ring-[#3b2fc9]/20 cursor-pointer"
+                    title="Select all visible items"
+                  />
+                </th>
+                <th
+                  onClick={() => setSortBy(sortBy === 'brand_asc' ? 'brand_desc' : 'brand_asc')}
+                  className="px-4 py-3 min-w-[150px] cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800 transition-colors select-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Brand Name</span>
+                    <ArrowUpDown className="h-3 w-3 opacity-60" />
+                  </div>
+                </th>
+                <th
+                  onClick={() => setSortBy(sortBy === 'item_asc' ? 'item_desc' : 'item_asc')}
+                  className="px-4 py-3 min-w-[180px] cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800 transition-colors select-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Item Name</span>
+                    <ArrowUpDown className="h-3 w-3 opacity-60" />
+                  </div>
+                </th>
                 <th className="px-4 py-3 w-[150px]">Sites</th>
-                <th className="px-4 py-3 w-[100px]">Case Size</th>
-                <th className="px-4 py-3 w-[100px]">Ref MRP</th>
+                <th
+                  onClick={() => setSortBy(sortBy === 'case_desc' ? 'case_asc' : 'case_desc')}
+                  className="px-4 py-3 w-[110px] cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800 transition-colors select-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Case Size</span>
+                    <ArrowUpDown className="h-3 w-3 opacity-60" />
+                  </div>
+                </th>
+                <th
+                  onClick={() => setSortBy(sortBy === 'mrp_desc' ? 'mrp_asc' : 'mrp_desc')}
+                  className="px-4 py-3 w-[110px] cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800 transition-colors select-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Ref MRP</span>
+                    <ArrowUpDown className="h-3 w-3 opacity-60" />
+                  </div>
+                </th>
                 <th className="px-4 py-3 w-[110px] text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {showAdd && (
-                <tr className="bg-blue-50/50">
+                <tr className="bg-blue-50/50 dark:bg-blue-950/30">
+                  <td className="px-3 py-2 text-center" />
                   <td className="px-4 py-2">
                     <input
-                      className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#3b2fc9]"
+                      className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-sm focus:outline-none focus:border-[#3b2fc9] bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                       placeholder="e.g. Haldiram"
                       value={newBrand}
                       onChange={(e) => setNewBrand(e.target.value)}
@@ -1014,7 +1489,7 @@ export default function CatalogPage() {
                   </td>
                   <td className="px-4 py-2">
                     <input
-                      className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#3b2fc9]"
+                      className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-sm focus:outline-none focus:border-[#3b2fc9] bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                       placeholder="e.g. Soya Sticks"
                       value={newItem}
                       onChange={(e) => setNewItem(e.target.value)}
@@ -1044,7 +1519,7 @@ export default function CatalogPage() {
                             className={`px-1.5 py-0.5 rounded text-[10px] font-medium border transition-colors ${
                               isSelected
                                 ? 'bg-[#3b2fc9] text-white border-[#3b2fc9]'
-                                : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                                : 'bg-white dark:bg-slate-800 text-gray-500 border-gray-200 dark:border-slate-700 hover:bg-gray-50'
                             }`}
                           >
                             {opt.label}
@@ -1056,7 +1531,7 @@ export default function CatalogPage() {
                   <td className="px-4 py-2">
                     <input
                       type="number"
-                      className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#3b2fc9]"
+                      className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-sm focus:outline-none focus:border-[#3b2fc9] bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                       placeholder="e.g. 144"
                       value={newCaseSize}
                       onChange={(e) => setNewCaseSize(e.target.value)}
@@ -1065,7 +1540,7 @@ export default function CatalogPage() {
                   <td className="px-4 py-2">
                     <input
                       type="number"
-                      className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#3b2fc9]"
+                      className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-sm focus:outline-none focus:border-[#3b2fc9] bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                       placeholder="e.g. 50"
                       value={newMrp}
                       onChange={(e) => setNewMrp(e.target.value)}
@@ -1076,7 +1551,7 @@ export default function CatalogPage() {
                       <button
                         onClick={handleSaveNew}
                         disabled={saving}
-                        className="p-1.5 text-green-600 hover:bg-green-50 rounded"
+                        className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg cursor-pointer"
                         title="Save"
                       >
                         <Check className="h-4 w-4" />
@@ -1084,7 +1559,7 @@ export default function CatalogPage() {
                       <button
                         onClick={() => setShowAdd(false)}
                         disabled={saving}
-                        className="p-1.5 text-gray-400 hover:bg-gray-100 rounded"
+                        className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg cursor-pointer"
                         title="Cancel"
                       >
                         <X className="h-4 w-4" />
@@ -1096,45 +1571,58 @@ export default function CatalogPage() {
 
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                    Loading catalog...
+                  <td colSpan={7} className="px-4 py-12 text-center text-slate-400 text-sm">
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-[#3b2fc9]" />
+                      <span>Loading catalog items...</span>
+                    </div>
                   </td>
                 </tr>
               ) : filteredItems.length === 0 && !showAdd ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                    No catalog items found.
+                  <td colSpan={7} className="px-4 py-12 text-center text-slate-400 text-sm">
+                    No catalog items found matching your filters.
                   </td>
                 </tr>
               ) : (
                 filteredItems.map((item) => {
                   const isEditing = editingId === item.id;
+                  const isSelected = item.id ? selectedIds.has(item.id) : false;
                   return (
                     <tr
                       key={item.id}
                       className={cn(
-                        "hover:bg-gray-50 transition-colors",
-                        isEditing && "bg-blue-50/30"
+                        "hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors",
+                        isEditing && "bg-blue-50/30",
+                        isSelected && "bg-indigo-50/40 dark:bg-indigo-950/20"
                       )}
                     >
+                      <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => item.id && toggleSelectItem(item.id)}
+                          className="rounded border-slate-300 text-[#3b2fc9] focus:ring-[#3b2fc9]/20 cursor-pointer"
+                        />
+                      </td>
                       <td className="px-4 py-2">
                         {isEditing ? (
                           <input
-                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-[#3b2fc9]"
+                            className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-2 py-1 text-sm focus:outline-none focus:border-[#3b2fc9] bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                             value={editBrand}
                             onChange={(e) => setEditBrand(e.target.value)}
                             autoFocus
                           />
                         ) : (
-                          <span className="font-medium text-gray-900">
+                          <span className="font-bold text-slate-900 dark:text-white">
                             {item.brandName}
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-2 text-gray-600">
+                      <td className="px-4 py-2 text-slate-600 dark:text-slate-300 font-medium">
                         {isEditing ? (
                           <input
-                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-[#3b2fc9]"
+                            className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-2 py-1 text-sm focus:outline-none focus:border-[#3b2fc9] bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                             value={editItem}
                             onChange={(e) => setEditItem(e.target.value)}
                           />
@@ -1146,7 +1634,7 @@ export default function CatalogPage() {
                         {isEditing ? (
                           <div className="flex flex-wrap gap-1">
                             {SITES_OPTIONS.map((opt) => {
-                              const isSelected = editSites.includes(opt.id as any);
+                              const isSelectedSite = editSites.includes(opt.id as any);
                               return (
                                 <button
                                   key={opt.id}
@@ -1156,7 +1644,7 @@ export default function CatalogPage() {
                                       setEditSites(['all']);
                                     } else {
                                       const withoutAll = editSites.filter((s) => s !== 'all');
-                                      if (isSelected) {
+                                      if (isSelectedSite) {
                                         const next = withoutAll.filter((s) => s !== opt.id);
                                         setEditSites(next.length === 0 ? ['all'] : next);
                                       } else {
@@ -1165,9 +1653,9 @@ export default function CatalogPage() {
                                     }
                                   }}
                                   className={`px-1.5 py-0.5 rounded text-[10px] font-medium border transition-colors ${
-                                    isSelected
+                                    isSelectedSite
                                       ? 'bg-[#3b2fc9] text-white border-[#3b2fc9]'
-                                      : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                                      : 'bg-white dark:bg-slate-800 text-gray-500 border-gray-200 dark:border-slate-700 hover:bg-gray-50'
                                   }`}
                                 >
                                   {opt.label}
@@ -1179,30 +1667,30 @@ export default function CatalogPage() {
                           renderItemSiteBadges(item.applicableSites)
                         )}
                       </td>
-                      <td className="px-4 py-2 text-gray-600">
+                      <td className="px-4 py-2 text-slate-700 dark:text-slate-300 font-mono">
                         {isEditing ? (
                           <input
                             type="number"
-                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-[#3b2fc9]"
+                            className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-2 py-1 text-sm focus:outline-none focus:border-[#3b2fc9] bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                             value={editCaseSize}
                             onChange={(e) => setEditCaseSize(e.target.value)}
                             placeholder="-"
                           />
                         ) : (
-                          item.caseSize || '-'
+                          item.caseSize ? `${item.caseSize} pcs` : <span className="text-blue-600 dark:text-blue-400 font-sans text-xs">Missing</span>
                         )}
                       </td>
-                      <td className="px-4 py-2 text-gray-600">
+                      <td className="px-4 py-2 text-slate-900 dark:text-white font-mono font-bold">
                         {isEditing ? (
                           <input
                             type="number"
-                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-[#3b2fc9]"
+                            className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-2 py-1 text-sm focus:outline-none focus:border-[#3b2fc9] bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                             value={editMrp}
                             onChange={(e) => setEditMrp(e.target.value)}
                             placeholder="-"
                           />
                         ) : (
-                          item.mrp ? `₹${item.mrp}` : '-'
+                          item.mrp ? `₹${item.mrp}` : <span className="text-amber-600 dark:text-amber-400 font-sans text-xs">Missing</span>
                         )}
                       </td>
                       <td className="px-4 py-2 text-right">
@@ -1212,7 +1700,7 @@ export default function CatalogPage() {
                               <button
                                 onClick={() => handleSaveEdit(item.id!)}
                                 disabled={saving}
-                                className="p-1.5 text-green-600 hover:bg-green-50 rounded"
+                                className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg cursor-pointer"
                                 title="Save"
                               >
                                 <Check className="h-4 w-4" />
@@ -1220,7 +1708,7 @@ export default function CatalogPage() {
                               <button
                                 onClick={() => setEditingId(null)}
                                 disabled={saving}
-                                className="p-1.5 text-gray-400 hover:bg-gray-100 rounded"
+                                className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg cursor-pointer"
                                 title="Cancel"
                               >
                                 <X className="h-4 w-4" />
@@ -1238,16 +1726,16 @@ export default function CatalogPage() {
                                   setEditSites(item.applicableSites && item.applicableSites.length > 0 ? item.applicableSites : ['newrelic']);
                                   setError('');
                                 }}
-                                className="p-1.5 text-gray-400 hover:text-[#3b2fc9] hover:bg-blue-50 rounded transition-colors"
-                                title="Edit"
+                                className="p-1.5 text-gray-400 hover:text-[#3b2fc9] hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                                title="Edit Item"
                               >
                                 <Pencil className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => handleDelete(item.id!)}
                                 disabled={saving}
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                title="Delete"
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
+                                title="Delete Item"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
@@ -1263,6 +1751,142 @@ export default function CatalogPage() {
           </table>
         </div>
       </div>
+
+      {/* Floating Batch Operations Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 dark:bg-white/95 text-white dark:text-slate-900 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-md flex items-center gap-3 border border-slate-700 dark:border-slate-200 animate-in slide-in-from-bottom duration-200 max-w-[95vw]">
+          <span className="text-xs font-black whitespace-nowrap bg-indigo-600 text-white px-2.5 py-1 rounded-xl">
+            {selectedIds.size} selected
+          </span>
+
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              setShowBatchSitesModal(true);
+            }}
+            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-800 dark:bg-slate-100 hover:bg-slate-700 dark:hover:bg-slate-200 transition-colors whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
+          >
+            <Building2 className="h-3.5 w-3.5" />
+            <span>Assign Sites</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('medium');
+              handleBatchDelete();
+            }}
+            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white transition-colors whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span>Delete</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              setSelectedIds(new Set());
+            }}
+            className="text-xs text-slate-400 hover:text-white dark:hover:text-slate-900 p-1 rounded-lg cursor-pointer"
+            title="Clear selection"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Batch Assign Sites Modal */}
+      {showBatchSitesModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-sm w-full p-5 space-y-4 border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl text-[#3b2fc9]">
+                  <Building2 className="h-4 w-4" />
+                </div>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                  Assign Sites to {selectedIds.size} Items
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowBatchSitesModal(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              Select which sites will be allowed to order or indent the selected {selectedIds.size} item(s):
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              {SITES_OPTIONS.map((opt) => {
+                const isSelected = batchSitesSelection.includes(opt.id as any);
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      if (opt.id === 'all') {
+                        setBatchSitesSelection(['all']);
+                      } else {
+                        const withoutAll = batchSitesSelection.filter((s) => s !== 'all');
+                        if (isSelected) {
+                          const next = withoutAll.filter((s) => s !== opt.id);
+                          setBatchSitesSelection(next.length === 0 ? ['all'] : next);
+                        } else {
+                          setBatchSitesSelection([...withoutAll, opt.id as any]);
+                        }
+                      }
+                    }}
+                    className={cn(
+                      "px-3 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer",
+                      isSelected
+                        ? 'bg-[#3b2fc9] text-white border-[#3b2fc9] shadow-xs'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowBatchSitesModal(false)}
+                className="flex-1 h-10 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBatchAssignSites}
+                disabled={saving}
+                className="flex-1 h-10 rounded-xl bg-[#3b2fc9] hover:bg-[#2f25a8] text-white text-xs font-bold shadow-sm cursor-pointer"
+              >
+                {saving ? 'Updating...' : 'Save Sites'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSV Import Modal */}
+      <CatalogCsvImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={() => {
+          loadData();
+          triggerHaptic('success');
+        }}
+        existingCatalog={catalog}
+      />
     </div>
   );
 }

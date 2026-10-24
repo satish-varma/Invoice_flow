@@ -247,12 +247,16 @@ export async function saveCatalogItems(
   }
 }
 
+export function getCatalogDocId(brandName: string, itemName: string): string {
+  return `${brandName.trim().toLowerCase()}_${itemName.trim().toLowerCase()}`
+    .replace(/[^a-z0-9]/g, '_')
+    .replace(/_+/g, '_');
+}
+
 export async function saveCatalogItem(item: Omit<CatalogItem, 'id'>, id?: string): Promise<void> {
   await assertWritePermission('Saving Catalog Item');
   try {
-    const docId = id || `${item.brandName.trim().toLowerCase()}_${item.itemName
-      .trim()
-      .toLowerCase()}`.replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+    const docId = id || getCatalogDocId(item.brandName, item.itemName);
     
     const docRef = doc(db, CATALOG_COLLECTION, docId);
     const dataToSave: any = {
@@ -278,6 +282,123 @@ export async function deleteCatalogItem(id: string): Promise<void> {
   } catch (error) {
     console.error('Error deleting catalog item:', error);
     throw error;
+  }
+}
+
+/**
+ * Bulk save or update catalog items in fast concurrent batches with timeout guards.
+ */
+export async function bulkSaveCatalogItems(
+  items: Array<{
+    id?: string;
+    brandName: string;
+    itemName: string;
+    defaultQuantity?: number;
+    caseSize?: number;
+    mrp?: number;
+    applicableSites?: ('newrelic' | 'dsm' | 'ntt_data' | 'all')[];
+  }>,
+  onProgress?: (progress: { current: number; total: number; percent: number; statusText: string }) => void
+): Promise<{ savedCount: number }> {
+  await assertWritePermission('Bulk Saving Catalog Items');
+  const validItems = items.filter(i => i.brandName?.trim() && i.itemName?.trim());
+  if (validItems.length === 0) return { savedCount: 0 };
+
+  const prepared = validItems.map(item => {
+    const docId = item.id || getCatalogDocId(item.brandName, item.itemName);
+    const docRef = doc(db, CATALOG_COLLECTION, docId);
+    const dataToSave: any = {
+      brandName: item.brandName.trim(),
+      itemName: item.itemName.trim(),
+      defaultQuantity: item.defaultQuantity || 1,
+    };
+    if (item.caseSize !== undefined) dataToSave.caseSize = item.caseSize;
+    if (item.mrp !== undefined) dataToSave.mrp = item.mrp;
+    if (item.applicableSites !== undefined) dataToSave.applicableSites = item.applicableSites;
+
+    return { docRef, dataToSave };
+  });
+
+  const CHUNK_SIZE = 15;
+  let savedCount = 0;
+  const total = prepared.length;
+
+  for (let i = 0; i < total; i += CHUNK_SIZE) {
+    const chunk = prepared.slice(i, i + CHUNK_SIZE);
+    const batchIndex = Math.floor(i / CHUNK_SIZE) + 1;
+    const totalBatches = Math.ceil(total / CHUNK_SIZE);
+
+    if (onProgress) {
+      onProgress({
+        current: i,
+        total,
+        percent: Math.round((i / total) * 90),
+        statusText: `Saving batch ${batchIndex} of ${totalBatches}...`,
+      });
+    }
+
+    await Promise.race([
+      Promise.all(chunk.map(entry => setDoc(entry.docRef, entry.dataToSave, { merge: true }))),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout saving catalog batch ${batchIndex}.`)), 15000)
+      ),
+    ]);
+
+    savedCount += chunk.length;
+  }
+
+  if (onProgress) {
+    onProgress({
+      current: total,
+      total,
+      percent: 100,
+      statusText: `Saved ${savedCount} catalog item(s).`,
+    });
+  }
+
+  return { savedCount };
+}
+
+/**
+ * Bulk delete catalog items by ID in concurrent batches.
+ */
+export async function bulkDeleteCatalogItems(ids: string[]): Promise<void> {
+  await assertWritePermission('Bulk Deleting Catalog Items');
+  const validIds = ids.filter(id => Boolean(id?.trim()));
+  if (validIds.length === 0) return;
+
+  const CHUNK_SIZE = 15;
+  for (let i = 0; i < validIds.length; i += CHUNK_SIZE) {
+    const chunk = validIds.slice(i, i + CHUNK_SIZE);
+    await Promise.race([
+      Promise.all(chunk.map(id => deleteDoc(doc(db, CATALOG_COLLECTION, id)))),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout deleting catalog items.')), 15000)
+      ),
+    ]);
+  }
+}
+
+/**
+ * Bulk update applicable sites for multiple catalog items.
+ */
+export async function bulkUpdateCatalogSites(
+  ids: string[],
+  sites: ('newrelic' | 'dsm' | 'ntt_data' | 'all')[]
+): Promise<void> {
+  await assertWritePermission('Bulk Updating Catalog Sites');
+  const validIds = ids.filter(id => Boolean(id?.trim()));
+  if (validIds.length === 0) return;
+
+  const CHUNK_SIZE = 15;
+  for (let i = 0; i < validIds.length; i += CHUNK_SIZE) {
+    const chunk = validIds.slice(i, i + CHUNK_SIZE);
+    await Promise.race([
+      Promise.all(chunk.map(id => setDoc(doc(db, CATALOG_COLLECTION, id), { applicableSites: sites }, { merge: true }))),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout updating catalog sites.')), 15000)
+      ),
+    ]);
   }
 }
 

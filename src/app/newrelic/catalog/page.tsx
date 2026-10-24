@@ -132,8 +132,12 @@ export default function CatalogPage() {
   const [editMrp, setEditMrp] = useState<string>('');
   const [editSites, setEditSites] = useState<('newrelic' | 'dsm' | 'ntt_data' | 'all')[]>(['newrelic']);
 
-  // Single field quick-edit state (Case Size or Ref MRP)
-  const [quickEdit, setQuickEdit] = useState<{ id: string; field: 'caseSize' | 'mrp'; value: string } | null>(null);
+  // Single field quick-edit state (Brand, Item, Case Size or Ref MRP)
+  const [quickEdit, setQuickEdit] = useState<{
+    id: string;
+    field: 'brandName' | 'itemName' | 'caseSize' | 'mrp';
+    value: string;
+  } | null>(null);
 
   // Add-new form state
   const [showAdd, setShowAdd] = useState(false);
@@ -335,38 +339,69 @@ export default function CatalogPage() {
     }
   }
 
-  async function handleQuickSaveField(item: CatalogItem, field: 'caseSize' | 'mrp', valueStr: string) {
+  async function handleQuickSaveField(
+    item: CatalogItem,
+    field: 'brandName' | 'itemName' | 'caseSize' | 'mrp',
+    valueStr: string
+  ) {
     if (isReadOnly || role === 'guest') {
       alert('Read-Only Mode: Guest account cannot edit catalog items.');
-      return;
-    }
-    const numVal = valueStr.trim() === '' ? undefined : Number(valueStr);
-    if (valueStr.trim() !== '' && (isNaN(Number(valueStr)) || Number(valueStr) < 0)) {
-      setError('Please enter a valid positive number.');
-      return;
-    }
-    setSaving(true);
-    setError('');
-    try {
-      await saveCatalogItem(
-        {
-          brandName: item.brandName,
-          itemName: item.itemName,
-          defaultQuantity: item.defaultQuantity || 1,
-          caseSize: field === 'caseSize' ? numVal : item.caseSize,
-          mrp: field === 'mrp' ? numVal : item.mrp,
-          applicableSites: item.applicableSites,
-        },
-        item.id!
-      );
-      const refreshed = await getCatalogItems();
-      setCatalog(refreshed);
       setQuickEdit(null);
+      return;
+    }
+
+    const trimmed = valueStr.trim();
+    let updatedValue: any = trimmed;
+
+    if (field === 'caseSize' || field === 'mrp') {
+      if (trimmed === '') {
+        updatedValue = undefined;
+      } else {
+        const numVal = Number(trimmed);
+        if (isNaN(numVal) || numVal < 0) {
+          setError('Please enter a valid positive number.');
+          return;
+        }
+        updatedValue = numVal;
+      }
+    } else {
+      if (!trimmed) {
+        setError('Brand Name and Item Name cannot be blank.');
+        return;
+      }
+    }
+
+    // If unchanged, simply close
+    if ((item as any)[field] === updatedValue) {
+      setQuickEdit(null);
+      return;
+    }
+
+    const itemId = item.id || getCatalogDocId(item.brandName, item.itemName);
+    const prevCatalog = [...catalog];
+    const updatedItem: CatalogItem = {
+      ...item,
+      [field]: updatedValue,
+    };
+
+    // Optimistic UI update for instant zero-latency feedback
+    setCatalog((prev) =>
+      prev.map((i) => {
+        const docId = i.id || getCatalogDocId(i.brandName, i.itemName);
+        return docId === itemId ? updatedItem : i;
+      })
+    );
+    setQuickEdit(null);
+    setError('');
+
+    try {
+      await saveCatalogItem(updatedItem, itemId);
       triggerHaptic('success');
     } catch (e) {
-      setError('Failed to update value.');
-    } finally {
-      setSaving(false);
+      console.error('Error saving inline cell edit:', e);
+      setCatalog(prevCatalog);
+      setError('Failed to update value in database.');
+      triggerHaptic('warning');
     }
   }
 
@@ -388,28 +423,50 @@ export default function CatalogPage() {
     }
   }
 
-  function handleExportCsv() {
+  function handleExportCsv(selectedOnly = false) {
     triggerHaptic('light');
-    const headers = ['Brand Name', 'Item Name', 'Case Size', 'Reference MRP', 'Sites'];
-    const rows = filteredItems.map((i) => {
+    const itemsToExport = selectedOnly || selectedIds.size > 0
+      ? (selectedIds.size > 0 ? catalog.filter(i => i.id && selectedIds.has(i.id)) : filteredItems)
+      : filteredItems;
+
+    if (itemsToExport.length === 0) {
+      alert('No items to export based on current filters.');
+      return;
+    }
+
+    const headers = ['Doc ID', 'Brand Name', 'Item Name', 'Case Size', 'Reference MRP', 'Sites', 'Status'];
+    const rows = itemsToExport.map((i) => {
       const sitesStr = (i.applicableSites && i.applicableSites.length > 0 ? i.applicableSites : ['newrelic']).join('|');
+      const docId = i.id || getCatalogDocId(i.brandName, i.itemName);
+      let status = 'Configured';
+      if (!i.mrp && !i.caseSize) status = 'Missing MRP & Case';
+      else if (!i.mrp) status = 'Missing MRP';
+      else if (!i.caseSize) status = 'Missing Case';
+
       return [
+        `"${docId.replace(/"/g, '""')}"`,
         `"${i.brandName.replace(/"/g, '""')}"`,
         `"${i.itemName.replace(/"/g, '""')}"`,
         i.caseSize || '',
         i.mrp || '',
         `"${sitesStr}"`,
+        `"${status}"`,
       ];
     });
-    const csvContent = [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+
+    // Prepend UTF-8 BOM (\uFEFF) for flawless Excel compatibility
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const scopeStr = selectedIds.size > 0 ? `selected_${itemsToExport.length}` : `filtered_${itemsToExport.length}`;
     link.setAttribute('href', url);
-    link.setAttribute('download', `catalog_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `catalog_export_${scopeStr}_${dateStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   async function handleSyncMrp() {
@@ -598,12 +655,13 @@ export default function CatalogPage() {
           <button
             onClick={() => {
               triggerHaptic('light');
-              handleExportCsv();
+              handleExportCsv(false);
             }}
             className="flex-1 sm:flex-initial h-11 sm:h-10 px-3.5 rounded-2xl sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all flex items-center justify-center gap-2 shadow-xs active:scale-95 cursor-pointer"
+            title={selectedIds.size > 0 ? `Export ${selectedIds.size} selected items` : `Export all ${filteredItems.length} filtered items to CSV`}
           >
             <Download className="h-4 w-4" />
-            <span>Export CSV</span>
+            <span>{selectedIds.size > 0 ? `Export (${selectedIds.size})` : 'Export CSV'}</span>
           </button>
           <button
             onClick={() => {
@@ -1356,6 +1414,7 @@ export default function CatalogPage() {
                             if (e.key === 'Enter') handleQuickSaveField(item, 'caseSize', quickEdit.value);
                             if (e.key === 'Escape') setQuickEdit(null);
                           }}
+                          onBlur={() => handleQuickSaveField(item, 'caseSize', quickEdit.value)}
                           className="w-full px-2 py-0.5 text-xs font-mono font-bold text-slate-900 dark:text-white bg-transparent focus:outline-none min-w-0"
                         />
                         <button
@@ -1415,6 +1474,7 @@ export default function CatalogPage() {
                             if (e.key === 'Enter') handleQuickSaveField(item, 'mrp', quickEdit.value);
                             if (e.key === 'Escape') setQuickEdit(null);
                           }}
+                          onBlur={() => handleQuickSaveField(item, 'mrp', quickEdit.value)}
                           className="w-full px-2 py-0.5 text-xs font-mono font-bold text-slate-900 dark:text-white bg-transparent focus:outline-none text-right min-w-0"
                         />
                         <button
@@ -1656,10 +1716,33 @@ export default function CatalogPage() {
                             onChange={(e) => setEditBrand(e.target.value)}
                             autoFocus
                           />
+                        ) : quickEdit?.id === item.id && quickEdit?.field === 'brandName' ? (
+                          <input
+                            autoFocus
+                            value={quickEdit.value}
+                            onChange={(e) => setQuickEdit({ ...quickEdit, value: e.target.value })}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleQuickSaveField(item, 'brandName', quickEdit.value);
+                              if (e.key === 'Escape') setQuickEdit(null);
+                            }}
+                            onBlur={() => handleQuickSaveField(item, 'brandName', quickEdit.value)}
+                            className="w-full border border-[#3b2fc9] rounded-lg px-2 py-1 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-none shadow-xs"
+                          />
                         ) : (
-                          <span className="font-bold text-slate-900 dark:text-white">
-                            {item.brandName}
-                          </span>
+                          <div
+                            onClick={() => {
+                              if (isReadOnly || role === 'guest') return;
+                              triggerHaptic('light');
+                              setQuickEdit({ id: item.id!, field: 'brandName', value: item.brandName });
+                            }}
+                            className="group cursor-pointer py-1 px-1.5 -mx-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center justify-between gap-1"
+                            title="Click to edit brand"
+                          >
+                            <span className="font-bold text-slate-900 dark:text-white group-hover:text-[#3b2fc9] transition-colors">
+                              {item.brandName}
+                            </span>
+                            <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 text-slate-400 group-hover:text-[#3b2fc9] transition shrink-0" />
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-2 text-slate-600 dark:text-slate-300 font-medium">
@@ -1669,8 +1752,33 @@ export default function CatalogPage() {
                             value={editItem}
                             onChange={(e) => setEditItem(e.target.value)}
                           />
+                        ) : quickEdit?.id === item.id && quickEdit?.field === 'itemName' ? (
+                          <input
+                            autoFocus
+                            value={quickEdit.value}
+                            onChange={(e) => setQuickEdit({ ...quickEdit, value: e.target.value })}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleQuickSaveField(item, 'itemName', quickEdit.value);
+                              if (e.key === 'Escape') setQuickEdit(null);
+                            }}
+                            onBlur={() => handleQuickSaveField(item, 'itemName', quickEdit.value)}
+                            className="w-full border border-[#3b2fc9] rounded-lg px-2 py-1 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-none shadow-xs"
+                          />
                         ) : (
-                          item.itemName
+                          <div
+                            onClick={() => {
+                              if (isReadOnly || role === 'guest') return;
+                              triggerHaptic('light');
+                              setQuickEdit({ id: item.id!, field: 'itemName', value: item.itemName });
+                            }}
+                            className="group cursor-pointer py-1 px-1.5 -mx-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center justify-between gap-1"
+                            title="Click to edit item name"
+                          >
+                            <span className="text-slate-600 dark:text-slate-300 font-medium group-hover:text-[#3b2fc9] transition-colors">
+                              {item.itemName}
+                            </span>
+                            <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 text-slate-400 group-hover:text-[#3b2fc9] transition shrink-0" />
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-2">
@@ -1719,8 +1827,41 @@ export default function CatalogPage() {
                             onChange={(e) => setEditCaseSize(e.target.value)}
                             placeholder="-"
                           />
+                        ) : quickEdit?.id === item.id && quickEdit?.field === 'caseSize' ? (
+                          <input
+                            type="number"
+                            autoFocus
+                            placeholder="pcs"
+                            value={quickEdit.value}
+                            onChange={(e) => setQuickEdit({ ...quickEdit, value: e.target.value })}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleQuickSaveField(item, 'caseSize', quickEdit.value);
+                              if (e.key === 'Escape') setQuickEdit(null);
+                            }}
+                            onBlur={() => handleQuickSaveField(item, 'caseSize', quickEdit.value)}
+                            className="w-24 border border-[#3b2fc9] rounded-lg px-2 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-none shadow-xs"
+                          />
                         ) : (
-                          item.caseSize ? `${item.caseSize} pcs` : <span className="text-blue-600 dark:text-blue-400 font-sans text-xs">Missing</span>
+                          <div
+                            onClick={() => {
+                              if (isReadOnly || role === 'guest') return;
+                              triggerHaptic('light');
+                              setQuickEdit({ id: item.id!, field: 'caseSize', value: item.caseSize?.toString() || '' });
+                            }}
+                            className="group cursor-pointer py-1 px-1.5 -mx-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center justify-between gap-1"
+                            title="Click to edit case size"
+                          >
+                            {item.caseSize ? (
+                              <span className="text-slate-700 dark:text-slate-300 font-mono font-bold group-hover:text-[#3b2fc9]">
+                                {item.caseSize} pcs
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/60">
+                                + Set Case
+                              </span>
+                            )}
+                            <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 text-slate-400 group-hover:text-[#3b2fc9] transition shrink-0" />
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-2 text-slate-900 dark:text-white font-mono font-bold">
@@ -1732,8 +1873,44 @@ export default function CatalogPage() {
                             onChange={(e) => setEditMrp(e.target.value)}
                             placeholder="-"
                           />
+                        ) : quickEdit?.id === item.id && quickEdit?.field === 'mrp' ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-slate-400 font-bold">₹</span>
+                            <input
+                              type="number"
+                              autoFocus
+                              placeholder="0"
+                              value={quickEdit.value}
+                              onChange={(e) => setQuickEdit({ ...quickEdit, value: e.target.value })}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleQuickSaveField(item, 'mrp', quickEdit.value);
+                                if (e.key === 'Escape') setQuickEdit(null);
+                              }}
+                              onBlur={() => handleQuickSaveField(item, 'mrp', quickEdit.value)}
+                              className="w-20 border border-[#3b2fc9] rounded-lg px-2 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-none shadow-xs"
+                            />
+                          </div>
                         ) : (
-                          item.mrp ? `₹${item.mrp}` : <span className="text-amber-600 dark:text-amber-400 font-sans text-xs">Missing</span>
+                          <div
+                            onClick={() => {
+                              if (isReadOnly || role === 'guest') return;
+                              triggerHaptic('light');
+                              setQuickEdit({ id: item.id!, field: 'mrp', value: item.mrp?.toString() || '' });
+                            }}
+                            className="group cursor-pointer py-1 px-1.5 -mx-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center justify-between gap-1"
+                            title="Click to edit reference MRP"
+                          >
+                            {item.mrp ? (
+                              <span className="text-slate-900 dark:text-white font-mono font-bold group-hover:text-[#3b2fc9]">
+                                ₹{item.mrp}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900/60">
+                                + Set MRP
+                              </span>
+                            )}
+                            <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 text-slate-400 group-hover:text-[#3b2fc9] transition shrink-0" />
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-2 text-right">
@@ -1812,6 +1989,19 @@ export default function CatalogPage() {
           >
             <Building2 className="h-3.5 w-3.5" />
             <span>Assign Sites</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              handleExportCsv(true);
+            }}
+            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-800 dark:bg-slate-100 hover:bg-slate-700 dark:hover:bg-slate-200 transition-colors whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
+            title="Export only selected rows to CSV"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Export CSV</span>
           </button>
 
           <button

@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Gut Guru — 100 Logo Concepts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{--t:#0f766e;--tl:#14b8a6;--g:#d97706;--gl:#f59e0b;--gn:#15803d;--gnl:#22c55e;--bg:#f8f7f4;--card:#fff;--tx:#0f172a;--mu:#64748b;--bd:#e2e8f0}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+
+    header{background:#fff;border-bottom:1px solid var(--bd);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+    .hdr-l{display:flex;align-items:center;gap:10px}
+    .hdr-dot{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#0f766e,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:14px}
+    .hdr-t{font-size:13px;font-weight:800;letter-spacing:-0.3px}
+    .hdr-s{font-size:10px;color:var(--mu);font-weight:500;margin-top:1px}
+    .ctrls{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+    .cl{font-size:9px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:0.5px;margin-right:4px}
+    .cb{padding:5px 11px;border-radius:6px;border:1.5px solid var(--bd);font-size:10px;font-weight:700;cursor:pointer;transition:all 0.15s;background:#fff;color:var(--mu)}
+    .cb:hover{border-color:var(--t);color:var(--t)}
+    .cb.on{background:#0f172a;color:#fff;border-color:#0f172a}
+
+    main{max-width:1400px;margin:0 auto;padding:40px 28px 80px}
+    .top{margin-bottom:40px}
+    .ey{display:inline-flex;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--t);background:#f0fdf4;border:1px solid #bbf7d0;padding:3px 10px;border-radius:100px;margin-bottom:12px}
+    h1{font-size:30px;font-weight:900;letter-spacing:-1px;line-height:1.1;margin-bottom:8px}
+    .desc{font-size:12px;color:var(--mu);max-width:500px;line-height:1.6}
+
+    .cat{margin-bottom:36px}
+    .cat-h{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--bd)}
+    .cat-n{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--mu)}
+    .cat-c{font-size:9px;font-weight:700;color:var(--t);background:#f0fdf4;padding:2px 7px;border-radius:100px}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
+    @media(min-width:900px){.grid{grid-template-columns:repeat(8,1fr)}}
+    @media(min-width:1200px){.grid{grid-template-columns:repeat(10,1fr)}}
+
+    .lc{background:var(--card);border:1px solid var(--bd);border-radius:14px;overflow:hidden;cursor:pointer;transition:all 0.2s cubic-bezier(0.4,0,0.2,1);position:relative}
+    .lc:hover{transform:translateY(-3px);box-shadow:0 12px 40px -8px rgba(0,0,0,0.12);border-color:#cbd5e1;z-index:10}
+    .lc.picked{border-color:#0f766e;box-shadow:0 0 0 2px #0f766e33}
+    .lc .cv{display:flex;align-items:center;justify-content:center;padding:16px 12px;min-height:100px;transition:background 0.3s;background:#fff}
+    .lc .cv svg{width:56px;height:56px}
+    .lc .lb{padding:6px 8px;background:#fafafa;border-top:1px solid var(--bd);text-align:center}
+    .lc .ln{font-size:8px;font-weight:700;color:var(--tx);line-height:1.3}
+    .lc .li{font-size:7px;font-weight:600;color:var(--mu)}
+    .num{position:absolute;top:5px;left:6px;font-size:7px;font-weight:800;color:var(--mu);opacity:0.5}
+
+    .picked-bar{position:fixed;bottom:0;left:0;right:0;background:#0f172a;color:#fff;padding:12px 28px;display:none;align-items:center;justify-content:space-between;z-index:200;border-top:2px solid var(--t)}
+    .picked-bar.show{display:flex}
+    .pb-t{font-size:12px;font-weight:700}
+    .pb-b{padding:7px 18px;border-radius:8px;border:none;font-size:11px;font-weight:800;cursor:pointer;background:var(--t);color:#fff;transition:all 0.15s}
+    .pb-b:hover{background:#14b8a6}
+
+    /* Modal */
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:300;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+    .modal-bg.show{display:flex}
+    .modal{background:#fff;border-radius:20px;padding:40px;max-width:400px;width:90%;text-align:center;position:relative}
+    .modal svg{width:160px;height:160px;margin-bottom:20px}
+    .modal h3{font-size:18px;font-weight:800;margin-bottom:4px}
+    .modal p{font-size:11px;color:var(--mu);margin-bottom:16px}
+    .modal .close{position:absolute;top:12px;right:16px;font-size:18px;cursor:pointer;color:var(--mu);background:none;border:none}
+    .modal .dl{padding:8px 20px;border-radius:8px;border:none;font-size:11px;font-weight:800;cursor:pointer;background:var(--t);color:#fff;margin:4px}
+    .modal .dl:hover{background:#14b8a6}
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-l">
+    <div class="hdr-dot">🥗</div>
+    <div>
+      <div class="hdr-t">The Gut Guru Hospitality Services</div>
+      <div class="hdr-s">100 Logo Concepts • Click any to zoom & download SVG</div>
+    </div>
+  </div>
+  <div class="ctrls">
+    <span class="cl">Canvas:</span>
+    <button class="cb on" onclick="setBg('white',this)">White</button>
+    <button class="cb" onclick="setBg('dark',this)">Dark</button>
+    <button class="cb" onclick="setBg('kraft',this)">Kraft</button>
+    <button class="cb" onclick="setBg('teal',this)">Teal</button>
+    <button class="cb" onclick="setBg('blush',this)">Blush</button>
+  </div>
+</header>
+
+<main>
+  <div class="top">
+    <div class="ey">✦ 100 Concepts</div>
+    <h1>Pick your icon.</h1>
+    <p class="desc">Click any logo to zoom in and download. Tap multiple to shortlist. Every mark is a self-contained SVG vector — infinite resolution for print, packaging, app icons, and embroidery.</p>
+  </div>
+
+  <div id="gallery"></div>
+</main>
+
+<div class="picked-bar" id="pbar">
+  <span class="pb-t" id="pcount">0 picked</span>
+  <button class="pb-b" onclick="clearPicks()">Clear All</button>
+</div>
+
+<div class="modal-bg" id="modal" onclick="closeModal(event)">
+  <div class="modal" id="modalInner">
+    <button class="close" onclick="document.getElementById('modal').classList.remove('show')">✕</button>
+    <div id="modalSvg"></div>
+    <h3 id="modalTitle"></h3>
+    <p id="modalCat"></p>
+    <button class="dl" onclick="dlCurrent()">↓ Download SVG</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 100 LOGO DEFINITIONS — each is {name, cat, svg}
+// svg is a function returning the inner SVG content for viewBox="0 0 80 80"
+// ============================================================
+const T='#0f766e', TL='#14b8a6', G='#d97706', GL='#f59e0b', GN='#15803d', GNL='#22c55e', D='#0f172a';
+
+// Gradients shared across logos (injected once)
+const DEFS = `
+<defs>
+<linearGradient id="tg" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="${T}"/><stop offset="100%" stop-color="${G}"/></linearGradient>
+<linearGradient id="gn" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${GN}"/><stop offset="100%" stop-color="${GNL}"/></linearGradient>
+<linearGradient id="tl" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${TL}"/><stop offset="100%" stop-color="${T}"/></linearGradient>
+<linearGradient id="gl" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${GL}"/><stop offset="100%" stop-color="${G}"/></linearGradient>
+<linearGradient id="tgv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${T}"/><stop offset="100%" stop-color="${G}"/></linearGradient>
+</defs>`;
+
+const logos = [
+// ── A. LETTER G MARKS (1-10) ──
+{n:"G Aperture",c:"Letter G",s:`<path d="M52 27C47 21 38 19 31 22C22 26 18 36 22 45C26 54 36 58 45 54C50 52 54 47 54 42H40" stroke="url(#tg)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`},
+{n:"G Leaf Tip",c:"Letter G",s:`<path d="M52 27C47 21 38 19 31 22C22 26 18 36 22 45C26 54 36 58 45 54C50 52 54 47 54 42H40" stroke="${T}" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M52 27C55 22 58 16 56 12C52 14 49 19 52 27Z" fill="${GN}"/>`},
+{n:"G Sprout",c:"Letter G",s:`<path d="M52 28C47 21 37 19 30 23C22 28 19 38 23 46C27 54 37 57 45 53C50 50 53 45 53 40H40" stroke="${T}" stroke-width="5" stroke-linecap="round" fill="none"/><line x1="52" y1="28" x2="52" y2="16" stroke="${GN}" stroke-width="3.5" stroke-linecap="round"/><path d="M52 20C47 17 46 12 49 9C53 10 55 15 52 20Z" fill="${GN}"/><path d="M52 20C57 17 58 12 55 9C51 10 49 15 52 20Z" fill="${GNL}"/>`},
+{n:"G Sun",c:"Letter G",s:`<path d="M52 28C47 21 37 19 30 23C22 28 19 38 23 46C27 54 37 57 45 53C50 50 53 45 53 40H40" stroke="${T}" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="40" cy="40" r="6" fill="${G}"/><g stroke="${GL}" stroke-width="2" stroke-linecap="round"><line x1="40" y1="30" x2="40" y2="27"/><line x1="40" y1="53" x2="40" y2="50"/><line x1="30" y1="40" x2="27" y2="40"/><line x1="50" y1="40" x2="53" y2="40"/></g>`},
+{n:"G Circle",c:"Letter G",s:`<circle cx="40" cy="40" r="24" stroke="${T}" stroke-width="4.5" fill="none"/><path d="M52 28C47 21 37 19 30 23C22 28 19 38 23 46C27 54 37 57 45 53C50 50 53 45 53 40H42" stroke="${G}" stroke-width="4" stroke-linecap="round" fill="none"/>`},
+{n:"G Dot",c:"Letter G",s:`<path d="M52 28C47 21 37 19 30 23C22 28 19 38 23 46C27 54 37 57 45 53C50 50 53 45 53 40H40" stroke="url(#tg)" stroke-width="6" stroke-linecap="round" fill="none"/><circle cx="40" cy="40" r="4" fill="${G}"/>`},
+{n:"G Helix",c:"Letter G",s:`<path d="M50 24C44 18 34 18 28 24C22 30 22 42 28 50C34 56 44 56 50 50" stroke="${T}" stroke-width="4.5" stroke-linecap="round" fill="none"/><path d="M50 50L50 38H38" stroke="${T}" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M50 24C53 20 55 15 52 12C48 14 47 19 50 24Z" fill="${GN}"/><path d="M50 24C54 20 58 18 58 14C55 14 51 18 50 24Z" fill="${GNL}" opacity="0.8"/>`},
+{n:"GG Mirror",c:"Letter G",s:`<path d="M42 28C38 22 30 20 25 24C18 29 17 38 22 44C27 50 35 50 40 46" stroke="${T}" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M38 52C42 58 50 60 55 56C62 51 63 42 58 36C53 30 45 30 40 34" stroke="${G}" stroke-width="4" stroke-linecap="round" fill="none"/>`},
+{n:"G Minimal",c:"Letter G",s:`<path d="M54 28C48 19 35 17 27 23C19 29 17 42 23 50C29 58 42 60 50 54C54 51 56 46 56 40H40" stroke="${T}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`},
+{n:"G Bowl",c:"Letter G",s:`<path d="M50 26C45 20 36 18 29 22C21 27 18 37 22 45C26 53 36 56 44 52C48 50 51 46 51 41H40" stroke="${T}" stroke-width="4.5" stroke-linecap="round" fill="none"/><path d="M27 56C32 62 48 62 53 56" stroke="${G}" stroke-width="4" stroke-linecap="round" fill="none"/>`},
+
+// ── B. LEAF / SPROUT (11-20) ──
+{n:"Twin Leaf",c:"Leaf & Sprout",s:`<line x1="40" y1="62" x2="40" y2="30" stroke="${GN}" stroke-width="4" stroke-linecap="round"/><path d="M40 35C30 28 25 18 30 12C38 14 42 25 40 35Z" fill="${GN}"/><path d="M40 35C50 28 55 18 50 12C42 14 38 25 40 35Z" fill="${GNL}"/><circle cx="40" cy="10" r="3" fill="${G}"/>`},
+{n:"Curled Fern",c:"Leaf & Sprout",s:`<path d="M40 62C40 45 35 35 28 28C22 22 20 16 24 12C30 12 38 20 40 35" stroke="${GN}" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M40 42C46 35 52 32 56 34C54 38 48 40 40 42Z" fill="${GNL}"/><path d="M40 50C44 46 50 44 53 46C50 49 45 49 40 50Z" fill="${GN}" opacity="0.7"/>`},
+{n:"Seed Burst",c:"Leaf & Sprout",s:`<ellipse cx="40" cy="54" rx="10" ry="7" fill="${G}"/><line x1="40" y1="48" x2="40" y2="28" stroke="${GN}" stroke-width="3.5" stroke-linecap="round"/><path d="M40 32C34 26 30 18 34 14C39 16 41 24 40 32Z" fill="${GN}"/><path d="M40 32C46 26 50 18 46 14C41 16 39 24 40 32Z" fill="${GNL}"/>`},
+{n:"Sprout Ring",c:"Leaf & Sprout",s:`<circle cx="40" cy="40" r="22" stroke="${T}" stroke-width="3.5" fill="none"/><line x1="40" y1="52" x2="40" y2="32" stroke="${GN}" stroke-width="3" stroke-linecap="round"/><path d="M40 36C35 30 33 24 36 20C40 22 41 29 40 36Z" fill="${GN}"/><path d="M40 36C45 30 47 24 44 20C40 22 39 29 40 36Z" fill="${GNL}"/>`},
+{n:"Three Leaves",c:"Leaf & Sprout",s:`<line x1="40" y1="60" x2="40" y2="22" stroke="${GN}" stroke-width="3" stroke-linecap="round"/><path d="M40 42C32 38 28 30 32 26C38 28 40 36 40 42Z" fill="${GN}"/><path d="M40 42C48 38 52 30 48 26C42 28 40 36 40 42Z" fill="${GNL}"/><path d="M40 30C34 24 28 22 26 18C30 16 36 20 40 30Z" fill="${GN}" opacity="0.7"/><path d="M40 30C46 24 52 22 54 18C50 16 44 20 40 30Z" fill="${GNL}" opacity="0.7"/><circle cx="40" cy="18" r="3" fill="${G}"/>`},
+{n:"Leaf Shield",c:"Leaf & Sprout",s:`<path d="M40 14C28 20 20 32 20 46C20 54 28 62 40 66C52 62 60 54 60 46C60 32 52 20 40 14Z" stroke="${GN}" stroke-width="3.5" fill="none"/><path d="M40 54L40 32" stroke="${GNL}" stroke-width="2.5" stroke-linecap="round"/><path d="M40 38C35 34 32 28 35 24C39 26 40 32 40 38Z" fill="${GNL}"/><path d="M40 38C45 34 48 28 45 24C41 26 40 32 40 38Z" fill="${GN}"/>`},
+{n:"Dew Drop Leaf",c:"Leaf & Sprout",s:`<path d="M40 16C32 24 22 38 22 48C22 58 30 64 40 64C50 64 58 58 58 48C58 38 48 24 40 16Z" fill="none" stroke="${GN}" stroke-width="3.5"/><path d="M40 56L40 36" stroke="${GNL}" stroke-width="2.5" stroke-linecap="round"/><path d="M40 42C36 38 34 32 37 30C40 32 40 37 40 42Z" fill="${GNL}"/><path d="M40 42C44 38 46 32 43 30C40 32 40 37 40 42Z" fill="${GN}" opacity="0.8"/>`},
+{n:"Lotus Leaf",c:"Leaf & Sprout",s:`<path d="M40 58C34 50 20 46 16 38C22 34 34 40 40 48Z" fill="${GN}"/><path d="M40 58C46 50 60 46 64 38C58 34 46 40 40 48Z" fill="${GNL}"/><path d="M40 48C40 38 40 28 40 20" stroke="${GN}" stroke-width="2.5" stroke-linecap="round"/><path d="M40 30C36 24 32 20 34 16C38 18 40 24 40 30Z" fill="${T}"/><path d="M40 30C44 24 48 20 46 16C42 18 40 24 40 30Z" fill="${TL}"/>`},
+{n:"Olive Branch",c:"Leaf & Sprout",s:`<path d="M24 58C30 48 40 36 56 22" stroke="${GN}" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M32 50C28 44 28 38 32 36C36 38 34 44 32 50Z" fill="${GN}"/><path d="M40 42C36 36 36 30 40 28C44 30 42 36 40 42Z" fill="${GNL}"/><path d="M48 34C44 28 44 22 48 20C52 22 50 28 48 34Z" fill="${GN}"/><circle cx="56" cy="22" r="3" fill="${G}"/>`},
+{n:"Sprout Heart",c:"Leaf & Sprout",s:`<path d="M40 58C28 48 16 40 16 30C16 22 22 18 28 18C33 18 37 21 40 26C43 21 47 18 52 18C58 18 64 22 64 30C64 40 52 48 40 58Z" fill="none" stroke="${GN}" stroke-width="3.5" stroke-linejoin="round"/><line x1="40" y1="50" x2="40" y2="34" stroke="${GNL}" stroke-width="2.5" stroke-linecap="round"/><circle cx="40" cy="32" r="3" fill="${G}"/>`},
+
+// ── C. FORK / SPOON / CULINARY (21-30) ──
+{n:"Fork Leaf",c:"Culinary",s:`<line x1="40" y1="64" x2="40" y2="28" stroke="${G}" stroke-width="4" stroke-linecap="round"/><line x1="34" y1="28" x2="34" y2="16" stroke="${G}" stroke-width="3" stroke-linecap="round"/><line x1="40" y1="28" x2="40" y2="16" stroke="${G}" stroke-width="3" stroke-linecap="round"/><line x1="46" y1="28" x2="46" y2="16" stroke="${G}" stroke-width="3" stroke-linecap="round"/><path d="M46 16C50 12 52 18 48 20" fill="${GN}"/><path d="M46 16C50 10 54 14 50 18" fill="${GNL}" opacity="0.8"/>`},
+{n:"Spoon Sun",c:"Culinary",s:`<line x1="40" y1="64" x2="40" y2="40" stroke="url(#tgv)" stroke-width="4.5" stroke-linecap="round"/><ellipse cx="40" cy="30" rx="14" ry="13" stroke="url(#tg)" stroke-width="4" fill="none"/><circle cx="40" cy="30" r="5" fill="${G}"/><g stroke="${GL}" stroke-width="2" stroke-linecap="round"><line x1="40" y1="21" x2="40" y2="17"/><line x1="49" y1="24" x2="52" y2="21"/><line x1="31" y1="24" x2="28" y2="21"/></g>`},
+{n:"Crossed Cutlery",c:"Culinary",s:`<line x1="28" y1="60" x2="52" y2="20" stroke="${G}" stroke-width="4" stroke-linecap="round"/><line x1="52" y1="60" x2="28" y2="20" stroke="${T}" stroke-width="4" stroke-linecap="round"/><circle cx="40" cy="40" r="5" fill="${GN}"/>`},
+{n:"Fork Circle",c:"Culinary",s:`<circle cx="40" cy="40" r="22" stroke="${T}" stroke-width="3" fill="none"/><line x1="40" y1="52" x2="40" y2="32" stroke="${G}" stroke-width="3.5" stroke-linecap="round"/><line x1="36" y1="32" x2="36" y2="24" stroke="${G}" stroke-width="2.5" stroke-linecap="round"/><line x1="40" y1="32" x2="40" y2="24" stroke="${G}" stroke-width="2.5" stroke-linecap="round"/><line x1="44" y1="32" x2="44" y2="24" stroke="${G}" stroke-width="2.5" stroke-linecap="round"/>`},
+{n:"Spoon Sprout",c:"Culinary",s:`<line x1="40" y1="62" x2="40" y2="38" stroke="${T}" stroke-width="4" stroke-linecap="round"/><ellipse cx="40" cy="28" rx="12" ry="11" stroke="${T}" stroke-width="3.5" fill="none"/><path d="M40 22C36 18 34 12 37 10C40 12 40 17 40 22Z" fill="${GN}"/><path d="M40 22C44 18 46 12 43 10C40 12 40 17 40 22Z" fill="${GNL}"/>`},
+{n:"Chopstick Leaf",c:"Culinary",s:`<line x1="34" y1="60" x2="42" y2="20" stroke="${G}" stroke-width="3.5" stroke-linecap="round"/><line x1="46" y1="60" x2="38" y2="20" stroke="${G}" stroke-width="3.5" stroke-linecap="round"/><path d="M40 24C34 18 30 12 34 10C38 12 40 18 40 24Z" fill="${GN}"/><path d="M40 24C46 18 50 12 46 10C42 12 40 18 40 24Z" fill="${GNL}"/>`},
+{n:"Knife Fork",c:"Culinary",s:`<path d="M32 16L32 32C32 36 36 38 36 38L36 62" stroke="${T}" stroke-width="3.5" stroke-linecap="round" fill="none"/><line x1="48" y1="62" x2="48" y2="32" stroke="${G}" stroke-width="3.5" stroke-linecap="round"/><line x1="44" y1="32" x2="44" y2="20" stroke="${G}" stroke-width="2.5" stroke-linecap="round"/><line x1="48" y1="32" x2="48" y2="20" stroke="${G}" stroke-width="2.5" stroke-linecap="round"/><line x1="52" y1="32" x2="52" y2="20" stroke="${G}" stroke-width="2.5" stroke-linecap="round"/>`},
+{n:"Whisk Ring",c:"Culinary",s:`<ellipse cx="40" cy="34" rx="16" ry="20" stroke="${T}" stroke-width="3" fill="none"/><line x1="40" y1="54" x2="40" y2="66" stroke="${T}" stroke-width="4" stroke-linecap="round"/><circle cx="40" cy="34" r="4" fill="${G}"/>`},
+{n:"Chef Hat",c:"Culinary",s:`<path d="M26 42C20 42 16 36 18 30C20 24 26 22 30 24C30 18 34 14 40 14C46 14 50 18 50 24C54 22 60 24 62 30C64 36 60 42 54 42Z" stroke="${T}" stroke-width="3.5" fill="none" stroke-linejoin="round"/><line x1="28" y1="42" x2="28" y2="56" stroke="${T}" stroke-width="2.5" stroke-linecap="round"/><line x1="52" y1="42" x2="52" y2="56" stroke="${T}" stroke-width="2.5" stroke-linecap="round"/><line x1="26" y1="56" x2="54" y2="56" stroke="${G}" stroke-width="3" stroke-linecap="round"/><line x1="26" y1="62" x2="54" y2="62" stroke="${G}" stroke-width="2.5" stroke-linecap="round"/>`},
+{n:"Ladle Drop",c:"Culinary",s:`<circle cx="40" cy="30" r="14" stroke="url(#tg)" stroke-width="3.5" fill="none"/><path d="M32 42C28 50 26 58 30 62C34 66 40 64 40 64" stroke="url(#tg)" stroke-width="4" stroke-linecap="round" fill="none"/><circle cx="40" cy="30" r="5" fill="${GN}"/>`},
+
+// ── D. BOWL / PLATE / CUP (31-40) ──
+{n:"Bowl Smile",c:"Bowl & Plate",s:`<path d="M20 38C24 56 56 56 60 38" stroke="url(#tg)" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M28 32C32 28 36 26 40 26C44 26 48 28 52 32" stroke="${GN}" stroke-width="3" stroke-linecap="round" fill="none"/><circle cx="40" cy="22" r="3" fill="${G}"/>`},
+{n:"Bowl Steam",c:"Bowl & Plate",s:`<path d="M22 42C26 56 54 56 58 42" stroke="${T}" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M32 36C32 30 36 28 36 24" stroke="${G}" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M40 34C40 28 44 26 44 22" stroke="${G}" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M48 36C48 30 52 28 52 24" stroke="${G}" stroke-width="2.5" stroke-linecap="round" fill="none"/>`},
+{n:"Plate Ring",c:"Bowl & Plate",s:`<circle cx="40" cy="40" r="24" stroke="${T}" stroke-width="2.5" fill="none"/><circle cx="40" cy="40" r="18" stroke="${T}" stroke-width="1.5" fill="none" opacity="0.3"/><path d="M32 40C36 36 44 36 48 40" stroke="${G}" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M40 36L40 30" stroke="${GN}" stroke-width="2.5" stroke-linecap="round"/><circle cx="40" cy="28" r="2.5" fill="${GN}"/>`},
+{n:"Cup Leaf",c:"Bowl & Plate",s:`<rect x="26" y="24" width="28" height="30" rx="4" stroke="${T}" stroke-width="3.5" fill="none"/><path d="M54 32C60 32 64 36 64 42C64 48 60 50 54 50" stroke="${T}" stroke-width="3" fill="none"/><path d="M36 34C36 30 40 28 40 24" stroke="${G}" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M44 34C44 30 48 28 48 24" stroke="${G}" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M24 58H56" stroke="${T}" stroke-width="3" stroke-linecap="round"/>`},
+{n:"Bowl Circle",c:"Bowl & Plate",s:`<circle cx="40" cy="40" r="22" stroke="${T}" stroke-width="3.5" fill="none"/><path d="M24 38C28 52 52 52 56 38" stroke="${G}" stroke-width="3.5" stroke-linecap="round" fill="none"/>`},
+{n:"Noodle Bowl",c:"Bowl & Plate",s:`<path d="M20 40C24 56 56 56 60 40" stroke="${T}" stroke-width="4.5" stroke-linecap="round" fill="none"/><path d="M28 40C30 32 34 28 38 32C42 36 46 32 50 28" stroke="${G}" stroke-width="2.5" stroke-linecap="round" fill="none"/><line x1="56" y1="28" x2="62" y2="22" stroke="${G}" stroke-width="3" stroke-linecap="round"/><line x1="58" y1="32" x2="64" y2="26" stroke="${G}" stroke-width="3" stroke-linecap="round"/>`},
+{n:"Mortar Bowl",c:"Bowl & Plate",s:`<path d="M24 32C24 50 56 50 56 32" stroke="${T}" stroke-width="4" stroke-linecap="round" fill="none"/><line x1="24" y1="32" x2="56" y2="32" stroke="${T}" stroke-width="3" stroke-linecap="round"/><line x1="48" y1="32" x2="56" y2="18" stroke="${G}" stroke-width="4" stroke-linecap="round"/><circle cx="56" cy="16" r="4" fill="${GN}"/>`},
+{n:"Steam Pot",c:"Bowl & Plate",s:`<rect x="24" y="34" width="32" height="24" rx="5" stroke="${T}" stroke-width="3.5" fill="none"/><line x1="22" y1="34" x2="58" y2="34" stroke="${T}" stroke-width="4" stroke-linecap="round"/><path d="M20 38L18 34" stroke="${T}" stroke-width="3" stroke-linecap="round"/><path d="M60 38L62 34" stroke="${T}" stroke-width="3" stroke-linecap="round"/><path d="M36 28C36 24 40 22 40 18" stroke="${G}" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M44 28C44 24 48 22 48 18" stroke="${G}" stroke-width="2" stroke-linecap="round" fill="none"/>`},
+{n:"Cloche",c:"Bowl & Plate",s:`<path d="M22 50C22 30 58 30 58 50" stroke="${T}" stroke-width="4" stroke-linecap="round" fill="none"/><line x1="18" y1="50" x2="62" y2="50" stroke="${T}" stroke-width="4" stroke-linecap="round"/><circle cx="40" cy="24" r="3.5" fill="${G}"/>`},
+{n:"Serving Tray",c:"Bowl & Plate",s:`<path d="M18 48L22 36H58L62 48" stroke="${T}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><line x1="16" y1="48" x2="64" y2="48" stroke="${G}" stroke-width="4" stroke-linecap="round"/><circle cx="40" cy="32" r="4" fill="${GN}"/>`},
+
+// ── E. SPIRAL / HELIX / DNA (41-50) ──
+{n:"Spiral",c:"Spiral & Helix",s:`<path d="M40 60C28 60 18 50 18 40C18 28 28 18 40 18C54 18 62 28 62 40C62 50 54 56 44 56C36 56 30 50 30 44C30 38 34 34 40 34C44 34 48 38 48 42" stroke="url(#tg)" stroke-width="4" stroke-linecap="round" fill="none"/>`},
+{n:"DNA Strand",c:"Spiral & Helix",s:`<path d="M28 18C28 28 52 32 52 42C52 52 28 56 28 66" stroke="${T}" stroke-width="3.5" stroke-linecap="round" fill="none"/><path d="M52 18C52 28 28 32 28 42C28 52 52 56 52 66" stroke="${G}" stroke-width="3.5" stroke-linecap="round" fill="none"/><line x1="32" y1="30" x2="48" y2="30" stroke="${TL}" stroke-width="2" stroke-linecap="round" opacity="0.4"/><line x1="32" y1="42" x2="48" y2="42" stroke="${GL}" stroke-width="2" stroke-linecap="round" opacity="0.4"/><line x1="32" y1="54" x2="48" y2="54" stroke="${TL}" stroke-width="2" stroke-linecap="round" opacity="0.4"/>`},
+{n:"Gut Coil",c:"Spiral & Helix",s:`<path d="M32 24C24 24 20 32 20 38C20 46 28 48 34 44C40 40 38 32 34 30C28 28 24 34 28 38C32 42 40 42 44 38C50 32 52 24 48 20C44 18 38 20 38 26C38 34 46 40 52 40C58 40 62 34 60 28" stroke="url(#tg)" stroke-width="3.5" stroke-linecap="round" fill="none"/>`},
+{n:"Fibonacci",c:"Spiral & Helix",s:`<path d="M42 42C42 36 36 30 30 30C24 30 18 36 18 42C18 52 28 60 38 60C52 60 62 50 62 38C62 24 50 14 38 14" stroke="url(#tg)" stroke-width="3.5" stroke-linecap="round" fill="none"/><circle cx="42" cy="42" r="3" fill="${GN}"/>`},
+{n:"Vortex",c:"Spiral & Helix",s:`<circle cx="40" cy="40" r="6" fill="${G}"/><circle cx="40" cy="40" r="12" stroke="${T}" stroke-width="2.5" fill="none" stroke-dasharray="6 8"/><circle cx="40" cy="40" r="20" stroke="${TL}" stroke-width="2.5" fill="none" stroke-dasharray="8 10"/><circle cx="40" cy="40" r="28" stroke="${GL}" stroke-width="2.5" fill="none" stroke-dasharray="10 14"/>`},
+{n:"Helix Ring",c:"Spiral & Helix",s:`<circle cx="40" cy="40" r="22" stroke="${T}" stroke-width="3" fill="none"/><path d="M26 32C30 38 36 42 40 40C44 38 48 32 52 28" stroke="${G}" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M26 48C30 42 36 38 40 40C44 42 48 48 52 52" stroke="${GN}" stroke-width="3" stroke-linecap="round" fill="none"/>`},
+{n:"Wave Flow",c:"Spiral & Helix",s:`<path d="M16 32C24 24 32 40 40 32C48 24 56 40 64 32" stroke="${T}" stroke-width="3.5" stroke-linecap="round" fill="none"/><path d="M16 44C24 36 32 52 40 44C48 36 56 52 64 44" stroke="${G}" stroke-width="3.5" stroke-linecap="round" fill="none"/><path d="M16 56C24 48 32 64 40 56C48 48 56 64 64 56" stroke="${GN}" stroke-width="3.5" stroke-linecap="round" fill="none"/>`},
+{n:"Orbit Dot",c:"Spiral & Helix",s:`<ellipse cx="40" cy="40" rx="24" ry="10" stroke="${T}" stroke-width="2.5" fill="none" transform="rotate(-30 40 40)"/><ellipse cx="40" cy="40" rx="24" ry="10" stroke="${G}" stroke-width="2.5" fill="none" transform="rotate(30 40 40)"/><ellipse cx="40" cy="40" rx="24" ry="10" stroke="${GN}" stroke-width="2.5" fill="none" transform="rotate(90 40 40)"/><circle cx="40" cy="40" r="5" fill="${G}"/>`},
+{n:"Swirl Leaf",c:"Spiral & Helix",s:`<path d="M40 56C32 56 22 48 22 38C22 28 30 20 40 20C52 20 58 30 56 40C54 48 48 52 42 50C36 48 34 42 36 38C38 34 44 32 46 36" stroke="${T}" stroke-width="3.5" stroke-linecap="round" fill="none"/><path d="M46 36C50 30 54 22 50 18C46 20 44 28 46 36Z" fill="${GN}"/>`},
+{n:"Golden Ratio",c:"Spiral & Helix",s:`<path d="M40 50C34 50 28 44 28 38C28 30 34 24 40 24C48 24 54 30 54 38C54 48 46 56 38 56" stroke="url(#tg)" stroke-width="4" stroke-linecap="round" fill="none"/><circle cx="40" cy="38" r="4" fill="${G}"/><circle cx="40" cy="38" r="8" stroke="${T}" stroke-width="1.5" fill="none" opacity="0.3"/>`},
+
+// ── F. CIRCLE / GEOMETRIC (51-60) ──
+{n:"Split Circle",c:"Geometric",s:`<path d="M40 16A24 24 0 0 1 40 64" fill="${T}"/><path d="M40 64A24 24 0 0 1 40 16" fill="${G}" opacity="0.85"/><circle cx="40" cy="40" r="8" fill="#fff"/>`},
+{n:"Hex Mark",c:"Geometric",s:`<polygon points="40,16 60,28 60,52 40,64 20,52 20,28" stroke="url(#tg)" stroke-width="3.5" fill="none" stroke-linejoin="round"/><circle cx="40" cy="40" r="6" fill="${GN}"/>`},
+{n:"Diamond Leaf",c:"Geometric",s:`<polygon points="40,16 62,40 40,64 18,40" stroke="${T}" stroke-width="3.5" fill="none" stroke-linejoin="round"/><path d="M40 48L40 32" stroke="${GN}" stroke-width="2.5" stroke-linecap="round"/><path d="M40 36C36 32 34 26 37 24C40 26 40 31 40 36Z" fill="${GN}"/><path d="M40 36C44 32 46 26 43 24C40 26 40 31 40 36Z" fill="${GNL}"/>`},
+{n:"Tri Mark",c:"Geometric",s:`<polygon points="40,16 64,58 16,58" stroke="url(#tg)" stroke-width="3.5" fill="none" stroke-linejoin="round"/><circle cx="40" cy="44" r="7" stroke="${GN}" stroke-width="2.5" fill="none"/><circle cx="40" cy="44" r="2.5" fill="${GN}"/>`},
+{n:"Concentric",c:"Geometric",s:`<circle cx="40" cy="40" r="24" stroke="${T}" stroke-width="3" fill="none"/><circle cx="40" cy="40" r="16" stroke="${G}" stroke-width="3" fill="none"/><circle cx="40" cy="40" r="8" stroke="${GN}" stroke-width="3" fill="none"/><circle cx="40" cy="40" r="3" fill="${G}"/>`},
+{n:"Octagon",c:"Geometric",s:`<polygon points="30,16 50,16 64,30 64,50 50,64 30,64 16,50 16,30" stroke="url(#tg)" stroke-width="3.5" fill="none" stroke-linejoin="round"/><line x1="40" y1="50" x2="40" y2="34" stroke="${GN}" stroke-width="3" stroke-linecap="round"/><path d="M40 38C36 34 34 28 37 26C40 28 40 33 40 38Z" fill="${GN}"/><path d="M40 38C44 34 46 28 43 26C40 28 40 33 40 38Z" fill="${GNL}"/>`},
+{n:"Square Dot",c:"Geometric",s:`<rect x="18" y="18" width="44" height="44" rx="8" stroke="${T}" stroke-width="3.5" fill="none"/><circle cx="40" cy="40" r="8" fill="url(#tg)"/>`},
+{n:"Arch",c:"Geometric",s:`<path d="M22 58C22 38 30 18 40 18C50 18 58 38 58 58" stroke="url(#tg)" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="40" cy="52" r="4" fill="${GN}"/>`},
+{n:"Cross Plus",c:"Geometric",s:`<line x1="40" y1="16" x2="40" y2="64" stroke="${T}" stroke-width="5" stroke-linecap="round"/><line x1="16" y1="40" x2="64" y2="40" stroke="${G}" stroke-width="5" stroke-linecap="round"/><circle cx="40" cy="40" r="6" fill="${GN}"/>`},
+{n:"Stacked Bars",c:"Geometric",s:`<rect x="18" y="18" width="44" height="10" rx="5" fill="${T}"/><rect x="24" y="34" width="32" height="10" rx="5" fill="${G}"/><rect x="30" y="50" width="20" height="10" rx="5" fill="${GN}"/>`},
+
+// ── G. INFINITY / LOOP (61-70) ──
+{n:"Infinity",c:"Infinity & Loop",s:`<path d="M40 40C40 32 32 24 24 24C16 24 12 32 12 40C12 48 16 56 24 56C32 56 40 48 40 40C40 32 48 24 56 24C64 24 68 32 68 40C68 48 64 56 56 56C48 56 40 48 40 40" stroke="url(#tg)" stroke-width="4.5" fill="none"/>`},
+{n:"Leaf Loop",c:"Infinity & Loop",s:`<path d="M40 40C40 32 32 24 24 24C16 24 12 32 12 40C12 48 16 56 24 56C32 56 40 48 40 40" stroke="${T}" stroke-width="4.5" fill="none"/><path d="M40 40C44 32 52 24 60 28C66 34 62 48 54 54C48 58 42 52 40 40Z" fill="url(#gn)"/>`},
+{n:"Link Chain",c:"Infinity & Loop",s:`<rect x="12" y="28" width="28" height="24" rx="12" stroke="${T}" stroke-width="4" fill="none"/><rect x="40" y="28" width="28" height="24" rx="12" stroke="${G}" stroke-width="4" fill="none"/>`},
+{n:"Möbius",c:"Infinity & Loop",s:`<path d="M14 44C14 28 28 24 40 32C52 40 66 36 66 24" stroke="${T}" stroke-width="4.5" stroke-linecap="round" fill="none"/><path d="M14 56C14 40 28 36 40 44C52 52 66 48 66 36" stroke="${G}" stroke-width="4.5" stroke-linecap="round" fill="none"/>`},
+{n:"Orbit",c:"Infinity & Loop",s:`<ellipse cx="40" cy="40" rx="26" ry="14" stroke="${T}" stroke-width="3.5" fill="none"/><circle cx="40" cy="40" r="5" fill="${G}"/><circle cx="18" cy="36" r="4" fill="${GN}"/><circle cx="62" cy="44" r="4" fill="${TL}"/>`},
+{n:"Ribbon",c:"Infinity & Loop",s:`<path d="M20 56C20 40 32 28 40 28C48 28 40 44 40 44C40 44 32 56 40 56C48 56 60 44 60 28" stroke="url(#tg)" stroke-width="4.5" stroke-linecap="round" fill="none"/>`},
+{n:"Knot",c:"Infinity & Loop",s:`<path d="M28 24C20 32 20 48 28 56C36 64 48 60 48 48C48 36 36 32 28 40" stroke="${T}" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M52 56C60 48 60 32 52 24C44 16 32 20 32 32C32 44 44 48 52 40" stroke="${G}" stroke-width="4" stroke-linecap="round" fill="none"/>`},
+{n:"Yin Yang",c:"Infinity & Loop",s:`<circle cx="40" cy="40" r="24" stroke="${T}" stroke-width="3" fill="none"/><path d="M40 16A24 24 0 0 1 40 64A12 12 0 0 1 40 40A12 12 0 0 0 40 16" fill="${T}"/><circle cx="40" cy="28" r="4" fill="${G}"/><circle cx="40" cy="52" r="4" fill="${T}"/>`},
+{n:"Flow Lines",c:"Infinity & Loop",s:`<path d="M16 34C28 22 52 22 64 34" stroke="${T}" stroke-width="3.5" stroke-linecap="round" fill="none"/><path d="M16 44C28 32 52 32 64 44" stroke="${G}" stroke-width="3.5" stroke-linecap="round" fill="none"/><path d="M16 54C28 42 52 42 64 54" stroke="${GN}" stroke-width="3.5" stroke-linecap="round" fill="none"/>`},
+{n:"Celtic Knot",c:"Infinity & Loop",s:`<path d="M28 28C28 20 40 16 40 28C40 40 52 36 52 28C52 20 40 16 40 28" stroke="${T}" stroke-width="3.5" fill="none"/><path d="M28 52C28 60 40 64 40 52C40 40 52 44 52 52C52 60 40 64 40 52" stroke="${G}" stroke-width="3.5" fill="none"/><line x1="40" y1="28" x2="40" y2="52" stroke="${GN}" stroke-width="3" stroke-linecap="round"/>`},
+
+// ── H. SUN / STAR / RADIANT (71-80) ──
+{n:"Sun Burst",c:"Sun & Star",s:`<circle cx="40" cy="40" r="10" fill="${G}"/><g stroke="${GL}" stroke-width="3" stroke-linecap="round"><line x1="40" y1="26" x2="40" y2="18"/><line x1="40" y1="62" x2="40" y2="54"/><line x1="26" y1="40" x2="18" y2="40"/><line x1="62" y1="40" x2="54" y2="40"/><line x1="30" y1="30" x2="24" y2="24"/><line x1="56" y1="56" x2="50" y2="50"/><line x1="30" y1="50" x2="24" y2="56"/><line x1="56" y1="24" x2="50" y2="30"/></g>`},
+{n:"Half Sun",c:"Sun & Star",s:`<path d="M18 50C18 34 28 20 40 20C52 20 62 34 62 50" stroke="${G}" stroke-width="4" stroke-linecap="round" fill="none"/><line x1="18" y1="50" x2="62" y2="50" stroke="${T}" stroke-width="4" stroke-linecap="round"/><g stroke="${GL}" stroke-width="2.5" stroke-linecap="round"><line x1="40" y1="20" x2="40" y2="14"/><line x1="28" y1="24" x2="24" y2="18"/><line x1="52" y1="24" x2="56" y2="18"/></g>`},
+{n:"Star 6",c:"Sun & Star",s:`<polygon points="40,14 46,30 64,30 50,42 54,58 40,48 26,58 30,42 16,30 34,30" stroke="url(#tg)" stroke-width="3" fill="none" stroke-linejoin="round"/><circle cx="40" cy="36" r="4" fill="${GN}"/>`},
+{n:"Starburst",c:"Sun & Star",s:`<g stroke="url(#tg)" stroke-width="3" stroke-linecap="round"><line x1="40" y1="16" x2="40" y2="64"/><line x1="16" y1="40" x2="64" y2="40"/><line x1="23" y1="23" x2="57" y2="57"/><line x1="57" y1="23" x2="23" y2="57"/></g><circle cx="40" cy="40" r="8" fill="${G}"/>`},
+{n:"Petal Sun",c:"Sun & Star",s:`<g fill="${G}"><ellipse cx="40" cy="24" rx="5" ry="10"/><ellipse cx="40" cy="56" rx="5" ry="10"/><ellipse cx="24" cy="40" rx="10" ry="5"/><ellipse cx="56" cy="40" rx="10" ry="5"/></g><g fill="${GL}" opacity="0.7"><ellipse cx="29" cy="29" rx="5" ry="10" transform="rotate(45 29 29)"/><ellipse cx="51" cy="29" rx="5" ry="10" transform="rotate(-45 51 29)"/><ellipse cx="29" cy="51" rx="5" ry="10" transform="rotate(-45 29 51)"/><ellipse cx="51" cy="51" rx="5" ry="10" transform="rotate(45 51 51)"/></g><circle cx="40" cy="40" r="6" fill="#fff"/><circle cx="40" cy="40" r="3" fill="${T}"/>`},
+{n:"Spark",c:"Sun & Star",s:`<path d="M40 14L44 34L64 30L46 40L64 50L44 46L40 66L36 46L16 50L34 40L16 30L36 34Z" fill="url(#tg)"/><circle cx="40" cy="40" r="4" fill="#fff"/>`},
+{n:"Glow Ring",c:"Sun & Star",s:`<circle cx="40" cy="40" r="14" stroke="${G}" stroke-width="4.5" fill="none"/><circle cx="40" cy="40" r="22" stroke="${GL}" stroke-width="2" fill="none" opacity="0.4"/><circle cx="40" cy="40" r="28" stroke="${GL}" stroke-width="1" fill="none" opacity="0.2"/><circle cx="40" cy="40" r="5" fill="${G}"/>`},
+{n:"Corona",c:"Sun & Star",s:`<circle cx="40" cy="40" r="14" fill="${G}"/><g fill="${GL}"><path d="M40 14L43 24L37 24Z"/><path d="M40 66L43 56L37 56Z"/><path d="M14 40L24 37L24 43Z"/><path d="M66 40L56 37L56 43Z"/><path d="M22 22L30 28L26 32Z"/><path d="M58 22L50 28L54 32Z"/><path d="M22 58L30 52L26 48Z"/><path d="M58 58L50 52L54 48Z"/></g>`},
+{n:"Crescent",c:"Sun & Star",s:`<path d="M48 18C34 18 22 28 22 42C22 56 34 64 48 64C38 60 32 52 32 42C32 32 38 24 48 18Z" fill="url(#tg)"/><circle cx="50" cy="32" r="2" fill="${GL}" opacity="0.6"/><circle cx="56" cy="40" r="1.5" fill="${GL}" opacity="0.4"/>`},
+{n:"Asterisk",c:"Sun & Star",s:`<g stroke="url(#tg)" stroke-width="5" stroke-linecap="round"><line x1="40" y1="18" x2="40" y2="62"/><line x1="21" y1="29" x2="59" y2="51"/><line x1="59" y1="29" x2="21" y2="51"/></g><circle cx="40" cy="40" r="5" fill="#fff"/>`},
+
+// ── I. BADGE / SHIELD / CREST (81-90) ──
+{n:"Shield",c:"Badge & Crest",s:`<path d="M40 14L60 22V42C60 54 50 62 40 66C30 62 20 54 20 42V22Z" stroke="url(#tg)" stroke-width="3.5" fill="none" stroke-linejoin="round"/><circle cx="40" cy="38" r="6" fill="${GN}"/>`},
+{n:"Badge Circle",c:"Badge & Crest",s:`<circle cx="40" cy="40" r="24" stroke="${T}" stroke-width="4" fill="none"/><circle cx="40" cy="40" r="19" stroke="${T}" stroke-width="1.5" fill="none" opacity="0.3"/><path d="M33 42L38 47L48 35" stroke="${G}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`},
+{n:"Banner Shield",c:"Badge & Crest",s:`<path d="M40 14L58 22V48L40 66L22 48V22Z" stroke="url(#tg)" stroke-width="3.5" fill="none" stroke-linejoin="round"/><line x1="40" y1="52" x2="40" y2="32" stroke="${GN}" stroke-width="3" stroke-linecap="round"/><path d="M40 36C36 32 34 26 37 24C40 26 40 31 40 36Z" fill="${GN}"/><path d="M40 36C44 32 46 26 43 24C40 26 40 31 40 36Z" fill="${GNL}"/>`},
+{n:"Seal Ring",c:"Badge & Crest",s:`<circle cx="40" cy="40" r="24" stroke="${T}" stroke-width="2.5" fill="none"/><circle cx="40" cy="40" r="20" stroke="${T}" stroke-width="2.5" fill="none"/><circle cx="40" cy="40" r="10" fill="url(#tg)"/><g fill="${G}"><circle cx="40" cy="14" r="2"/><circle cx="40" cy="66" r="2"/><circle cx="14" cy="40" r="2"/><circle cx="66" cy="40" r="2"/></g>`},
+{n:"Laurel Badge",c:"Badge & Crest",s:`<path d="M24 56C20 48 18 40 22 32C26 24 34 20 40 18C46 20 54 24 58 32C62 40 60 48 56 56" stroke="${GN}" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M24 56C28 52 36 52 40 56C44 52 52 52 56 56" stroke="${G}" stroke-width="3" stroke-linecap="round" fill="none"/><circle cx="40" cy="38" r="6" fill="${G}"/>`},
+{n:"Stamp",c:"Badge & Crest",s:`<circle cx="40" cy="40" r="24" stroke="${T}" stroke-width="3" fill="none" stroke-dasharray="4 4"/><circle cx="40" cy="40" r="18" stroke="${T}" stroke-width="2" fill="none"/><text x="40" y="45" text-anchor="middle" font-family="'Inter'" font-weight="900" font-size="14" fill="${T}">TGG</text>`},
+{n:"Crown",c:"Badge & Crest",s:`<path d="M18 50L24 28L32 40L40 22L48 40L56 28L62 50Z" stroke="url(#tg)" stroke-width="3.5" fill="none" stroke-linejoin="round"/><line x1="18" y1="50" x2="62" y2="50" stroke="url(#tg)" stroke-width="3.5" stroke-linecap="round"/><line x1="20" y1="56" x2="60" y2="56" stroke="${G}" stroke-width="2.5" stroke-linecap="round"/><circle cx="40" cy="22" r="3" fill="${G}"/>`},
+{n:"Monogram TGG",c:"Badge & Crest",s:`<circle cx="40" cy="40" r="24" stroke="${T}" stroke-width="3.5" fill="none"/><text x="40" y="46" text-anchor="middle" font-family="'Inter'" font-weight="900" font-size="16" fill="url(#tg)" letter-spacing="1">TGG</text>`},
+{n:"Ribbon Badge",c:"Badge & Crest",s:`<circle cx="40" cy="34" r="18" stroke="${T}" stroke-width="3.5" fill="none"/><path d="M28 48L24 66L34 58L40 68L46 58L56 66L52 48" stroke="${G}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="40" cy="34" r="5" fill="${GN}"/>`},
+{n:"Quality Seal",c:"Badge & Crest",s:`<polygon points="40,14 46,28 62,28 50,38 54,52 40,44 26,52 30,38 18,28 34,28" stroke="${T}" stroke-width="2.5" fill="none" stroke-linejoin="round"/><polygon points="40,14 46,28 62,28 50,38 54,52 40,44 26,52 30,38 18,28 34,28" stroke="${G}" stroke-width="1" fill="url(#tg)" opacity="0.15"/><circle cx="40" cy="36" r="5" fill="${G}"/>`},
+
+// ── J. COMBINATION / UNIQUE (91-100) ──
+{n:"Gut + Fork",c:"Unique Combo",s:`<path d="M30 20C22 28 22 44 30 52C38 60 50 56 50 44C50 32 38 28 30 36" stroke="${T}" stroke-width="3.5" stroke-linecap="round" fill="none"/><line x1="56" y1="60" x2="56" y2="34" stroke="${G}" stroke-width="3.5" stroke-linecap="round"/><line x1="52" y1="34" x2="52" y2="24" stroke="${G}" stroke-width="2.5" stroke-linecap="round"/><line x1="56" y1="34" x2="56" y2="24" stroke="${G}" stroke-width="2.5" stroke-linecap="round"/><line x1="60" y1="34" x2="60" y2="24" stroke="${G}" stroke-width="2.5" stroke-linecap="round"/>`},
+{n:"Bowl + Helix",c:"Unique Combo",s:`<path d="M18 44C22 58 58 58 62 44" stroke="${T}" stroke-width="4.5" stroke-linecap="round" fill="none"/><path d="M30 44C30 34 40 30 40 22C40 30 50 34 50 44" stroke="${G}" stroke-width="3" stroke-linecap="round" fill="none"/><circle cx="40" cy="20" r="3" fill="${GN}"/>`},
+{n:"Sun + Leaf",c:"Unique Combo",s:`<circle cx="36" cy="44" r="12" fill="${G}"/><g stroke="${GL}" stroke-width="2.5" stroke-linecap="round"><line x1="36" y1="28" x2="36" y2="24"/><line x1="36" y1="60" x2="36" y2="56"/><line x1="20" y1="44" x2="24" y2="44"/><line x1="48" y1="44" x2="52" y2="44"/></g><path d="M50 32C46 24 48 16 54 14C58 20 54 28 50 32Z" fill="${GN}"/><path d="M50 32C56 28 62 28 64 22C60 18 52 24 50 32Z" fill="${GNL}"/>`},
+{n:"G + Heart",c:"Unique Combo",s:`<path d="M40 58C28 48 16 40 16 30C16 22 22 18 28 18C33 18 37 21 40 26C43 21 47 18 52 18C58 18 64 22 64 30C64 40 52 48 40 58Z" fill="none" stroke="${T}" stroke-width="3.5" stroke-linejoin="round"/><path d="M46 30C44 28 42 28 40 30C38 28 36 28 34 30C32 34 34 38 40 44C46 38 48 34 46 30Z" fill="${G}"/>`},
+{n:"Spoon + Spiral",c:"Unique Combo",s:`<ellipse cx="34" cy="28" rx="10" ry="12" stroke="${T}" stroke-width="3.5" fill="none"/><path d="M34 40L34 62" stroke="${T}" stroke-width="4" stroke-linecap="round"/><path d="M48 22C52 22 56 26 56 32C56 38 52 42 48 42C44 42 42 38 42 34C42 30 44 28 48 28" stroke="${G}" stroke-width="3" stroke-linecap="round" fill="none"/>`},
+{n:"Fork + Sun",c:"Unique Combo",s:`<circle cx="40" cy="54" r="3.5" fill="${G}"/><line x1="40" y1="50" x2="40" y2="30" stroke="${G}" stroke-width="4" stroke-linecap="round"/><line x1="34" y1="30" x2="34" y2="18" stroke="${G}" stroke-width="3" stroke-linecap="round"/><line x1="40" y1="30" x2="40" y2="18" stroke="${G}" stroke-width="3" stroke-linecap="round"/><line x1="46" y1="30" x2="46" y2="18" stroke="${G}" stroke-width="3" stroke-linecap="round"/><circle cx="40" cy="14" r="6" stroke="${GL}" stroke-width="2" fill="none"/><circle cx="40" cy="14" r="2" fill="${GL}"/>`},
+{n:"Shield Leaf",c:"Unique Combo",s:`<path d="M40 14L60 24V44C60 54 50 62 40 66C30 62 20 54 20 44V24Z" stroke="${T}" stroke-width="3" fill="none" stroke-linejoin="round"/><path d="M40 54L40 30" stroke="${GN}" stroke-width="3" stroke-linecap="round"/><path d="M40 38C34 32 30 24 34 20C38 22 40 30 40 38Z" fill="${GN}"/><path d="M40 38C46 32 50 24 46 20C42 22 40 30 40 38Z" fill="${GNL}"/>`},
+{n:"Crown + G",c:"Unique Combo",s:`<path d="M50 32C45 24 35 22 28 26C22 30 20 40 24 48C28 54 36 56 42 52" stroke="${T}" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M22 18L26 28L32 22L38 30L44 22L48 28L52 18" stroke="${G}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`},
+{n:"Plate + Sprout",c:"Unique Combo",s:`<circle cx="40" cy="42" r="20" stroke="${T}" stroke-width="3" fill="none"/><circle cx="40" cy="42" r="14" stroke="${T}" stroke-width="1.5" fill="none" opacity="0.25"/><line x1="40" y1="48" x2="40" y2="30" stroke="${GN}" stroke-width="3" stroke-linecap="round"/><path d="M40 34C36 30 34 24 37 22C40 24 40 29 40 34Z" fill="${GN}"/><path d="M40 34C44 30 46 24 43 22C40 24 40 29 40 34Z" fill="${GNL}"/>`},
+{n:"Infinity Leaf",c:"Unique Combo",s:`<path d="M40 40C40 32 32 26 26 26C18 26 14 32 14 40C14 48 18 54 26 54C32 54 40 48 40 40" stroke="${T}" stroke-width="4" fill="none"/><path d="M40 40C44 32 52 26 58 30C64 36 60 48 52 52C46 56 42 50 40 40Z" fill="url(#gn)"/>`},
+];
+
+// ============================================================
+// BUILD GALLERY
+// ============================================================
+const categories = [
+  {name:'Letter G Marks', range:[0,10]},
+  {name:'Leaf & Sprout', range:[10,20]},
+  {name:'Culinary', range:[20,30]},
+  {name:'Bowl & Plate', range:[30,40]},
+  {name:'Spiral & Helix', range:[40,50]},
+  {name:'Geometric', range:[50,60]},
+  {name:'Infinity & Loop', range:[60,70]},
+  {name:'Sun & Star', range:[70,80]},
+  {name:'Badge & Crest', range:[80,90]},
+  {name:'Unique Combos', range:[90,100]},
+];
+
+const gallery = document.getElementById('gallery');
+const picked = new Set();
+
+categories.forEach(cat => {
+  const section = document.createElement('div');
+  section.className = 'cat';
+  section.innerHTML = `<div class="cat-h"><span class="cat-n">${cat.name}</span><span class="cat-c">${cat.range[1]-cat.range[0]} concepts</span></div>`;
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+
+  for (let i = cat.range[0]; i < cat.range[1]; i++) {
+    const l = logos[i];
+    const card = document.createElement('div');
+    card.className = 'lc';
+    card.id = 'card-'+i;
+    card.innerHTML = `
+      <span class="num">#${String(i+1).padStart(2,'0')}</span>
+      <div class="cv" id="cv-${i}">
+        <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">${DEFS}${l.s}</svg>
+      </div>
+      <div class="lb">
+        <div class="ln">${l.n}</div>
+      </div>`;
+    card.addEventListener('click', e => {
+      if (e.shiftKey) {
+        // Toggle pick
+        card.classList.toggle('picked');
+        if (picked.has(i)) picked.delete(i); else picked.add(i);
+        updatePbar();
+      } else {
+        openModal(i);
+      }
+    });
+    grid.appendChild(card);
+  }
+  section.appendChild(grid);
+  gallery.appendChild(section);
+});
+
+function updatePbar() {
+  const bar = document.getElementById('pbar');
+  const cnt = document.getElementById('pcount');
+  if (picked.size > 0) {
+    bar.classList.add('show');
+    cnt.textContent = picked.size + ' picked';
+  } else {
+    bar.classList.remove('show');
+  }
+}
+function clearPicks() {
+  picked.forEach(i => document.getElementById('card-'+i).classList.remove('picked'));
+  picked.clear();
+  updatePbar();
+}
+
+// Canvas bg switcher
+function setBg(mode, btn) {
+  document.querySelectorAll('.cb').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  const bg = {white:'#ffffff',dark:'#0f172a',kraft:'#e8dcce',teal:'#0f4c45',blush:'#fdf2f8'}[mode];
+  document.querySelectorAll('.cv').forEach(c => c.style.background = bg);
+}
+
+// Modal
+let currentModal = -1;
+function openModal(i) {
+  currentModal = i;
+  const l = logos[i];
+  document.getElementById('modalSvg').innerHTML = `<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:160px;height:160px">${DEFS}${l.s}</svg>`;
+  document.getElementById('modalTitle').textContent = '#' + (i+1) + ' — ' + l.n;
+  document.getElementById('modalCat').textContent = l.c;
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal(e) {
+  if (e.target === document.getElementById('modal')) {
+    document.getElementById('modal').classList.remove('show');
+  }
+}
+function dlCurrent() {
+  if (currentModal < 0) return;
+  const l = logos[currentModal];
+  const svg = `<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">${DEFS}${l.s}</svg>`;
+  const blob = new Blob([svg], {type:'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'TGG_' + String(currentModal+1).padStart(2,'0') + '_' + l.n.replace(/\s+/g,'_') + '.svg';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>

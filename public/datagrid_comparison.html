@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Grid Comparison: Now vs. Modernized</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .num-tabular { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased min-h-screen">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
+    <div class="max-w-[1700px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            Interactive Comparison
+          </span>
+          <h1 class="text-base font-black text-white">Data Grid: Current vs. Modernized</h1>
+        </div>
+        <p class="text-xs text-slate-400 mt-0.5">Live visual side-by-side walkthrough of the Delivery Challans &amp; Catalog tables</p>
+      </div>
+
+      <!-- Mode Switcher -->
+      <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+        <button onclick="setMode('split')" id="btn-split" class="mode-btn active px-3.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-xs">
+          ⚖️ Side-by-Side Split
+        </button>
+        <button onclick="setMode('now')" id="btn-now" class="mode-btn px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">
+          🔴 Current (Now)
+        </button>
+        <button onclick="setMode('modern')" id="btn-modern" class="mode-btn px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">
+          🟢 Modernized (Proposed)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Key Difference Summary Bar -->
+  <div class="border-b border-slate-800/80 bg-slate-900/40 px-6 py-3">
+    <div class="max-w-[1700px] mx-auto flex flex-wrap items-center justify-between gap-4 text-xs">
+      <div class="flex flex-wrap items-center gap-4">
+        <span class="font-bold text-slate-400 uppercase text-[10px] tracking-wider">What Changes:</span>
+        <span class="flex items-center gap-1.5 text-slate-300">
+          <span class="h-2 w-2 rounded-full bg-amber-400"></span> <strong>1. Filters:</strong> Dropdowns → Instant Facet Pills
+        </span>
+        <span class="flex items-center gap-1.5 text-slate-300">
+          <span class="h-2 w-2 rounded-full bg-emerald-400"></span> <strong>2. Editing:</strong> Full Modal Form → Direct In-Cell Quick Edit
+        </span>
+        <span class="flex items-center gap-1.5 text-slate-300">
+          <span class="h-2 w-2 rounded-full bg-blue-400"></span> <strong>3. Margins:</strong> Hidden in sub-modal → Live Color-Coded Badges
+        </span>
+        <span class="flex items-center gap-1.5 text-slate-300">
+          <span class="h-2 w-2 rounded-full bg-purple-400"></span> <strong>4. Bulk Actions:</strong> Buried → Floating Slide-up Action Dock
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Comparison Area -->
+  <main class="max-w-[1700px] mx-auto p-6">
+    <div id="comparison-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+
+      <!-- ============================================================== -->
+      <!-- LEFT: CURRENT TABLE (NOW)                                      -->
+      <!-- ============================================================== -->
+      <section id="panel-now" class="space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-rose-900/30">
+          <div class="flex items-center gap-2">
+            <span class="h-3 w-3 rounded-full bg-rose-500"></span>
+            <h2 class="text-sm font-black text-rose-300 uppercase tracking-wider">Current Implementation (Now)</h2>
+          </div>
+          <span class="text-xs text-slate-500 font-mono">Traditional multi-step workflow</span>
+        </div>
+
+        <!-- Simulated Current Search Bar & Segmented Locations -->
+        <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+          <!-- Search input -->
+          <div class="relative">
+            <input type="text" disabled value="Search challans by DC#, brand, or item name..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-9 py-2.5 text-xs text-slate-400">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
+          </div>
+
+          <!-- Current Hub Buttons -->
+          <div class="flex items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs">
+            <span class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold">All Hubs (142)</span>
+            <span class="px-3 py-1.5 text-slate-400 font-medium">Hyderabad (84)</span>
+            <span class="px-3 py-1.5 text-slate-400 font-medium">Bangalore (58)</span>
+          </div>
+
+          <!-- Current Financial Stats Text -->
+          <div class="text-[11px] text-slate-400 font-mono pt-1 border-t border-slate-800/60 flex gap-2">
+            <span>Goods: ₹1,04,200</span>
+            <span>|</span>
+            <span>Trans: ₹3,230</span>
+            <span>|</span>
+            <span class="text-emerald-400">Profit: ₹35,420</span>
+          </div>
+        </div>
+
+        <!-- Current Table Representation -->
+        <div class="rounded-2xl border border-slate-800 overflow-hidden bg-slate-900">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-950 border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider">
+              <tr>
+                <th class="p-3 w-8"><input type="checkbox" disabled class="rounded bg-slate-800 border-slate-700"></th>
+                <th class="p-3">DC No</th>
+                <th class="p-3">Date</th>
+                <th class="p-3">Location</th>
+                <th class="p-3 text-right">Value (MRP)</th>
+                <th class="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60 text-slate-300">
+              <!-- Current Row 1 -->
+              <tr>
+                <td class="p-3"><input type="checkbox" disabled class="rounded bg-slate-800 border-slate-700"></td>
+                <td class="p-3 font-mono font-bold text-white">DC-1042</td>
+                <td class="p-3 text-slate-400 font-mono">24-10-2024</td>
+                <td class="p-3">
+                  <span class="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold border border-blue-500/30">
+                    Hyderabad
+                  </span>
+                </td>
+                <td class="p-3 text-right font-mono font-bold text-white">₹1,920.00</td>
+                <td class="p-3 text-right">
+                  <!-- Current cramped 4-5 buttons -->
+                  <div class="inline-flex gap-1">
+                    <button class="px-2 py-1 rounded bg-indigo-600 text-white text-[10px] font-bold">View</button>
+                    <button class="px-2 py-1 rounded bg-slate-800 text-slate-300 text-[10px]">PDF</button>
+                    <button class="px-2 py-1 rounded bg-slate-800 text-amber-300 text-[10px]">Edit ✎</button>
+                    <button class="px-2 py-1 rounded bg-slate-800 text-rose-300 text-[10px]">Margin</button>
+                  </div>
+                </td>
+              </tr>
+              <!-- Current Row 2 -->
+              <tr>
+                <td class="p-3"><input type="checkbox" disabled class="rounded bg-slate-800 border-slate-700"></td>
+                <td class="p-3 font-mono font-bold text-white">DC-1043</td>
+                <td class="p-3 text-slate-400 font-mono">24-10-2024</td>
+                <td class="p-3">
+                  <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                    Bangalore
+                  </span>
+                </td>
+                <td class="p-3 text-right font-mono font-bold text-white">₹3,060.00</td>
+                <td class="p-3 text-right">
+                  <div class="inline-flex gap-1">
+                    <button class="px-2 py-1 rounded bg-indigo-600 text-white text-[10px] font-bold">View</button>
+                    <button class="px-2 py-1 rounded bg-slate-800 text-slate-300 text-[10px]">PDF</button>
+                    <button class="px-2 py-1 rounded bg-slate-800 text-amber-300 text-[10px]">Edit ✎</button>
+                    <button class="px-2 py-1 rounded bg-slate-800 text-rose-300 text-[10px]">Margin</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Annotation Callouts (Current Pain Points) -->
+        <div class="space-y-2 p-4 rounded-2xl bg-rose-950/20 border border-rose-900/30 text-xs text-rose-200">
+          <div class="font-bold flex items-center gap-1.5 text-rose-300">
+            <span>⚠️</span> Current Pain Points:
+          </div>
+          <ul class="list-disc pl-4 space-y-1 text-slate-300">
+            <li><strong>Editing an item</strong> forces you out of the list into a heavy multi-step modal.</li>
+            <li><strong>Margins are invisible</strong> on the row — you must click the "Margin" button on each DC to see what you earned.</li>
+            <li><strong>No status filter pills</strong> for "Pending Signed Copy" or "Unverified Goods".</li>
+            <li><strong>Bulk selection</strong> only shows total MRP count, with no 1-click bulk verification or export.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- RIGHT: MODERNIZED DATA GRID (PROPOSED)                          -->
+      <!-- ============================================================== -->
+      <section id="panel-modern" class="space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-emerald-500/30">
+          <div class="flex items-center gap-2">
+            <span class="h-3 w-3 rounded-full bg-emerald-400 animate-pulse"></span>
+            <h2 class="text-sm font-black text-emerald-300 uppercase tracking-wider">Modernized Smart Data Grid (Proposed)</h2>
+          </div>
+          <span class="text-xs text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
+            ✨ Interactive Live Demo
+          </span>
+        </div>
+
+        <!-- Modern Filter Pills Bar (Faceted Search) -->
+        <div class="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+          <!-- 1-Click Interactive Pills with Counts -->
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button onclick="demoFilter('all', this)" class="modern-pill active px-3 py-1 rounded-xl text-xs font-black bg-emerald-500 text-slate-950 transition">
+              All Records <span class="ml-1 opacity-75 font-mono">142</span>
+            </button>
+            <button onclick="demoFilter('pending', this)" class="modern-pill px-3 py-1 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition">
+              Pending Signed DC <span class="ml-1 px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 font-mono">8</span>
+            </button>
+            <button onclick="demoFilter('low-margin', this)" class="modern-pill px-3 py-1 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition">
+              Low Margin (&lt;10%) <span class="ml-1 px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-300 font-mono">14</span>
+            </button>
+            <button onclick="demoFilter('verified', this)" class="modern-pill px-3 py-1 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition">
+              Verified <span class="ml-1 opacity-75 font-mono">120</span>
+            </button>
+          </div>
+
+          <!-- Instant High-Speed Fuzzy Search -->
+          <div class="relative">
+            <input type="text" placeholder="Type to instantly filter items, brands, vendors..." class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-9 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400">⚡</span>
+          </div>
+        </div>
+
+        <!-- Modern Grid Container -->
+        <div class="rounded-2xl border border-slate-800 overflow-hidden bg-slate-900/90 shadow-2xl relative">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-950/90 sticky top-0 border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider">
+              <tr>
+                <th class="p-3 w-8"><input type="checkbox" onchange="demoCheckAll(this)" class="rounded bg-slate-800 border-slate-700 text-emerald-500"></th>
+                <th class="p-3">DC # / Item</th>
+                <th class="p-3">Qty (Double Click)</th>
+                <th class="p-3">P.Cost</th>
+                <th class="p-3">MRP (Selling)</th>
+                <th class="p-3">Margin % (Admin)</th>
+                <th class="p-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60 text-slate-300" id="modern-demo-body">
+              
+              <!-- Modern Row 1 (Healthy Margin) -->
+              <tr class="hover:bg-slate-800/40 transition group" data-category="verified">
+                <td class="p-3"><input type="checkbox" onchange="demoCheckRow()" class="demo-cb rounded bg-slate-800 border-slate-700 text-emerald-500"></td>
+                <td class="p-3 font-bold text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <div>
+                    <div>DC-1042 • Coca Cola 300ml</div>
+                    <div class="text-[10px] text-slate-400 font-normal">Swastik Ent • Beverages</div>
+                  </div>
+                </td>
+                <td class="p-3">
+                  <!-- INLINE EDIT CELL -->
+                  <span onclick="demoEditCell(this)" class="px-2 py-1 rounded bg-slate-950 border border-slate-800 hover:border-emerald-500 text-white font-mono cursor-pointer transition flex items-center gap-1 w-max" title="Click to quick-edit">
+                    <span>48 units</span>
+                    <span class="text-[9px] text-slate-500 group-hover:text-emerald-400">✎</span>
+                  </span>
+                </td>
+                <td class="p-3 font-mono">₹28.00</td>
+                <td class="p-3 font-mono font-bold text-white">₹40.00</td>
+                <td class="p-3">
+                  <!-- Color-Coded Margin Badge -->
+                  <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono">
+                    30.0% (₹12/u)
+                  </span>
+                </td>
+                <td class="p-3 text-right">
+                  <button class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200">View ↗</button>
+                </td>
+              </tr>
+
+              <!-- Modern Row 2 (Low Margin Warning) -->
+              <tr class="hover:bg-slate-800/40 transition group bg-rose-950/10" data-category="low-margin">
+                <td class="p-3"><input type="checkbox" onchange="demoCheckRow()" class="demo-cb rounded bg-slate-800 border-slate-700 text-emerald-500"></td>
+                <td class="p-3 font-bold text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+                  <div>
+                    <div>DC-1042 • Greek Yogurt 90g</div>
+                    <div class="text-[10px] text-slate-400 font-normal">Drums Food • Dairy</div>
+                  </div>
+                </td>
+                <td class="p-3">
+                  <span onclick="demoEditCell(this)" class="px-2 py-1 rounded bg-slate-950 border border-slate-800 hover:border-emerald-500 text-white font-mono cursor-pointer transition flex items-center gap-1 w-max" title="Click to quick-edit">
+                    <span>24 units</span>
+                    <span class="text-[9px] text-slate-500 group-hover:text-emerald-400">✎</span>
+                  </span>
+                </td>
+                <td class="p-3 font-mono">₹46.50</td>
+                <td class="p-3 font-mono font-bold text-white">₹50.00</td>
+                <td class="p-3">
+                  <!-- Color-Coded Low Margin Badge -->
+                  <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-rose-500/20 text-rose-300 border border-rose-500/30 font-mono">
+                    7.0% (₹3.5/u) ⚠️
+                  </span>
+                </td>
+                <td class="p-3 text-right">
+                  <button class="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 text-xs font-bold">Fix Price</button>
+                </td>
+              </tr>
+
+              <!-- Modern Row 3 (Pending Verification) -->
+              <tr class="hover:bg-slate-800/40 transition group" data-category="pending">
+                <td class="p-3"><input type="checkbox" onchange="demoCheckRow()" class="demo-cb rounded bg-slate-800 border-slate-700 text-emerald-500"></td>
+                <td class="p-3 font-bold text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                  <div>
+                    <div>DC-1043 • Cold Pressed Juice 200ml</div>
+                    <div class="text-[10px] text-slate-400 font-normal">Raw Pressery • Juices</div>
+                  </div>
+                </td>
+                <td class="p-3">
+                  <span onclick="demoEditCell(this)" class="px-2 py-1 rounded bg-slate-950 border border-slate-800 hover:border-emerald-500 text-white font-mono cursor-pointer transition flex items-center gap-1 w-max" title="Click to quick-edit">
+                    <span>36 units</span>
+                    <span class="text-[9px] text-slate-500 group-hover:text-emerald-400">✎</span>
+                  </span>
+                </td>
+                <td class="p-3 font-mono">₹62.00</td>
+                <td class="p-3 font-mono font-bold text-white">₹85.00</td>
+                <td class="p-3">
+                  <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono">
+                    27.1% (₹23/u)
+                  </span>
+                </td>
+                <td class="p-3 text-right">
+                  <button class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-black text-xs font-bold transition">Verify ✓</button>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+
+          <!-- Footer Totals -->
+          <div class="p-3 bg-slate-950 border-t border-slate-800 flex justify-between items-center text-xs">
+            <span class="text-slate-400">3 of 142 items</span>
+            <div class="flex gap-4 font-mono">
+              <span class="text-slate-400">MRP: <strong class="text-white">₹6,180</strong></span>
+              <span class="text-emerald-400 font-bold">Total Margin: ₹1,488 (24.1%)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Simulated Floating Bulk Action Dock -->
+        <div id="demo-bulk-dock" class="p-3 rounded-2xl bg-slate-950 border border-emerald-500/40 shadow-xl flex items-center justify-between text-xs transition-all duration-300 opacity-0 translate-y-4">
+          <span class="text-white font-bold flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span id="demo-checked-count">0</span> Items Selected
+          </span>
+          <div class="flex items-center gap-2">
+            <button onclick="alert('Bulk Verified!')" class="px-3 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">✓ Bulk Verify</button>
+            <button onclick="alert('Exported CSV!')" class="px-3 py-1 rounded-lg bg-slate-800 text-white font-bold">⬇ Export CSV</button>
+          </div>
+        </div>
+
+        <!-- Annotation Callouts (Modern Advantages) -->
+        <div class="space-y-2 p-4 rounded-2xl bg-emerald-950/20 border border-emerald-900/30 text-xs text-emerald-200">
+          <div class="font-bold flex items-center gap-1.5 text-emerald-300">
+            <span>✨</span> What You Gain:
+          </div>
+          <ul class="list-disc pl-4 space-y-1 text-slate-300">
+            <li><strong>Double-click any quantity</strong> above to test editing without leaving the page.</li>
+            <li><strong>Immediate Margin Visibility</strong>: You spot low-margin or negative items instantly with red badges.</li>
+            <li><strong>Check any row's checkbox</strong> to see the floating bulk action bar activate.</li>
+            <li><strong>1-click Facet Pills</strong>: Filter to Pending or Low Margin in 0 milliseconds.</li>
+          </ul>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Interactive JavaScript -->
+  <script>
+    function setMode(mode) {
+      document.querySelectorAll('.mode-btn').forEach(b => {
+        b.className = 'mode-btn px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition';
+      });
+      event.target.className = 'mode-btn active px-3.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-xs';
+
+      const grid = document.getElementById('comparison-grid');
+      const panelNow = document.getElementById('panel-now');
+      const panelModern = document.getElementById('panel-modern');
+
+      if (mode === 'split') {
+        grid.className = 'grid grid-cols-1 lg:grid-cols-2 gap-8 items-start';
+        panelNow.classList.remove('hidden');
+        panelModern.classList.remove('hidden');
+      } else if (mode === 'now') {
+        grid.className = 'grid grid-cols-1 max-w-4xl mx-auto items-start';
+        panelNow.classList.remove('hidden');
+        panelModern.classList.add('hidden');
+      } else if (mode === 'modern') {
+        grid.className = 'grid grid-cols-1 max-w-5xl mx-auto items-start';
+        panelNow.classList.add('hidden');
+        panelModern.classList.remove('hidden');
+      }
+    }
+
+    function demoFilter(cat, btn) {
+      document.querySelectorAll('.modern-pill').forEach(b => {
+        b.className = 'modern-pill px-3 py-1 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition';
+      });
+      btn.className = 'modern-pill active px-3 py-1 rounded-xl text-xs font-black bg-emerald-500 text-slate-950 transition';
+
+      const rows = document.querySelectorAll('#modern-demo-body tr');
+      rows.forEach(r => {
+        if (cat === 'all' || r.getAttribute('data-category') === cat) {
+          r.style.display = '';
+        } else {
+          r.style.display = 'none';
+        }
+      });
+    }
+
+    function demoEditCell(el) {
+      const current = el.querySelector('span').innerText;
+      const newVal = prompt("Quick Edit Quantity (Spreadsheet-style):", current);
+      if (newVal !== null && newVal !== '') {
+        el.querySelector('span').innerText = newVal;
+        alert("Updated to " + newVal + "! Margin & totals recalculated in real time.");
+      }
+    }
+
+    function demoCheckRow() {
+      const checked = document.querySelectorAll('.demo-cb:checked').length;
+      const dock = document.getElementById('demo-bulk-dock');
+      const countEl = document.getElementById('demo-checked-count');
+      countEl.innerText = checked;
+      if (checked > 0) {
+        dock.classList.remove('opacity-0', 'translate-y-4');
+      } else {
+        dock.classList.add('opacity-0', 'translate-y-4');
+      }
+    }
+
+    function demoCheckAll(master) {
+      document.querySelectorAll('.demo-cb').forEach(cb => cb.checked = master.checked);
+      demoCheckRow();
+    }
+  </script>
+</body>
+</html>

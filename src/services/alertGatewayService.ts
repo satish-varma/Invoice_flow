@@ -126,31 +126,42 @@ export function generateAlertMessage(
   }
 ): string {
   const today = data.date || new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  const site = data.siteName || 'Gut Guru Hub';
-  const name = data.employeeName || 'Staff Member';
+  const site = data.siteName || 'InvoiceFlow Hub';
+  const name = data.employeeName || 'Team Member';
+  const cutoff = data.cutoff || '06:30 AM';
 
   if (data.customText) {
     return data.customText;
   }
 
   switch (alertType) {
+    case 'gentle_reminder':
+      return `☀️ Morning Attendance Reminder\n\nHi ${name},\nPlease remember to mark your check-in for today's shift (${today}) at ${site}. Expected cutoff is ${cutoff}.\n\nHave a great and safe shift!\n— Operations Team`;
+
     case 'absent_notice':
-      return `⚠️ Gut Guru Attendance Notice\n\nHello ${name},\nYou have not checked in for today's shift (${today}) at ${site}. The shift cutoff deadline was ${data.cutoff || '06:30 AM'}.\n\nPlease check in immediately via your mobile kiosk, or notify your store manager if you are taking leave.`;
+      return `⚠️ Attendance Cutoff Notice\n\nHi ${name},\nYou have not checked in for today's shift (${today}) at ${site}. The cutoff deadline was ${cutoff}.\n\nPlease mark your attendance immediately via the Kiosk or notify your supervisor if on approved leave.\n— Operations Team`;
 
     case 'late_alert':
-      return `⏰ Gut Guru Check-in Notice\n\nHi ${name},\nYour check-in today (${today}) was recorded at ${data.checkInTime || 'morning'} (+${data.lateMinutes || 0} minutes past the ${data.cutoff || '06:30 AM'} deadline).\n\nPlease ensure punctual check-in for upcoming shifts.`;
+      return `⏰ Check-In Notice\n\nHi ${name},\nYour check-in today (${today}) was recorded at ${data.checkInTime || 'morning'} (+${data.lateMinutes || 0}m past the ${cutoff} cutoff).\n\nPlease ensure punctual check-ins for scheduled shifts.\n— Operations Team`;
 
     case 'checkout_reminder':
-      return `🏁 Gut Guru Shift Notice\n\nHi ${name},\nYou have been on duty for ${data.hoursElapsed || 11}+ hours today. Please remember to capture your check-out selfie before ending your shift to ensure your full day attendance is logged.`;
+      return `🏁 Shift Check-Out Reminder\n\nHi ${name},\nYou have completed your shift at ${site} (${data.hoursElapsed || 9}+ hours elapsed). Please remember to capture your check-out selfie on the kiosk before leaving.\n\nThank you for your hard work!\n— Operations Team`;
 
     case 'manager_digest':
-      return `📊 Gut Guru Morning Shift Digest (${today})\nSite: ${site}\n\n👥 Present: ${data.presentCount || 0} / ${data.totalRoster || 0}\n🟢 On Duty: ${data.onDutyCount || 0}\n🔴 Absent (${data.absentNames?.length || 0}): ${data.absentNames?.join(', ') || 'None (100% Present!)'}\n\nAutomated digest via Gut Guru Ops.`;
+      return `📊 Shift Attendance Digest — ${today}\n📍 Site: ${site}\n\n👥 Total Punched: ${data.presentCount || 0} / ${data.totalRoster || 0}\n🟢 On Duty: ${data.onDutyCount || 0}\n🔴 Absent / Pending (${data.absentNames?.length || 0}):\n${data.absentNames && data.absentNames.length > 0 ? data.absentNames.map((n, i) => `  ${i + 1}. ${n}`).join('\n') : '  None (100% Turnout! 🎉)'}\n\n— Generated via InvoiceFlow Attendance`;
+
+    case 'group_absent_alert': {
+      const absentList = data.absentNames && data.absentNames.length > 0
+        ? data.absentNames.map((n, i) => `  ${i + 1}. ${n}`).join('\n')
+        : '  All staff present!';
+      return `📢 Shift Attendance Alert — ${today}\n📍 Site: ${site} · Cutoff: ${cutoff}\n\nThe following team members have not checked in yet:\n${absentList}\n\nPlease mark attendance immediately on the kiosk or update management.\n— Operations Team`;
+    }
 
     case 'test_ping':
-      return `🔔 Gut Guru Gateway Test\n\nThis is a test notification confirming your ${site} Alert Gateway is connected and operating correctly. Timestamp: ${new Date().toLocaleTimeString('en-IN')}`;
+      return `🔔 Gateway Test Notification\n\nThis is a test notification confirming your ${site} Alert Gateway is connected and operating correctly. Timestamp: ${new Date().toLocaleTimeString('en-IN')}`;
 
     default:
-      return `Gut Guru Alert: Message for ${name}.`;
+      return `Attendance Alert for ${name} (${site}): Please verify your shift status for ${today}.`;
   }
 }
 

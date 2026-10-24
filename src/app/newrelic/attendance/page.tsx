@@ -37,6 +37,10 @@ import {
 import { SelfieCapture } from '@/components/newrelic/attendance/selfie-capture';
 import { LeavesAndHolidaysTab } from '@/components/newrelic/attendance/LeavesAndHolidaysTab';
 import { AlertGatewayModal } from '@/components/newrelic/attendance/AlertGatewayModal';
+import WhatsAppQuickSendModal, { WhatsAppRecipient } from '@/components/newrelic/attendance/WhatsAppQuickSendModal';
+import WhatsAppDigestModal from '@/components/newrelic/attendance/WhatsAppDigestModal';
+import WhatsAppBatchAbsentModal from '@/components/newrelic/attendance/WhatsAppBatchAbsentModal';
+import { getContactedLog, markEmployeeContacted, ContactedRecord, openWhatsAppChat } from '@/lib/whatsapp';
 import { generateAlertMessage } from '@/services/alertGatewayService';
 import { CompanyHoliday, EmployeeLeave } from '@/types/leave';
 import {
@@ -131,6 +135,19 @@ function AttendancePageContent() {
   const [editingPhoneEmp, setEditingPhoneEmp] = useState<{ id: string; name: string; phone: string } | null>(null);
   const [isSavingPhone, setIsSavingPhone] = useState(false);
   const [isSavingEmpTiming, setIsSavingEmpTiming] = useState(false);
+  const [whatsAppRecipient, setWhatsAppRecipient] = useState<WhatsAppRecipient | null>(null);
+  const [showWhatsAppDigestModal, setShowWhatsAppDigestModal] = useState(false);
+  const [showBatchAbsentModal, setShowBatchAbsentModal] = useState(false);
+  const [contactedMap, setContactedMap] = useState<Record<string, ContactedRecord>>({});
+
+  useEffect(() => {
+    setContactedMap(getContactedLog());
+    const handleContactedUpdate = () => {
+      setContactedMap(getContactedLog());
+    };
+    window.addEventListener('invoiceflow_contacted_updated', handleContactedUpdate);
+    return () => window.removeEventListener('invoiceflow_contacted_updated', handleContactedUpdate);
+  }, []);
   const [empTimingForm, setEmpTimingForm] = useState<{
     expectedStart: string;
     cutoff: string;
@@ -2137,25 +2154,19 @@ function AttendancePageContent() {
                       <span className="hidden sm:inline">Refresh</span>
                     </button>
 
-                    {/* 1-Click WhatsApp Shift Digest (100% Free) */}
-                    <a
-                      href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                        generateAlertMessage('manager_digest', {
-                          siteName: adminSiteFilter === 'all' ? 'All Sites' : adminSiteFilter.toUpperCase(),
-                          presentCount: adminMetrics.presentCount,
-                          totalRoster: adminMetrics.totalRoster,
-                          onDutyCount: adminMetrics.onDutyList.length,
-                          absentNames: adminMetrics.absentEmployees.map((e) => e.name),
-                        })
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    {/* Interactive WhatsApp Shift Digest Modal Trigger (100% Free) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setShowWhatsAppDigestModal(true);
+                      }}
                       className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all whitespace-nowrap"
-                      title="Open WhatsApp with pre-filled shift attendance summary (100% Free)"
+                      title="Preview, customize, or share shift attendance digest via WhatsApp (100% Free)"
                     >
                       <MessageCircle className="h-3.5 w-3.5" />
                       <span>WhatsApp Digest</span>
-                    </a>
+                    </button>
 
                     <button
                       type="button"
@@ -2432,13 +2443,40 @@ function AttendancePageContent() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
-                        <span>Showing {filteredAbsentEmployees.length} staff member(s) who haven&apos;t punched in yet today</span>
+                      {/* Batch Absent Alert Operations Banner */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-rose-50 via-rose-50/70 to-amber-50/70 p-3.5 rounded-2xl border border-rose-200/80 shadow-2xs">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+                            <UserX className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-rose-950">
+                              {filteredAbsentEmployees.length} Team Member{filteredAbsentEmployees.length !== 1 ? 's' : ''} Pending Check-In
+                            </p>
+                            <p className="text-[11px] text-rose-700 font-medium">
+                              Shift cutoff deadline has passed. Send instant 1-to-1 reminders or broadcast to your operations group.
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setShowBatchAbsentModal(true);
+                          }}
+                          className="h-8 px-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all whitespace-nowrap"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5 text-white" />
+                          <span>Batch Alert All Absent ({filteredAbsentEmployees.length})</span>
+                        </button>
                       </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {filteredAbsentEmployees.map((emp) => {
                           const sId = resolveSiteId(emp.siteId);
                           const rule = getEffectiveShiftRule(emp, globalShiftRules);
+                          const contacted = contactedMap[emp.id!];
                           return (
                             <div
                               key={emp.id}
@@ -2452,9 +2490,11 @@ function AttendancePageContent() {
                                   <div>
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <h4 className="text-sm font-bold text-slate-900">{emp.name}</h4>
-                                      <span className="text-[10px] font-mono font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
-                                        {emp.employeeId}
-                                      </span>
+                                      {emp.employeeId && (
+                                        <span className="text-[10px] font-mono font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                                          {emp.employeeId}
+                                        </span>
+                                      )}
                                     </div>
                                     <p className="text-xs text-slate-500 mt-0.5">{emp.designation}</p>
                                   </div>
@@ -2476,37 +2516,47 @@ function AttendancePageContent() {
                                   <span>Expected: <strong className="text-slate-800">{rule.expectedStart}</strong></span>
                                   <span>· Cutoff: <strong className="text-amber-700">{rule.cutoff}</strong></span>
                                 </div>
-                                <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
-                                  Pending Check-In
-                                </span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {contacted && (
+                                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
+                                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                      <span>Alerted {contacted.formattedTime}</span>
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                                    Pending Check-In
+                                  </span>
+                                </div>
                               </div>
 
                               {(() => {
-                                const absentNoticeText = generateAlertMessage('absent_notice', {
-                                  employeeName: emp.name,
-                                  cutoff: rule.cutoff + ' AM',
-                                  siteName: emp.location?.toUpperCase() || 'Hub',
-                                  date: new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }),
-                                });
                                 const cleanPhone = emp.phone ? emp.phone.replace(/\D/g, '').slice(-10) : '';
-                                const waUrl = cleanPhone
-                                  ? `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(absentNoticeText)}`
-                                  : `https://api.whatsapp.com/send?text=${encodeURIComponent(absentNoticeText)}`;
 
                                 return (
                                   <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 flex-wrap">
                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                      {/* High-visibility solid green 1-Click WhatsApp Button (100% Free) */}
-                                      <a
-                                        href={waUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                      {/* Interactive WhatsApp Quick-Send Drawer (100% Free) */}
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          triggerHaptic('light');
+                                          setWhatsAppRecipient({
+                                            id: emp.id!,
+                                            name: emp.name,
+                                            employeeId: emp.employeeId,
+                                            phone: emp.phone,
+                                            siteName: emp.location?.toUpperCase() || 'Hub',
+                                            designation: emp.designation,
+                                            isAbsent: true,
+                                            cutoffTime: rule.cutoff + ' AM',
+                                          });
+                                        }}
                                         className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all"
-                                        title={cleanPhone ? `Open WhatsApp chat with ${emp.name} (Pre-filled reminder)` : 'Open WhatsApp to share pre-filled absent reminder'}
+                                        title={cleanPhone ? `Open WhatsApp chat with ${emp.name} (Preview & Edit)` : 'Open WhatsApp to share pre-filled absent reminder'}
                                       >
                                         <MessageCircle className="w-3.5 h-3.5 text-white" />
                                         <span>WhatsApp</span>
-                                      </a>
+                                      </button>
 
                                       {emp.phone ? (
                                         <>
@@ -2614,11 +2664,14 @@ function AttendancePageContent() {
                           (rec.employeeId && e.employeeId === rec.employeeId) ||
                           (rec.employeeName && e.name.toLowerCase().trim() === rec.employeeName.toLowerCase().trim())
                       );
+                      const empKey = empMatch?.id || rec.employeeDocId || rec.employeeId || '';
                       return (
                         <AdminAttendanceCard
                           key={rec.id}
                           record={rec}
                           employeePhone={empMatch?.phone}
+                          contactedInfo={empKey ? contactedMap[empKey] : undefined}
+                          onOpenWhatsApp={(item) => setWhatsAppRecipient(item)}
                           isExpanded={expandedRecord === rec.id}
                           onToggle={() => setExpandedRecord(expandedRecord === rec.id ? null : rec.id!)}
                         />
@@ -2694,11 +2747,14 @@ function AttendancePageContent() {
                             (rec.employeeId && e.employeeId === rec.employeeId) ||
                             (rec.employeeName && e.name.toLowerCase().trim() === rec.employeeName.toLowerCase().trim())
                         );
+                        const empKey = empMatch?.id || rec.employeeDocId || rec.employeeId || '';
                         return (
                           <AdminAttendanceCard
                             key={rec.id}
                             record={rec}
                             employeePhone={empMatch?.phone}
+                            contactedInfo={empKey ? contactedMap[empKey] : undefined}
+                            onOpenWhatsApp={(item) => setWhatsAppRecipient(item)}
                             isExpanded={expandedRecord === rec.id}
                             onToggle={() => setExpandedRecord(expandedRecord === rec.id ? null : rec.id!)}
                           />
@@ -3984,6 +4040,96 @@ function AttendancePageContent() {
         </div>
       )}
 
+      {/* WhatsApp Quick-Send Drawer / Modal */}
+      <WhatsAppQuickSendModal
+        isOpen={Boolean(whatsAppRecipient)}
+        onClose={() => setWhatsAppRecipient(null)}
+        recipient={whatsAppRecipient}
+        onSavePhone={async (empId, newPhone) => {
+          await updateDoc(doc(db, 'newrelic_employees', empId), {
+            phone: newPhone,
+            updatedAt: new Date().toISOString(),
+          });
+          setEmployees((prev) => prev.map((e) => (e.id === empId ? { ...e, phone: newPhone } : e)));
+          toast({ title: 'Phone Saved', description: `Updated to +91 ${newPhone}` });
+        }}
+        onSendGatewayAlert={async (recipient, msg) => {
+          if (!recipient.phone) return;
+          setSendingAlertEmpId(recipient.id);
+          try {
+            const res = await fetch('/api/attendance/alerts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'send_single',
+                recipientPhone: recipient.phone,
+                recipientName: recipient.name,
+                alertType: recipient.isLate ? 'late_alert' : recipient.isAbsent ? 'absent_notice' : 'custom',
+                customMessage: msg,
+                userEmail: user?.email,
+              }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.error || 'Gateway dispatch failed');
+            toast({ title: `Alert Dispatched to ${recipient.name}`, description: `Sent via ${data.provider?.toUpperCase() || 'Gateway'}` });
+            markEmployeeContacted(recipient.id, { template: 'gateway', recipientName: recipient.name, phone: recipient.phone });
+            setWhatsAppRecipient(null);
+          } catch (err: any) {
+            toast({ variant: 'destructive', title: 'Gateway Alert Failed', description: err.message });
+          } finally {
+            setSendingAlertEmpId(null);
+          }
+        }}
+        isSendingGateway={sendingAlertEmpId === whatsAppRecipient?.id}
+        lastContacted={whatsAppRecipient ? contactedMap[whatsAppRecipient.id] : undefined}
+      />
+
+      {/* WhatsApp Daily Shift Digest Modal */}
+      <WhatsAppDigestModal
+        isOpen={showWhatsAppDigestModal}
+        onClose={() => setShowWhatsAppDigestModal(false)}
+        siteOptions={SITE_OPTIONS}
+        currentSite={adminSiteFilter}
+        onSiteChange={setAdminSiteFilter}
+        metrics={{
+          presentCount: adminMetrics.presentCount,
+          totalRoster: adminMetrics.totalRoster,
+          onDutyCount: adminMetrics.onDutyList.length,
+          absentNames: adminMetrics.absentEmployees.map((e) => e.name),
+          lateCount: adminMetrics.lateList.length,
+          attendanceRate: adminMetrics.attendanceRate,
+        }}
+        onBroadcastGateway={handleBroadcastDigest}
+        isBroadcasting={isBroadcastingDigest}
+      />
+
+      {/* WhatsApp Batch Absent Alerts Modal */}
+      <WhatsAppBatchAbsentModal
+        isOpen={showBatchAbsentModal}
+        onClose={() => setShowBatchAbsentModal(false)}
+        absentList={filteredAbsentEmployees.map((e) => {
+          const rule = getEffectiveShiftRule(e, globalShiftRules);
+          return {
+            id: e.id!,
+            name: e.name,
+            employeeId: e.employeeId,
+            phone: e.phone,
+            siteName: e.location?.toUpperCase() || 'Hub',
+            cutoffTime: rule.cutoff + ' AM',
+            designation: e.designation,
+          };
+        })}
+        siteName={adminSiteFilter}
+        contactedMap={contactedMap}
+        onSavePhone={async (empId, phone) => {
+          await updateDoc(doc(db, 'newrelic_employees', empId), {
+            phone,
+            updatedAt: new Date().toISOString(),
+          });
+          setEmployees((prev) => prev.map((e) => (e.id === empId ? { ...e, phone } : e)));
+        }}
+      />
+
       {/* Multi-Provider Alert Gateway Settings Modal */}
       <AlertGatewayModal
         isOpen={showAlertModal}
@@ -3998,11 +4144,15 @@ function AttendancePageContent() {
 function AdminAttendanceCard({
   record,
   employeePhone,
+  contactedInfo,
+  onOpenWhatsApp,
   isExpanded,
   onToggle,
 }: {
   record: NewRelicAttendance;
   employeePhone?: string;
+  contactedInfo?: ContactedRecord;
+  onOpenWhatsApp?: (recipient: WhatsAppRecipient) => void;
   isExpanded: boolean;
   onToggle: () => void;
 }) {
@@ -4113,18 +4263,40 @@ function AdminAttendanceCard({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* 1-Click WhatsApp Button (100% Free) */}
-          <a
-            href={waUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="h-7 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-2xs transition-all active:scale-95"
-            title={cleanPhone ? `Chat with ${record.employeeName} on WhatsApp (100% Free)` : 'Share status update on WhatsApp (100% Free)'}
+          {contactedInfo && (
+            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1 hidden md:flex shadow-2xs">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+              <span>Alerted {contactedInfo.formattedTime}</span>
+            </span>
+          )}
+
+          {/* Interactive WhatsApp Quick-Send Drawer (100% Free) */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              triggerHaptic('light');
+              if (onOpenWhatsApp) {
+                onOpenWhatsApp({
+                  id: record.employeeDocId || record.employeeId || record.id!,
+                  name: record.employeeName,
+                  employeeId: record.employeeId,
+                  phone: employeePhone,
+                  siteName: record.location?.toUpperCase() || 'Hub',
+                  isLate: record.isLate,
+                  lateMinutes: record.lateMinutes,
+                  checkInTime: inTimeStr,
+                });
+              } else {
+                openWhatsAppChat(employeePhone, waMsg);
+              }
+            }}
+            className="h-7 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-2xs transition-all active:scale-95 cursor-pointer"
+            title={cleanPhone ? `Chat with ${record.employeeName} on WhatsApp (Preview & Edit)` : 'Share status update on WhatsApp (100% Free)'}
           >
             <MessageCircle className="h-3.5 w-3.5 text-white" />
             <span className="hidden sm:inline">WhatsApp</span>
-          </a>
+          </button>
 
           <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold shrink-0 ${statusColor}`}>
             {isWorking ? (

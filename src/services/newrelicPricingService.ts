@@ -379,31 +379,234 @@ export async function bulkUpdateBrandPricing({
   return { updatedCount };
 }
 
+export interface SeedPricingOptions {
+  location?: NewRelicLocation | 'all';
+  strategy?: 'missing_only' | 'overwrite_all';
+  dateRange?: 'all' | 'last_30_days' | 'last_90_days' | 'last_180_days';
+  onProgress?: (progress: {
+    stage: 'scanning' | 'analyzing' | 'saving' | 'complete';
+    current: number;
+    total: number;
+    percent: number;
+    statusText: string;
+  }) => void;
+}
+
+export interface SeedPricingPreviewItem {
+  brandName: string;
+  itemName: string;
+  location: NewRelicLocation;
+  mrp: number;
+  purchaseCost: number;
+  discountPercent: number;
+  isNew: boolean;
+  dcNumber: string;
+  dcDate: string;
+}
+
+export interface SeedPricingPreview {
+  totalChallansScanned: number;
+  totalLineItemsFound: number;
+  uniqueKeysFound: number;
+  newItemsCount: number;
+  updateItemsCount: number;
+  brandSummary: Record<string, number>;
+  sampleItems: SeedPricingPreviewItem[];
+}
+
+export interface SeedPricingResult {
+  seeded: number;
+  updated: number;
+  skipped: number;
+  totalProcessed: number;
+  durationMs: number;
+}
+
+function getCutoffTimestamp(range?: SeedPricingOptions['dateRange']): number {
+  if (!range || range === 'all') return 0;
+  const now = Date.now();
+  if (range === 'last_30_days') return now - 30 * 24 * 60 * 60 * 1000;
+  if (range === 'last_90_days') return now - 90 * 24 * 60 * 60 * 1000;
+  if (range === 'last_180_days') return now - 180 * 24 * 60 * 60 * 1000;
+  return 0;
+}
+
+function getDocDateMs(data: any): number {
+  if (data.dcDate) {
+    const ms = new Date(data.dcDate).getTime();
+    if (!isNaN(ms)) return ms;
+  }
+  if (data.createdAt) {
+    if (typeof data.createdAt?.toMillis === 'function') return data.createdAt.toMillis();
+    const ms = new Date(data.createdAt).getTime();
+    if (!isNaN(ms)) return ms;
+  }
+  return 0;
+}
+
 /**
- * Seeds the newrelic_pricing collection from existing challan history.
- * Reads all DCs ordered newest-first; latest data wins — skips items already seen.
- * Only seeds entries where procurementCost > 0 on the DC line item.
+ * Previews what items would be seeded from challan history without making changes.
  */
-export async function seedPricingFromChallans(): Promise<{ seeded: number; skipped: number }> {
-  await assertWritePermission('Seeding Pricing from Challans');
-  // Lazy import to avoid circular deps at module level
+export async function previewSeedPricingFromChallans(
+  options?: SeedPricingOptions
+): Promise<SeedPricingPreview> {
   const { db } = await import('@/lib/firebase');
-  const { collection, getDocs, query, orderBy, setDoc, doc, serverTimestamp } = await import('firebase/firestore');
+  const { collection, getDocs } = await import('firebase/firestore');
 
   const CHALLANS_COLLECTION = 'newrelic_challans';
-  const seen = new Set<string>(); // "brand__item__location" — track which we've already seeded
-  let seeded = 0;
-  let skipped = 0;
+  const cutoffMs = getCutoffTimestamp(options?.dateRange);
+
+  const [challanSnap, existingPricingSnap] = await Promise.all([
+    getDocs(collection(db, CHALLANS_COLLECTION)),
+    getDocs(collection(db, PRICING_COLLECTION)),
+  ]);
+
+  const existingDocIds = new Set<string>();
+  existingPricingSnap.docs.forEach((d) => existingDocIds.add(d.id));
+
+  const docs = challanSnap.docs.filter((d) => {
+    const data = d.data();
+    if (data.isDeleted) return false;
+    if (options?.location && options.location !== 'all' && data.location !== options.location) return false;
+    const dateMs = getDocDateMs(data);
+    if (cutoffMs > 0 && dateMs > 0 && dateMs < cutoffMs) return false;
+    return true;
+  });
+
+  docs.sort((a, b) => getDocDateMs(b.data()) - getDocDateMs(a.data()));
+
+  const seen = new Set<string>();
+  const sampleItems: SeedPricingPreviewItem[] = [];
+  const brandSummary: Record<string, number> = {};
+  let newItemsCount = 0;
+  let updateItemsCount = 0;
+  let totalLineItemsFound = 0;
+
+  for (const docSnap of docs) {
+    const data = docSnap.data();
+    const location = data.location as NewRelicLocation;
+    if (!location || !Array.isArray(data.lineItems)) continue;
+
+    for (const item of data.lineItems) {
+      totalLineItemsFound++;
+      const brand = (item.brandName || '').trim();
+      const name = (item.itemName || '').trim();
+      const pCost = Number(item.procurementCost);
+      const mrp = Number(item.mrp);
+
+      if (!brand || !name || !(pCost > 0)) continue;
+
+      const seenKey = `${brand.toLowerCase()}__${name.toLowerCase()}__${location}`;
+      if (seen.has(seenKey)) continue;
+      seen.add(seenKey);
+
+      const docId = getPricingDocId(brand, name, location);
+      const isNew = !existingDocIds.has(docId);
+
+      if (isNew) {
+        newItemsCount++;
+      } else {
+        updateItemsCount++;
+      }
+
+      brandSummary[brand] = (brandSummary[brand] || 0) + 1;
+
+      if (sampleItems.length < 40) {
+        const discountPercent = mrp > 0 ? parseFloat(((1 - pCost / mrp) * 100).toFixed(2)) : 0;
+        sampleItems.push({
+          brandName: brand,
+          itemName: name,
+          location,
+          mrp: mrp || pCost,
+          purchaseCost: pCost,
+          discountPercent,
+          isNew,
+          dcNumber: data.dcNumber || 'DC',
+          dcDate: data.dcDate || 'Recent',
+        });
+      }
+    }
+  }
+
+  return {
+    totalChallansScanned: docs.length,
+    totalLineItemsFound,
+    uniqueKeysFound: seen.size,
+    newItemsCount,
+    updateItemsCount,
+    brandSummary,
+    sampleItems,
+  };
+}
+
+/**
+ * Seeds the newrelic_pricing collection from existing challan history.
+ * Uses high-performance batch commits (writeBatch) to write hundreds of items in ~1 second.
+ * Safely handles deleted challans, location filters, date boundaries, and safe modes.
+ */
+export async function seedPricingFromChallans(
+  options?: SeedPricingOptions
+): Promise<SeedPricingResult> {
+  await assertWritePermission('Seeding Pricing from Challans');
+  const startTime = Date.now();
+
+  const { db } = await import('@/lib/firebase');
+  const { collection, getDocs, doc, serverTimestamp, writeBatch } = await import('firebase/firestore');
+
+  const CHALLANS_COLLECTION = 'newrelic_challans';
+  const cutoffMs = getCutoffTimestamp(options?.dateRange);
+
+  if (options?.onProgress) {
+    options.onProgress({
+      stage: 'scanning',
+      current: 0,
+      total: 100,
+      percent: 10,
+      statusText: 'Scanning delivery challan records...',
+    });
+  }
 
   try {
-    const snap = await getDocs(
-      query(collection(db, CHALLANS_COLLECTION), orderBy('createdAt', 'desc'))
-    );
+    const [challanSnap, existingPricingSnap] = await Promise.all([
+      getDocs(collection(db, CHALLANS_COLLECTION)),
+      getDocs(collection(db, PRICING_COLLECTION)),
+    ]);
 
-    for (const docSnap of snap.docs) {
+    const existingDocIds = new Set<string>();
+    existingPricingSnap.docs.forEach((d) => existingDocIds.add(d.id));
+
+    const docs = challanSnap.docs.filter((d) => {
+      const data = d.data();
+      if (data.isDeleted) return false;
+      if (options?.location && options.location !== 'all' && data.location !== options.location) return false;
+      const dateMs = getDocDateMs(data);
+      if (cutoffMs > 0 && dateMs > 0 && dateMs < cutoffMs) return false;
+      return true;
+    });
+
+    // Sort newest first
+    docs.sort((a, b) => getDocDateMs(b.data()) - getDocDateMs(a.data()));
+
+    if (options?.onProgress) {
+      options.onProgress({
+        stage: 'analyzing',
+        current: docs.length,
+        total: docs.length,
+        percent: 30,
+        statusText: `Analyzed ${docs.length} challans. Deduplicating line items...`,
+      });
+    }
+
+    const seen = new Set<string>();
+    const itemsToCommit: { docId: string; payload: any; isNew: boolean }[] = [];
+    let skipped = 0;
+    let seeded = 0;
+    let updated = 0;
+
+    for (const docSnap of docs) {
       const data = docSnap.data();
       const location = data.location as NewRelicLocation;
-      if (!location || !data.lineItems || !Array.isArray(data.lineItems)) continue;
+      if (!location || !Array.isArray(data.lineItems)) continue;
 
       for (const item of data.lineItems) {
         const brand = (item.brandName || '').trim();
@@ -420,31 +623,93 @@ export async function seedPricingFromChallans(): Promise<{ seeded: number; skipp
         }
         seen.add(seenKey);
 
+        const docId = getPricingDocId(brand, name, location);
+        const isNew = !existingDocIds.has(docId);
+
+        // If safe strategy is chosen: skip existing items
+        if (!isNew && options?.strategy === 'missing_only') {
+          skipped++;
+          continue;
+        }
+
         const discountPercent =
           mrp > 0 ? parseFloat(((1 - pCost / mrp) * 100).toFixed(2)) : 0;
 
-        const docId = getPricingDocId(brand, name, location);
-        await setDoc(
-          doc(db, PRICING_COLLECTION, docId),
-          {
+        itemsToCommit.push({
+          docId,
+          isNew,
+          payload: {
             brandName: brand,
             itemName: name,
             location,
-            mrp: mrp || pCost, // fallback mrp to pCost if not available
+            mrp: mrp || pCost,
             discountPercent,
             purchaseCost: pCost,
             updatedAt: serverTimestamp(),
+            source: 'challan_seed',
+            lastSeededFromDc: data.dcNumber || null,
+            lastSeededDcDate: data.dcDate || null,
           },
-          { merge: true }
-        );
-        seeded++;
+        });
+
+        if (isNew) {
+          seeded++;
+        } else {
+          updated++;
+        }
       }
     }
+
+    // High-performance batch writing (400 items per batch)
+    const BATCH_SIZE = 400;
+    const totalBatches = Math.max(1, Math.ceil(itemsToCommit.length / BATCH_SIZE));
+
+    for (let i = 0; i < itemsToCommit.length; i += BATCH_SIZE) {
+      const chunk = itemsToCommit.slice(i, i + BATCH_SIZE);
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+
+      if (options?.onProgress) {
+        const pct = 30 + Math.round((i / (itemsToCommit.length || 1)) * 65);
+        options.onProgress({
+          stage: 'saving',
+          current: i,
+          total: itemsToCommit.length,
+          percent: pct,
+          statusText: `Writing batch ${batchNum} of ${totalBatches} (${chunk.length} items)...`,
+        });
+      }
+
+      const batch = writeBatch(db);
+      for (const entry of chunk) {
+        batch.set(doc(db, PRICING_COLLECTION, entry.docId), entry.payload, { merge: true });
+      }
+      await batch.commit();
+    }
+
+    // Bust client cache so refreshed data is immediately visible
+    setCachedData('pricing_items_hyderabad', null).catch(() => {});
+    setCachedData('pricing_items_bangalore', null).catch(() => {});
+
+    if (options?.onProgress) {
+      options.onProgress({
+        stage: 'complete',
+        current: itemsToCommit.length,
+        total: itemsToCommit.length,
+        percent: 100,
+        statusText: `Done! Seeded ${seeded} new items, updated ${updated}.`,
+      });
+    }
+
+    return {
+      seeded,
+      updated,
+      skipped,
+      totalProcessed: itemsToCommit.length,
+      durationMs: Date.now() - startTime,
+    };
   } catch (e) {
     console.error('Error seeding pricing from challans:', e);
     throw e;
   }
-
-  return { seeded, skipped };
 }
 

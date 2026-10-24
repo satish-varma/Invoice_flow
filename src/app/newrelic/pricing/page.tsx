@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
+import SeedHistoryModal from '@/components/newrelic/pricing/SeedHistoryModal';
 
 type EditRow = {
   brandName: string;
@@ -75,6 +76,7 @@ export default function PricingPage() {
   const [isSeeding, setIsSeeding] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
   const [seedResult, setSeedResult] = useState<string | null>(null);
+  const [showSeedModal, setShowSeedModal] = useState(false);
 
   // Filter tabs: 'all' | 'missing-cost' | 'missing-mrp'
   const [filterMode, setFilterMode] = useState<'all' | 'missing-cost' | 'missing-mrp'>('all');
@@ -391,32 +393,21 @@ export default function PricingPage() {
           </button>
 
           <button
-            onClick={async () => {
+            type="button"
+            onClick={() => {
               triggerHaptic('medium');
               if (isReadOnly || role === 'guest') {
                 alert('Guest Mode (Read-Only): Seeding pricing items is disabled.');
                 return;
               }
-              if (!confirm('This will populate the Pricing table from your existing DC history (latest data wins). Continue?')) return;
-              setIsSeeding(true);
-              setSeedResult(null);
-              setError('');
-              try {
-                const result = await seedPricingFromChallans();
-                const refreshed = await getAllPricingItems();
-                setPricingItems(refreshed);
-                setSeedResult(`✓ Seeded ${result.seeded} item(s) from DC history (${result.skipped} already covered by newer DCs).`);
-              } catch {
-                setError('Seeding failed. Please try again.');
-              } finally {
-                setIsSeeding(false);
-              }
+              setShowSeedModal(true);
             }}
             disabled={isSeeding || isCleaning || saving}
             className="flex-1 sm:flex-initial h-11 sm:h-10 px-3 rounded-2xl sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5 shadow-xs active:scale-95"
+            title="Scan challan history to seed prices with preview, safe filters, and instant batch writes"
           >
-            <RefreshCw className={`h-4 w-4 ${isSeeding ? 'animate-spin' : ''}`} />
-            <span>{isSeeding ? 'Seeding…' : 'Seed History'}</span>
+            <Sparkles className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+            <span>Seed History</span>
           </button>
           
           <button
@@ -1502,6 +1493,23 @@ export default function PricingPage() {
           </div>
         </div>
       )}
+      {/* Enhanced Seed Pricing from Challan History Modal */}
+      <SeedHistoryModal
+        isOpen={showSeedModal}
+        onClose={() => setShowSeedModal(false)}
+        activeLocation={activeLocation}
+        onSeedSuccess={async (res) => {
+          setSeedResult(
+            `✓ Seeded ${res.seeded} new item(s) and updated ${res.updated} item(s) in ${(res.durationMs / 1000).toFixed(1)}s (${res.skipped} skipped).`
+          );
+          try {
+            const refreshed = await getPricingItems(activeLocation);
+            setPricingItems(refreshed);
+          } catch (e) {
+            console.error('Failed to reload pricing after seed:', e);
+          }
+        }}
+      />
     </div>
   );
 }

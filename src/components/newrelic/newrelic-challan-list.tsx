@@ -721,7 +721,7 @@ export function NewRelicChallanList({
 
       {/* Desktop Table View (>= lg) */}
       <div className="hidden lg:block overflow-x-auto min-w-0 w-full max-w-full">
-        <Table className="min-w-[860px]">
+        <Table className="min-w-[800px]">
           <TableHeader className="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-10 border-b border-indigo-100/70 dark:border-slate-800 shadow-xs">
             <TableRow className="bg-gradient-to-r from-slate-50 via-indigo-50/40 to-slate-50 dark:from-slate-900 dark:via-slate-800/40 dark:to-slate-900 border-b border-indigo-100/70 dark:border-slate-800">
               {isAdmin && (
@@ -769,20 +769,10 @@ export function NewRelicChallanList({
                   {challan.dcNumber}
                 </TableCell>
                 <TableCell className="align-middle py-3">
-                  <div className="flex flex-col gap-1 min-w-[210px]">
-                    {/* Line 1: Location Badge (HYD / BLR) + Date + Items Count */}
+                  <div className="flex flex-col gap-0.5 min-w-[150px]">
+                    {/* Line 1: Date + Items Count */}
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <Badge
-                        variant="outline"
-                        className={
-                          challan.location === 'hyderabad'
-                            ? 'border-sky-300 text-sky-800 bg-sky-50 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800 font-black text-[10px] px-1.5 py-0.5 rounded shadow-2xs'
-                            : 'border-emerald-300 text-emerald-800 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 font-black text-[10px] px-1.5 py-0.5 rounded shadow-2xs'
-                        }
-                      >
-                        {challan.location === 'hyderabad' ? 'HYD' : 'BLR'}
-                      </Badge>
-                      <span className="font-semibold text-xs text-gray-800 dark:text-gray-200 tabular-nums">
+                      <span className="font-semibold text-xs text-gray-900 dark:text-gray-100 tabular-nums">
                         {challan.dcDate ? format(new Date(challan.dcDate), 'dd-MM-yyyy') : '—'}
                       </span>
                       <span className="text-gray-300 dark:text-gray-600">·</span>
@@ -800,11 +790,6 @@ export function NewRelicChallanList({
                       >
                         {formatAuthorName((isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)))}
                       </span>
-                      {(isTrashView ? challan.deletedAt : challan.createdAt) && (
-                        <span className="text-gray-400 dark:text-gray-500 text-[10px]">
-                          ({format(new Date(isTrashView ? challan.deletedAt! : challan.createdAt!), 'dd-MMM')})
-                        </span>
-                      )}
                     </div>
                   </div>
                 </TableCell>

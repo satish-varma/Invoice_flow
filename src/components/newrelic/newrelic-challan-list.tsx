@@ -3,7 +3,7 @@ import { NewRelicChallan } from '@/types/challan';
 
 import React, { useState, useRef } from 'react';
 import { format } from 'date-fns';
-import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, ChevronDown, ChevronUp, FileCheck, Paperclip, Edit, Package, Calendar, AlertTriangle } from 'lucide-react';
+import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, ChevronDown, ChevronUp, FileCheck, Paperclip, Edit, Package, Calendar, AlertTriangle, Check } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 import { useToast } from '@/hooks/use-toast';
 import { NewRelicAttachmentModal } from './newrelic-attachment-modal';
@@ -145,6 +145,40 @@ export function NewRelicChallanList({
     }
     setSelectedIds(next);
   };
+
+  const handleCopyDcNumber = (e: React.MouseEvent, dcNumber: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(dcNumber);
+    triggerHaptic('light');
+    toast({
+      title: 'Copied to Clipboard',
+      description: `DC #${dcNumber} copied.`,
+      duration: 1500,
+    });
+  };
+
+  const gridTotals = React.useMemo(() => {
+    let totalUnits = 0;
+    let totalMrp = 0;
+    let totalCost = 0;
+
+    for (const c of challans) {
+      for (const item of (c.lineItems || [])) {
+        totalUnits += Number(item.quantity) || 0;
+        totalMrp += (Number(item.mrp) || 0) * (Number(item.quantity) || 1);
+      }
+      if (c.procurementCost !== undefined && c.procurementCost !== null) {
+        totalCost += Number(c.procurementCost);
+      } else {
+        totalCost += (c.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+      }
+    }
+
+    const marginAmount = totalMrp - totalCost;
+    const avgMargin = totalMrp > 0 ? (marginAmount / totalMrp) * 100 : 0;
+
+    return { totalUnits, totalMrp, totalCost, marginAmount, avgMargin };
+  }, [challans]);
 
   if (challans.length === 0) {
     return (
@@ -722,313 +756,428 @@ export function NewRelicChallanList({
       {/* Desktop Table View (>= lg) */}
       <div className="hidden lg:block overflow-x-auto min-w-0 w-full max-w-full">
         <Table className="min-w-[800px]">
-          <TableHeader className="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-10 border-b border-indigo-100/70 dark:border-slate-800 shadow-xs">
+          <TableHeader className="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-10 border-b border-indigo-100/70 dark:border-slate-800 shadow-2xs">
             <TableRow className="bg-gradient-to-r from-slate-50 via-indigo-50/40 to-slate-50 dark:from-slate-900 dark:via-slate-800/40 dark:to-slate-900 border-b border-indigo-100/70 dark:border-slate-800">
               {isAdmin && (
-                <TableHead className="w-[40px] pl-4">
+                <TableHead className="w-[44px] pl-4">
                   <input 
                     type="checkbox"
-                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
                     checked={challans.length > 0 && selectedIds.size === challans.filter(c => c.id).length}
                     onChange={(e) => handleSelectAll(e.target.checked)}
+                    aria-label="Select all rows"
                   />
                 </TableHead>
               )}
-              <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">DC No</TableHead>
-              <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">Details</TableHead>
+              <TableHead className="font-extrabold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider w-[170px]">DC Number</TableHead>
+              <TableHead className="font-extrabold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Details</TableHead>
               {isAdmin && (
                 <>
-                  <TableHead className="font-bold text-[#3b2fc9] dark:text-indigo-400 text-xs uppercase tracking-wider text-right">Value (MRP)</TableHead>
-                  <TableHead className="font-bold text-emerald-700 dark:text-emerald-400 text-xs uppercase tracking-wider text-right">Margin %</TableHead>
+                  <TableHead className="font-extrabold text-[#3b2fc9] dark:text-indigo-400 text-xs uppercase tracking-wider text-right">Value (MRP)</TableHead>
+                  <TableHead className="font-extrabold text-emerald-700 dark:text-emerald-400 text-xs uppercase tracking-wider text-right">Margin %</TableHead>
                   {showFinancials && (
                     <>
-                      <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider text-right">Rev</TableHead>
-                      <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider text-right">Cost</TableHead>
-                      <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider text-right">Profit</TableHead>
+                      <TableHead className="font-extrabold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider text-right">Rev</TableHead>
+                      <TableHead className="font-extrabold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider text-right">Cost</TableHead>
+                      <TableHead className="font-extrabold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider text-right">Profit</TableHead>
                     </>
                   )}
                 </>
               )}
-              <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider text-right">Actions</TableHead>
+              <TableHead className="font-extrabold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider text-right pr-4">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {challans.map((challan) => (
-              <TableRow key={challan.id} className="hover:bg-indigo-50/30 transition-colors">
-                {isAdmin && (
-                  <TableCell className="pl-4">
-                    <input
-                      type="checkbox"
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
-                      checked={!!challan.id && selectedIds.has(challan.id)}
-                      onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
-                    />
-                  </TableCell>
-                )}
-                <TableCell className="font-mono font-bold tabular-nums text-indigo-950 dark:text-indigo-200">
-                  {challan.dcNumber}
-                </TableCell>
-                <TableCell className="align-middle py-3">
-                  <div className="flex flex-col gap-0.5 min-w-[150px]">
-                    {/* Line 1: Date + Items Count */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-semibold text-xs text-gray-900 dark:text-gray-100 tabular-nums">
-                        {challan.dcDate ? format(new Date(challan.dcDate), 'dd-MM-yyyy') : '—'}
-                      </span>
-                      <span className="text-gray-300 dark:text-gray-600">·</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
-                        {challan.lineItems?.length ?? 0} {(challan.lineItems?.length ?? 0) === 1 ? 'item' : 'items'}
-                      </span>
-                    </div>
+            {challans.map((challan) => {
+              const isSelected = !!challan.id && selectedIds.has(challan.id);
+              const hasSignedDc = (challan.signedCopyUrls?.length ?? 0) > 0;
+              const hasInvoice = (challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0;
 
-                    {/* Line 2: Author info */}
-                    <div className="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
-                      <span className="text-gray-400 dark:text-gray-500">{isTrashView ? 'Deleted by' : 'by'}</span>
-                      <span 
-                        className="font-medium text-gray-700 dark:text-gray-300 truncate max-w-[170px]" 
-                        title={(isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)) || 'System'}
+              return (
+                <TableRow 
+                  key={challan.id} 
+                  className={`transition-colors duration-150 border-b border-slate-100 dark:border-slate-800/80 ${
+                    isSelected
+                      ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-l-4 border-l-indigo-600'
+                      : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40 border-l-4 border-l-transparent'
+                  }`}
+                >
+                  {isAdmin && (
+                    <TableCell className="pl-4 w-[44px]">
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                        checked={isSelected}
+                        onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
+                        aria-label={`Select ${challan.dcNumber}`}
+                      />
+                    </TableCell>
+                  )}
+                  <TableCell className="font-mono font-bold tabular-nums text-slate-900 dark:text-slate-100">
+                    <div className="flex items-center gap-2">
+                      {/* Live Verification Status Dot */}
+                      <span
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          hasSignedDc
+                            ? 'bg-emerald-500 ring-2 ring-emerald-100 dark:ring-emerald-950'
+                            : 'bg-amber-400 ring-2 ring-amber-100 dark:ring-amber-950'
+                        }`}
+                        title={hasSignedDc ? 'Signed DC Verified' : 'Pending Signed DC'}
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => handleCopyDcNumber(e, challan.dcNumber)}
+                        className="group/copy flex items-center gap-1 hover:text-[#3b2fc9] dark:hover:text-indigo-400 transition-colors cursor-pointer text-left"
+                        title="Click to copy DC number"
                       >
-                        {formatAuthorName((isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)))}
-                      </span>
+                        <span className="font-extrabold tracking-tight text-xs sm:text-sm">{challan.dcNumber}</span>
+                        <Copy className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover/copy:text-[#3b2fc9] dark:group-hover/copy:text-indigo-400 opacity-0 group-hover/copy:opacity-100 transition-opacity shrink-0" />
+                      </button>
                     </div>
-                  </div>
-                </TableCell>
-                {isAdmin && (
-                  <>
-                    {(() => {
-                      const mrpTotal = (challan.lineItems || []).reduce((acc, item) => acc + ((item.mrp || 0) * (item.quantity || 1)), 0);
-                      const commission = mrpTotal * 0.055;
-                      const revenue = mrpTotal - commission;
-                      
-                      let pCost = 0;
-                      if (challan.procurementCost !== undefined && challan.procurementCost !== null) {
-                        pCost = Number(challan.procurementCost);
-                      } else {
-                        pCost = (challan.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
-                      }
-                      
-                      const tCost = challan.transportCost || 0;
-                      const oCost = challan.otherCharges || 0;
-                      const totalCost = pCost + tCost + oCost;
-                      const profit = revenue - totalCost;
+                  </TableCell>
+                  <TableCell className="align-middle py-3">
+                    <div className="flex flex-col gap-0.5 min-w-[150px]">
+                      {/* Line 1: Date + Items Count */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-xs text-slate-900 dark:text-slate-100 tabular-nums">
+                          {challan.dcDate ? format(new Date(challan.dcDate), 'dd-MM-yyyy') : '—'}
+                        </span>
+                        <span className="text-slate-300 dark:text-slate-700">·</span>
+                        <span className="px-1.5 py-0.2 rounded-md bg-slate-100 dark:bg-slate-800 text-[11px] font-bold text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                          {challan.lineItems?.length ?? 0} {(challan.lineItems?.length ?? 0) === 1 ? 'item' : 'items'}
+                        </span>
+                      </div>
 
-                      return (
-                        <>
-                          <TableCell className="text-right whitespace-nowrap align-top pt-3 tabular-nums font-mono font-bold text-[#3b2fc9] text-xs">
-                            ₹{mrpTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </TableCell>
-                          {(() => {
-                            const totalUnits = (challan.lineItems || []).reduce((acc, item) => acc + (Number(item.quantity) || 1), 0);
-                            const marginAmount = mrpTotal - pCost;
-                            const marginPct = mrpTotal > 0 ? (marginAmount / mrpTotal) * 100 : 0;
-                            const perUnit = totalUnits > 0 ? marginAmount / totalUnits : 0;
-
-                            return (
-                              <TableCell className="text-right whitespace-nowrap align-top pt-3">
-                                <div className="flex flex-col items-end">
-                                  <span className={`inline-flex items-center gap-1 font-mono font-bold text-xs px-2.5 py-0.5 rounded-full border shadow-2xs ${
-                                    marginPct >= 20
-                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                                      : marginPct >= 10
-                                      ? 'bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
-                                      : marginPct >= 0
-                                      ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
-                                      : 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
-                                  }`}>
-                                    {marginPct.toFixed(1)}%
-                                  </span>
-                                  <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono mt-0.5">
-                                    ₹{perUnit.toFixed(1)}/u
-                                  </span>
-                                </div>
-                              </TableCell>
-                            );
-                          })()}
-                          {showFinancials && (
-                            <>
-                              <TableCell className="text-right whitespace-nowrap align-top pt-3">
-                                <div className="flex flex-col text-[11px] items-end leading-tight tabular-nums">
-                                  <span className="text-gray-400" title="5.5% Commission">- ₹{commission.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                  <span className="font-bold text-[13px] text-gray-900 border-t border-gray-200 mt-1 pt-1 w-full text-right">
-                                     ₹{revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right whitespace-nowrap align-top pt-3">
-                                <div className="flex flex-col text-[11px] items-end leading-tight text-gray-500 tabular-nums">
-                                  <span>Goods: ₹{pCost.toLocaleString('en-IN')}</span>
-                                  <span>Trans: ₹{tCost.toLocaleString('en-IN')}</span>
-                                  <span>Other: ₹{oCost.toLocaleString('en-IN')}</span>
-                                  <span className="font-bold text-[13px] text-gray-900 border-t border-gray-200 mt-1 pt-1 w-full text-right">
-                                     ₹{totalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right font-medium whitespace-nowrap align-top pt-3">
-                                <div className="flex flex-col items-end w-full h-full justify-end pb-[2px] tabular-nums font-bold">
-                                  <span className={profit >= 0 ? "text-emerald-700" : "text-red-700"}>
-                                    ₹{profit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                              </TableCell>
-                            </>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </>
-                )}
-                <TableCell>
-                  <div className="flex items-center justify-end gap-1">
-                    {isTrashView ? (
-                      isAdmin ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 gap-1 mr-2"
-                          onClick={() => onRestoreChallan && challan.id && onRestoreChallan(challan.id)}
-                          title="Restore"
+                      {/* Line 2: Author info */}
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        <span className="w-3.5 h-3.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-[9px] font-black inline-flex items-center justify-center shrink-0 uppercase">
+                          {formatAuthorName((isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)))?.charAt(0) || 'U'}
+                        </span>
+                        <span className="text-slate-400 dark:text-slate-500">{isTrashView ? 'Deleted by' : 'by'}</span>
+                        <span 
+                          className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[150px]" 
+                          title={(isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)) || 'System'}
                         >
-                          <RefreshCcw className="h-4 w-4" /> Restore
-                        </Button>
-                      ) : null
-                    ) : (
-                      <>
-                        {/* Attachment: Signed DC */}
-                        {canViewSignedCopies && (
+                          {formatAuthorName((isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)))}
+                        </span>
+                      </div>
+                    </div>
+                  </TableCell>
+                  {isAdmin && (
+                    <>
+                      {(() => {
+                        const mrpTotal = (challan.lineItems || []).reduce((acc, item) => acc + ((item.mrp || 0) * (item.quantity || 1)), 0);
+                        const commission = mrpTotal * 0.055;
+                        const revenue = mrpTotal - commission;
+                        
+                        let pCost = 0;
+                        if (challan.procurementCost !== undefined && challan.procurementCost !== null) {
+                          pCost = Number(challan.procurementCost);
+                        } else {
+                          pCost = (challan.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+                        }
+                        
+                        const tCost = challan.transportCost || 0;
+                        const oCost = challan.otherCharges || 0;
+                        const totalCost = pCost + tCost + oCost;
+                        const profit = revenue - totalCost;
+
+                        return (
+                          <>
+                            <TableCell className="text-right whitespace-nowrap align-middle py-3 tabular-nums font-mono font-bold text-[#3b2fc9] dark:text-indigo-300 text-xs sm:text-sm">
+                              ₹{mrpTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </TableCell>
+                            {(() => {
+                              const totalUnits = (challan.lineItems || []).reduce((acc, item) => acc + (Number(item.quantity) || 1), 0);
+                              const marginAmount = mrpTotal - pCost;
+                              const marginPct = mrpTotal > 0 ? (marginAmount / mrpTotal) * 100 : 0;
+                              const perUnit = totalUnits > 0 ? marginAmount / totalUnits : 0;
+
+                              return (
+                                <TableCell className="text-right whitespace-nowrap align-middle py-3">
+                                  <div className="flex flex-col items-end gap-0.5">
+                                    <span className={`inline-flex items-center gap-1 font-mono font-bold text-xs px-2.5 py-0.5 rounded-full border shadow-2xs ${
+                                      marginPct >= 20
+                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+                                        : marginPct >= 10
+                                        ? 'bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800'
+                                        : marginPct >= 0
+                                        ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800'
+                                        : 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800'
+                                    }`}>
+                                      {marginPct >= 20 ? '↑ ' : marginPct < 0 ? '↓ ' : marginPct < 10 ? '⚠️ ' : ''}
+                                      {marginPct.toFixed(1)}%
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+                                      ₹{perUnit.toFixed(1)}/u
+                                    </span>
+                                  </div>
+                                </TableCell>
+                              );
+                            })()}
+                            {showFinancials && (
+                              <>
+                                <TableCell className="text-right whitespace-nowrap align-middle py-3">
+                                  <div className="flex flex-col text-[11px] items-end leading-tight tabular-nums">
+                                    <span className="text-gray-400" title="5.5% Commission">- ₹{commission.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    <span className="font-bold text-[13px] text-gray-900 dark:text-white border-t border-gray-200 dark:border-slate-700 mt-1 pt-1 w-full text-right">
+                                       ₹{revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right whitespace-nowrap align-middle py-3">
+                                  <div className="flex flex-col text-[11px] items-end leading-tight text-gray-500 dark:text-slate-400 tabular-nums">
+                                    <span>Goods: ₹{pCost.toLocaleString('en-IN')}</span>
+                                    <span>Trans: ₹{tCost.toLocaleString('en-IN')}</span>
+                                    <span>Other: ₹{oCost.toLocaleString('en-IN')}</span>
+                                    <span className="font-bold text-[13px] text-gray-900 dark:text-white border-t border-gray-200 dark:border-slate-700 mt-1 pt-1 w-full text-right">
+                                       ₹{totalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right font-medium whitespace-nowrap align-middle py-3">
+                                  <div className="flex flex-col items-end w-full h-full justify-end pb-[2px] tabular-nums font-bold">
+                                    <span className={profit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}>
+                                      ₹{profit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                              </>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </>
+                  )}
+                  <TableCell className="py-3 pr-4">
+                    <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                      {isTrashView ? (
+                        isAdmin ? (
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
+                            className="h-8 px-2.5 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 rounded-xl font-bold gap-1 shadow-2xs"
+                            onClick={() => onRestoreChallan && challan.id && onRestoreChallan(challan.id)}
+                            title="Restore"
+                          >
+                            <RefreshCcw className="h-3.5 w-3.5" /> Restore
+                          </Button>
+                        ) : null
+                      ) : (
+                        <>
+                          {/* Attachment: Signed DC */}
+                          {canViewSignedCopies && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic('light');
+                                setAttachmentModal({ challan, type: 'signed_copy' });
+                              }}
+                              className={`h-7 px-2 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all border ${
+                                hasSignedDc
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200/90 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 shadow-2xs'
+                                  : 'text-slate-400 hover:text-emerald-700 hover:bg-emerald-50/70 border-slate-200 dark:border-slate-700 border-dashed'
+                              }`}
+                              title="Manage Signed Copies"
+                            >
+                              {hasSignedDc ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                  <span>Signed</span>
+                                  <span className="ml-0.5 px-1 rounded-full bg-emerald-600 text-white text-[9px] font-black">
+                                    {challan.signedCopyUrls!.length}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <Paperclip className="w-3 h-3 text-slate-400 shrink-0" />
+                                  <span>+Signed</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+
+                          {/* Attachment: Invoice */}
+                          <button
+                            type="button"
                             onClick={() => {
                               triggerHaptic('light');
-                              setAttachmentModal({ challan, type: 'signed_copy' });
+                              setAttachmentModal({ challan, type: 'goods_received' });
                             }}
-                            className={`h-7 px-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 ${
-                              (challan.signedCopyUrls?.length ?? 0) > 0
-                                ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 shadow-2xs'
-                                : 'text-gray-400 hover:text-emerald-700 hover:bg-emerald-50'
+                            className={`h-7 px-2 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all border ${
+                              hasInvoice
+                                ? 'bg-blue-50 text-blue-700 border-blue-200/90 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800 hover:bg-blue-100 shadow-2xs'
+                                : 'text-slate-400 hover:text-blue-700 hover:bg-blue-50/70 border-slate-200 dark:border-slate-700 border-dashed'
                             }`}
-                            title="Manage Signed Copies"
+                            title="Goods Received Invoice"
                           >
-                            <Paperclip className="w-3 h-3 text-emerald-600" />
-                            <span className="hidden xl:inline">Signed</span>
-                            {(challan.signedCopyUrls?.length ?? 0) > 0 && (
-                              <span className="ml-0.5 px-1 py-0.2 rounded-full bg-emerald-600 text-white text-[8px] font-black">
-                                {challan.signedCopyUrls!.length}
-                              </span>
+                            {hasInvoice ? (
+                              <>
+                                <Receipt className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
+                                <span>Inv</span>
+                                <span className="ml-0.5 px-1 rounded-full bg-blue-600 text-white text-[9px] font-black">
+                                  {challan.goodsReceivedInvoiceUrls!.length}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <FileText className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span>+Inv</span>
+                              </>
                             )}
-                          </Button>
-                        )}
+                          </button>
 
-                        {/* Attachment: Invoice */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            triggerHaptic('light');
-                            setAttachmentModal({ challan, type: 'goods_received' });
-                          }}
-                          className={`h-7 px-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 ${
-                            (challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0
-                              ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/80 shadow-2xs'
-                              : 'text-gray-400 hover:text-blue-700 hover:bg-blue-50'
-                          }`}
-                          title="Goods Received Invoice"
-                        >
-                          <FileText className="w-3 h-3 text-blue-600" />
-                          <span className="hidden xl:inline">Invoice</span>
-                          {(challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0 && (
-                            <span className="ml-0.5 px-1 py-0.2 rounded-full bg-blue-600 text-white text-[8px] font-black">
-                              {challan.goodsReceivedInvoiceUrls!.length}
-                            </span>
-                          )}
-                        </Button>
+                          {/* Action Icon Group in Segregated Pill */}
+                          <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-xl border border-slate-200/70 dark:border-slate-700">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all"
+                              onClick={() => {
+                                triggerHaptic('light');
+                                onSelectChallan(challan);
+                              }}
+                              title="Edit in Form"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                            
+                            {onPreviewChallan && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all"
+                                onClick={() => {
+                                  triggerHaptic('light');
+                                  onPreviewChallan(challan);
+                                }}
+                                title="Preview Document"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
 
-                        {/* Edit in Form */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-500 hover:text-[#3b2fc9] hover:bg-indigo-50"
-                          onClick={() => {
-                            triggerHaptic('light');
-                            onSelectChallan(challan);
-                          }}
-                          title="Edit in Form"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-500 hover:text-purple-600"
-                          onClick={() => {
-                            triggerHaptic('light');
-                            onDuplicateChallan(challan);
-                          }}
-                          title="Duplicate with next DC number"
-                        >
-                          <Copy className="h-4 w-4 text-purple-600" />
-                        </Button>
-                        {onPreviewChallan && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-gray-500 hover:text-[#3b2fc9]"
-                            onClick={() => onPreviewChallan(challan)}
-                            title="Preview Document"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {isAdmin && onAdminPreviewChallan && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-gray-500 hover:text-[#3b2fc9]"
-                            onClick={() => onAdminPreviewChallan(challan)}
-                            title="Admin Quick View"
-                          >
-                            <Receipt className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-500 hover:text-[#3b2fc9]"
-                          onClick={() => onDownloadChallan(challan)}
-                          title="Download PDF"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        {isAdmin && onViewHistory && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-gray-500 hover:text-[#3b2fc9]"
-                            onClick={() => onViewHistory(challan)}
-                            title="View Edit History"
-                          >
-                            <History className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </>
-                    )}
-                        {hasDeleteClearance && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-gray-400 hover:text-red-500"
-                            title="Delete"
-                            onClick={() => setDeleteConfirmChallan(challan)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all"
+                              onClick={() => {
+                                triggerHaptic('medium');
+                                onDownloadChallan(challan);
+                              }}
+                              title="Download PDF"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-slate-600 dark:text-slate-300 hover:text-purple-600 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all"
+                              onClick={() => {
+                                triggerHaptic('light');
+                                onDuplicateChallan(challan);
+                              }}
+                              title="Duplicate with next DC number"
+                            >
+                              <Copy className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                            </Button>
+
+                            {isAdmin && onAdminPreviewChallan && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-rose-600 dark:text-rose-400 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all"
+                                onClick={() => {
+                                  triggerHaptic('light');
+                                  onAdminPreviewChallan(challan);
+                                }}
+                                title="Admin Quick View (Cost & Margin breakdown)"
+                              >
+                                <Receipt className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+
+                            {isAdmin && onViewHistory && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all"
+                                onClick={() => {
+                                  triggerHaptic('light');
+                                  onViewHistory(challan);
+                                }}
+                                title="View Edit History"
+                              >
+                                <History className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+
+                            {hasDeleteClearance && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-all"
+                                title="Delete"
+                                onClick={() => setDeleteConfirmChallan(challan)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
+          <tfoot className="sticky bottom-0 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md border-t-2 border-slate-200/90 dark:border-slate-800 shadow-sm z-10">
+            <TableRow className="hover:bg-transparent font-bold">
+              {isAdmin && <TableCell className="pl-4 w-[44px]"></TableCell>}
+              <TableCell className="text-xs font-black text-slate-800 dark:text-slate-200">
+                <span>Total: {challans.length} {challans.length === 1 ? 'record' : 'records'}</span>
+              </TableCell>
+              <TableCell className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                <span>{gridTotals.totalUnits.toLocaleString('en-IN')} total units</span>
+              </TableCell>
+              {isAdmin && (
+                <>
+                  <TableCell className="text-right text-xs font-mono font-black text-[#3b2fc9] dark:text-indigo-400">
+                    ₹{gridTotals.totalMrp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </TableCell>
+                  <TableCell className="text-right text-xs font-mono font-black">
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] border ${
+                      gridTotals.avgMargin >= 20
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                        : gridTotals.avgMargin >= 10
+                        ? 'bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
+                        : 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                    }`}>
+                      Avg {gridTotals.avgMargin.toFixed(1)}%
+                    </span>
+                  </TableCell>
+                  {showFinancials && (
+                    <>
+                      <TableCell className="text-right text-xs font-mono font-bold text-slate-600 dark:text-slate-400">
+                        ₹{(gridTotals.totalMrp * 0.945).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-mono font-bold text-slate-600 dark:text-slate-400">
+                        ₹{gridTotals.totalCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                        ₹{((gridTotals.totalMrp * 0.945) - gridTotals.totalCost).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                      </TableCell>
+                    </>
+                  )}
+                </>
+              )}
+              <TableCell className="text-right text-xs text-slate-400 pr-4">
+                —
+              </TableCell>
+            </TableRow>
+          </tfoot>
         </Table>
       </div>
 

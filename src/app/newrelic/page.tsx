@@ -2,7 +2,7 @@
 import { NewRelicChallan, NewRelicLocation } from '@/types/challan';
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Loader2, FileText, MapPin, Filter, FileSpreadsheet, RefreshCcw, Search, X, ArrowUp, Calculator } from 'lucide-react';
+import { Loader2, FileText, MapPin, Filter, FileSpreadsheet, RefreshCcw, Search, X, ArrowUp, Calculator, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
@@ -70,7 +70,7 @@ export default function NewRelicPage() {
   const [filterMonth, setFilterMonth] = useState<string>('all');
   const [filterYear, setFilterYear] = useState<string>('all');
   const [filterCycle, setFilterCycle] = useState<string>('all');
-  const [facetFilter, setFacetFilter] = useState<'all' | 'pending_signed' | 'has_signed' | 'low_margin' | 'high_margin'>('all');
+  const [facetFilter, setFacetFilter] = useState<'all' | 'pending_signed' | 'has_signed' | 'low_margin' | 'high_margin' | 'missing_cost'>('all');
 
   const [historyChallan, setHistoryChallan] = useState<NewRelicChallan | null>(null);
   const [previewChallan, setPreviewChallan] = useState<NewRelicChallan | null>(null);
@@ -434,19 +434,29 @@ export default function NewRelicPage() {
   
   const facetCounts = useMemo(() => {
     if (!isAdmin) {
-      return { all: 0, pendingSigned: 0, hasSigned: 0, lowMargin: 0, highMargin: 0 };
+      return { all: 0, pendingSigned: 0, hasSigned: 0, lowMargin: 0, highMargin: 0, missingCost: 0 };
     }
 
     let pendingSigned = 0;
     let hasSigned = 0;
     let lowMargin = 0;
     let highMargin = 0;
+    let missingCost = 0;
 
     for (const c of activeChallans) {
       if (c.signedCopyUrls && c.signedCopyUrls.length > 0) {
         hasSigned++;
       } else {
         pendingSigned++;
+      }
+
+      // Check if any line item has missing or <=0 procurement cost
+      const hasMissingItemCost = (c.lineItems || []).some((item) => {
+        const cost = item.procurementCost as unknown;
+        return cost === undefined || cost === null || cost === '' || isNaN(Number(cost)) || Number(cost) <= 0;
+      });
+      if (hasMissingItemCost) {
+        missingCost++;
       }
 
       const mrp = (c.lineItems || []).reduce((sum, item) => sum + ((Number(item.mrp) || 0) * (Number(item.quantity) || 1)), 0);
@@ -467,6 +477,7 @@ export default function NewRelicPage() {
       hasSigned,
       lowMargin,
       highMargin,
+      missingCost,
     };
   }, [activeChallans, isAdmin]);
   
@@ -497,6 +508,13 @@ export default function NewRelicPage() {
         list = list.filter((c) => !(c.signedCopyUrls && c.signedCopyUrls.length > 0));
       } else if (facetFilter === 'has_signed') {
         list = list.filter((c) => c.signedCopyUrls && c.signedCopyUrls.length > 0);
+      } else if (facetFilter === 'missing_cost') {
+        list = list.filter((c) => {
+          return (c.lineItems || []).some((item) => {
+            const cost = item.procurementCost as unknown;
+            return cost === undefined || cost === null || cost === '' || isNaN(Number(cost)) || Number(cost) <= 0;
+          });
+        });
       } else if (facetFilter === 'low_margin') {
         list = list.filter((c) => {
           const mrp = (c.lineItems || []).reduce((sum, item) => sum + ((Number(item.mrp) || 0) * (Number(item.quantity) || 1)), 0);
@@ -846,6 +864,31 @@ export default function NewRelicPage() {
 
         {/* Instant Search Bar & Filter Controls */}
         <div className="space-y-3">
+          {/* Missing P.Cost Alert Notification Banner (Admin Only) */}
+          {isAdmin && facetCounts.missingCost > 0 && facetFilter !== 'missing_cost' && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 sm:px-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs sm:text-sm animate-in fade-in shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-xl bg-amber-200/80 dark:bg-amber-900/80 text-amber-800 dark:text-amber-200 shrink-0">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-bold">Missing Procurement Cost: </span>
+                  <span>{facetCounts.missingCost} delivery {facetCounts.missingCost === 1 ? 'challan has' : 'challans have'} items with missed P.Cost.</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setFacetFilter('missing_cost');
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white text-xs font-bold shrink-0 transition-all shadow-xs flex items-center justify-center gap-1.5"
+              >
+                <span>Filter Missing ({facetCounts.missingCost})</span>
+              </button>
+            </div>
+          )}
+
           {/* Instant Search Input */}
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-500 pointer-events-none" />
@@ -922,6 +965,29 @@ export default function NewRelicPage() {
                 <span>Signed DC Verified</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/80 font-mono">
                   {facetCounts.hasSigned}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setFacetFilter(facetFilter === 'missing_cost' ? 'all' : 'missing_cost');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                  facetFilter === 'missing_cost'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-amber-800 dark:text-amber-300 hover:bg-amber-50 border border-amber-300 dark:border-amber-900/60'
+                }`}
+                title="Filter delivery challans that have at least one line item missing procurement cost"
+              >
+                <span>⚠️ Missing P.Cost</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                  facetCounts.missingCost > 0
+                    ? 'bg-amber-200 text-amber-950 dark:bg-amber-900 dark:text-amber-200 font-black'
+                    : 'bg-amber-100 dark:bg-amber-950 font-normal'
+                }`}>
+                  {facetCounts.missingCost}
                 </span>
               </button>
 

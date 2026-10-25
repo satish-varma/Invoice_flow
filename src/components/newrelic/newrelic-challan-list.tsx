@@ -379,6 +379,11 @@ export function NewRelicChallanList({
           const mrpTotal = (challan.lineItems || []).reduce((acc, item) => acc + ((item.mrp || 0) * (item.quantity || 1)), 0);
           const topItems = (challan.lineItems || []).slice(0, 2);
           const extraItemsCount = (challan.lineItems?.length || 0) - 2;
+          const missingCostCount = (challan.lineItems || []).filter((item) => {
+            const cost = item.procurementCost as unknown;
+            return cost === undefined || cost === null || cost === '' || isNaN(Number(cost)) || Number(cost) <= 0;
+          }).length;
+          const hasMissingCost = missingCostCount > 0;
 
           return (
             <TiltCard
@@ -465,6 +470,27 @@ export function NewRelicChallanList({
                     <span>{NEWRELIC_LOCATIONS[challan.location]?.label ?? challan.location}</span>
                   </Badge>
                 </div>
+
+                {/* Missing Cost Banner on Mobile Card */}
+                {hasMissingCost && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      triggerHaptic('light');
+                      onSelectChallan(challan);
+                    }}
+                    className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-bold transition-all hover:bg-amber-100/80 active:scale-[0.99] text-left shadow-2xs"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 animate-pulse" />
+                      <span>Missing P.Cost on {missingCostCount} {missingCostCount === 1 ? 'item' : 'items'}</span>
+                    </span>
+                    <span className="text-[11px] underline font-extrabold text-amber-700 dark:text-amber-300 shrink-0">
+                      Fix Cost →
+                    </span>
+                  </button>
+                )}
 
                 {/* Total Value & Item Count Inset Banner */}
                 <div className="flex items-center justify-between theme-card-subtle rounded-2xl p-3">
@@ -585,6 +611,12 @@ export function NewRelicChallanList({
                           ₹{profit.toLocaleString('en-IN', { maximumFractionDigits: 1 })}
                         </span>
                       </div>
+                      {hasMissingCost && (
+                        <div className="pt-1 text-[10px] font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1 border-t border-amber-200/50 dark:border-amber-800/50">
+                          <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                          <span>{missingCostCount} item{missingCostCount === 1 ? '' : 's'} missing P.Cost — profit telemetry incomplete</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
@@ -792,6 +824,11 @@ export function NewRelicChallanList({
               const isSelected = !!challan.id && selectedIds.has(challan.id);
               const hasSignedDc = (challan.signedCopyUrls?.length ?? 0) > 0;
               const hasInvoice = (challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0;
+              const missingCostCount = (challan.lineItems || []).filter((item) => {
+                const cost = item.procurementCost as unknown;
+                return cost === undefined || cost === null || cost === '' || isNaN(Number(cost)) || Number(cost) <= 0;
+              }).length;
+              const hasMissingCost = missingCostCount > 0;
 
               return (
                 <TableRow 
@@ -814,7 +851,7 @@ export function NewRelicChallanList({
                     </TableCell>
                   )}
                   <TableCell className="font-mono font-bold tabular-nums text-slate-900 dark:text-slate-100">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {/* Live Verification Status Dot */}
                       <span
                         className={`w-2 h-2 rounded-full shrink-0 ${
@@ -833,6 +870,21 @@ export function NewRelicChallanList({
                         <span className="font-extrabold tracking-tight text-xs sm:text-sm">{challan.dcNumber}</span>
                         <Copy className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover/copy:text-[#3b2fc9] dark:group-hover/copy:text-indigo-400 opacity-0 group-hover/copy:opacity-100 transition-opacity shrink-0" />
                       </button>
+                      {hasMissingCost && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerHaptic('light');
+                            onSelectChallan(challan);
+                          }}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800 hover:bg-amber-200 transition-colors cursor-pointer shrink-0 shadow-2xs"
+                          title={`${missingCostCount} line item(s) missing P.Cost. Click to open and fix.`}
+                        >
+                          <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0 animate-pulse" />
+                          <span>Missing Cost</span>
+                        </button>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="align-middle py-3">
@@ -861,6 +913,23 @@ export function NewRelicChallanList({
                           {formatAuthorName((isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)))}
                         </span>
                       </div>
+
+                      {/* Line 3: Missing Cost notification if any */}
+                      {hasMissingCost && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerHaptic('light');
+                            onSelectChallan(challan);
+                          }}
+                          className="inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-700 dark:text-amber-400 hover:underline pt-0.5 text-left cursor-pointer"
+                          title="Click to open challan and fill missing P.Cost"
+                        >
+                          <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                          <span>Missing P.Cost on {missingCostCount} {missingCostCount === 1 ? 'item' : 'items'} (Fix →)</span>
+                        </button>
+                      )}
                     </div>
                   </TableCell>
                   {isAdmin && (
@@ -896,20 +965,36 @@ export function NewRelicChallanList({
                               return (
                                 <TableCell className="text-right whitespace-nowrap align-middle py-3">
                                   <div className="flex flex-col items-end gap-0.5">
-                                    <span className={`inline-flex items-center gap-1 font-mono font-bold text-xs px-2.5 py-0.5 rounded-full border shadow-2xs ${
-                                      marginPct >= 20
-                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
-                                        : marginPct >= 10
-                                        ? 'bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800'
-                                        : marginPct >= 0
-                                        ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800'
-                                        : 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800'
-                                    }`}>
-                                      {marginPct >= 20 ? '↑ ' : marginPct < 0 ? '↓ ' : marginPct < 10 ? '⚠️ ' : ''}
-                                      {marginPct.toFixed(1)}%
-                                    </span>
+                                    {hasMissingCost ? (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          triggerHaptic('light');
+                                          onSelectChallan(challan);
+                                        }}
+                                        title={`${missingCostCount} line item(s) missing P.Cost! Margin cannot be accurately calculated. Click to fix.`}
+                                        className="inline-flex items-center gap-1 font-mono font-bold text-xs px-2.5 py-0.5 rounded-full border shadow-2xs bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-800 hover:bg-amber-200 dark:hover:bg-amber-900 transition-colors cursor-pointer"
+                                      >
+                                        <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0 animate-pulse" />
+                                        <span>Incomplete</span>
+                                      </button>
+                                    ) : (
+                                      <span className={`inline-flex items-center gap-1 font-mono font-bold text-xs px-2.5 py-0.5 rounded-full border shadow-2xs ${
+                                        marginPct >= 20
+                                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+                                          : marginPct >= 10
+                                          ? 'bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800'
+                                          : marginPct >= 0
+                                          ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800'
+                                          : 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800'
+                                      }`}>
+                                        {marginPct >= 20 ? '↑ ' : marginPct < 0 ? '↓ ' : marginPct < 10 ? '⚠️ ' : ''}
+                                        {marginPct.toFixed(1)}%
+                                      </span>
+                                    )}
                                     <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
-                                      ₹{perUnit.toFixed(1)}/u
+                                      {hasMissingCost ? `${missingCostCount} missing cost` : `₹${perUnit.toFixed(1)}/u`}
                                     </span>
                                   </div>
                                 </TableCell>

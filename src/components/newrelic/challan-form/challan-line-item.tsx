@@ -184,19 +184,33 @@ export function ChallanLineItem({
               />
             </div>
           )}
-          {canSeePCost && (
-            <div className="space-y-1 sm:space-y-0">
-              <Label className="text-xs text-gray-500 sm:hidden">P.Cost</Label>
-              <Input
-                {...register(`lineItems.${index}.procurementCost`)}
-                type="number"
-                step="0.01"
-                min={0}
-                placeholder="Cost"
-                className={cn(errors.lineItems?.[index]?.procurementCost && 'border-red-400')}
-              />
-            </div>
-          )}
+          {canSeePCost && (() => {
+            const currentCost = watchedLineItems?.[index]?.procurementCost;
+            const isMissingCost = currentCost === undefined || currentCost === null || currentCost === '' || isNaN(Number(currentCost)) || Number(currentCost) <= 0;
+
+            return (
+              <div className="space-y-1 sm:space-y-0">
+                <div className="flex sm:hidden items-center justify-between">
+                  <Label className="text-xs text-gray-500">P.Cost</Label>
+                  {isMissingCost && (
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">Missing</span>
+                  )}
+                </div>
+                <Input
+                  {...register(`lineItems.${index}.procurementCost`)}
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  placeholder="Cost"
+                  className={cn(
+                    errors.lineItems?.[index]?.procurementCost && 'border-red-400',
+                    isMissingCost && !errors.lineItems?.[index]?.procurementCost && 'border-amber-400 bg-amber-50/40 focus:border-amber-500'
+                  )}
+                  title={isMissingCost ? "Procurement cost is missing" : undefined}
+                />
+              </div>
+            );
+          })()}
         </div>
       )}
 

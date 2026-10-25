@@ -16,6 +16,12 @@ export function ChallanSummary({ lineItems, canSeeMrp, canSeePCost }: ChallanSum
   const totalQty = items.reduce((acc, item) => acc + (Number(item?.quantity) || 0), 0);
   const totalMrp = items.reduce((acc, item) => acc + ((Number(item?.mrp) || 0) * (Number(item?.quantity) || 0)), 0);
   const totalPCost = items.reduce((acc, item) => acc + ((Number(item?.procurementCost) || 0) * (Number(item?.quantity) || 0)), 0);
+  const missingCostCount = canSeePCost
+    ? items.filter((item) => {
+        const cost = item?.procurementCost as unknown;
+        return cost === undefined || cost === null || cost === '' || isNaN(Number(cost)) || Number(cost) <= 0;
+      }).length
+    : 0;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 py-2 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
@@ -31,11 +37,16 @@ export function ChallanSummary({ lineItems, canSeeMrp, canSeePCost }: ChallanSum
           </strong>
         </span>
         {canSeePCost && (
-          <span>
-            Total P.Cost:{' '}
+          <span className="flex items-center gap-1.5 flex-wrap">
+            <span>Total P.Cost:</span>
             <strong className="text-gray-900">
               ₹{totalPCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </strong>
+            {missingCostCount > 0 && (
+              <span className="text-[11px] font-bold text-amber-800 bg-amber-100 dark:bg-amber-950 dark:text-amber-200 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-800">
+                ⚠️ {missingCostCount} missing
+              </span>
+            )}
           </span>
         )}
       </div>

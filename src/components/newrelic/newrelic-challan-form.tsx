@@ -152,6 +152,12 @@ export function NewRelicChallanForm({
   const calculatedTotalPCost = watchedLineItems?.reduce((acc: number, item: any) => acc + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 0)), 0) || 0;
   const calculatedTotalMrp = watchedLineItems?.reduce((acc: number, item: any) => acc + ((Number(item.mrp) || 0) * (Number(item.quantity) || 0)), 0) || 0;
   const calculatedTotalQty = watchedLineItems?.reduce((acc: number, item: any) => acc + (Number(item.quantity) || 0), 0) || 0;
+  const missingCostCount = canSeePCost
+    ? (watchedLineItems || []).filter((item: any) => {
+        const cost = item?.procurementCost;
+        return cost === undefined || cost === null || cost === '' || isNaN(Number(cost)) || Number(cost) <= 0;
+      }).length
+    : 0;
 
   /* ── Load Catalog for Autocomplete ── */
   useEffect(() => {
@@ -872,6 +878,18 @@ export function NewRelicChallanForm({
             <div className="text-sm">
               <strong className="font-semibold block mb-1">Legacy Cost Detected</strong>
               This document has a legacy global Procurement Cost of <strong>₹{(initialData?.procurementCost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>. Please distribute this into the new P.Cost columns below before saving.
+            </div>
+          </div>
+        )}
+
+        {canSeePCost && missingCostCount > 0 && (
+          <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 px-4 py-3 rounded-2xl flex items-start gap-3 shadow-2xs">
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 animate-pulse" />
+            <div className="text-xs sm:text-sm">
+              <strong className="font-extrabold block mb-0.5">Missing Procurement Cost</strong>
+              <span>
+                {missingCostCount} line item{missingCostCount === 1 ? ' is' : 's are'} missing vendor procurement cost (P.Cost). Enter costs in the amber-highlighted fields below for accurate profit and margin tracking.
+              </span>
             </div>
           </div>
         )}

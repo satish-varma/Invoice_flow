@@ -3,7 +3,7 @@ import { NewRelicChallan } from '@/types/challan';
 
 import React, { useState, useRef } from 'react';
 import { format } from 'date-fns';
-import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, ChevronDown, ChevronUp, FileCheck, Paperclip, Edit, Package, Calendar, AlertTriangle, Check } from 'lucide-react';
+import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, ChevronDown, ChevronUp, FileCheck, Paperclip, Edit, Package, Calendar, AlertTriangle, Check, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 import { useToast } from '@/hooks/use-toast';
 import { NewRelicAttachmentModal } from './newrelic-attachment-modal';
@@ -91,6 +91,29 @@ export function NewRelicChallanList({
     challan: NewRelicChallan;
     type: 'signed_copy' | 'goods_received';
   } | null>(null);
+
+  // Interactive Column Sorting
+  type SortField = 'date' | 'dcNumber' | 'mrp' | 'margin';
+  type SortDirection = 'asc' | 'desc';
+
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = (field: SortField) => {
+    triggerHaptic('light');
+    if (sortField === field) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      if (field === 'margin') {
+        setSortDirection('asc'); // Lowest margin first is most useful for auditing
+      } else if (field === 'mrp' || field === 'date') {
+        setSortDirection('desc'); // Highest value or newest date first
+      } else {
+        setSortDirection('asc'); // DC Number 001..999
+      }
+    }
+  };
 
   // Swipe-to-action state on mobile cards
   const [swipedId, setSwipedId] = useState<string | null>(null);
@@ -180,6 +203,58 @@ export function NewRelicChallanList({
     return { totalUnits, totalMrp, totalCost, marginAmount, avgMargin };
   }, [challans]);
 
+  const sortedChallans = React.useMemo(() => {
+    const list = [...challans];
+
+    list.sort((a, b) => {
+      if (sortField === 'date') {
+        const timeA = new Date(a.dcDate || 0).getTime();
+        const timeB = new Date(b.dcDate || 0).getTime();
+        return sortDirection === 'asc' ? timeA - timeB : timeB - timeA;
+      }
+
+      if (sortField === 'dcNumber') {
+        const numA = a.dcNumber || '';
+        const numB = b.dcNumber || '';
+        return sortDirection === 'asc'
+          ? numA.localeCompare(numB, undefined, { numeric: true, sensitivity: 'base' })
+          : numB.localeCompare(numA, undefined, { numeric: true, sensitivity: 'base' });
+      }
+
+      if (sortField === 'mrp') {
+        const mrpA = (a.lineItems || []).reduce((sum, item) => sum + ((Number(item.mrp) || 0) * (Number(item.quantity) || 1)), 0);
+        const mrpB = (b.lineItems || []).reduce((sum, item) => sum + ((Number(item.mrp) || 0) * (Number(item.quantity) || 1)), 0);
+        return sortDirection === 'asc' ? mrpA - mrpB : mrpB - mrpA;
+      }
+
+      if (sortField === 'margin') {
+        const mrpA = (a.lineItems || []).reduce((sum, item) => sum + ((Number(item.mrp) || 0) * (Number(item.quantity) || 1)), 0);
+        let pCostA = 0;
+        if (a.procurementCost !== undefined && a.procurementCost !== null) {
+          pCostA = Number(a.procurementCost);
+        } else {
+          pCostA = (a.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+        }
+        const marginA = mrpA > 0 ? ((mrpA - pCostA) / mrpA) * 100 : 0;
+
+        const mrpB = (b.lineItems || []).reduce((sum, item) => sum + ((Number(item.mrp) || 0) * (Number(item.quantity) || 1)), 0);
+        let pCostB = 0;
+        if (b.procurementCost !== undefined && b.procurementCost !== null) {
+          pCostB = Number(b.procurementCost);
+        } else {
+          pCostB = (b.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+        }
+        const marginB = mrpB > 0 ? ((mrpB - pCostB) / mrpB) * 100 : 0;
+
+        return sortDirection === 'asc' ? marginA - marginB : marginB - marginA;
+      }
+
+      return 0;
+    });
+
+    return list;
+  }, [challans, sortField, sortDirection]);
+
   if (challans.length === 0) {
     return (
       <div className="theme-card rounded-2xl shadow-sm p-10 text-center">
@@ -191,7 +266,21 @@ export function NewRelicChallanList({
   return (
     <div className="theme-card rounded-2xl shadow-sm overflow-hidden w-full max-w-full min-w-0">
       <div className="px-4 sm:px-6 py-4 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <h3 className="font-semibold theme-text-primary text-sm sm:text-base">Saved Challans</h3>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h3 className="font-semibold theme-text-primary text-sm sm:text-base">Saved Challans</h3>
+          <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+            <span className="hidden sm:inline text-slate-400">·</span>
+            <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1">
+              <span>Sorted:</span>
+              <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">
+                {sortField === 'date' && `Date (${sortDirection === 'desc' ? 'Newest' : 'Oldest'})`}
+                {sortField === 'dcNumber' && `DC# (${sortDirection === 'asc' ? 'A→Z' : 'Z→A'})`}
+                {sortField === 'mrp' && `Value (${sortDirection === 'desc' ? 'High→Low' : 'Low→High'})`}
+                {sortField === 'margin' && `Margin (${sortDirection === 'asc' ? 'Low→High' : 'High→Low'})`}
+              </span>
+            </span>
+          </div>
+        </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-gray-500">
           <span>{challans.length} document{challans.length !== 1 ? 's' : ''}</span>
           {isAdmin && (
@@ -374,8 +463,75 @@ export function NewRelicChallanList({
       )}
 
       {/* Mobile Feed Style Card List (< lg) */}
-      <div className="block lg:hidden p-2.5 sm:p-3 space-y-3.5 bg-transparent">
-        {challans.map((challan) => {
+      <div className="block lg:hidden p-2.5 sm:p-3 space-y-3 bg-transparent">
+        {/* Mobile Quick Sort Controls */}
+        <div className="flex items-center justify-between gap-1 px-1 text-xs">
+          <span className="text-[11px] font-bold text-slate-400 shrink-0">Sort:</span>
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+            <button
+              type="button"
+              onClick={() => handleSort('date')}
+              className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1 active:scale-95 ${
+                sortField === 'date'
+                  ? 'bg-indigo-600 text-white shadow-2xs font-black'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <span>Date</span>
+              {sortField === 'date' && (
+                <span>{sortDirection === 'desc' ? '↓' : '↑'}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSort('dcNumber')}
+              className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1 active:scale-95 ${
+                sortField === 'dcNumber'
+                  ? 'bg-indigo-600 text-white shadow-2xs font-black'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <span>DC#</span>
+              {sortField === 'dcNumber' && (
+                <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+              )}
+            </button>
+            {isAdmin && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleSort('mrp')}
+                  className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1 active:scale-95 ${
+                    sortField === 'mrp'
+                      ? 'bg-indigo-600 text-white shadow-2xs font-black'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  <span>Value</span>
+                  {sortField === 'mrp' && (
+                    <span>{sortDirection === 'desc' ? '↓' : '↑'}</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSort('margin')}
+                  className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1 active:scale-95 ${
+                    sortField === 'margin'
+                      ? 'bg-emerald-600 text-white shadow-2xs font-black'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  <span>Margin%</span>
+                  {sortField === 'margin' && (
+                    <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                  )}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {sortedChallans.map((challan) => {
           const mrpTotal = (challan.lineItems || []).reduce((acc, item) => acc + ((item.mrp || 0) * (item.quantity || 1)), 0);
           const topItems = (challan.lineItems || []).slice(0, 2);
           const extraItemsCount = (challan.lineItems?.length || 0) - 2;
@@ -801,12 +957,84 @@ export function NewRelicChallanList({
                   />
                 </TableHead>
               )}
-              <TableHead className="font-extrabold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider w-[170px]">DC Number</TableHead>
-              <TableHead className="font-extrabold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Details</TableHead>
+              <TableHead className="w-[180px]">
+                <button
+                  type="button"
+                  onClick={() => handleSort('dcNumber')}
+                  className="flex items-center gap-1.5 py-1 px-1.5 -ml-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors cursor-pointer group"
+                  title={`Sort by DC Number (${sortField === 'dcNumber' ? (sortDirection === 'asc' ? 'Ascending A→Z' : 'Descending Z→A') : 'Click to sort'})`}
+                >
+                  <span className={sortField === 'dcNumber' ? 'text-indigo-600 dark:text-indigo-400 font-black' : ''}>DC Number</span>
+                  {sortField === 'dcNumber' ? (
+                    sortDirection === 'asc' ? (
+                      <ArrowUp className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    ) : (
+                      <ArrowDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    )
+                  ) : (
+                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-40 group-hover:opacity-100 shrink-0 transition-opacity" />
+                  )}
+                </button>
+              </TableHead>
+              <TableHead>
+                <button
+                  type="button"
+                  onClick={() => handleSort('date')}
+                  className="flex items-center gap-1.5 py-1 px-1.5 -ml-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors cursor-pointer group"
+                  title={`Sort by Date (${sortField === 'date' ? (sortDirection === 'desc' ? 'Newest first' : 'Oldest first') : 'Click to sort'})`}
+                >
+                  <span className={sortField === 'date' ? 'text-indigo-600 dark:text-indigo-400 font-black' : ''}>Details (Date)</span>
+                  {sortField === 'date' ? (
+                    sortDirection === 'desc' ? (
+                      <ArrowDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    ) : (
+                      <ArrowUp className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    )
+                  ) : (
+                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-40 group-hover:opacity-100 shrink-0 transition-opacity" />
+                  )}
+                </button>
+              </TableHead>
               {isAdmin && (
                 <>
-                  <TableHead className="font-extrabold text-[#3b2fc9] dark:text-indigo-400 text-xs uppercase tracking-wider text-right">Value (MRP)</TableHead>
-                  <TableHead className="font-extrabold text-emerald-700 dark:text-emerald-400 text-xs uppercase tracking-wider text-right">Margin %</TableHead>
+                  <TableHead className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('mrp')}
+                      className="inline-flex items-center justify-end gap-1.5 py-1 px-1.5 -mr-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 text-xs font-extrabold uppercase tracking-wider text-[#3b2fc9] dark:text-indigo-400 transition-colors cursor-pointer group ml-auto"
+                      title={`Sort by Total MRP Value (${sortField === 'mrp' ? (sortDirection === 'desc' ? 'Highest first' : 'Lowest first') : 'Click to sort'})`}
+                    >
+                      <span className={sortField === 'mrp' ? 'font-black underline' : ''}>Value (MRP)</span>
+                      {sortField === 'mrp' ? (
+                        sortDirection === 'desc' ? (
+                          <ArrowDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                        ) : (
+                          <ArrowUp className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-40 group-hover:opacity-100 shrink-0 transition-opacity" />
+                      )}
+                    </button>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('margin')}
+                      className="inline-flex items-center justify-end gap-1.5 py-1 px-1.5 -mr-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 text-xs font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 transition-colors cursor-pointer group ml-auto"
+                      title={`Sort by Profit Margin % (${sortField === 'margin' ? (sortDirection === 'asc' ? 'Lowest margin first' : 'Highest margin first') : 'Click to sort'})`}
+                    >
+                      <span className={sortField === 'margin' ? 'font-black underline' : ''}>Margin %</span>
+                      {sortField === 'margin' ? (
+                        sortDirection === 'asc' ? (
+                          <ArrowUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        ) : (
+                          <ArrowDown className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-40 group-hover:opacity-100 shrink-0 transition-opacity" />
+                      )}
+                    </button>
+                  </TableHead>
                   {showFinancials && (
                     <>
                       <TableHead className="font-extrabold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider text-right">Rev</TableHead>
@@ -820,7 +1048,7 @@ export function NewRelicChallanList({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {challans.map((challan) => {
+            {sortedChallans.map((challan) => {
               const isSelected = !!challan.id && selectedIds.has(challan.id);
               const hasSignedDc = (challan.signedCopyUrls?.length ?? 0) > 0;
               const hasInvoice = (challan.goodsReceivedInvoiceUrls?.length ?? 0) > 0;

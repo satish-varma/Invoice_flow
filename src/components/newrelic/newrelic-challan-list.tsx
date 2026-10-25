@@ -383,7 +383,7 @@ export function NewRelicChallanList({
             const cost = item.procurementCost as unknown;
             return cost === undefined || cost === null || cost === '' || isNaN(Number(cost)) || Number(cost) <= 0;
           }).length;
-          const hasMissingCost = missingCostCount > 0;
+          const hasMissingCost = isAdmin && missingCostCount > 0;
 
           return (
             <TiltCard
@@ -471,8 +471,8 @@ export function NewRelicChallanList({
                   </Badge>
                 </div>
 
-                {/* Missing Cost Banner on Mobile Card */}
-                {hasMissingCost && (
+                {/* Missing Cost Banner on Mobile Card (Admin Only) */}
+                {isAdmin && hasMissingCost && (
                   <button
                     type="button"
                     onClick={(e) => {
@@ -828,7 +828,7 @@ export function NewRelicChallanList({
                 const cost = item.procurementCost as unknown;
                 return cost === undefined || cost === null || cost === '' || isNaN(Number(cost)) || Number(cost) <= 0;
               }).length;
-              const hasMissingCost = missingCostCount > 0;
+              const hasMissingCost = isAdmin && missingCostCount > 0;
 
               return (
                 <TableRow 
@@ -870,7 +870,7 @@ export function NewRelicChallanList({
                         <span className="font-extrabold tracking-tight text-xs sm:text-sm">{challan.dcNumber}</span>
                         <Copy className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover/copy:text-[#3b2fc9] dark:group-hover/copy:text-indigo-400 opacity-0 group-hover/copy:opacity-100 transition-opacity shrink-0" />
                       </button>
-                      {hasMissingCost && (
+                      {isAdmin && hasMissingCost && (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -914,8 +914,8 @@ export function NewRelicChallanList({
                         </span>
                       </div>
 
-                      {/* Line 3: Missing Cost notification if any */}
-                      {hasMissingCost && (
+                      {/* Line 3: Missing Cost notification if any (Admin Only) */}
+                      {isAdmin && hasMissingCost && (
                         <button
                           type="button"
                           onClick={(e) => {

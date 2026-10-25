@@ -2,11 +2,17 @@
 import { NewRelicChallan, NewRelicLocation } from '@/types/challan';
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Loader2, FileText, MapPin, Filter, FileSpreadsheet, RefreshCcw, Search, X, ArrowUp, Calculator, AlertTriangle } from 'lucide-react';
+import { Loader2, FileText, MapPin, Filter, FileSpreadsheet, RefreshCcw, Search, X, ArrowUp, Calculator, AlertTriangle, Plus, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import {getNewRelicChallans, deleteNewRelicChallan, revertNewRelicChallanVersion, NEWRELIC_LOCATIONS} from '@/services/newrelicChallanService';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { NewRelicChallanForm } from '@/components/newrelic/newrelic-challan-form';
 import { NewRelicChallanList } from '@/components/newrelic/newrelic-challan-list';
 import { NewRelicItemDashboard } from '@/components/newrelic/newrelic-item-dashboard';
@@ -712,70 +718,16 @@ export default function NewRelicPage() {
           </div>
         )}
 
-        {/* Desktop Action Buttons (hidden on mobile, replaced by floating action button) */}
-        {!selectedChallan && !isCreatingNew && (
-          <>
-            <div className="hidden sm:flex flex-row gap-3">
-              <button
-                onClick={() => handleStartCreateNew('hyderabad')}
-                className="flex-1 bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 hover:from-indigo-700 hover:to-violet-800 text-white py-3.5 px-4 rounded-xl font-bold transition-all shadow-md shadow-indigo-200/60 active:scale-[0.98] flex items-center justify-center gap-2"
-              >
-                <FileText className="h-5 w-5" />
-                New Challan (Hyderabad)
-              </button>
-              <button
-                onClick={() => handleStartCreateNew('bangalore')}
-                className="flex-1 bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white py-3.5 px-4 rounded-xl font-bold transition-all shadow-md shadow-emerald-200/60 active:scale-[0.98] flex items-center justify-center gap-2"
-              >
-                <FileText className="h-5 w-5" />
-                New Challan (Bangalore)
-              </button>
-              {(role === 'admin' || role === 'superadmin') && (
-                <Link
-                  href="/newrelic/reconcile"
-                  className="flex-1 bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white py-3.5 px-4 rounded-xl font-bold transition-all shadow-md shadow-amber-200/60 active:scale-[0.98] flex items-center justify-center gap-2"
-                >
-                  <RefreshCcw className="h-5 w-5" />
-                  Reconcile
-                </Link>
-              )}
-              {(role === 'admin' || role === 'superadmin') && (
-                <button
-                  onClick={handleExportExcel}
-                  className="flex-1 bg-gradient-to-r from-blue-600 via-blue-700 to-cyan-700 hover:from-blue-700 hover:to-cyan-800 text-white py-3.5 px-4 rounded-xl font-bold transition-all shadow-md shadow-blue-200/60 active:scale-[0.98] flex items-center justify-center gap-2"
-                >
-                  <FileSpreadsheet className="h-5 w-5" />
-                  Export Excel
-                </button>
-              )}
-              {(role === 'admin' || role === 'superadmin') && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setShowCalculator(true);
-                  }}
-                  className="bg-white hover:bg-gray-50 border border-gray-200 hover:border-[#3b2fc9]/40 text-gray-800 py-3.5 px-4 rounded-xl font-bold transition-all shadow-xs active:scale-[0.98] flex items-center justify-center gap-2 group shrink-0"
-                  title="Calculate MRP percentage and purchase cost"
-                >
-                  <Calculator className="h-5 w-5 text-[#3b2fc9] group-hover:scale-110 transition-transform" />
-                  <span>% Calculator</span>
-                </button>
-              )}
-            </div>
-
-            {/* Floating Back to Top Button on Mobile */}
-            {showScrollTop && (
-              <button
-                type="button"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="fixed left-4 bottom-26 z-30 w-12 h-12 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-gray-200 text-gray-700 hover:text-[#3b2fc9] flex items-center justify-center sm:hidden active:scale-90 transition-transform animate-in fade-in"
-                aria-label="Scroll to top"
-              >
-                <ArrowUp className="w-5 h-5 stroke-[2.2]" />
-              </button>
-            )}
-          </>
+        {/* Floating Back to Top Button on Mobile */}
+        {showScrollTop && (
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="fixed left-4 bottom-26 z-30 w-12 h-12 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-gray-200 text-gray-700 hover:text-[#3b2fc9] flex items-center justify-center sm:hidden active:scale-90 transition-transform animate-in fade-in"
+            aria-label="Scroll to top"
+          >
+            <ArrowUp className="w-5 h-5 stroke-[2.2]" />
+          </button>
         )}
 
         {/* Form Container */}
@@ -798,319 +750,102 @@ export default function NewRelicPage() {
           </div>
         )}
 
-        {/* Tabs - Show full tab bar for Admin; for user/manager hide single Active Challans card on mobile */}
-        {role === 'admin' || role === 'superadmin' ? (
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none no-scrollbar">
-            <button
-              onClick={() => setActiveTab('active')}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'active'
-                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm shadow-indigo-200'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
-              }`}
-            >
-              <span>Active Challans</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
-                activeTab === 'active' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
-              }`}>
-                {activeChallans.length}
-              </span>
-            </button>
-
-            <Link
-              href="/newrelic/analytics"
-              className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 shrink-0 bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/40"
-            >
-              <span>📊 Analytics</span>
-            </Link>
-
-            <button
-              onClick={() => setActiveTab('items')}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 shrink-0 ${
-                activeTab === 'items'
-                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm shadow-indigo-200'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
-              }`}
-            >
-              <span>📋 Item Ledger</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('trash')}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'trash'
-                  ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-sm shadow-rose-200'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300'
-              }`}
-            >
-              <span>Trash / Audit</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
-                activeTab === 'trash' ? 'bg-white/20 text-white' : 'bg-rose-50 text-rose-600'
-              }`}>
-                {trashChallans.length}
-              </span>
-            </button>
-          </div>
-        ) : (
-          <div className="hidden sm:flex items-center gap-2 pb-1">
-            <div className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80 flex items-center gap-2">
-              <span>Active Challans</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-indigo-600 text-white">
-                {activeChallans.length}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Instant Search Bar & Filter Controls */}
-        <div className="space-y-3">
-          {/* Missing P.Cost Alert Notification Banner (Admin Only) */}
-          {isAdmin && facetCounts.missingCost > 0 && facetFilter !== 'missing_cost' && (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 sm:px-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs sm:text-sm animate-in fade-in shadow-2xs">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-xl bg-amber-200/80 dark:bg-amber-900/80 text-amber-800 dark:text-amber-200 shrink-0">
-                  <AlertTriangle className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="font-bold">Missing Procurement Cost: </span>
-                  <span>{facetCounts.missingCost} delivery {facetCounts.missingCost === 1 ? 'challan has' : 'challans have'} items with missed P.Cost.</span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setFacetFilter('missing_cost');
-                }}
-                className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white text-xs font-bold shrink-0 transition-all shadow-xs flex items-center justify-center gap-1.5"
-              >
-                <span>Filter Missing ({facetCounts.missingCost})</span>
-              </button>
-            </div>
-          )}
-
-          {/* Instant Search Input */}
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-500 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search challans by DC#, brand, or item name..."
-              className="w-full h-12 sm:h-11 pl-10 pr-10 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 shadow-sm transition-all"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Clear search"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          {/* 1-Click Interactive Facet Filter Pills (Modern Data Grid - Admin Only) */}
-          {isAdmin && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setFacetFilter('all');
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
-                  facetFilter === 'all'
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                <span>All Records</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200/60 dark:bg-slate-700 font-mono">
-                  {facetCounts.all}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setFacetFilter(facetFilter === 'pending_signed' ? 'all' : 'pending_signed');
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
-                  facetFilter === 'pending_signed'
-                    ? 'bg-amber-500 text-white shadow-xs'
-                    : 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 hover:bg-amber-50 border border-amber-200 dark:border-amber-900/50'
-                }`}
-              >
-                <span>Pending Signed DC</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-amber-950/80 font-mono">
-                  {facetCounts.pendingSigned}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setFacetFilter(facetFilter === 'has_signed' ? 'all' : 'has_signed');
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
-                  facetFilter === 'has_signed'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 border border-emerald-200 dark:border-emerald-900/50'
-                }`}
-              >
-                <span>Signed DC Verified</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/80 font-mono">
-                  {facetCounts.hasSigned}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setFacetFilter(facetFilter === 'missing_cost' ? 'all' : 'missing_cost');
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
-                  facetFilter === 'missing_cost'
-                    ? 'bg-amber-600 text-white shadow-xs'
-                    : 'bg-white dark:bg-slate-800 text-amber-800 dark:text-amber-300 hover:bg-amber-50 border border-amber-300 dark:border-amber-900/60'
-                }`}
-                title="Filter delivery challans that have at least one line item missing procurement cost"
-              >
-                <span>⚠️ Missing P.Cost</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                  facetCounts.missingCost > 0
-                    ? 'bg-amber-200 text-amber-950 dark:bg-amber-900 dark:text-amber-200 font-black'
-                    : 'bg-amber-100 dark:bg-amber-950 font-normal'
-                }`}>
-                  {facetCounts.missingCost}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setFacetFilter(facetFilter === 'low_margin' ? 'all' : 'low_margin');
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
-                  facetFilter === 'low_margin'
-                    ? 'bg-rose-600 text-white shadow-xs'
-                    : 'bg-white dark:bg-slate-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 border border-rose-200 dark:border-rose-900/50'
-                }`}
-                title="Filter challans with profit margin under 10%"
-              >
-                <span>⚠️ Low Margin (&lt;10%)</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-100 dark:bg-rose-950/80 font-mono">
-                  {facetCounts.lowMargin}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setFacetFilter(facetFilter === 'high_margin' ? 'all' : 'high_margin');
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
-                  facetFilter === 'high_margin'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 border border-emerald-200 dark:border-emerald-900/50'
-                }`}
-                title="Filter challans with healthy profit margin 20% or higher"
-              >
-                <span>Healthy Margin (≥20%)</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/80 font-mono">
-                  {facetCounts.highMargin}
-                </span>
-              </button>
-
-              {facetFilter !== 'all' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setFacetFilter('all');
-                  }}
-                  className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 underline px-2 py-1 shrink-0"
-                >
-                  Reset Filter
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Filters Section: Segmented Location Switcher + Quick Presets + More Filters */}
-          <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] space-y-3">
-            {/* Top Row: Segmented Location Switcher (Mobile & Desktop) */}
+        {/* Unified Top Navigation & Controls */}
+        {!selectedChallan && !isCreatingNew && (
+          <div className="space-y-3">
+            {/* ═══ TIER 1: Unified Navigation & Action Suite ═══ */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              {/* Responsive Segmented Switcher (Fluid pill container) */}
-              <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl w-full sm:w-auto gap-1 border border-slate-200/70 dark:border-slate-700">
+              {/* Left: View Navigation Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none no-scrollbar">
                 <button
                   type="button"
                   onClick={() => {
                     triggerHaptic('light');
-                    setFilterLocation('all');
+                    setActiveTab('active');
                   }}
-                  className={`flex-1 sm:flex-initial flex items-center justify-center text-center px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    filterLocation === 'all'
-                      ? 'bg-gradient-to-r from-indigo-600 to-[#3b2fc9] text-white shadow-xs font-black'
-                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60'
+                  className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
+                    activeTab === 'active'
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                      : 'bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:border-slate-300'
                   }`}
                 >
-                  All Hubs ({activeChallans.length})
+                  <span>Active Challans</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                    activeTab === 'active' ? 'bg-white/20 text-white dark:bg-slate-200 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
+                  }`}>
+                    {activeChallans.length}
+                  </span>
                 </button>
-                {Object.entries(NEWRELIC_LOCATIONS).map(([key, loc]) => {
-                  const count = activeChallans.filter(c => c.location === key).length;
-                  const isSelected = filterLocation === key;
-                  const activeColor =
-                    key === 'hyderabad'
-                      ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-xs font-black'
-                      : 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-xs font-black';
 
-                  return (
+                {isAdmin && (
+                  <>
                     <button
-                      key={key}
                       type="button"
                       onClick={() => {
                         triggerHaptic('light');
-                        setFilterLocation(key);
+                        setActiveTab('items');
                       }}
-                      className={`flex-1 sm:flex-initial flex items-center justify-center text-center px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                        isSelected ? activeColor : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60'
+                      className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                        activeTab === 'items'
+                          ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                          : 'bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:border-slate-300'
                       }`}
                     >
-                      {loc.label} <span className="text-[10px] opacity-80 ml-1">({count})</span>
+                      <span>📋 Item Ledger</span>
                     </button>
-                  );
-                })}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setActiveTab('trash');
+                      }}
+                      className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
+                        activeTab === 'trash'
+                          ? 'bg-rose-600 text-white shadow-sm'
+                          : 'bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:border-slate-300'
+                      }`}
+                    >
+                      <span>Trash</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                        activeTab === 'trash' ? 'bg-white/20 text-white' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400'
+                      }`}>
+                        {trashChallans.length}
+                      </span>
+                    </button>
+
+                    <Link
+                      href="/newrelic/analytics"
+                      className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 shrink-0 bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/40"
+                    >
+                      <span>📊 Analytics</span>
+                    </Link>
+                  </>
+                )}
               </div>
 
-              {/* Financial Unlock Toggle (Admin) */}
-              {(role === 'admin' || role === 'superadmin') && (
-                <div className="flex items-center gap-2 sm:ml-auto">
-                  {isUnlocked ? (
-                    <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-3 py-1.5 rounded-xl w-full sm:w-auto justify-between sm:justify-start">
-                      <label className="text-xs text-emerald-800 dark:text-emerald-300 cursor-pointer flex items-center gap-1.5 font-bold">
+              {/* Right: Consolidated Action Suite */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none no-scrollbar sm:ml-auto">
+                {/* Financial Unlock Status (Admin) */}
+                {isAdmin && (
+                  isUnlocked ? (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 font-bold shrink-0">
+                      <label className="cursor-pointer flex items-center gap-1.5">
                         <input
                           type="checkbox"
                           checked={showFinancials}
                           onChange={(e) => setShowFinancials(e.target.checked)}
-                          className="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                          className="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5"
                         />
-                        <Unlock className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                        Financials Visible ({remainingMinutes}m)
+                        <Unlock className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <span className="hidden md:inline">Visible ({remainingMinutes}m)</span>
                       </label>
                       <button
                         onClick={() => {
                           lockFinancials();
                           setShowFinancials(false);
                         }}
-                        className="text-xs text-red-600 hover:text-red-800 underline font-semibold ml-1.5"
+                        className="text-[11px] text-red-600 hover:text-red-800 underline font-semibold ml-0.5"
                         title="Lock now"
                       >
                         Lock
@@ -1120,181 +855,453 @@ export default function NewRelicPage() {
                     <button
                       type="button"
                       onClick={() => setShowFinancialModal(true)}
-                      className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 text-slate-700 dark:text-slate-300 text-xs font-bold border border-slate-200/80 dark:border-slate-700 shadow-2xs transition-colors shrink-0"
+                      title="Unlock Financials (Costs & Margins)"
                     >
-                      <Lock className="h-4 w-4 text-slate-500" />
-                      Unlock Financials
+                      <Lock className="w-3.5 h-3.5 text-slate-500" />
+                      <span className="hidden md:inline">Unlock Financials</span>
                     </button>
-                  )}
-                </div>
-              )}
+                  )
+                )}
 
-              {/* MRP % Calculator Trigger - Admin & Superadmin only */}
-              {(role === 'admin' || role === 'superadmin') && (
+                {/* MRP % Calculator Trigger (Admin Only) */}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setShowCalculator(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-[#3b2fc9] dark:text-purple-400 text-xs font-bold border border-purple-200/80 dark:border-purple-900/60 shadow-2xs active:scale-95 transition-all shrink-0"
+                    title="Calculate MRP percentage and purchase cost"
+                  >
+                    <Calculator className="w-3.5 h-3.5" />
+                    <span className="hidden md:inline">% Calc</span>
+                  </button>
+                )}
+
+                {/* Reconcile (Admin Only) */}
+                {isAdmin && (
+                  <Link
+                    href="/newrelic/reconcile"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-amber-700 dark:text-amber-400 text-xs font-bold border border-amber-200/80 dark:border-amber-900/60 shadow-2xs active:scale-95 transition-all shrink-0"
+                    title="Reconcile Delivery Challans"
+                  >
+                    <RefreshCcw className="w-3.5 h-3.5" />
+                    <span className="hidden md:inline">Reconcile</span>
+                  </Link>
+                )}
+
+                {/* Export Excel (Admin Only) */}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={handleExportExcel}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-700 dark:text-blue-400 text-xs font-bold border border-blue-200/80 dark:border-blue-900/60 shadow-2xs active:scale-95 transition-all shrink-0"
+                    title="Export to Excel Spreadsheet"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    <span className="hidden md:inline">Export</span>
+                  </button>
+                )}
+
+                {/* + New Challan Split Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-[#3b2fc9] hover:from-indigo-700 hover:to-indigo-800 text-white text-xs sm:text-sm font-bold shadow-sm shadow-indigo-200/60 active:scale-95 transition-all shrink-0"
+                    >
+                      <Plus className="w-4 h-4 stroke-[2.5]" />
+                      <span>New Challan</span>
+                      <ChevronDown className="w-3.5 h-3.5 opacity-80 -mr-0.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 p-1.5 rounded-2xl shadow-xl border-slate-200 dark:border-slate-800">
+                    <DropdownMenuItem
+                      onClick={() => handleStartCreateNew('hyderabad')}
+                      className="flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-800 dark:text-slate-100"
+                    >
+                      <div className="w-2.5 h-2.5 rounded-full bg-sky-500 shrink-0 shadow-xs" />
+                      <div className="flex flex-col">
+                        <span className="font-bold text-xs sm:text-sm">Hyderabad Hub</span>
+                        <span className="text-[10px] text-slate-400">Mindspace · Hitec City</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleStartCreateNew('bangalore')}
+                      className="flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-800 dark:text-slate-100"
+                    >
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-xs" />
+                      <div className="flex flex-col">
+                        <span className="font-bold text-xs sm:text-sm">Bangalore Hub</span>
+                        <span className="text-[10px] text-slate-400">Bagmane Tech Park</span>
+                      </div>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            {/* Missing P.Cost Alert Notification Banner (Admin Only) */}
+            {isAdmin && facetCounts.missingCost > 0 && facetFilter !== 'missing_cost' && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2.5 sm:px-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs sm:text-sm animate-in fade-in shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1 rounded-lg bg-amber-200/80 dark:bg-amber-900/80 text-amber-800 dark:text-amber-200 shrink-0">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-bold">Missing Procurement Cost: </span>
+                    <span>{facetCounts.missingCost} delivery {facetCounts.missingCost === 1 ? 'challan has' : 'challans have'} items with missed P.Cost.</span>
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
                     triggerHaptic('light');
-                    setShowCalculator(true);
+                    setFacetFilter('missing_cost');
                   }}
-                  className="flex items-center gap-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 text-[#3b2fc9] text-xs font-bold px-3.5 py-2 rounded-xl border border-purple-200/80 shadow-2xs transition-colors shrink-0 ml-auto sm:ml-0 active:scale-95"
-                  title="MRP % Calculator"
+                  className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white text-xs font-bold shrink-0 transition-all shadow-xs flex items-center justify-center gap-1.5"
                 >
-                  <Calculator className="h-4 w-4" />
-                  <span>MRP % Calc</span>
+                  <span>Filter Missing ({facetCounts.missingCost})</span>
                 </button>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* Bottom Row: Date Presets & Filter Reset */}
-            <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
-              {/* Cycle Presets: Only visible to Admin / Superadmin */}
-              {(role === 'admin' || role === 'superadmin') ? (
-                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar py-0.5">
-                  <span className="text-xs font-bold text-slate-400 mr-1 hidden sm:inline">Cycle:</span>
+            {/* ═══ TIER 2: Unified Control Center Card ═══ */}
+            <div className="bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] space-y-3">
+              {/* Row 1: Hub Switcher + Search Input + Date Selectors */}
+              <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5">
+                {/* Segmented Location Hub Switcher */}
+                <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl gap-1 border border-slate-200/70 dark:border-slate-700 shrink-0">
                   <button
                     type="button"
                     onClick={() => {
                       triggerHaptic('light');
-                      setFilterCycle('all');
+                      setFilterLocation('all');
                     }}
-                    className={`h-9 sm:h-8 px-3.5 rounded-full text-xs font-bold transition-all active:scale-95 ${
-                      filterCycle === 'all'
-                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-black border border-[#3b2fc9]/30 shadow-2xs'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 border border-slate-200/80 dark:border-slate-700'
+                    className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      filterLocation === 'all'
+                        ? 'bg-gradient-to-r from-indigo-600 to-[#3b2fc9] text-white shadow-xs font-black'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60'
                     }`}
                   >
-                    All Dates
+                    All Hubs ({activeChallans.length})
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setFilterCycle('1-15');
-                    }}
-                    className={`h-9 sm:h-8 px-3.5 rounded-full text-xs font-bold transition-all active:scale-95 ${
-                      filterCycle === '1-15'
-                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-black border border-[#3b2fc9]/30 shadow-2xs'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 border border-slate-200/80 dark:border-slate-700'
-                    }`}
-                  >
-                    Cycle 1 (1–15)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setFilterCycle('16-31');
-                    }}
-                    className={`h-9 sm:h-8 px-3.5 rounded-full text-xs font-bold transition-all active:scale-95 ${
-                      filterCycle === '16-31'
-                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] font-black border border-[#3b2fc9]/30 shadow-2xs'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 border border-slate-200/80 dark:border-slate-700'
-                    }`}
-                  >
-                    Cycle 2 (16–End)
-                  </button>
+                  {Object.entries(NEWRELIC_LOCATIONS).map(([key, loc]) => {
+                    const count = activeChallans.filter(c => c.location === key).length;
+                    const isSelected = filterLocation === key;
+                    const activeColor =
+                      key === 'hyderabad'
+                        ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-xs font-black'
+                        : 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-xs font-black';
 
-                  {/* Total Value for Cycle */}
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/40 dark:to-purple-950/40 border border-indigo-200/80 dark:border-indigo-800 text-xs shrink-0 shadow-2xs ml-1">
-                    <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
-                      {filterCycle === '1-15' ? 'Cycle 1' : filterCycle === '16-31' ? 'Cycle 2' : 'Cycle'} Value:
-                    </span>
-                    <span className="font-black text-[#3b2fc9] dark:text-indigo-400 font-mono text-xs sm:text-sm">
-                      ₹{cycleTotalValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setFilterLocation(key);
+                        }}
+                        className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          isSelected ? activeColor : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60'
+                        }`}
+                      >
+                        {loc.label} <span className="text-[10px] opacity-80 ml-0.5">({count})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Instant Search Bar */}
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-500 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search challans by DC#, brand, or item name..."
+                    className="w-full h-9 pl-9 pr-8 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/90 dark:border-slate-700/80 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200/50"
+                      aria-label="Clear search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Date Filters (Month & Year) & Reset */}
+                <div className="flex items-center gap-1.5 shrink-0 self-end md:self-auto">
+                  {/* Month */}
+                  <div className="relative">
+                    <select
+                      value={filterMonth}
+                      onChange={(e) => {
+                        triggerHaptic('light');
+                        setFilterMonth(e.target.value);
+                      }}
+                      className={`h-9 pl-2.5 pr-6 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 appearance-none cursor-pointer border transition-all ${
+                        filterMonth !== 'all'
+                          ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] border-[#3b2fc9]/30'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <option value="all">📅 Month</option>
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const date = new Date(2000, i, 1);
+                        return <option key={i} value={i}>{date.toLocaleString('default', { month: 'short' })}</option>;
+                      })}
+                    </select>
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-slate-400">▼</span>
+                  </div>
+
+                  {/* Year */}
+                  <div className="relative">
+                    <select
+                      value={filterYear}
+                      onChange={(e) => {
+                        triggerHaptic('light');
+                        setFilterYear(e.target.value);
+                      }}
+                      className={`h-9 pl-2.5 pr-6 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 appearance-none cursor-pointer border transition-all ${
+                        filterYear !== 'all'
+                          ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] border-[#3b2fc9]/30'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <option value="all">🗓️ Year</option>
+                      {availableYears.map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-slate-400">▼</span>
+                  </div>
+
+                  {/* Reset button if active */}
+                  {(filterLocation !== (user?.preferredLocations?.[0] || 'all') || filterMonth !== 'all' || filterYear !== 'all' || filterCycle !== 'all' || searchQuery.trim() !== '' || facetFilter !== 'all') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('medium');
+                        const defaultLoc = user?.preferredLocations?.[0] || 'all';
+                        setFilterLocation(defaultLoc);
+                        setFilterMonth('all');
+                        setFilterYear('all');
+                        setFilterCycle('all');
+                        setSearchQuery('');
+                        setFacetFilter('all');
+                      }}
+                      className="h-9 px-2.5 rounded-xl text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center gap-1 active:scale-95"
+                      title="Reset all filters"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Reset</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 2: Admin Facet Pills & Cycle Presets + Cycle Total (Admin Only) */}
+              {isAdmin && (
+                <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
+                  {/* Left: Facet Filter Pills */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none no-scrollbar">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setFacetFilter('all');
+                      }}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                        facetFilter === 'all'
+                          ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200/80 dark:border-slate-700'
+                      }`}
+                    >
+                      <span>All Records</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200/60 dark:bg-slate-700 font-mono">
+                        {facetCounts.all}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setFacetFilter(facetFilter === 'pending_signed' ? 'all' : 'pending_signed');
+                      }}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                        facetFilter === 'pending_signed'
+                          ? 'bg-amber-500 text-white shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-800 text-amber-700 dark:text-amber-400 hover:bg-amber-50 border border-amber-200 dark:border-amber-900/50'
+                      }`}
+                    >
+                      <span>Pending Signed</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-amber-950/80 font-mono">
+                        {facetCounts.pendingSigned}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setFacetFilter(facetFilter === 'has_signed' ? 'all' : 'has_signed');
+                      }}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                        facetFilter === 'has_signed'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 border border-emerald-200 dark:border-emerald-900/50'
+                      }`}
+                    >
+                      <span>Signed Verified</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/80 font-mono">
+                        {facetCounts.hasSigned}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setFacetFilter(facetFilter === 'missing_cost' ? 'all' : 'missing_cost');
+                      }}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                        facetFilter === 'missing_cost'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-800 text-amber-800 dark:text-amber-300 hover:bg-amber-50 border border-amber-300 dark:border-amber-900/60'
+                      }`}
+                      title="Filter delivery challans that have at least one line item missing procurement cost"
+                    >
+                      <span>⚠️ Missing P.Cost</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                        facetCounts.missingCost > 0
+                          ? 'bg-amber-200 text-amber-950 dark:bg-amber-900 dark:text-amber-200 font-black'
+                          : 'bg-amber-100 dark:bg-amber-950 font-normal'
+                      }`}>
+                        {facetCounts.missingCost}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setFacetFilter(facetFilter === 'low_margin' ? 'all' : 'low_margin');
+                      }}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                        facetFilter === 'low_margin'
+                          ? 'bg-rose-600 text-white shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 border border-rose-200 dark:border-rose-900/50'
+                      }`}
+                      title="Filter challans with profit margin under 10%"
+                    >
+                      <span>⚠️ Low Margin</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-100 dark:bg-rose-950/80 font-mono">
+                        {facetCounts.lowMargin}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setFacetFilter(facetFilter === 'high_margin' ? 'all' : 'high_margin');
+                      }}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                        facetFilter === 'high_margin'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 border border-emerald-200 dark:border-emerald-900/50'
+                      }`}
+                      title="Filter challans with healthy profit margin 20% or higher"
+                    >
+                      <span>Healthy Margin</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/80 font-mono">
+                        {facetCounts.highMargin}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Right: Cycle Presets & Cycle Total Value */}
+                  <div className="flex items-center gap-1.5 ml-auto overflow-x-auto pb-0.5 scrollbar-none no-scrollbar">
+                    <div className="flex items-center p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200/70 dark:border-slate-700 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setFilterCycle('all');
+                        }}
+                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                          filterCycle === 'all'
+                            ? 'bg-white dark:bg-slate-700 text-[#3b2fc9] dark:text-indigo-300 shadow-2xs font-black'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                        }`}
+                      >
+                        All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setFilterCycle('1-15');
+                        }}
+                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                          filterCycle === '1-15'
+                            ? 'bg-white dark:bg-slate-700 text-[#3b2fc9] dark:text-indigo-300 shadow-2xs font-black'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                        }`}
+                      >
+                        Cycle 1 (1–15)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setFilterCycle('16-31');
+                        }}
+                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                          filterCycle === '16-31'
+                            ? 'bg-white dark:bg-slate-700 text-[#3b2fc9] dark:text-indigo-300 shadow-2xs font-black'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                        }`}
+                      >
+                        Cycle 2 (16–End)
+                      </button>
+                    </div>
+
+                    {/* Cycle Total Value */}
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800 text-xs shrink-0">
+                      <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">Total:</span>
+                      <span className="font-black text-[#3b2fc9] dark:text-indigo-400 font-mono text-xs">
+                        ₹{cycleTotalValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <div className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                  <span>📅 Filter by Date:</span>
-                </div>
               )}
+            </div>
 
-              {/* Date Pickers (Month & Year) & Clear Filters */}
-              <div className="flex items-center gap-2 ml-auto">
-                {/* Month Pill */}
-                <div className="relative">
-                  <select
-                    value={filterMonth}
-                    onChange={(e) => {
-                      triggerHaptic('light');
-                      setFilterMonth(e.target.value);
-                    }}
-                    className={`h-9 sm:h-8 pl-3 pr-7 rounded-full text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 appearance-none cursor-pointer border transition-all ${
-                      filterMonth !== 'all'
-                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] border-[#3b2fc9]/30'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <option value="all">📅 All Months</option>
-                    {Array.from({ length: 12 }, (_, i) => {
-                      const date = new Date(2000, i, 1);
-                      return <option key={i} value={i}>{date.toLocaleString('default', { month: 'short' })}</option>;
-                    })}
-                  </select>
-                  <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-slate-400">▼</span>
-                </div>
-
-                {/* Year Pill */}
-                <div className="relative">
-                  <select
-                    value={filterYear}
-                    onChange={(e) => {
-                      triggerHaptic('light');
-                      setFilterYear(e.target.value);
-                    }}
-                    className={`h-9 sm:h-8 pl-3 pr-7 rounded-full text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/30 appearance-none cursor-pointer border transition-all ${
-                      filterYear !== 'all'
-                        ? 'bg-[#3b2fc9]/10 text-[#3b2fc9] border-[#3b2fc9]/30'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <option value="all">🗓️ All Years</option>
-                    {availableYears.map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                  <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-slate-400">▼</span>
-                </div>
-
-                {/* Clear Active Filters Button */}
-                {(filterLocation !== (user?.preferredLocations?.[0] || 'all') || filterMonth !== 'all' || filterYear !== 'all' || filterCycle !== 'all' || searchQuery.trim() !== '') && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic('medium');
-                      const defaultLoc = user?.preferredLocations?.[0] || 'all';
-                      setFilterLocation(defaultLoc);
-                      setFilterMonth('all');
-                      setFilterYear('all');
-                      setFilterCycle('all');
-                      setSearchQuery('');
-                    }}
-                    className="h-9 sm:h-8 px-3 rounded-full text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center gap-1 active:scale-95"
-                    title="Reset all filters"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                    <span>Reset</span>
-                  </button>
-                )}
+            {/* Showing search results message */}
+            {searchQuery && (
+              <div className="flex items-center justify-between text-xs px-2 text-gray-500">
+                <span>Showing {displayChallans.length} challan{displayChallans.length !== 1 ? 's' : ''} for &ldquo;<strong className="text-gray-800">{searchQuery}</strong>&rdquo;</span>
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="text-[#3b2fc9] hover:underline font-semibold"
+                >
+                  Clear Search
+                </button>
               </div>
-            </div>
+            )}
           </div>
-
-          {searchQuery && (
-            <div className="flex items-center justify-between text-xs px-2 text-gray-500">
-              <span>Showing {displayChallans.length} challan{displayChallans.length !== 1 ? 's' : ''} for &ldquo;<strong className="text-gray-800">{searchQuery}</strong>&rdquo;</span>
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="text-[#3b2fc9] hover:underline font-semibold"
-              >
-                Clear
-              </button>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Main Content Area */}
         {isLoading ? (

@@ -3,10 +3,11 @@ import { NewRelicChallan } from '@/types/challan';
 
 import React, { useState, useRef } from 'react';
 import { format } from 'date-fns';
-import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, ChevronDown, ChevronUp, FileCheck, Paperclip, Edit, Package, Calendar, AlertTriangle, Check, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Trash2, Download, Edit2, Copy, RefreshCcw, History, Eye, Receipt, MoreVertical, FileText, ChevronDown, ChevronUp, FileCheck, Paperclip, Edit, Package, Calendar, AlertTriangle, Check, ArrowUpDown, ArrowUp, ArrowDown, Rows, LayoutList } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 import { useToast } from '@/hooks/use-toast';
 import { NewRelicAttachmentModal } from './newrelic-attachment-modal';
+import { QuickCostModal } from './QuickCostModal';
 import { RollingCashCounter } from '@/components/effects/RollingCashCounter';
 import { TiltCard } from '@/components/effects/TiltCard';
 import { Input } from '@/components/ui/input';
@@ -56,6 +57,7 @@ interface NewRelicChallanListProps {
   onRestoreChallan?: (id: string) => void;
   role?: string | null;
   showFinancials?: boolean;
+  onChallanUpdated?: (c: NewRelicChallan) => void;
 }
 
 const formatAuthorName = (email?: string | null) => {
@@ -76,6 +78,7 @@ export function NewRelicChallanList({
   onRestoreChallan,
   role,
   showFinancials,
+  onChallanUpdated,
 }: NewRelicChallanListProps) {
   const { toast } = useToast();
   const { user, role: authRole, canDelete, isReadOnly } = useAuth();
@@ -91,6 +94,29 @@ export function NewRelicChallanList({
     challan: NewRelicChallan;
     type: 'signed_copy' | 'goods_received';
   } | null>(null);
+
+  // Quick-Fix Cost Mini-Modal State (Admin Only)
+  const [quickCostChallan, setQuickCostChallan] = useState<NewRelicChallan | null>(null);
+
+  // Table Density Toggle (Compact vs Comfortable)
+  const [density, setDensity] = useState<'compact' | 'comfortable'>('comfortable');
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('newrelic_grid_density') as 'compact' | 'comfortable' | null;
+      if (saved === 'compact' || saved === 'comfortable') {
+        setDensity(saved);
+      }
+    }
+  }, []);
+
+  const handleDensityChange = (newDensity: 'compact' | 'comfortable') => {
+    triggerHaptic('light');
+    setDensity(newDensity);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('newrelic_grid_density', newDensity);
+    }
+  };
 
   // Interactive Column Sorting
   type SortField = 'date' | 'dcNumber' | 'mrp' | 'margin';
@@ -268,8 +294,8 @@ export function NewRelicChallanList({
       <div className="px-4 sm:px-6 py-4 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2.5">
           <h3 className="font-semibold theme-text-primary text-sm sm:text-base">Saved Challans</h3>
-          <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
-            <span className="hidden sm:inline text-slate-400">·</span>
+          <div className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+            <span className="text-slate-400">·</span>
             <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1">
               <span>Sorted:</span>
               <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">
@@ -279,6 +305,36 @@ export function NewRelicChallanList({
                 {sortField === 'margin' && `Margin (${sortDirection === 'asc' ? 'Low→High' : 'High→Low'})`}
               </span>
             </span>
+          </div>
+
+          {/* Table Density Toggle (Desktop) */}
+          <div className="hidden lg:flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-xs shrink-0 ml-1">
+            <button
+              type="button"
+              onClick={() => handleDensityChange('compact')}
+              className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all ${
+                density === 'compact'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs font-black'
+                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+              }`}
+              title="Compact View (Dense rows, less scrolling)"
+            >
+              <Rows className="w-3.5 h-3.5" />
+              <span>Compact</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDensityChange('comfortable')}
+              className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all ${
+                density === 'comfortable'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs font-black'
+                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+              }`}
+              title="Comfortable View (Default spacious padding)"
+            >
+              <LayoutList className="w-3.5 h-3.5" />
+              <span>Comfortable</span>
+            </button>
           </div>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-gray-500">
@@ -634,7 +690,7 @@ export function NewRelicChallanList({
                     onClick={(e) => {
                       e.stopPropagation();
                       triggerHaptic('light');
-                      onSelectChallan(challan);
+                      setQuickCostChallan(challan);
                     }}
                     className="w-full flex items-center justify-between px-3.5 py-2 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-bold transition-all hover:bg-amber-100/80 active:scale-[0.99] text-left shadow-2xs"
                   >
@@ -1057,6 +1113,7 @@ export function NewRelicChallanList({
                 return cost === undefined || cost === null || cost === '' || isNaN(Number(cost)) || Number(cost) <= 0;
               }).length;
               const hasMissingCost = isAdmin && missingCostCount > 0;
+              const cellPy = density === 'compact' ? 'py-1.5' : 'py-3';
 
               return (
                 <TableRow 
@@ -1068,7 +1125,7 @@ export function NewRelicChallanList({
                   }`}
                 >
                   {isAdmin && (
-                    <TableCell className="pl-4 w-[44px]">
+                    <TableCell className={`pl-4 w-[44px] ${cellPy}`}>
                       <input
                         type="checkbox"
                         className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
@@ -1078,7 +1135,7 @@ export function NewRelicChallanList({
                       />
                     </TableCell>
                   )}
-                  <TableCell className="font-mono font-bold tabular-nums text-slate-900 dark:text-slate-100">
+                  <TableCell className={`font-mono font-bold tabular-nums text-slate-900 dark:text-slate-100 align-middle ${cellPy}`}>
                     <div className="flex items-center gap-2 flex-wrap">
                       {/* Live Verification Status Dot */}
                       <span
@@ -1095,7 +1152,7 @@ export function NewRelicChallanList({
                         className="group/copy flex items-center gap-1 hover:text-[#3b2fc9] dark:hover:text-indigo-400 transition-colors cursor-pointer text-left"
                         title="Click to copy DC number"
                       >
-                        <span className="font-extrabold tracking-tight text-xs sm:text-sm">{challan.dcNumber}</span>
+                        <span className={`font-extrabold tracking-tight ${density === 'compact' ? 'text-xs' : 'text-xs sm:text-sm'}`}>{challan.dcNumber}</span>
                         <Copy className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover/copy:text-[#3b2fc9] dark:group-hover/copy:text-indigo-400 opacity-0 group-hover/copy:opacity-100 transition-opacity shrink-0" />
                       </button>
                       {isAdmin && hasMissingCost && (
@@ -1104,19 +1161,19 @@ export function NewRelicChallanList({
                           onClick={(e) => {
                             e.stopPropagation();
                             triggerHaptic('light');
-                            onSelectChallan(challan);
+                            setQuickCostChallan(challan);
                           }}
                           className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800 hover:bg-amber-200 transition-colors cursor-pointer shrink-0 shadow-2xs"
-                          title={`${missingCostCount} line item(s) missing P.Cost. Click to open and fix.`}
+                          title={`${missingCostCount} line item(s) missing P.Cost. Click to quick-fix.`}
                         >
                           <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0 animate-pulse" />
-                          <span>Missing Cost</span>
+                          <span>Fix Cost</span>
                         </button>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="align-middle py-3">
-                    <div className="flex flex-col gap-0.5 min-w-[150px]">
+                  <TableCell className={`align-middle ${cellPy}`}>
+                    <div className={`flex flex-col ${density === 'compact' ? 'gap-0 leading-tight' : 'gap-0.5'} min-w-[150px]`}>
                       {/* Line 1: Date + Items Count */}
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-semibold text-xs text-slate-900 dark:text-slate-100 tabular-nums">
@@ -1149,10 +1206,10 @@ export function NewRelicChallanList({
                           onClick={(e) => {
                             e.stopPropagation();
                             triggerHaptic('light');
-                            onSelectChallan(challan);
+                            setQuickCostChallan(challan);
                           }}
                           className="inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-700 dark:text-amber-400 hover:underline pt-0.5 text-left cursor-pointer"
-                          title="Click to open challan and fill missing P.Cost"
+                          title="Click to quick-fix missing P.Cost in mini-modal"
                         >
                           <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
                           <span>Missing P.Cost on {missingCostCount} {missingCostCount === 1 ? 'item' : 'items'} (Fix →)</span>
@@ -1181,7 +1238,7 @@ export function NewRelicChallanList({
 
                         return (
                           <>
-                            <TableCell className="text-right whitespace-nowrap align-middle py-3 tabular-nums font-mono font-bold text-[#3b2fc9] dark:text-indigo-300 text-xs sm:text-sm">
+                            <TableCell className={`text-right whitespace-nowrap align-middle tabular-nums font-mono font-bold text-[#3b2fc9] dark:text-indigo-300 ${density === 'compact' ? 'text-xs' : 'text-xs sm:text-sm'} ${cellPy}`}>
                               ₹{mrpTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </TableCell>
                             {(() => {
@@ -1191,7 +1248,7 @@ export function NewRelicChallanList({
                               const perUnit = totalUnits > 0 ? marginAmount / totalUnits : 0;
 
                               return (
-                                <TableCell className="text-right whitespace-nowrap align-middle py-3">
+                                <TableCell className={`text-right whitespace-nowrap align-middle ${cellPy}`}>
                                   <div className="flex flex-col items-end gap-0.5">
                                     {hasMissingCost ? (
                                       <button
@@ -1199,9 +1256,9 @@ export function NewRelicChallanList({
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           triggerHaptic('light');
-                                          onSelectChallan(challan);
+                                          setQuickCostChallan(challan);
                                         }}
-                                        title={`${missingCostCount} line item(s) missing P.Cost! Margin cannot be accurately calculated. Click to fix.`}
+                                        title={`${missingCostCount} line item(s) missing P.Cost! Margin cannot be accurately calculated. Click to quick-fix.`}
                                         className="inline-flex items-center gap-1 font-mono font-bold text-xs px-2.5 py-0.5 rounded-full border shadow-2xs bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-800 hover:bg-amber-200 dark:hover:bg-amber-900 transition-colors cursor-pointer"
                                       >
                                         <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0 animate-pulse" />
@@ -1230,7 +1287,7 @@ export function NewRelicChallanList({
                             })()}
                             {showFinancials && (
                               <>
-                                <TableCell className="text-right whitespace-nowrap align-middle py-3">
+                                <TableCell className={`text-right whitespace-nowrap align-middle ${cellPy}`}>
                                   <div className="flex flex-col text-[11px] items-end leading-tight tabular-nums">
                                     <span className="text-gray-400" title="5.5% Commission">- ₹{commission.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     <span className="font-bold text-[13px] text-gray-900 dark:text-white border-t border-gray-200 dark:border-slate-700 mt-1 pt-1 w-full text-right">
@@ -1238,7 +1295,7 @@ export function NewRelicChallanList({
                                     </span>
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-right whitespace-nowrap align-middle py-3">
+                                <TableCell className={`text-right whitespace-nowrap align-middle ${cellPy}`}>
                                   <div className="flex flex-col text-[11px] items-end leading-tight text-gray-500 dark:text-slate-400 tabular-nums">
                                     <span>Goods: ₹{pCost.toLocaleString('en-IN')}</span>
                                     <span>Trans: ₹{tCost.toLocaleString('en-IN')}</span>
@@ -1248,7 +1305,7 @@ export function NewRelicChallanList({
                                     </span>
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-right font-medium whitespace-nowrap align-middle py-3">
+                                <TableCell className={`text-right font-medium whitespace-nowrap align-middle ${cellPy}`}>
                                   <div className="flex flex-col items-end w-full h-full justify-end pb-[2px] tabular-nums font-bold">
                                     <span className={profit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}>
                                       ₹{profit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1262,7 +1319,7 @@ export function NewRelicChallanList({
                       })()}
                     </>
                   )}
-                  <TableCell className="py-3 pr-4">
+                  <TableCell className={`${cellPy} pr-4`}>
                     <div className="flex items-center justify-end gap-1.5 flex-wrap">
                       {isTrashView ? (
                         isAdmin ? (
@@ -1640,6 +1697,25 @@ export function NewRelicChallanList({
                 attachmentModal.challan.goodsReceivedInvoiceUrls = updatedUrls;
               }
             }
+          }}
+        />
+      )}
+
+      {/* ── Rapid Quick-Fix Cost Mini-Modal (Admin Only) ── */}
+      {isAdmin && quickCostChallan && (
+        <QuickCostModal
+          isOpen={!!quickCostChallan}
+          onClose={() => setQuickCostChallan(null)}
+          challan={quickCostChallan}
+          onSaved={(updated) => {
+            const idx = challans.findIndex(c => c.id === updated.id);
+            if (idx >= 0) {
+              challans[idx] = updated;
+            }
+            onChallanUpdated?.(updated);
+          }}
+          onOpenFullForm={(c) => {
+            onSelectChallan(c);
           }}
         />
       )}

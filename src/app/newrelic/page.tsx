@@ -1337,6 +1337,17 @@ export default function NewRelicPage() {
             onPreviewChallan={setPreviewChallan}
             onAdminPreviewChallan={setAdminPreviewChallan}
             onRestoreChallan={handleRestore}
+            onChallanUpdated={(updated) => {
+              setChallans((prev) => {
+                const idx = prev.findIndex(c => c.id === updated.id);
+                if (idx >= 0) {
+                  const next = [...prev];
+                  next[idx] = updated;
+                  return next;
+                }
+                return prev;
+              });
+            }}
           />
         )}
       </div>

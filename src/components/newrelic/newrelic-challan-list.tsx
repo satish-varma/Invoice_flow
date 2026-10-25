@@ -80,6 +80,7 @@ export function NewRelicChallanList({
   const { toast } = useToast();
   const { user, role: authRole, canDelete, isReadOnly } = useAuth();
   const effectiveRole = role || authRole;
+  const isAdmin = effectiveRole === 'admin' || effectiveRole === 'superadmin';
   const canViewSignedCopies = effectiveRole !== 'guest' && hasPermission(user, 'signed_copies');
   const hasDeleteClearance = canDelete && !isReadOnly && effectiveRole !== 'guest';
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -159,7 +160,7 @@ export function NewRelicChallanList({
         <h3 className="font-semibold theme-text-primary text-sm sm:text-base">Saved Challans</h3>
         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-gray-500">
           <span>{challans.length} document{challans.length !== 1 ? 's' : ''}</span>
-          {(role === 'admin' || role === 'superadmin') && (
+          {isAdmin && (
             <>
               <span className="hidden sm:inline text-gray-300">|</span>
               {(() => {
@@ -221,7 +222,7 @@ export function NewRelicChallanList({
       </div>
 
       {/* Floating Selection Bar (Modernized Data Grid Bulk Dock) */}
-      {selectedIds.size > 0 && (role === 'admin' || role === 'superadmin') && (
+      {selectedIds.size > 0 && isAdmin && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-950/95 dark:bg-slate-900/95 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700/80 z-50 flex flex-wrap items-center justify-center gap-3 backdrop-blur-xl animate-in slide-in-from-bottom-6">
           {(() => {
             const challansToAggregate = challans.filter(c => c.id && selectedIds.has(c.id));
@@ -396,12 +397,14 @@ export function NewRelicChallanList({
                 {/* Card Header: Checkbox, DC Number, Date, Location Pill */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
-                    <input
-                      type="checkbox"
-                      className="rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 w-5 h-5 shrink-0"
-                      checked={!!challan.id && selectedIds.has(challan.id)}
-                      onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
-                    />
+                    {isAdmin && (
+                      <input
+                        type="checkbox"
+                        className="rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 w-5 h-5 shrink-0"
+                        checked={!!challan.id && selectedIds.has(challan.id)}
+                        onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
+                      />
+                    )}
                     <div className="min-w-0">
                       <span className="font-mono font-black tabular-nums text-slate-950 dark:text-white text-base sm:text-lg leading-tight block truncate">
                         {challan.dcNumber}
@@ -503,7 +506,7 @@ export function NewRelicChallanList({
                 })()}
 
                 {/* Author & Audit Info (if admin or trash) */}
-                {role === 'admin' && (
+                {isAdmin && (
                   <div className="flex items-center justify-between text-xs text-slate-400 pt-0.5">
                     <span>{isTrashView ? 'Deleted by' : 'Created by'}</span>
                     <span className="font-semibold text-slate-600 dark:text-slate-300 truncate max-w-[190px]">
@@ -518,7 +521,7 @@ export function NewRelicChallanList({
                 )}
 
                 {/* Admin Financials Snapshot */}
-                {role === 'admin' && showFinancials && (() => {
+                {isAdmin && showFinancials && (() => {
                   const commission = mrpTotal * 0.055;
                   const revenue = mrpTotal - commission;
                   let pCost = 0;
@@ -625,7 +628,7 @@ export function NewRelicChallanList({
                       <RefreshCcw className="h-4 w-4 text-emerald-600" /> Restore Challan
                     </Button>
                   ) : (
-                    <div className={`grid ${role === 'admin' && onAdminPreviewChallan ? 'grid-cols-5' : 'grid-cols-4'} gap-1.5 sm:gap-2`}>
+                    <div className={`grid ${isAdmin && onAdminPreviewChallan ? 'grid-cols-5' : 'grid-cols-4'} gap-1.5 sm:gap-2`}>
                       {/* View Document */}
                       <Button
                         variant="default"
@@ -691,7 +694,7 @@ export function NewRelicChallanList({
                       </Button>
 
                       {/* Admin Quick View (Admin Only) */}
-                      {role === 'admin' && onAdminPreviewChallan && (
+                      {isAdmin && onAdminPreviewChallan && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -721,19 +724,21 @@ export function NewRelicChallanList({
         <Table className="min-w-[1050px]">
           <TableHeader className="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-10 border-b border-indigo-100/70 dark:border-slate-800 shadow-xs">
             <TableRow className="bg-gradient-to-r from-slate-50 via-indigo-50/40 to-slate-50 dark:from-slate-900 dark:via-slate-800/40 dark:to-slate-900 border-b border-indigo-100/70 dark:border-slate-800">
-              <TableHead className="w-[40px] pl-4">
-                <input 
-                  type="checkbox"
-                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
-                  checked={challans.length > 0 && selectedIds.size === challans.filter(c => c.id).length}
-                  onChange={(e) => handleSelectAll(e.target.checked)}
-                />
-              </TableHead>
+              {isAdmin && (
+                <TableHead className="w-[40px] pl-4">
+                  <input 
+                    type="checkbox"
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                    checked={challans.length > 0 && selectedIds.size === challans.filter(c => c.id).length}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                  />
+                </TableHead>
+              )}
               <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">DC No</TableHead>
               <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">Date</TableHead>
               <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">Location</TableHead>
               <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider text-center">Items</TableHead>
-              {(role === 'admin' || role === 'superadmin') && (
+              {isAdmin && (
                 <>
                   <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">{isTrashView ? 'Deleted By' : 'Author'}</TableHead>
                   <TableHead className="font-bold text-[#3b2fc9] dark:text-indigo-400 text-xs uppercase tracking-wider text-right">Value (MRP)</TableHead>
@@ -753,14 +758,16 @@ export function NewRelicChallanList({
           <TableBody>
             {challans.map((challan) => (
               <TableRow key={challan.id} className="hover:bg-indigo-50/30 transition-colors">
-                <TableCell className="pl-4">
-                  <input
-                    type="checkbox"
-                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
-                    checked={!!challan.id && selectedIds.has(challan.id)}
-                    onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
-                  />
-                </TableCell>
+                {isAdmin && (
+                  <TableCell className="pl-4">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                      checked={!!challan.id && selectedIds.has(challan.id)}
+                      onChange={(e) => challan.id && handleSelectOne(challan.id, e.target.checked)}
+                    />
+                  </TableCell>
+                )}
                 <TableCell className="font-mono font-bold tabular-nums text-indigo-950">
                   {challan.dcNumber}
                 </TableCell>
@@ -787,7 +794,7 @@ export function NewRelicChallanList({
                 <TableCell className="text-center text-gray-700 font-bold tabular-nums">
                   {challan.lineItems?.length ?? 0}
                 </TableCell>
-                {(role === 'admin' || role === 'superadmin') && (
+                {isAdmin && (
                   <>
                     <TableCell>
                       <div className="flex flex-col text-[11px]">
@@ -887,7 +894,7 @@ export function NewRelicChallanList({
                 <TableCell>
                   <div className="flex items-center justify-end gap-1">
                     {isTrashView ? (
-                      role === 'admin' ? (
+                      isAdmin ? (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -986,7 +993,7 @@ export function NewRelicChallanList({
                             <Eye className="h-4 w-4" />
                           </Button>
                         )}
-                        {role === 'admin' && onAdminPreviewChallan && (
+                        {isAdmin && onAdminPreviewChallan && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -1006,7 +1013,7 @@ export function NewRelicChallanList({
                         >
                           <Download className="h-4 w-4" />
                         </Button>
-                        {role === 'admin' && onViewHistory && (
+                        {isAdmin && onViewHistory && (
                           <Button
                             variant="ghost"
                             size="icon"

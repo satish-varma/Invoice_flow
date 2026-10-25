@@ -433,6 +433,10 @@ export default function NewRelicPage() {
   const trashChallans = challans.filter((c) => c.isDeleted);
   
   const facetCounts = useMemo(() => {
+    if (!isAdmin) {
+      return { all: 0, pendingSigned: 0, hasSigned: 0, lowMargin: 0, highMargin: 0 };
+    }
+
     let pendingSigned = 0;
     let hasSigned = 0;
     let lowMargin = 0;
@@ -445,18 +449,16 @@ export default function NewRelicPage() {
         pendingSigned++;
       }
 
-      if (isAdmin) {
-        const mrp = (c.lineItems || []).reduce((sum, item) => sum + ((Number(item.mrp) || 0) * (Number(item.quantity) || 1)), 0);
-        let pCost = 0;
-        if (c.procurementCost !== undefined && c.procurementCost !== null) {
-          pCost = Number(c.procurementCost);
-        } else {
-          pCost = (c.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
-        }
-        const marginPct = mrp > 0 ? ((mrp - pCost) / mrp) * 100 : 0;
-        if (marginPct < 10) lowMargin++;
-        if (marginPct >= 20) highMargin++;
+      const mrp = (c.lineItems || []).reduce((sum, item) => sum + ((Number(item.mrp) || 0) * (Number(item.quantity) || 1)), 0);
+      let pCost = 0;
+      if (c.procurementCost !== undefined && c.procurementCost !== null) {
+        pCost = Number(c.procurementCost);
+      } else {
+        pCost = (c.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
       }
+      const marginPct = mrp > 0 ? ((mrp - pCost) / mrp) * 100 : 0;
+      if (marginPct < 10) lowMargin++;
+      if (marginPct >= 20) highMargin++;
     }
 
     return {
@@ -489,35 +491,37 @@ export default function NewRelicPage() {
       });
     }
 
-    // Modern Data Grid Facet Filtering
-    if (facetFilter === 'pending_signed') {
-      list = list.filter((c) => !(c.signedCopyUrls && c.signedCopyUrls.length > 0));
-    } else if (facetFilter === 'has_signed') {
-      list = list.filter((c) => c.signedCopyUrls && c.signedCopyUrls.length > 0);
-    } else if (facetFilter === 'low_margin' && isAdmin) {
-      list = list.filter((c) => {
-        const mrp = (c.lineItems || []).reduce((sum, item) => sum + ((Number(item.mrp) || 0) * (Number(item.quantity) || 1)), 0);
-        let pCost = 0;
-        if (c.procurementCost !== undefined && c.procurementCost !== null) {
-          pCost = Number(c.procurementCost);
-        } else {
-          pCost = (c.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
-        }
-        const marginPct = mrp > 0 ? ((mrp - pCost) / mrp) * 100 : 0;
-        return marginPct < 10;
-      });
-    } else if (facetFilter === 'high_margin' && isAdmin) {
-      list = list.filter((c) => {
-        const mrp = (c.lineItems || []).reduce((sum, item) => sum + ((Number(item.mrp) || 0) * (Number(item.quantity) || 1)), 0);
-        let pCost = 0;
-        if (c.procurementCost !== undefined && c.procurementCost !== null) {
-          pCost = Number(c.procurementCost);
-        } else {
-          pCost = (c.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
-        }
-        const marginPct = mrp > 0 ? ((mrp - pCost) / mrp) * 100 : 0;
-        return marginPct >= 20;
-      });
+    // Modern Data Grid Facet Filtering (Admin Only)
+    if (isAdmin && facetFilter !== 'all') {
+      if (facetFilter === 'pending_signed') {
+        list = list.filter((c) => !(c.signedCopyUrls && c.signedCopyUrls.length > 0));
+      } else if (facetFilter === 'has_signed') {
+        list = list.filter((c) => c.signedCopyUrls && c.signedCopyUrls.length > 0);
+      } else if (facetFilter === 'low_margin') {
+        list = list.filter((c) => {
+          const mrp = (c.lineItems || []).reduce((sum, item) => sum + ((Number(item.mrp) || 0) * (Number(item.quantity) || 1)), 0);
+          let pCost = 0;
+          if (c.procurementCost !== undefined && c.procurementCost !== null) {
+            pCost = Number(c.procurementCost);
+          } else {
+            pCost = (c.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+          }
+          const marginPct = mrp > 0 ? ((mrp - pCost) / mrp) * 100 : 0;
+          return marginPct < 10;
+        });
+      } else if (facetFilter === 'high_margin') {
+        list = list.filter((c) => {
+          const mrp = (c.lineItems || []).reduce((sum, item) => sum + ((Number(item.mrp) || 0) * (Number(item.quantity) || 1)), 0);
+          let pCost = 0;
+          if (c.procurementCost !== undefined && c.procurementCost !== null) {
+            pCost = Number(c.procurementCost);
+          } else {
+            pCost = (c.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+          }
+          const marginPct = mrp > 0 ? ((mrp - pCost) / mrp) * 100 : 0;
+          return marginPct >= 20;
+        });
+      }
     }
 
     if (searchQuery.trim()) {
@@ -864,117 +868,115 @@ export default function NewRelicPage() {
             )}
           </div>
 
-          {/* 1-Click Interactive Facet Filter Pills (Modern Data Grid) */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setFacetFilter('all');
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
-                facetFilter === 'all'
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
-              }`}
-            >
-              <span>All Records</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200/60 dark:bg-slate-700 font-mono">
-                {facetCounts.all}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setFacetFilter(facetFilter === 'pending_signed' ? 'all' : 'pending_signed');
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
-                facetFilter === 'pending_signed'
-                  ? 'bg-amber-500 text-white shadow-xs'
-                  : 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 hover:bg-amber-50 border border-amber-200 dark:border-amber-900/50'
-              }`}
-            >
-              <span>Pending Signed DC</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-amber-950/80 font-mono">
-                {facetCounts.pendingSigned}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setFacetFilter(facetFilter === 'has_signed' ? 'all' : 'has_signed');
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
-                facetFilter === 'has_signed'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 border border-emerald-200 dark:border-emerald-900/50'
-              }`}
-            >
-              <span>Signed DC Verified</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/80 font-mono">
-                {facetCounts.hasSigned}
-              </span>
-            </button>
-
-            {isAdmin && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setFacetFilter(facetFilter === 'low_margin' ? 'all' : 'low_margin');
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
-                    facetFilter === 'low_margin'
-                      ? 'bg-rose-600 text-white shadow-xs'
-                      : 'bg-white dark:bg-slate-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 border border-rose-200 dark:border-rose-900/50'
-                  }`}
-                  title="Filter challans with profit margin under 10%"
-                >
-                  <span>⚠️ Low Margin (&lt;10%)</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-100 dark:bg-rose-950/80 font-mono">
-                    {facetCounts.lowMargin}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setFacetFilter(facetFilter === 'high_margin' ? 'all' : 'high_margin');
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
-                    facetFilter === 'high_margin'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 border border-emerald-200 dark:border-emerald-900/50'
-                  }`}
-                  title="Filter challans with healthy profit margin 20% or higher"
-                >
-                  <span>Healthy Margin (≥20%)</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/80 font-mono">
-                    {facetCounts.highMargin}
-                  </span>
-                </button>
-              </>
-            )}
-
-            {facetFilter !== 'all' && (
+          {/* 1-Click Interactive Facet Filter Pills (Modern Data Grid - Admin Only) */}
+          {isAdmin && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
               <button
                 type="button"
                 onClick={() => {
                   triggerHaptic('light');
                   setFacetFilter('all');
                 }}
-                className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 underline px-2 py-1 shrink-0"
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                  facetFilter === 'all'
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
+                }`}
               >
-                Reset Filter
+                <span>All Records</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200/60 dark:bg-slate-700 font-mono">
+                  {facetCounts.all}
+                </span>
               </button>
-            )}
-          </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setFacetFilter(facetFilter === 'pending_signed' ? 'all' : 'pending_signed');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                  facetFilter === 'pending_signed'
+                    ? 'bg-amber-500 text-white shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 hover:bg-amber-50 border border-amber-200 dark:border-amber-900/50'
+                }`}
+              >
+                <span>Pending Signed DC</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-amber-950/80 font-mono">
+                  {facetCounts.pendingSigned}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setFacetFilter(facetFilter === 'has_signed' ? 'all' : 'has_signed');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                  facetFilter === 'has_signed'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 border border-emerald-200 dark:border-emerald-900/50'
+                }`}
+              >
+                <span>Signed DC Verified</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/80 font-mono">
+                  {facetCounts.hasSigned}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setFacetFilter(facetFilter === 'low_margin' ? 'all' : 'low_margin');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                  facetFilter === 'low_margin'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 border border-rose-200 dark:border-rose-900/50'
+                }`}
+                title="Filter challans with profit margin under 10%"
+              >
+                <span>⚠️ Low Margin (&lt;10%)</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-100 dark:bg-rose-950/80 font-mono">
+                  {facetCounts.lowMargin}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setFacetFilter(facetFilter === 'high_margin' ? 'all' : 'high_margin');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                  facetFilter === 'high_margin'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 border border-emerald-200 dark:border-emerald-900/50'
+                }`}
+                title="Filter challans with healthy profit margin 20% or higher"
+              >
+                <span>Healthy Margin (≥20%)</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/80 font-mono">
+                  {facetCounts.highMargin}
+                </span>
+              </button>
+
+              {facetFilter !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setFacetFilter('all');
+                  }}
+                  className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 underline px-2 py-1 shrink-0"
+                >
+                  Reset Filter
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Filters Section: Segmented Location Switcher + Quick Presets + More Filters */}
           <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] space-y-3">

@@ -220,32 +220,118 @@ export function NewRelicChallanList({
         </div>
       </div>
 
-      {/* Floating Selection Bar */}
-      {selectedIds.size > 0 && role === 'admin' && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl border border-gray-700 z-50 flex flex-wrap items-center justify-center gap-4 animate-in slide-in-from-bottom-8">
+      {/* Floating Selection Bar (Modernized Data Grid Bulk Dock) */}
+      {selectedIds.size > 0 && (role === 'admin' || role === 'superadmin') && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-950/95 dark:bg-slate-900/95 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700/80 z-50 flex flex-wrap items-center justify-center gap-3 backdrop-blur-xl animate-in slide-in-from-bottom-6">
           {(() => {
             const challansToAggregate = challans.filter(c => c.id && selectedIds.has(c.id));
             const totals = challansToAggregate.reduce((acc, c) => {
               const mrp = (c.lineItems || []).reduce((sum, i) => sum + ((i.mrp || 0) * (i.quantity || 1)), 0);
+              let pCost = 0;
+              if (c.procurementCost !== undefined && c.procurementCost !== null) {
+                pCost = Number(c.procurementCost);
+              } else {
+                pCost = (c.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+              }
               acc.mrp += mrp;
+              acc.pCost += pCost;
               return acc;
-            }, { mrp: 0 });
+            }, { mrp: 0, pCost: 0 });
+
+            const marginAmount = totals.mrp - totals.pCost;
+            const marginPct = totals.mrp > 0 ? (marginAmount / totals.mrp) * 100 : 0;
+
+            const handleBulkExportCsv = () => {
+              if (challansToAggregate.length === 0) return;
+              const headers = ['DC Number', 'Date', 'Location', 'Items Count', 'MRP Value', 'Procurement Cost', 'Estimated Margin %'];
+              const rows = challansToAggregate.map(c => {
+                const mrp = (c.lineItems || []).reduce((sum, i) => sum + ((i.mrp || 0) * (i.quantity || 1)), 0);
+                let pCost = 0;
+                if (c.procurementCost !== undefined && c.procurementCost !== null) {
+                  pCost = Number(c.procurementCost);
+                } else {
+                  pCost = (c.lineItems || []).reduce((sum, item: any) => sum + ((Number(item.procurementCost) || 0) * (Number(item.quantity) || 1)), 0);
+                }
+                const mPct = mrp > 0 ? (((mrp - pCost) / mrp) * 100).toFixed(1) : '0';
+                return [
+                  `"${c.dcNumber || ''}"`,
+                  `"${c.dcDate ? format(new Date(c.dcDate), 'yyyy-MM-dd') : ''}"`,
+                  `"${c.location || ''}"`,
+                  c.lineItems?.length || 0,
+                  mrp.toFixed(2),
+                  pCost.toFixed(2),
+                  `"${mPct}%"`
+                ].join(',');
+              });
+              const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n');
+              const encodedUri = encodeURI(csvContent);
+              const link = document.createElement('a');
+              link.setAttribute('href', encodedUri);
+              link.setAttribute('download', `challans_bulk_${format(new Date(), 'yyyyMMdd_HHmm')}.csv`);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              triggerHaptic('success');
+              toast({
+                title: 'Bulk CSV Exported',
+                description: `Exported ${challansToAggregate.length} challans to CSV.`,
+              });
+            };
+
+            const handleBulkDownloadPdf = () => {
+              challansToAggregate.forEach((c, idx) => {
+                setTimeout(() => {
+                  onDownloadChallan(c);
+                }, idx * 400);
+              });
+              triggerHaptic('medium');
+              toast({
+                title: 'Bulk Download Started',
+                description: `Downloading ${challansToAggregate.length} PDFs...`,
+              });
+            };
 
             return (
               <>
-                <div className="flex items-center gap-2 pr-4 border-r border-gray-700 font-medium">
-                  <span className="bg-[#3b2fc9] text-white text-xs px-2 py-0.5 rounded-full">{selectedIds.size}</span>
-                  Selected
+                <div className="flex items-center gap-2 pr-3 border-r border-slate-700 text-xs font-bold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span className="bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-full font-mono">{selectedIds.size}</span>
+                  <span>Selected</span>
                 </div>
-                <div className="flex items-center gap-4 text-sm font-bold">
-                  <span>MRP: ₹{totals.mrp.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+
+                <div className="flex items-center gap-3 text-xs font-mono font-bold">
+                  <span>MRP: ₹{totals.mrp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  <span className={`px-2 py-0.5 rounded-md border text-[11px] ${
+                    marginPct >= 20 ? 'bg-emerald-950 text-emerald-300 border-emerald-700' : 'bg-amber-950 text-amber-300 border-amber-700'
+                  }`}>
+                    Margin: {marginPct.toFixed(1)}% (₹{marginAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })})
+                  </span>
                 </div>
-                <button 
-                  onClick={() => handleSelectAll(false)}
-                  className="ml-2 text-gray-400 hover:text-white transition-colors text-sm"
-                >
-                  Clear
-                </button>
+
+                <div className="flex items-center gap-1.5 pl-2 border-l border-slate-700">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleBulkExportCsv}
+                    className="h-8 px-2.5 bg-slate-800 hover:bg-slate-700 text-white border-slate-700 text-xs font-bold rounded-xl"
+                  >
+                    <Download className="w-3.5 h-3.5 mr-1" /> Export CSV
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={handleBulkDownloadPdf}
+                    className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl"
+                  >
+                    <FileText className="w-3.5 h-3.5 mr-1" /> Bulk PDF
+                  </Button>
+                  <button 
+                    onClick={() => handleSelectAll(false)}
+                    className="ml-2 text-slate-400 hover:text-white transition-colors text-xs font-medium px-1.5 py-1"
+                  >
+                    Clear
+                  </button>
+                </div>
               </>
             );
           })()}
@@ -633,8 +719,8 @@ export function NewRelicChallanList({
       {/* Desktop Table View (>= lg) */}
       <div className="hidden lg:block overflow-x-auto min-w-0 w-full max-w-full">
         <Table className="min-w-[1050px]">
-          <TableHeader>
-            <TableRow className="bg-gradient-to-r from-slate-50 via-indigo-50/40 to-slate-50 border-b border-indigo-100/70 hover:bg-slate-50">
+          <TableHeader className="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-10 border-b border-indigo-100/70 dark:border-slate-800 shadow-xs">
+            <TableRow className="bg-gradient-to-r from-slate-50 via-indigo-50/40 to-slate-50 dark:from-slate-900 dark:via-slate-800/40 dark:to-slate-900 border-b border-indigo-100/70 dark:border-slate-800">
               <TableHead className="w-[40px] pl-4">
                 <input 
                   type="checkbox"
@@ -643,24 +729,25 @@ export function NewRelicChallanList({
                   onChange={(e) => handleSelectAll(e.target.checked)}
                 />
               </TableHead>
-              <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider">DC No</TableHead>
-              <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider">Date</TableHead>
-              <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider">Location</TableHead>
-              <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider text-center">Items</TableHead>
+              <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">DC No</TableHead>
+              <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">Date</TableHead>
+              <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">Location</TableHead>
+              <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider text-center">Items</TableHead>
               {(role === 'admin' || role === 'superadmin') && (
                 <>
-                  <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider">{isTrashView ? 'Deleted By' : 'Author'}</TableHead>
-                  <TableHead className="font-bold text-[#3b2fc9] text-xs uppercase tracking-wider text-right">Value (MRP)</TableHead>
+                  <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">{isTrashView ? 'Deleted By' : 'Author'}</TableHead>
+                  <TableHead className="font-bold text-[#3b2fc9] dark:text-indigo-400 text-xs uppercase tracking-wider text-right">Value (MRP)</TableHead>
+                  <TableHead className="font-bold text-emerald-700 dark:text-emerald-400 text-xs uppercase tracking-wider text-right">Margin %</TableHead>
                   {showFinancials && (
                     <>
-                      <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider text-right">Rev</TableHead>
-                      <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider text-right">Cost</TableHead>
-                      <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider text-right">Profit</TableHead>
+                      <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider text-right">Rev</TableHead>
+                      <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider text-right">Cost</TableHead>
+                      <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider text-right">Profit</TableHead>
                     </>
                   )}
                 </>
               )}
-              <TableHead className="font-bold text-gray-700 text-xs uppercase tracking-wider text-right">Actions</TableHead>
+              <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -736,6 +823,33 @@ export function NewRelicChallanList({
                           <TableCell className="text-right whitespace-nowrap align-top pt-3 tabular-nums font-mono font-bold text-[#3b2fc9] text-xs">
                             ₹{mrpTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </TableCell>
+                          {(() => {
+                            const totalUnits = (challan.lineItems || []).reduce((acc, item) => acc + (Number(item.quantity) || 1), 0);
+                            const marginAmount = mrpTotal - pCost;
+                            const marginPct = mrpTotal > 0 ? (marginAmount / mrpTotal) * 100 : 0;
+                            const perUnit = totalUnits > 0 ? marginAmount / totalUnits : 0;
+
+                            return (
+                              <TableCell className="text-right whitespace-nowrap align-top pt-3">
+                                <div className="flex flex-col items-end">
+                                  <span className={`inline-flex items-center gap-1 font-mono font-bold text-xs px-2.5 py-0.5 rounded-full border shadow-2xs ${
+                                    marginPct >= 20
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                                      : marginPct >= 10
+                                      ? 'bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
+                                      : marginPct >= 0
+                                      ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                                      : 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+                                  }`}>
+                                    {marginPct.toFixed(1)}%
+                                  </span>
+                                  <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                                    ₹{perUnit.toFixed(1)}/u
+                                  </span>
+                                </div>
+                              </TableCell>
+                            );
+                          })()}
                           {showFinancials && (
                             <>
                               <TableCell className="text-right whitespace-nowrap align-top pt-3">

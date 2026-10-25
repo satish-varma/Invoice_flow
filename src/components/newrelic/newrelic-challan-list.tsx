@@ -721,7 +721,7 @@ export function NewRelicChallanList({
 
       {/* Desktop Table View (>= lg) */}
       <div className="hidden lg:block overflow-x-auto min-w-0 w-full max-w-full">
-        <Table className="min-w-[1050px]">
+        <Table className="min-w-[860px]">
           <TableHeader className="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-10 border-b border-indigo-100/70 dark:border-slate-800 shadow-xs">
             <TableRow className="bg-gradient-to-r from-slate-50 via-indigo-50/40 to-slate-50 dark:from-slate-900 dark:via-slate-800/40 dark:to-slate-900 border-b border-indigo-100/70 dark:border-slate-800">
               {isAdmin && (
@@ -735,12 +735,9 @@ export function NewRelicChallanList({
                 </TableHead>
               )}
               <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">DC No</TableHead>
-              <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">Date</TableHead>
-              <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">Location</TableHead>
-              <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider text-center">Items</TableHead>
+              <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">Details</TableHead>
               {isAdmin && (
                 <>
-                  <TableHead className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">{isTrashView ? 'Deleted By' : 'Author'}</TableHead>
                   <TableHead className="font-bold text-[#3b2fc9] dark:text-indigo-400 text-xs uppercase tracking-wider text-right">Value (MRP)</TableHead>
                   <TableHead className="font-bold text-emerald-700 dark:text-emerald-400 text-xs uppercase tracking-wider text-right">Margin %</TableHead>
                   {showFinancials && (
@@ -768,46 +765,51 @@ export function NewRelicChallanList({
                     />
                   </TableCell>
                 )}
-                <TableCell className="font-mono font-bold tabular-nums text-indigo-950">
+                <TableCell className="font-mono font-bold tabular-nums text-indigo-950 dark:text-indigo-200">
                   {challan.dcNumber}
                 </TableCell>
-                <TableCell className="text-gray-600 font-medium text-xs tabular-nums">
-                  {challan.dcDate
-                    ? format(new Date(challan.dcDate), 'dd-MM-yyyy')
-                    : '—'}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={
-                      challan.location === 'hyderabad'
-                        ? 'border-sky-300 text-sky-800 bg-gradient-to-r from-sky-50 to-blue-50 font-bold px-2.5 py-0.5 rounded-full shadow-2xs inline-flex items-center gap-1.5'
-                        : 'border-emerald-300 text-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 font-bold px-2.5 py-0.5 rounded-full shadow-2xs inline-flex items-center gap-1.5'
-                    }
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      challan.location === 'hyderabad' ? 'bg-sky-500' : 'bg-emerald-500'
-                    }`} />
-                    <span>{NEWRELIC_LOCATIONS[challan.location]?.label ?? challan.location}</span>
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center text-gray-700 font-bold tabular-nums">
-                  {challan.lineItems?.length ?? 0}
+                <TableCell className="align-middle py-3">
+                  <div className="flex flex-col gap-1 min-w-[210px]">
+                    {/* Line 1: Location Badge (HYD / BLR) + Date + Items Count */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge
+                        variant="outline"
+                        className={
+                          challan.location === 'hyderabad'
+                            ? 'border-sky-300 text-sky-800 bg-sky-50 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800 font-black text-[10px] px-1.5 py-0.5 rounded shadow-2xs'
+                            : 'border-emerald-300 text-emerald-800 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 font-black text-[10px] px-1.5 py-0.5 rounded shadow-2xs'
+                        }
+                      >
+                        {challan.location === 'hyderabad' ? 'HYD' : 'BLR'}
+                      </Badge>
+                      <span className="font-semibold text-xs text-gray-800 dark:text-gray-200 tabular-nums">
+                        {challan.dcDate ? format(new Date(challan.dcDate), 'dd-MM-yyyy') : '—'}
+                      </span>
+                      <span className="text-gray-300 dark:text-gray-600">·</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
+                        {challan.lineItems?.length ?? 0} {(challan.lineItems?.length ?? 0) === 1 ? 'item' : 'items'}
+                      </span>
+                    </div>
+
+                    {/* Line 2: Author info */}
+                    <div className="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+                      <span className="text-gray-400 dark:text-gray-500">{isTrashView ? 'Deleted by' : 'by'}</span>
+                      <span 
+                        className="font-medium text-gray-700 dark:text-gray-300 truncate max-w-[170px]" 
+                        title={(isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)) || 'System'}
+                      >
+                        {formatAuthorName((isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)))}
+                      </span>
+                      {(isTrashView ? challan.deletedAt : challan.createdAt) && (
+                        <span className="text-gray-400 dark:text-gray-500 text-[10px]">
+                          ({format(new Date(isTrashView ? challan.deletedAt! : challan.createdAt!), 'dd-MMM')})
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </TableCell>
                 {isAdmin && (
                   <>
-                    <TableCell>
-                      <div className="flex flex-col text-[11px]">
-                        <span className="font-medium text-gray-700 truncate max-w-[150px]" title={(isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)) || 'System'}>
-                          {formatAuthorName((isTrashView ? challan.deletedBy : (challan.createdBy || challan.updatedBy)))}
-                        </span>
-                        {(isTrashView ? challan.deletedAt : challan.createdAt) && (
-                          <span className="text-gray-400">
-                            {format(new Date((isTrashView ? challan.deletedAt : challan.createdAt)), 'dd-MMM-yy')}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
                     {(() => {
                       const mrpTotal = (challan.lineItems || []).reduce((acc, item) => acc + ((item.mrp || 0) * (item.quantity || 1)), 0);
                       const commission = mrpTotal * 0.055;

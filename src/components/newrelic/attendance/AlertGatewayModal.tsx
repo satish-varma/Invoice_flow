@@ -17,6 +17,10 @@ import {
   ShieldCheck,
   Radio,
   ExternalLink,
+  Plus,
+  Trash2,
+  Users,
+  Check,
 } from 'lucide-react';
 import { AlertGatewayConfig, AlertProviderType, AlertDispatchRecord } from '@/types/alertGateway';
 import { DEFAULT_ALERT_CONFIG } from '@/services/alertGatewayService';
@@ -41,6 +45,105 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
   const [testPhone, setTestPhone] = useState('');
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Top 5 Managers and Instant Test Triggers
+  const [newAdminPhone, setNewAdminPhone] = useState('');
+  const [isTriggeringTest, setIsTriggeringTest] = useState<string | null>(null);
+
+  const handleAddAdminPhone = () => {
+    const raw = newAdminPhone.replace(/\D/g, '');
+    if (!raw || raw.length < 10) {
+      toast({ variant: 'destructive', title: 'Enter a valid 10-digit mobile number' });
+      return;
+    }
+    const clean = raw.length === 10 ? `91${raw}` : raw.startsWith('91') ? raw : `91${raw.slice(-10)}`;
+    const currentList = config.adminPhones || [config.managerPhone || '917709632898'];
+    if (currentList.includes(clean)) {
+      toast({ variant: 'destructive', title: 'This number is already in the manager list' });
+      return;
+    }
+    if (currentList.length >= 5) {
+      toast({ variant: 'destructive', title: 'Maximum 5 managers allowed on Meta test line' });
+      return;
+    }
+    const updated = [...currentList, clean];
+    setConfig((prev) => ({
+      ...prev,
+      adminPhones: updated,
+      managerPhone: prev.managerPhone || clean,
+    }));
+    setNewAdminPhone('');
+    triggerHaptic('light');
+    toast({ title: 'Manager Added', description: `+${clean} added. Click Save to persist.` });
+  };
+
+  const handleRemoveAdminPhone = (phoneToRemove: string) => {
+    const currentList = config.adminPhones || [config.managerPhone || '917709632898'];
+    const updated = currentList.filter((p) => p !== phoneToRemove);
+    setConfig((prev) => ({
+      ...prev,
+      adminPhones: updated,
+      managerPhone: updated[0] || '',
+    }));
+    triggerHaptic('light');
+  };
+
+  const handleTriggerTestAlert = async (type: 'late' | 'absent' | 'digest') => {
+    setIsTriggeringTest(type);
+    triggerHaptic('light');
+    try {
+      let payload: any = {};
+      if (type === 'late') {
+        payload = {
+          action: 'trigger_late_alert',
+          employeeName: 'Sample Staff (Test)',
+          siteName: 'Main Hub',
+          checkInTime: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+          lateMinutes: 25,
+          cutoff: '06:30 AM',
+          userEmail,
+        };
+      } else if (type === 'absent') {
+        payload = {
+          action: 'trigger_absent_alert',
+          siteName: 'Main Hub',
+          cutoff: '06:30 AM',
+          absentNames: ['Ramesh Pawar', 'Kavita Shinde'],
+          userEmail,
+        };
+      } else if (type === 'digest') {
+        payload = {
+          action: 'send_manager_digest',
+          siteName: 'All Sites',
+          presentCount: 15,
+          totalRoster: 18,
+          onDutyCount: 14,
+          absentNames: ['Ramesh Pawar', 'Kavita Shinde', 'Amit More'],
+          userEmail,
+        };
+      }
+
+      const res = await fetch('/api/attendance/alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to dispatch test alert');
+      }
+      triggerHaptic('success');
+      toast({
+        title: `✅ Test ${type.toUpperCase()} Alert Dispatched`,
+        description: `Delivered to ${data.totalSent || 1} manager(s) via WhatsApp!`,
+      });
+      loadGatewaySettings();
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Test Alert Failed', description: err.message });
+    } finally {
+      setIsTriggeringTest(null);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -552,70 +655,207 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
             </form>
           ) : activeTab === 'automation' ? (
             <div className="space-y-5">
-              {/* Manager Phone for Shift Digest Broadcast */}
+              {/* Top 5 Managers & Admins Card */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <Smartphone className="w-4 h-4 text-indigo-600" />
-                  Store In-Charge / Ops Manager Routing
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-indigo-600" />
+                    Top 5 Managers &amp; Admins WhatsApp Routing
+                  </h4>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
+                    {((config.adminPhones && config.adminPhones.length > 0) ? config.adminPhones : [config.managerPhone || '917709632898']).length} / 5 Slots
+                  </span>
+                </div>
                 <p className="text-xs text-slate-500">
-                  Target mobile number to receive daily morning shift summaries (present, absent list, and late arrivals).
+                  Target manager numbers to receive automated alerts for staff late arrivals, morning absenteeism, and shift summaries.
                 </p>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Manager WhatsApp / Mobile Phone (10 digits or with +91)
-                  </label>
-                  <input
-                    type="tel"
-                    value={config.managerPhone || ''}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, managerPhone: e.target.value }))}
-                    placeholder="e.g. 9876543210 or +91 98765 43210"
-                    className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-xl font-mono focus:ring-2 focus:ring-[#3b2fc9]/20"
-                  />
+
+                {/* Manager Chips */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {((config.adminPhones && config.adminPhones.length > 0) ? config.adminPhones : [config.managerPhone || '917709632898']).map((phone, idx) => (
+                    <div
+                      key={phone}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs font-mono font-bold text-slate-800"
+                    >
+                      <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{phone.startsWith('+') ? phone : `+${phone}`}</span>
+                      {idx === 0 && (
+                        <span className="text-[9px] uppercase font-black px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
+                          Primary
+                        </span>
+                      )}
+                      {((config.adminPhones && config.adminPhones.length > 0) ? config.adminPhones : [config.managerPhone || '917709632898']).length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAdminPhone(phone)}
+                          className="text-slate-400 hover:text-rose-600 ml-1 p-0.5 rounded transition-colors"
+                          title="Remove manager"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add Manager Input (if < 5 slots) */}
+                {((config.adminPhones && config.adminPhones.length > 0) ? config.adminPhones : [config.managerPhone || '917709632898']).length < 5 && (
+                  <div className="pt-2 flex gap-2">
+                    <input
+                      type="tel"
+                      value={newAdminPhone}
+                      onChange={(e) => setNewAdminPhone(e.target.value)}
+                      placeholder="Add manager phone (e.g. 9876543210)"
+                      className="flex-1 h-10 px-3 text-xs bg-white border border-slate-200 rounded-xl font-mono focus:ring-2 focus:ring-[#3b2fc9]/20"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddAdminPhone}
+                      className="h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Manager</span>
+                    </button>
+                  </div>
+                )}
+
+                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] leading-relaxed flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Meta Test Sandbox Requirement:</strong> Because you are using test number <code>+1 (555) 210-3921</code>, each of your top 5 manager numbers must be added to your <em>&ldquo;To&rdquo; Allowed List</em> in Meta Developer Console and verified with OTP once.
+                  </div>
                 </div>
               </div>
 
               {/* Automation Toggles */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
                 <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Automated Triggers
+                  Automated Admin Notification Triggers
                 </h4>
-                <label className="flex items-start gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition-colors">
+
+                <label className="flex items-start gap-3 cursor-pointer p-2.5 rounded-xl hover:bg-white transition-colors bg-white/60 border border-slate-200/60">
                   <input
                     type="checkbox"
-                    checked={config.enableAutoLateAlert}
+                    checked={config.enableAutoLateAlert !== false}
                     onChange={(e) => setConfig((prev) => ({ ...prev, enableAutoLateAlert: e.target.checked }))}
                     className="mt-1 h-4 w-4 rounded border-slate-300 text-[#3b2fc9] focus:ring-[#3b2fc9]"
                   />
                   <div>
-                    <span className="text-xs font-bold text-slate-800 block">Automatic Late Arrival Notice</span>
-                    <span className="text-[11px] text-slate-500 block">
-                      Dispatches an automated WhatsApp / SMS notice directly to the employee immediately when they check in past their cutoff deadline.
+                    <span className="text-xs font-bold text-slate-900 block flex items-center gap-1.5">
+                      <span>⏰ Instant Staff Late Arrival Alert</span>
+                      <span className="text-[10px] uppercase font-black px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">Real-Time</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
+                      Immediately dispatches an automated WhatsApp notification to your top 5 managers the exact second any staff member punches in late past their cutoff deadline.
                     </span>
                   </div>
                 </label>
 
-                <label className="flex items-start gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition-colors border-t border-slate-100 pt-3">
+                <label className="flex items-start gap-3 cursor-pointer p-2.5 rounded-xl hover:bg-white transition-colors bg-white/60 border border-slate-200/60">
                   <input
                     type="checkbox"
-                    checked={config.enableAutoCheckoutReminder}
+                    checked={config.enableAutoAbsentAlert !== false}
+                    onChange={(e) => setConfig((prev) => ({ ...prev, enableAutoAbsentAlert: e.target.checked }))}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-[#3b2fc9] focus:ring-[#3b2fc9]"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 block flex items-center gap-1.5">
+                      <span>⚠️ Morning Cutoff Absentee Alert</span>
+                      <span className="text-[10px] uppercase font-black px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800">Cutoff</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
+                      Pings managers with the full list of staff who have not checked in once the morning cutoff time (e.g. 06:30 AM) passes.
+                    </span>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer p-2.5 rounded-xl hover:bg-white transition-colors bg-white/60 border border-slate-200/60">
+                  <input
+                    type="checkbox"
+                    checked={config.enableAutoDailyDigest !== false}
+                    onChange={(e) => setConfig((prev) => ({ ...prev, enableAutoDailyDigest: e.target.checked }))}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-[#3b2fc9] focus:ring-[#3b2fc9]"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 block flex items-center gap-1.5">
+                      <span>📊 Daily Morning Shift Attendance Digest</span>
+                      <span className="text-[10px] uppercase font-black px-1.5 py-0.2 rounded bg-teal-100 text-teal-800">Daily</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
+                      Consolidated morning summary sent to managers containing total roster turnout, present count, on-duty count, and absentee list.
+                    </span>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer p-2.5 rounded-xl hover:bg-white transition-colors bg-white/60 border border-slate-200/60">
+                  <input
+                    type="checkbox"
+                    checked={config.enableAutoCheckoutReminder !== false}
                     onChange={(e) => setConfig((prev) => ({ ...prev, enableAutoCheckoutReminder: e.target.checked }))}
                     className="mt-1 h-4 w-4 rounded border-slate-300 text-[#3b2fc9] focus:ring-[#3b2fc9]"
                   />
                   <div>
-                    <span className="text-xs font-bold text-slate-800 block">Checkout Reminder for Long Shifts</span>
-                    <span className="text-[11px] text-slate-500 block">
-                      Pings staff active for &gt;11.5 hours to capture check-out selfie before leaving.
+                    <span className="text-xs font-bold text-slate-900 block flex items-center gap-1.5">
+                      <span>🏁 Missed Check-Out Notice</span>
+                      <span className="text-[10px] uppercase font-black px-1.5 py-0.2 rounded bg-amber-100 text-amber-800">Evening</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
+                      Alerts managers in the evening regarding any team members who completed their shift hours but forgot to record their check-out selfie.
                     </span>
                   </div>
                 </label>
               </div>
 
+              {/* Instant Test Triggers Card */}
+              <div className="bg-indigo-50/60 border border-indigo-200 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
+                    <Send className="w-3.5 h-3.5 text-indigo-600" />
+                    Test Automated Alerts to All Top 5 Managers
+                  </h4>
+                  <span className="text-[10px] font-bold text-indigo-600">Live Dispatches</span>
+                </div>
+                <p className="text-xs text-indigo-900/80">
+                  Click any button to immediately dispatch a sample automated notification to your configured manager numbers via WhatsApp:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleTriggerTestAlert('late')}
+                    disabled={Boolean(isTriggeringTest)}
+                    className="h-10 px-3 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {isTriggeringTest === 'late' ? <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" /> : <span>⏰</span>}
+                    <span>Test Late Alert</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleTriggerTestAlert('absent')}
+                    disabled={Boolean(isTriggeringTest)}
+                    className="h-10 px-3 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {isTriggeringTest === 'absent' ? <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" /> : <span>⚠️</span>}
+                    <span>Test Absent Alert</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleTriggerTestAlert('digest')}
+                    disabled={Boolean(isTriggeringTest)}
+                    className="h-10 px-3 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {isTriggeringTest === 'digest' ? <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" /> : <span>📊</span>}
+                    <span>Test Shift Digest</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Test Ping Section */}
-              <div className="bg-indigo-50/50 border border-indigo-200 rounded-2xl p-4 space-y-3">
-                <h4 className="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
-                  <Send className="w-3.5 h-3.5 text-indigo-600" />
-                  Test Gateway Connection
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5 text-slate-600" />
+                  Custom Number Single Ping
                 </h4>
                 <div className="flex gap-2">
                   <input
@@ -623,13 +863,13 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
                     value={testPhone}
                     onChange={(e) => setTestPhone(e.target.value)}
                     placeholder="Recipient phone (e.g. 9876543210)"
-                    className="flex-1 h-10 px-3 text-xs bg-white border border-indigo-200 rounded-xl font-mono focus:ring-2 focus:ring-[#3b2fc9]/20"
+                    className="flex-1 h-10 px-3 text-xs bg-white border border-slate-200 rounded-xl font-mono focus:ring-2 focus:ring-[#3b2fc9]/20"
                   />
                   <button
                     type="button"
                     onClick={handleSendTestPing}
                     disabled={isTesting}
-                    className="h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 disabled:opacity-50"
+                    className="h-10 px-4 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 disabled:opacity-50"
                   >
                     {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                     <span>Send Ping</span>

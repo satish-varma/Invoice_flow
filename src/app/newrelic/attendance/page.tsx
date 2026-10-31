@@ -1064,8 +1064,23 @@ function AttendancePageContent() {
           toast({
             variant: 'destructive',
             title: `⚠️ Checked In (Late by ${res.lateMinutes} mins)`,
-            description: `Shift deadline was ${res.cutoff || effectiveRule.cutoff} AM. Redirecting to DC Hub...`,
+            description: `Shift deadline was ${res.cutoff || effectiveRule.cutoff} AM. Notifying managers on WhatsApp...`,
           });
+          // Real-time automated WhatsApp alert to top managers
+          fetch('/api/attendance/alerts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'trigger_late_alert',
+              employeeName: selectedEmployee.name,
+              siteName: (selectedEmployee.siteId || selectedEmployee.location || 'Hub').toUpperCase(),
+              checkInTime: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+              lateMinutes: res.lateMinutes,
+              cutoff: (res.cutoff || effectiveRule.cutoff) + ' AM',
+              userEmail: user?.email,
+              siteId: selectedEmployee.siteId,
+            }),
+          }).catch((err) => console.warn('[AutoLateAlert] Background dispatch error:', err));
         } else {
           toast({ title: `✅ Checked in on time — Redirecting to DC Hub...` });
         }

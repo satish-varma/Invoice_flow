@@ -51,9 +51,12 @@ export const DEFAULT_ALERT_CONFIG: AlertGatewayConfig = {
     webhookUrl: '',
     secretToken: '',
   },
-  enableAutoLateAlert: false,
-  enableAutoCheckoutReminder: false,
+  enableAutoLateAlert: true,
+  enableAutoAbsentAlert: true,
+  enableAutoCheckoutReminder: true,
+  enableAutoDailyDigest: true,
   managerPhone: '917709632898',
+  adminPhones: ['917709632898'],
   managerSiteRouting: {},
 };
 
@@ -92,6 +95,10 @@ export async function getAlertGatewayConfig(): Promise<AlertGatewayConfig> {
 
   if (!config.managerPhone?.trim()) {
     config.managerPhone = '917709632898';
+  }
+
+  if (!config.adminPhones || !Array.isArray(config.adminPhones) || config.adminPhones.length === 0) {
+    config.adminPhones = [config.managerPhone || '917709632898'];
   }
 
   return config;
@@ -171,17 +178,28 @@ export function generateAlertMessage(
     case 'late_alert':
       return `⏰ Check-In Notice\n\nHi ${name},\nYour check-in today (${today}) was recorded at ${data.checkInTime || 'morning'} (+${data.lateMinutes || 0}m past the ${cutoff} cutoff).\n\nPlease ensure punctual check-ins for scheduled shifts.\n— Operations Team`;
 
+    case 'admin_late_notice' as any:
+      return `⏰ Staff Late Arrival Alert — ${today}\n📍 Site: ${site}\n\n👤 Employee: ${name}\n⏱️ Punch Time: ${data.checkInTime || 'Just now'}\n⚠️ Delay: +${data.lateMinutes || 0} mins (Cutoff was ${cutoff})\n\n— InvoiceFlow Operations Alert`;
+
     case 'checkout_reminder':
       return `🏁 Shift Check-Out Reminder\n\nHi ${name},\nYou have completed your shift at ${site} (${data.hoursElapsed || 9}+ hours elapsed). Please remember to capture your check-out selfie on the kiosk before leaving.\n\nThank you for your hard work!\n— Operations Team`;
+
+    case 'admin_missed_checkout' as any: {
+      const list = data.absentNames && data.absentNames.length > 0
+        ? data.absentNames.map((n, i) => `  ${i + 1}. ${n}`).join('\n')
+        : '  None (All checked out! 🎉)';
+      return `🏁 Missed Check-Out Notice — ${today}\n📍 Site: ${site}\n\nThe following staff have active shifts without check-out:\n${list}\n\n— InvoiceFlow Attendance Operations`;
+    }
 
     case 'manager_digest':
       return `📊 Shift Attendance Digest — ${today}\n📍 Site: ${site}\n\n👥 Total Punched: ${data.presentCount || 0} / ${data.totalRoster || 0}\n🟢 On Duty: ${data.onDutyCount || 0}\n🔴 Absent / Pending (${data.absentNames?.length || 0}):\n${data.absentNames && data.absentNames.length > 0 ? data.absentNames.map((n, i) => `  ${i + 1}. ${n}`).join('\n') : '  None (100% Turnout! 🎉)'}\n\n— Generated via InvoiceFlow Attendance`;
 
-    case 'group_absent_alert': {
+    case 'group_absent_alert':
+    case 'admin_absent_alert' as any: {
       const absentList = data.absentNames && data.absentNames.length > 0
         ? data.absentNames.map((n, i) => `  ${i + 1}. ${n}`).join('\n')
-        : '  All staff present!';
-      return `📢 Shift Attendance Alert — ${today}\n📍 Site: ${site} · Cutoff: ${cutoff}\n\nThe following team members have not checked in yet:\n${absentList}\n\nPlease mark attendance immediately on the kiosk or update management.\n— Operations Team`;
+        : '  All staff present! 🎉';
+      return `📢 Morning Shift Cutoff Alert — ${today}\n📍 Site: ${site} · Cutoff: ${cutoff}\n\nThe following team members have not checked in yet:\n${absentList}\n\n— InvoiceFlow Operations Alert`;
     }
 
     case 'test_ping':
@@ -291,6 +309,14 @@ async function sendMetaWhatsApp(
     }
 
     const errorCode = data?.error?.code;
+
+    // Error 190: Access Token Expired or Invalid OAuth
+    if (errorCode === 190) {
+      return {
+        success: false,
+        error: `(#190) Meta Access Token Expired. Your 24-hour temporary token in Meta Developer Console has expired. Please copy a fresh token from developers.facebook.com/apps or configure a permanent System User Token in Meta Business Settings.`,
+      };
+    }
 
     // Error 131030: Number not in developer test allowed list
     if (errorCode === 131030) {
@@ -605,4 +631,69 @@ export async function dispatchAlert(
     provider,
     error: result.error,
   };
+}
+
+/**
+ * Dispatch an automated alert to all configured admin / manager phone numbers
+ * (strictly limited to top 5 managers for safety and quota compliance)
+ */
+export async function dispatchAlertToAdmins(
+  alertPayload: {
+    alertType: SendAlertRequest['alertType'];
+    customMessage: string;
+    siteId?: string;
+  },
+  configOverride?: AlertGatewayConfig,
+  senderEmail?: string | null
+): Promise<{
+  totalSent: number;
+  totalFailed: number;
+  results: Array<{ phone: string; success: boolean; error?: string }>;
+}> {
+  const config = configOverride || (await getAlertGatewayConfig());
+
+  // Collect raw target manager phone numbers
+  const rawTargets: string[] = [];
+  if (config.adminPhones && Array.isArray(config.adminPhones)) {
+    rawTargets.push(...config.adminPhones);
+  }
+  if (config.managerPhone) {
+    rawTargets.push(config.managerPhone);
+  }
+  if (alertPayload.siteId && config.managerSiteRouting?.[alertPayload.siteId]) {
+    rawTargets.push(config.managerSiteRouting[alertPayload.siteId]);
+  }
+  if (rawTargets.length === 0) {
+    rawTargets.push('917709632898');
+  }
+
+  // Deduplicate and sanitize to top 5 manager numbers max
+  const uniquePhones = Array.from(
+    new Set(rawTargets.map((p) => formatPhoneNumber(p).cleanDigits).filter(Boolean))
+  ).slice(0, 5);
+
+  const results: Array<{ phone: string; success: boolean; error?: string }> = [];
+  let totalSent = 0;
+  let totalFailed = 0;
+
+  for (const phone of uniquePhones) {
+    const res = await dispatchAlert(
+      {
+        to: phone,
+        recipientName: 'Operations Admin',
+        alertType: alertPayload.alertType,
+        customMessage: alertPayload.customMessage,
+      },
+      config,
+      senderEmail || 'system:auto-alert'
+    );
+    if (res.success) {
+      totalSent++;
+    } else {
+      totalFailed++;
+    }
+    results.push({ phone, success: res.success, error: res.error });
+  }
+
+  return { totalSent, totalFailed, results };
 }

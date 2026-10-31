@@ -3,6 +3,7 @@ import {
   getAlertGatewayConfig,
   saveAlertGatewayConfig,
   dispatchAlert,
+  dispatchAlertToAdmins,
   getRecentAlertLogs,
   generateAlertMessage,
 } from '@/services/alertGatewayService';
@@ -156,14 +157,7 @@ export async function POST(req: NextRequest) {
 
     if (action === 'send_manager_digest') {
       const { managerPhone, siteName, presentCount, totalRoster, onDutyCount, absentNames, userEmail } = body;
-      const targetPhone = managerPhone || (await getAlertGatewayConfig()).managerPhone;
-
-      if (!targetPhone) {
-        return NextResponse.json({
-          success: false,
-          error: 'No manager phone number configured for shift digest broadcast.',
-        }, { status: 400 });
-      }
+      const config = await getAlertGatewayConfig();
 
       const message = generateAlertMessage('manager_digest', {
         siteName: siteName || 'All Sites',
@@ -173,19 +167,139 @@ export async function POST(req: NextRequest) {
         absentNames: Array.isArray(absentNames) ? absentNames : [],
       });
 
-      const alertReq: SendAlertRequest = {
-        to: targetPhone,
-        recipientName: 'Store In-Charge / Ops Manager',
-        alertType: 'manager_digest',
-        customMessage: message,
-      };
+      // If specific phone was requested, prioritize it, otherwise dispatch to all top 5 managers
+      if (managerPhone && managerPhone !== '917709632898') {
+        const alertReq: SendAlertRequest = {
+          to: managerPhone,
+          recipientName: 'Store In-Charge / Ops Manager',
+          alertType: 'manager_digest',
+          customMessage: message,
+        };
+        const result = await dispatchAlert(alertReq, config, userEmail);
+        return NextResponse.json({
+          success: result.success,
+          provider: result.provider,
+          targetPhone: managerPhone,
+          error: result.error,
+        });
+      }
 
-      const result = await dispatchAlert(alertReq, undefined, userEmail);
+      const dispatchSummary = await dispatchAlertToAdmins(
+        {
+          alertType: 'manager_digest',
+          customMessage: message,
+        },
+        config,
+        userEmail
+      );
+
       return NextResponse.json({
-        success: result.success,
-        provider: result.provider,
-        targetPhone,
-        error: result.error,
+        success: dispatchSummary.totalSent > 0,
+        provider: config.activeProvider,
+        totalSent: dispatchSummary.totalSent,
+        totalFailed: dispatchSummary.totalFailed,
+        dispatchedTo: dispatchSummary.results,
+      });
+    }
+
+    if (action === 'trigger_late_alert') {
+      const { employeeName, siteName, checkInTime, lateMinutes, cutoff, userEmail, siteId } = body;
+      const config = await getAlertGatewayConfig();
+
+      if (config.enableAutoLateAlert === false) {
+        return NextResponse.json({
+          success: true,
+          skipped: true,
+          message: 'Automated late alerts are disabled in gateway settings.',
+        });
+      }
+
+      const message = generateAlertMessage('admin_late_notice' as any, {
+        employeeName: employeeName || 'Staff Member',
+        siteName: siteName || 'InvoiceFlow Hub',
+        checkInTime: checkInTime || 'Just now',
+        lateMinutes: Number(lateMinutes) || 0,
+        cutoff: cutoff || '06:30 AM',
+      });
+
+      const dispatchSummary = await dispatchAlertToAdmins(
+        {
+          alertType: 'late_alert',
+          customMessage: message,
+          siteId,
+        },
+        config,
+        userEmail || 'system:auto-late-alert'
+      );
+
+      return NextResponse.json({
+        success: dispatchSummary.totalSent > 0,
+        provider: config.activeProvider,
+        totalSent: dispatchSummary.totalSent,
+        dispatchedTo: dispatchSummary.results,
+      });
+    }
+
+    if (action === 'trigger_absent_alert') {
+      const { siteName, cutoff, absentNames, userEmail, siteId } = body;
+      const config = await getAlertGatewayConfig();
+
+      if (config.enableAutoAbsentAlert === false) {
+        return NextResponse.json({
+          success: true,
+          skipped: true,
+          message: 'Automated absent alerts are disabled in gateway settings.',
+        });
+      }
+
+      const message = generateAlertMessage('admin_absent_alert' as any, {
+        siteName: siteName || 'All Sites',
+        cutoff: cutoff || '06:30 AM',
+        absentNames: Array.isArray(absentNames) ? absentNames : [],
+      });
+
+      const dispatchSummary = await dispatchAlertToAdmins(
+        {
+          alertType: 'group_absent_alert',
+          customMessage: message,
+          siteId,
+        },
+        config,
+        userEmail || 'system:auto-absent-alert'
+      );
+
+      return NextResponse.json({
+        success: dispatchSummary.totalSent > 0,
+        provider: config.activeProvider,
+        totalSent: dispatchSummary.totalSent,
+        dispatchedTo: dispatchSummary.results,
+      });
+    }
+
+    if (action === 'trigger_missed_checkout_alert') {
+      const { siteName, missedStaffNames, userEmail, siteId } = body;
+      const config = await getAlertGatewayConfig();
+
+      const message = generateAlertMessage('admin_missed_checkout' as any, {
+        siteName: siteName || 'All Sites',
+        absentNames: Array.isArray(missedStaffNames) ? missedStaffNames : [],
+      });
+
+      const dispatchSummary = await dispatchAlertToAdmins(
+        {
+          alertType: 'checkout_reminder',
+          customMessage: message,
+          siteId,
+        },
+        config,
+        userEmail || 'system:auto-checkout-alert'
+      );
+
+      return NextResponse.json({
+        success: dispatchSummary.totalSent > 0,
+        provider: config.activeProvider,
+        totalSent: dispatchSummary.totalSent,
+        dispatchedTo: dispatchSummary.results,
       });
     }
 

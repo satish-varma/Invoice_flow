@@ -51,9 +51,12 @@ export interface AlertGatewayConfig {
   msg91?: MSG91Config;
   webhook?: WebhookConfig;
   // Automation settings
-  enableAutoLateAlert: boolean;
-  enableAutoCheckoutReminder: boolean;
-  managerPhone: string; // for daily absent digest broadcast
+  enableAutoLateAlert: boolean; // Auto WhatsApp alert to admins when employee arrives late
+  enableAutoAbsentAlert?: boolean; // Auto WhatsApp alert to admins when cutoff passes with absentees
+  enableAutoCheckoutReminder: boolean; // Remind staff and notify admins of missed checkouts
+  enableAutoDailyDigest?: boolean; // Auto morning digest to admins
+  managerPhone: string; // primary admin phone (e.g. "917709632898")
+  adminPhones?: string[]; // top 5 manager/admin WhatsApp numbers (e.g. ['917709632898'])
   managerSiteRouting?: Record<string, string>; // siteId -> manager phone number
   updatedAt?: string;
   updatedBy?: string;

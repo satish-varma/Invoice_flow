@@ -42,12 +42,12 @@ export default withAuth(
       return NextResponse.next();
     }
 
-    // Cron and backend API alerts authorization bypass
-    if (pathname.startsWith('/api/attendance/alerts') || pathname.startsWith('/api/tracker/cron')) {
-      const auth = req.headers.get('authorization');
-      if (auth && (auth === `Bearer ${process.env.CRON_SECRET}` || auth === `Bearer ${process.env.NEXTAUTH_SECRET}`)) {
-        return NextResponse.next();
-      }
+    // Cron and backend API authorization bypass - endpoints validate their own security/tokens
+    if (
+      pathname.startsWith('/api/attendance/cron') ||
+      pathname.startsWith('/api/tracker/cron')
+    ) {
+      return NextResponse.next();
     }
 
     if (!token) {
@@ -215,11 +215,11 @@ export default withAuth(
         ) {
           return true;
         }
-        if (pathname.startsWith('/api/attendance/alerts') || pathname.startsWith('/api/tracker/cron')) {
-          const auth = req.headers.get('authorization');
-          if (auth && (auth === `Bearer ${process.env.CRON_SECRET}` || auth === `Bearer ${process.env.NEXTAUTH_SECRET}`)) {
-            return true;
-          }
+        if (
+          pathname.startsWith('/api/attendance/cron') ||
+          pathname.startsWith('/api/tracker/cron')
+        ) {
+          return true;
         }
         return !!token;
       },

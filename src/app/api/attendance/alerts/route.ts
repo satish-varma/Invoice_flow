@@ -203,7 +203,18 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'trigger_late_alert') {
-      const { employeeName, siteName, checkInTime, lateMinutes, cutoff, userEmail, siteId } = body;
+      const {
+        employeeName,
+        employeePhone,
+        designation,
+        role,
+        siteName,
+        checkInTime,
+        lateMinutes,
+        cutoff,
+        userEmail,
+        siteId,
+      } = body;
       const config = await getAlertGatewayConfig();
 
       if (config.enableAutoLateAlert === false) {
@@ -216,6 +227,8 @@ export async function POST(req: NextRequest) {
 
       const message = generateAlertMessage('admin_late_notice' as any, {
         employeeName: employeeName || 'Staff Member',
+        employeePhone,
+        role: designation || role,
         siteName: siteName || 'InvoiceFlow Hub',
         checkInTime: checkInTime || 'Just now',
         lateMinutes: Number(lateMinutes) || 0,

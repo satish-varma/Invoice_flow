@@ -141,11 +141,22 @@ export function formatPhoneNumber(rawPhone: string): {
   };
 }
 
+/** Visual progress bar helper for WhatsApp text digests (e.g. [████████░░]) */
+export function buildProgressBar(present: number, total: number, barLength: number = 10): string {
+  if (total <= 0) return '░'.repeat(barLength);
+  const ratio = Math.min(1, Math.max(0, present / total));
+  const filled = Math.round(ratio * barLength);
+  const empty = Math.max(0, barLength - filled);
+  return '█'.repeat(filled) + '░'.repeat(empty);
+}
+
 /** Generate standardized message copy for alerts */
 export function generateAlertMessage(
   alertType: SendAlertRequest['alertType'],
   data: {
     employeeName?: string;
+    employeePhone?: string;
+    role?: string;
     siteName?: string;
     cutoff?: string;
     checkInTime?: string;
@@ -160,7 +171,7 @@ export function generateAlertMessage(
   }
 ): string {
   const today = data.date || new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  const site = data.siteName || 'InvoiceFlow Hub';
+  const site = data.siteName || 'The Gut Guru Hub';
   const name = data.employeeName || 'Team Member';
   const cutoff = data.cutoff || '06:30 AM';
 
@@ -178,8 +189,22 @@ export function generateAlertMessage(
     case 'late_alert':
       return `⏰ Check-In Notice\n\nHi ${name},\nYour check-in today (${today}) was recorded at ${data.checkInTime || 'morning'} (+${data.lateMinutes || 0}m past the ${cutoff} cutoff).\n\nPlease ensure punctual check-ins for scheduled shifts.\n— Operations Team`;
 
-    case 'admin_late_notice' as any:
-      return `⏰ Staff Late Arrival Alert — ${today}\n📍 Site: ${site}\n\n👤 Employee: ${name}\n⏱️ Punch Time: ${data.checkInTime || 'Just now'}\n⚠️ Delay: +${data.lateMinutes || 0} mins (Cutoff was ${cutoff})\n\n— InvoiceFlow Operations Alert`;
+    case 'admin_late_notice' as any: {
+      const cleanPhone = data.employeePhone ? formatPhoneNumber(data.employeePhone).cleanDigits : '';
+      const phoneDisplay = cleanPhone ? (cleanPhone.startsWith('+') ? cleanPhone : `+${cleanPhone}`) : '';
+      const roleLine = data.role ? `💼 Role: ${data.role}\n` : '';
+      const phoneLine = phoneDisplay ? `📱 Phone: ${phoneDisplay}\n` : '';
+
+      let contactAction = '';
+      if (cleanPhone) {
+        const textMsg = encodeURIComponent(
+          `Hi ${name}, management noticed you checked in late (+${data.lateMinutes || 0}m past ${cutoff}) today for your shift at ${site}.`
+        );
+        contactAction = `\n👉 1-Tap Contact Staff:\nhttps://wa.me/${cleanPhone}?text=${textMsg}\n`;
+      }
+
+      return `⏰ Staff Late Arrival Alert — ${today}\n📍 Facility: ${site}\n\n👤 Employee: ${name}\n${roleLine}⏱️ Punch Time: ${data.checkInTime || 'Just now'}\n⚠️ Delay: +${data.lateMinutes || 0} mins (Cutoff was ${cutoff})\n${phoneLine}${contactAction}\n— The Gut Guru Hospitality Operations`;
+    }
 
     case 'checkout_reminder':
       return `🏁 Shift Check-Out Reminder\n\nHi ${name},\nYou have completed your shift at ${site} (${data.hoursElapsed || 9}+ hours elapsed). Please remember to capture your check-out selfie on the kiosk before leaving.\n\nThank you for your hard work!\n— Operations Team`;
@@ -188,18 +213,29 @@ export function generateAlertMessage(
       const list = data.absentNames && data.absentNames.length > 0
         ? data.absentNames.map((n, i) => `  ${i + 1}. ${n}`).join('\n')
         : '  None (All checked out! 🎉)';
-      return `🏁 Missed Check-Out Notice — ${today}\n📍 Site: ${site}\n\nThe following staff have active shifts without check-out:\n${list}\n\n— InvoiceFlow Attendance Operations`;
+      return `🏁 Missed Check-Out Notice — ${today}\n📍 Facility: ${site}\n━━━━━━━━━━━━━━━━━━━━\nActive shifts without check-out punch:\n${list}\n\n🔗 Review Active Shifts:\nhttps://invoiceflow.thegutguru.in/newrelic/attendance\n\n— The Gut Guru Hospitality Operations`;
     }
 
-    case 'manager_digest':
-      return `📊 Shift Attendance Digest — ${today}\n📍 Site: ${site}\n\n👥 Total Punched: ${data.presentCount || 0} / ${data.totalRoster || 0}\n🟢 On Duty: ${data.onDutyCount || 0}\n🔴 Absent / Pending (${data.absentNames?.length || 0}):\n${data.absentNames && data.absentNames.length > 0 ? data.absentNames.map((n, i) => `  ${i + 1}. ${n}`).join('\n') : '  None (100% Turnout! 🎉)'}\n\n— Generated via InvoiceFlow Attendance`;
+    case 'manager_digest': {
+      const present = data.presentCount || 0;
+      const total = data.totalRoster || 0;
+      const pct = total > 0 ? Math.round((present / total) * 100) : 0;
+      const meter = buildProgressBar(present, total, 10);
+      const absentCount = data.absentNames?.length || 0;
+      const absentList = data.absentNames && data.absentNames.length > 0
+        ? data.absentNames.map((n, i) => `  ${i + 1}. ${n}`).join('\n')
+        : '  None (100% Turnout! 🎉)';
+
+      return `📊 Shift Attendance Digest — ${today}\n📍 Facility: ${site} · Turnout: ${pct}% ${pct >= 75 ? '🟢' : '🔴'}\n━━━━━━━━━━━━━━━━━━━━\nTurnout Meter: [${meter}] ${present} / ${total} Staff\n\n🟢 On Duty Right Now: ${data.onDutyCount || 0}\n🔴 Absent / Pending (${absentCount}):\n${absentList}\n\n🔗 Live Attendance Kiosk:\nhttps://invoiceflow.thegutguru.in/newrelic/attendance\n\n— The Gut Guru Hospitality Operations`;
+    }
 
     case 'group_absent_alert':
     case 'admin_absent_alert' as any: {
+      const absentCount = data.absentNames?.length || 0;
       const absentList = data.absentNames && data.absentNames.length > 0
         ? data.absentNames.map((n, i) => `  ${i + 1}. ${n}`).join('\n')
         : '  All staff present! 🎉';
-      return `📢 Morning Shift Cutoff Alert — ${today}\n📍 Site: ${site} · Cutoff: ${cutoff}\n\nThe following team members have not checked in yet:\n${absentList}\n\n— InvoiceFlow Operations Alert`;
+      return `📢 Morning Shift Cutoff Alert — ${today}\n📍 Facility: ${site} · Cutoff: ${cutoff}\n━━━━━━━━━━━━━━━━━━━━\n⚠️ Absent / Pending Punch (${absentCount}):\n${absentList}\n\n👉 Open Attendance Kiosk:\nhttps://invoiceflow.thegutguru.in/newrelic/attendance\n\n— The Gut Guru Hospitality Operations`;
     }
 
     case 'test_ping':

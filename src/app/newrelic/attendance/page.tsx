@@ -1073,6 +1073,8 @@ function AttendancePageContent() {
             body: JSON.stringify({
               action: 'trigger_late_alert',
               employeeName: selectedEmployee.name,
+              employeePhone: selectedEmployee.phone,
+              designation: selectedEmployee.designation,
               siteName: (selectedEmployee.siteId || selectedEmployee.location || 'Hub').toUpperCase(),
               checkInTime: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
               lateMinutes: res.lateMinutes,

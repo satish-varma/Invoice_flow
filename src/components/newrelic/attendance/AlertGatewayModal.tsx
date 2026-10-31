@@ -96,10 +96,12 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
       if (type === 'late') {
         payload = {
           action: 'trigger_late_alert',
-          employeeName: 'Sample Staff (Test)',
-          siteName: 'Main Hub',
-          checkInTime: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-          lateMinutes: 25,
+          employeeName: 'Kavita Shinde (Sample)',
+          employeePhone: config.managerPhone || '917709632898',
+          designation: 'Service Counter',
+          siteName: 'NewRelic DC',
+          checkInTime: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+          lateMinutes: 22,
           cutoff: '06:30 AM',
           userEmail,
         };

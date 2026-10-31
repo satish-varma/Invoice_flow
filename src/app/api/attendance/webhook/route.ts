@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, addDoc } from 'firebase/firestore';
 import {
   getAlertGatewayConfig,
   dispatchAlert,
@@ -81,18 +81,19 @@ export async function POST(req: NextRequest) {
     // Process Command
     const cmd = textBody.trim().toUpperCase();
 
-    // Pull live attendance data
+    // Pull live attendance data and config in parallel for maximum speed
     const now = new Date();
     const kolkataDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
 
-    const empSnap = await getDocs(collection(db, EMPLOYEES_COLLECTION));
+    const [empSnap, attSnap] = await Promise.all([
+      getDocs(collection(db, EMPLOYEES_COLLECTION)),
+      getDocs(query(collection(db, ATTENDANCE_COLLECTION), where('date', '==', kolkataDateStr))),
+    ]);
+
     const employees = empSnap.docs
       .map((d) => ({ id: d.id, ...d.data() } as any))
       .filter((e) => e.status !== 'inactive');
 
-    const attSnap = await getDocs(
-      query(collection(db, ATTENDANCE_COLLECTION), where('date', '==', kolkataDateStr))
-    );
     const attendanceRecords = attSnap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
 
     const checkedInEmpDocIds = new Set(

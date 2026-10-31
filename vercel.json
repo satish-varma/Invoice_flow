@@ -1,0 +1,20 @@
+{
+  "crons": [
+    {
+      "path": "/api/attendance/cron?trigger=absent",
+      "schedule": "15 1 * * *"
+    },
+    {
+      "path": "/api/attendance/cron?trigger=digest",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/attendance/cron?trigger=checkout",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/tracker/cron",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

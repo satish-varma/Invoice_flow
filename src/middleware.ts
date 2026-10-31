@@ -42,9 +42,10 @@ export default withAuth(
       return NextResponse.next();
     }
 
-    // Cron and backend API authorization bypass - endpoints validate their own security/tokens
+    // Cron, Webhook, and backend API authorization bypass - endpoints validate their own security/tokens
     if (
       pathname.startsWith('/api/attendance/cron') ||
+      pathname.startsWith('/api/attendance/webhook') ||
       pathname.startsWith('/api/tracker/cron')
     ) {
       return NextResponse.next();
@@ -217,6 +218,7 @@ export default withAuth(
         }
         if (
           pathname.startsWith('/api/attendance/cron') ||
+          pathname.startsWith('/api/attendance/webhook') ||
           pathname.startsWith('/api/tracker/cron')
         ) {
           return true;

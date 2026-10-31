@@ -853,6 +853,36 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
                 </div>
               </div>
 
+              {/* 2-Way WhatsApp Bot Webhook Reference Card */}
+              <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-4 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                    <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                    2-Way Interactive WhatsApp Bot
+                  </h4>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                    Live Assistant
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-900/80 leading-relaxed">
+                  Managers can reply with keywords (<code>STATUS</code>, <code>ABSENT</code>, <code>LATE</code>, <code>ONDUTY</code>) directly to <code>+1 (555) 210-3921</code> to receive real-time headcount &amp; turnout.
+                </p>
+                <div className="bg-white/80 border border-emerald-200/80 rounded-xl p-3 text-[11px] font-mono space-y-1.5 text-slate-700">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-slate-500">Callback URL:</span>
+                    <span className="text-emerald-700 font-bold truncate ml-2">https://invoiceflow.thegutguru.in/api/attendance/webhook</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-slate-500">Verify Token:</span>
+                    <span className="text-indigo-700 font-bold">invoiceflow_wa_webhook_2026</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-slate-500">Webhook Field:</span>
+                    <span className="text-slate-800 font-bold">messages</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Test Ping Section */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
                 <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">

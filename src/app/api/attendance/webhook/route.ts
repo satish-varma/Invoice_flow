@@ -106,7 +106,13 @@ export async function POST(req: NextRequest) {
 
     let replyMessage = '';
 
-    if (cmd.includes('STATUS') || cmd.includes('TODAY') || cmd.includes('SUMMARY') || cmd.includes('DIGEST')) {
+    if (
+      cmd.includes('STATUS') ||
+      cmd.includes('TODAY') ||
+      cmd.includes('SUMMARY') ||
+      cmd.includes('DIGEST') ||
+      cmd.includes('TURNOUT')
+    ) {
       const pct = totalRoster > 0 ? Math.round((presentCount / totalRoster) * 100) : 0;
       const meter = buildProgressBar(presentCount, totalRoster, 10);
       const absentList = absentEmployees.length > 0
@@ -114,7 +120,7 @@ export async function POST(req: NextRequest) {
         : '  None (100% Turnout! 🎉)';
 
       replyMessage = `📊 Live Shift Status — ${kolkataDateStr}\n📍 Facility: All Sites · Turnout: ${pct}% ${pct >= 75 ? '🟢' : '🔴'}\n━━━━━━━━━━━━━━━━━━━━\nTurnout Meter: [${meter}] ${presentCount} / ${totalRoster} Staff\n\n🟢 On Duty Right Now: ${onDutyRecords.length}\n🔴 Absent / Pending (${absentEmployees.length}):\n${absentList}\n\n🔗 Live Kiosk:\nhttps://studio--invoiceflow-24nxt.us-central1.hosted.app/newrelic/attendance\n\n— The Gut Guru Live Bot`;
-    } else if (cmd.includes('ABSENT')) {
+    } else if (cmd.includes('ABSENT') || cmd.includes('MISSING')) {
       if (absentEmployees.length === 0) {
         replyMessage = `🎉 100% Turnout Today — ${kolkataDateStr}\n\nAll ${totalRoster} scheduled team members have clocked in successfully!\n— The Gut Guru Live Bot`;
       } else {
@@ -126,7 +132,7 @@ export async function POST(req: NextRequest) {
 
         replyMessage = `🔴 Absent / Pending Staff Today (${absentEmployees.length}) — ${kolkataDateStr}\n━━━━━━━━━━━━━━━━━━━━\n${list}\n\n🔗 Live Kiosk:\nhttps://studio--invoiceflow-24nxt.us-central1.hosted.app/newrelic/attendance\n\n— The Gut Guru Live Bot`;
       }
-    } else if (cmd.includes('LATE')) {
+    } else if (cmd.includes('LATE') || cmd.includes('DELAY')) {
       const lateStaff: string[] = [];
       for (const r of attendanceRecords) {
         if (r.checkIn?.time) {
@@ -151,7 +157,14 @@ export async function POST(req: NextRequest) {
       } else {
         replyMessage = `⏰ Late Arrivals Today (${lateStaff.length}) — ${kolkataDateStr}\n━━━━━━━━━━━━━━━━━━━━\n${lateStaff.join('\n')}\n\n— The Gut Guru Live Bot`;
       }
-    } else if (cmd.includes('ONDUTY') || cmd.includes('ACTIVE') || cmd.includes('CHECKOUT')) {
+    } else if (
+      cmd.includes('ONDUTY') ||
+      cmd.includes('ON DUTY') ||
+      cmd.includes('DUTY') ||
+      cmd.includes('PRESENT') ||
+      cmd.includes('ACTIVE') ||
+      cmd.includes('CHECKOUT')
+    ) {
       if (onDutyRecords.length === 0) {
         replyMessage = `🟢 On-Duty Staff — ${kolkataDateStr}\n\nNo active shifts punched in currently.\n— The Gut Guru Live Bot`;
       } else {

@@ -870,7 +870,7 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
                 <div className="bg-white/80 border border-emerald-200/80 rounded-xl p-3 text-[11px] font-mono space-y-1.5 text-slate-700">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-slate-500">Callback URL:</span>
-                    <span className="text-emerald-700 font-bold truncate ml-2">https://invoiceflow.thegutguru.in/api/attendance/webhook</span>
+                    <span className="text-emerald-700 font-bold truncate ml-2">https://studio--invoiceflow-24nxt.us-central1.hosted.app/api/attendance/webhook</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-slate-500">Verify Token:</span>

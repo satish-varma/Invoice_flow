@@ -213,7 +213,7 @@ export function generateAlertMessage(
       const list = data.absentNames && data.absentNames.length > 0
         ? data.absentNames.map((n, i) => `  ${i + 1}. ${n}`).join('\n')
         : '  None (All checked out! 🎉)';
-      return `🏁 Missed Check-Out Notice — ${today}\n📍 Facility: ${site}\n━━━━━━━━━━━━━━━━━━━━\nActive shifts without check-out punch:\n${list}\n\n🔗 Review Active Shifts:\nhttps://invoiceflow.thegutguru.in/newrelic/attendance\n\n— The Gut Guru Hospitality Operations`;
+      return `🏁 Missed Check-Out Notice — ${today}\n📍 Facility: ${site}\n━━━━━━━━━━━━━━━━━━━━\nActive shifts without check-out punch:\n${list}\n\n🔗 Review Active Shifts:\nhttps://studio--invoiceflow-24nxt.us-central1.hosted.app/newrelic/attendance\n\n— The Gut Guru Hospitality Operations`;
     }
 
     case 'manager_digest': {
@@ -226,7 +226,7 @@ export function generateAlertMessage(
         ? data.absentNames.map((n, i) => `  ${i + 1}. ${n}`).join('\n')
         : '  None (100% Turnout! 🎉)';
 
-      return `📊 Shift Attendance Digest — ${today}\n📍 Facility: ${site} · Turnout: ${pct}% ${pct >= 75 ? '🟢' : '🔴'}\n━━━━━━━━━━━━━━━━━━━━\nTurnout Meter: [${meter}] ${present} / ${total} Staff\n\n🟢 On Duty Right Now: ${data.onDutyCount || 0}\n🔴 Absent / Pending (${absentCount}):\n${absentList}\n\n🔗 Live Attendance Kiosk:\nhttps://invoiceflow.thegutguru.in/newrelic/attendance\n\n— The Gut Guru Hospitality Operations`;
+      return `📊 Shift Attendance Digest — ${today}\n📍 Facility: ${site} · Turnout: ${pct}% ${pct >= 75 ? '🟢' : '🔴'}\n━━━━━━━━━━━━━━━━━━━━\nTurnout Meter: [${meter}] ${present} / ${total} Staff\n\n🟢 On Duty Right Now: ${data.onDutyCount || 0}\n🔴 Absent / Pending (${absentCount}):\n${absentList}\n\n🔗 Live Attendance Kiosk:\nhttps://studio--invoiceflow-24nxt.us-central1.hosted.app/newrelic/attendance\n\n— The Gut Guru Hospitality Operations`;
     }
 
     case 'group_absent_alert':
@@ -235,7 +235,7 @@ export function generateAlertMessage(
       const absentList = data.absentNames && data.absentNames.length > 0
         ? data.absentNames.map((n, i) => `  ${i + 1}. ${n}`).join('\n')
         : '  All staff present! 🎉';
-      return `📢 Morning Shift Cutoff Alert — ${today}\n📍 Facility: ${site} · Cutoff: ${cutoff}\n━━━━━━━━━━━━━━━━━━━━\n⚠️ Absent / Pending Punch (${absentCount}):\n${absentList}\n\n👉 Open Attendance Kiosk:\nhttps://invoiceflow.thegutguru.in/newrelic/attendance\n\n— The Gut Guru Hospitality Operations`;
+      return `📢 Morning Shift Cutoff Alert — ${today}\n📍 Facility: ${site} · Cutoff: ${cutoff}\n━━━━━━━━━━━━━━━━━━━━\n⚠️ Absent / Pending Punch (${absentCount}):\n${absentList}\n\n👉 Open Attendance Kiosk:\nhttps://studio--invoiceflow-24nxt.us-central1.hosted.app/newrelic/attendance\n\n— The Gut Guru Hospitality Operations`;
     }
 
     case 'test_ping':

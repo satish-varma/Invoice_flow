@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
         ? absentEmployees.map((e, idx) => `  ${idx + 1}. ${e.name} (${e.designation || 'Staff'})`).join('\n')
         : '  None (100% Turnout! 🎉)';
 
-      replyMessage = `📊 Live Shift Status — ${kolkataDateStr}\n📍 Facility: All Sites · Turnout: ${pct}% ${pct >= 75 ? '🟢' : '🔴'}\n━━━━━━━━━━━━━━━━━━━━\nTurnout Meter: [${meter}] ${presentCount} / ${totalRoster} Staff\n\n🟢 On Duty Right Now: ${onDutyRecords.length}\n🔴 Absent / Pending (${absentEmployees.length}):\n${absentList}\n\n🔗 Live Kiosk:\nhttps://invoiceflow.thegutguru.in/newrelic/attendance\n\n— The Gut Guru Live Bot`;
+      replyMessage = `📊 Live Shift Status — ${kolkataDateStr}\n📍 Facility: All Sites · Turnout: ${pct}% ${pct >= 75 ? '🟢' : '🔴'}\n━━━━━━━━━━━━━━━━━━━━\nTurnout Meter: [${meter}] ${presentCount} / ${totalRoster} Staff\n\n🟢 On Duty Right Now: ${onDutyRecords.length}\n🔴 Absent / Pending (${absentEmployees.length}):\n${absentList}\n\n🔗 Live Kiosk:\nhttps://studio--invoiceflow-24nxt.us-central1.hosted.app/newrelic/attendance\n\n— The Gut Guru Live Bot`;
     } else if (cmd.includes('ABSENT')) {
       if (absentEmployees.length === 0) {
         replyMessage = `🎉 100% Turnout Today — ${kolkataDateStr}\n\nAll ${totalRoster} scheduled team members have clocked in successfully!\n— The Gut Guru Live Bot`;
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
           return `  ${i + 1}. ${e.name}${role}${phone}`;
         }).join('\n');
 
-        replyMessage = `🔴 Absent / Pending Staff Today (${absentEmployees.length}) — ${kolkataDateStr}\n━━━━━━━━━━━━━━━━━━━━\n${list}\n\n🔗 Live Kiosk:\nhttps://invoiceflow.thegutguru.in/newrelic/attendance\n\n— The Gut Guru Live Bot`;
+        replyMessage = `🔴 Absent / Pending Staff Today (${absentEmployees.length}) — ${kolkataDateStr}\n━━━━━━━━━━━━━━━━━━━━\n${list}\n\n🔗 Live Kiosk:\nhttps://studio--invoiceflow-24nxt.us-central1.hosted.app/newrelic/attendance\n\n— The Gut Guru Live Bot`;
       }
     } else if (cmd.includes('LATE')) {
       const lateStaff: string[] = [];

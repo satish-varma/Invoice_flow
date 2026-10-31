@@ -59,15 +59,34 @@ export const DEFAULT_ALERT_CONFIG: AlertGatewayConfig = {
 
 /** Get the configured Alert Gateway settings from Firestore */
 export async function getAlertGatewayConfig(): Promise<AlertGatewayConfig> {
+  let config: AlertGatewayConfig = { ...DEFAULT_ALERT_CONFIG };
   try {
     const snap = await getDoc(doc(db, SETTINGS_DOC, GATEWAY_KEY));
     if (snap.exists()) {
-      return { ...DEFAULT_ALERT_CONFIG, ...snap.data() } as AlertGatewayConfig;
+      config = { ...DEFAULT_ALERT_CONFIG, ...snap.data() } as AlertGatewayConfig;
     }
   } catch (err) {
     console.warn('Error fetching alert gateway config from Firestore:', err);
   }
-  return DEFAULT_ALERT_CONFIG;
+
+  // Seamless fallback to environment variables if Meta credentials aren't in Firestore
+  const envPhoneId = process.env.META_WHATSAPP_PHONE_NUMBER_ID;
+  const envToken = process.env.META_WHATSAPP_ACCESS_TOKEN;
+  const envWabaId = process.env.META_WHATSAPP_WABA_ID;
+
+  if (envToken || envPhoneId) {
+    config.meta = {
+      phoneNumberId: config.meta?.phoneNumberId || envPhoneId || '',
+      accessToken: config.meta?.accessToken || envToken || '',
+      wabaId: config.meta?.wabaId || envWabaId || '',
+    };
+    if (config.activeProvider === 'mock' && envToken) {
+      config.activeProvider = 'meta_whatsapp';
+      config.channel = 'whatsapp';
+    }
+  }
+
+  return config;
 }
 
 /** Save updated Alert Gateway settings to Firestore */
@@ -210,37 +229,94 @@ async function sendMetaWhatsApp(
   message: string
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   const meta = config.meta;
-  if (!meta?.phoneNumberId || !meta?.accessToken) {
+  const phoneNumberId = meta?.phoneNumberId || process.env.META_WHATSAPP_PHONE_NUMBER_ID;
+  const accessToken = meta?.accessToken || process.env.META_WHATSAPP_ACCESS_TOKEN;
+
+  if (!phoneNumberId || !accessToken) {
     return { success: false, error: 'Meta WhatsApp credentials (phoneNumberId or accessToken) are missing.' };
   }
 
   const { cleanDigits } = formatPhoneNumber(recipientPhone);
-  const endpoint = `https://graph.facebook.com/v19.0/${meta.phoneNumberId}/messages`;
+  const endpoint = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
 
-  try {
+  const makeMetaRequest = async (payload: any) => {
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${meta.accessToken}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        recipient_type: 'individual',
-        to: cleanDigits,
-        type: 'text',
-        text: {
-          preview_url: false,
-          body: message,
-        },
-      }),
+      body: JSON.stringify(payload),
     });
-
     const data = await res.json();
-    if (!res.ok) {
-      return { success: false, error: data?.error?.message || `HTTP ${res.status}: Failed to send WhatsApp` };
+    return { ok: res.ok, status: res.status, data };
+  };
+
+  try {
+    const isTemplateRequest = message === 'hello_world' || message.startsWith('TEMPLATE:hello_world');
+
+    const primaryPayload = isTemplateRequest
+      ? {
+          messaging_product: 'whatsapp',
+          to: cleanDigits,
+          type: 'template',
+          template: {
+            name: 'hello_world',
+            language: { code: 'en_US' },
+          },
+        }
+      : {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: cleanDigits,
+          type: 'text',
+          text: {
+            preview_url: false,
+            body: message,
+          },
+        };
+
+    const { ok, status, data } = await makeMetaRequest(primaryPayload);
+
+    if (ok) {
+      return { success: true, data };
     }
-    return { success: true, data };
+
+    const errorCode = data?.error?.code;
+
+    // Error 131030: Number not in developer test allowed list
+    if (errorCode === 131030) {
+      return {
+        success: false,
+        error: `(#131030) Phone number +${cleanDigits} is not in your Meta Test Allowed List. In Meta Developer Console (WhatsApp > API Setup > Step 2: "To" dropdown), click "Manage phone number list", add +${cleanDigits}, and verify via OTP.`,
+      };
+    }
+
+    // Error 131047: Customer service window is closed (>24h). Fall back to approved hello_world template for test pings
+    if (errorCode === 131047 && !isTemplateRequest) {
+      console.warn('[MetaWhatsApp] 24h custom text window closed. Attempting hello_world template fallback...');
+      const fallbackPayload = {
+        messaging_product: 'whatsapp',
+        to: cleanDigits,
+        type: 'template',
+        template: {
+          name: 'hello_world',
+          language: { code: 'en_US' },
+        },
+      };
+      const fallbackRes = await makeMetaRequest(fallbackPayload);
+      if (fallbackRes.ok) {
+        return {
+          success: true,
+          data: { ...fallbackRes.data, note: 'Delivered via pre-approved template (24h custom text window was closed)' },
+        };
+      }
+    }
+
+    return {
+      success: false,
+      error: data?.error?.error_data?.details || data?.error?.message || `HTTP ${status}: Failed to send WhatsApp via Meta Cloud API`,
+    };
   } catch (err: any) {
     return { success: false, error: err.message };
   }

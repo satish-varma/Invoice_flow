@@ -339,19 +339,45 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
                         API Docs <ExternalLink className="w-2.5 h-2.5" />
                       </a>
                     </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Phone Number ID</label>
-                      <input
-                        type="text"
-                        value={config.meta?.phoneNumberId || ''}
-                        onChange={(e) => setConfig((prev) => ({
-                          ...prev,
-                          meta: { ...prev.meta!, phoneNumberId: e.target.value },
-                        }))}
-                        placeholder="e.g. 104593829482910"
-                        className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#3b2fc9]/20"
-                      />
+
+                    <div className="p-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-900 text-xs flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="font-bold text-[11px]">Active Sender Number:</span>
+                        <span className="font-mono text-[11px] font-bold text-emerald-700">+1 (555) 210-3921 (Official Meta Test Line)</span>
+                      </div>
+                      <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-200/60 text-emerald-800">Verified</span>
                     </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Phone Number ID</label>
+                        <input
+                          type="text"
+                          value={config.meta?.phoneNumberId || ''}
+                          onChange={(e) => setConfig((prev) => ({
+                            ...prev,
+                            meta: { ...prev.meta!, phoneNumberId: e.target.value },
+                          }))}
+                          placeholder="e.g. 1478203265366413"
+                          className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#3b2fc9]/20 font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Messaging Account ID (WABA ID)</label>
+                        <input
+                          type="text"
+                          value={config.meta?.wabaId || ''}
+                          onChange={(e) => setConfig((prev) => ({
+                            ...prev,
+                            meta: { ...prev.meta!, wabaId: e.target.value },
+                          }))}
+                          placeholder="e.g. 1138494142069945"
+                          className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#3b2fc9]/20 font-mono"
+                        />
+                      </div>
+                    </div>
+
                     <div>
                       <label className="block text-[11px] font-bold text-slate-600 mb-1">System User Access Token</label>
                       <input
@@ -361,9 +387,13 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
                           ...prev,
                           meta: { ...prev.meta!, accessToken: e.target.value },
                         }))}
-                        placeholder="EAA..."
+                        placeholder="EAAU2sq..."
                         className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#3b2fc9]/20 font-mono"
                       />
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] leading-relaxed">
+                      <span className="font-bold">⚠️ Meta Developer Test Mode Note:</span> Recipient numbers must be added to your <strong>&ldquo;To&rdquo; Allowed Recipient List</strong> in the Meta Developer Console (<em>WhatsApp &gt; API Setup &gt; Step 2: Select Phone Numbers &gt; Manage List</em>) and verified via OTP.
                     </div>
                   </div>
                 )}

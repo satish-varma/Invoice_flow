@@ -22,16 +22,16 @@ const GATEWAY_KEY = 'alert_gateway';
 const LOGS_COLLECTION = 'alert_logs';
 
 export const DEFAULT_ALERT_CONFIG: AlertGatewayConfig = {
-  activeProvider: 'mock',
-  channel: 'auto',
+  activeProvider: 'meta_whatsapp',
+  channel: 'whatsapp',
   ultramsg: {
     instanceId: '',
     token: '',
   },
   meta: {
-    phoneNumberId: '',
+    phoneNumberId: '1406728339194059',
     accessToken: '',
-    wabaId: '',
+    wabaId: '1353279520061969',
   },
   twilio: {
     accountSid: '',
@@ -53,7 +53,7 @@ export const DEFAULT_ALERT_CONFIG: AlertGatewayConfig = {
   },
   enableAutoLateAlert: false,
   enableAutoCheckoutReminder: false,
-  managerPhone: '',
+  managerPhone: '917709632898',
   managerSiteRouting: {},
 };
 
@@ -74,16 +74,24 @@ export async function getAlertGatewayConfig(): Promise<AlertGatewayConfig> {
   const envToken = process.env.META_WHATSAPP_ACCESS_TOKEN;
   const envWabaId = process.env.META_WHATSAPP_WABA_ID;
 
-  if (envToken || envPhoneId) {
-    config.meta = {
-      phoneNumberId: config.meta?.phoneNumberId || envPhoneId || '',
-      accessToken: config.meta?.accessToken || envToken || '',
-      wabaId: config.meta?.wabaId || envWabaId || '',
-    };
-    if (config.activeProvider === 'mock' && envToken) {
-      config.activeProvider = 'meta_whatsapp';
-      config.channel = 'whatsapp';
-    }
+  const currentPhoneId = config.meta?.phoneNumberId?.trim();
+  const currentToken = config.meta?.accessToken?.trim();
+  const currentWabaId = config.meta?.wabaId?.trim();
+
+  config.meta = {
+    phoneNumberId: currentPhoneId || envPhoneId || '1406728339194059',
+    accessToken: currentToken || envToken || '',
+    wabaId: currentWabaId || envWabaId || '1353279520061969',
+  };
+
+  // If token is available and provider was mock or missing, promote to meta_whatsapp
+  if ((config.meta.accessToken || envToken) && (config.activeProvider === 'mock' || !config.activeProvider)) {
+    config.activeProvider = 'meta_whatsapp';
+    config.channel = 'whatsapp';
+  }
+
+  if (!config.managerPhone?.trim()) {
+    config.managerPhone = '917709632898';
   }
 
   return config;
@@ -583,12 +591,12 @@ export async function dispatchAlert(
     provider,
     channel: provider === 'webhook' ? 'webhook' : (channelUsed as 'whatsapp' | 'sms'),
     recipientPhone: req.to,
-    recipientName: req.recipientName,
+    recipientName: req.recipientName || '',
     alertType: req.alertType,
     status: result.success ? (provider === 'mock' ? 'simulated' : 'sent') : 'failed',
     messageBody: message,
     providerResponse: result.data || null,
-    error: result.error,
+    error: result.error || '',
     sentBy: senderEmail || 'system',
   });
 

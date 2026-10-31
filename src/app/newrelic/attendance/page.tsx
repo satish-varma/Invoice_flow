@@ -277,6 +277,7 @@ function AttendancePageContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'send_manager_digest',
+          managerPhone: '917709632898',
           siteName: adminSiteFilter === 'all' ? 'All Sites' : adminSiteFilter.toUpperCase(),
           presentCount: adminMetrics.presentCount,
           totalRoster: adminMetrics.totalRoster,
@@ -4099,6 +4100,7 @@ function AttendancePageContent() {
           lateCount: adminMetrics.lateList.length,
           attendanceRate: adminMetrics.attendanceRate,
         }}
+        managerPhone="917709632898"
         onBroadcastGateway={handleBroadcastDigest}
         isBroadcasting={isBroadcastingDigest}
       />

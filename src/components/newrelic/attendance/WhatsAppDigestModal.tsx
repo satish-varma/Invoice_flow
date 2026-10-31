@@ -13,6 +13,7 @@ import {
   Loader2,
   ExternalLink,
   Sparkles,
+  Smartphone,
 } from 'lucide-react';
 import { generateAlertMessage } from '@/services/alertGatewayService';
 import { openWhatsAppChat, copyTextToClipboard, shareViaNative } from '@/lib/whatsapp';
@@ -32,6 +33,7 @@ interface WhatsAppDigestModalProps {
     lateCount?: number;
     attendanceRate?: number;
   };
+  managerPhone?: string;
   onBroadcastGateway?: () => Promise<void>;
   isBroadcasting?: boolean;
 }
@@ -43,6 +45,7 @@ export default function WhatsAppDigestModal({
   currentSite,
   onSiteChange,
   metrics,
+  managerPhone = '917709632898',
   onBroadcastGateway,
   isBroadcasting = false,
 }: WhatsAppDigestModalProps) {
@@ -70,8 +73,14 @@ export default function WhatsAppDigestModal({
 
   if (!isOpen) return null;
 
-  const handleOpenWhatsApp = () => {
+  const handleSendToAdmin = () => {
     triggerHaptic('medium');
+    openWhatsAppChat(managerPhone || '917709632898', digestText);
+    onClose();
+  };
+
+  const handleOpenWhatsAppPicker = () => {
+    triggerHaptic('light');
     openWhatsAppChat(undefined, digestText);
     onClose();
   };
@@ -158,14 +167,34 @@ export default function WhatsAppDigestModal({
           </div>
         </div>
 
+        {/* Target Recipient Banner */}
+        <div className="mt-4 p-2.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-950 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-700 flex items-center justify-center shrink-0">
+              <Smartphone className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
+                Target Admin WhatsApp:
+              </span>
+              <span className="font-mono text-xs font-black text-emerald-950 block">
+                {managerPhone.startsWith('+') ? managerPhone : `+${managerPhone}`}
+              </span>
+            </div>
+          </div>
+          <span className="px-2 py-0.5 rounded-full bg-emerald-200/70 text-emerald-900 text-[10px] font-black uppercase shrink-0">
+            Active Receiver
+          </span>
+        </div>
+
         {/* WhatsApp Chat Preview Bubble */}
-        <div className="mt-4">
+        <div className="mt-3">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs font-bold text-slate-700">WhatsApp Digest Preview:</span>
             <span className="text-[10px] text-slate-400 font-mono">{digestText.length} characters</span>
           </div>
 
-          <div className="bg-[#efeae2] dark:bg-slate-900 rounded-2xl p-3 border border-slate-300 relative shadow-inner max-h-56 overflow-y-auto">
+          <div className="bg-[#efeae2] dark:bg-slate-900 rounded-2xl p-3 border border-slate-300 relative shadow-inner max-h-52 overflow-y-auto">
             <div className="bg-[#d9fdd3] dark:bg-emerald-950 text-slate-900 dark:text-emerald-50 rounded-2xl rounded-tr-xs p-3 text-xs shadow-xs border border-[#c1e9be] dark:border-emerald-800 relative space-y-1 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
               {digestText}
               <div className="flex items-center justify-end gap-1 text-[10px] text-slate-500 font-sans font-medium pt-1">
@@ -178,35 +207,17 @@ export default function WhatsAppDigestModal({
 
         {/* Action Buttons */}
         <div className="mt-5 space-y-2.5">
-          {/* Primary Action: Open WhatsApp */}
-          <button
-            type="button"
-            onClick={handleOpenWhatsApp}
-            className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 transition-all"
-          >
-            <MessageCircle className="w-4 h-4 text-white" />
-            <span>Open in WhatsApp (Pick Group or Contact)</span>
-            <ExternalLink className="w-3.5 h-3.5 text-white/80 ml-auto" />
-          </button>
-
-          {/* Secondary Actions */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {/* Direct & Cloud API Primary Actions */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={handleCopy}
-              className="h-9 px-3 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+              onClick={handleSendToAdmin}
+              className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 transition-all"
+              title="Open WhatsApp chat directly with Admin (+91 7709632898)"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
-              <span>{copied ? 'Copied Report!' : 'Copy Report'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleShare}
-              className="h-9 px-3 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <Share2 className="w-3.5 h-3.5 text-slate-500" />
-              <span>Share...</span>
+              <MessageCircle className="w-4 h-4 text-white shrink-0" />
+              <span className="truncate">Send to Admin ({managerPhone.slice(-10)})</span>
+              <ExternalLink className="w-3.5 h-3.5 text-white/80 shrink-0 ml-auto" />
             </button>
 
             {onBroadcastGateway && (
@@ -214,22 +225,53 @@ export default function WhatsAppDigestModal({
                 type="button"
                 onClick={onBroadcastGateway}
                 disabled={isBroadcasting}
-                className="col-span-2 sm:col-span-1 h-9 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-2xs"
-                title="Broadcast directly to manager phone configured in Alert Gateway"
+                className="w-full h-11 bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-700 hover:from-emerald-700 hover:to-indigo-800 disabled:opacity-50 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md shadow-teal-700/20"
+                title="Send via Official Meta WhatsApp Cloud API"
               >
                 {isBroadcasting ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
                 ) : (
-                  <Send className="w-3.5 h-3.5" />
+                  <Send className="w-4 h-4 text-white shrink-0" />
                 )}
-                <span>Auto Broadcast</span>
+                <span>Auto Broadcast (Cloud API)</span>
               </button>
             )}
+          </div>
+
+          {/* Utility Actions */}
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={handleOpenWhatsAppPicker}
+              className="h-9 px-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+              title="Pick any contact or group on WhatsApp"
+            >
+              <MessageCircle className="w-3.5 h-3.5 text-slate-500" />
+              <span className="truncate">Other Chat</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="h-9 px-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
+              <span className="truncate">{copied ? 'Copied!' : 'Copy'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleShare}
+              className="h-9 px-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <Share2 className="w-3.5 h-3.5 text-slate-500" />
+              <span className="truncate">Share</span>
+            </button>
           </div>
         </div>
 
         <p className="text-[11px] text-slate-400 text-center mt-3 font-medium">
-          Opens WhatsApp directly on your phone or desktop. 100% Free.
+          Broadcasts directly to Admin WhatsApp (+91 7709632898) via Meta Cloud API or native WhatsApp.
         </p>
       </div>
     </div>

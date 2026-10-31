@@ -42,6 +42,14 @@ export default withAuth(
       return NextResponse.next();
     }
 
+    // Cron and backend API alerts authorization bypass
+    if (pathname.startsWith('/api/attendance/alerts') || pathname.startsWith('/api/tracker/cron')) {
+      const auth = req.headers.get('authorization');
+      if (auth && (auth === `Bearer ${process.env.CRON_SECRET}` || auth === `Bearer ${process.env.NEXTAUTH_SECRET}`)) {
+        return NextResponse.next();
+      }
+    }
+
     if (!token) {
       return NextResponse.redirect(new URL('/login', req.url));
     }

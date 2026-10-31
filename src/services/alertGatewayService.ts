@@ -326,23 +326,36 @@ async function sendMetaWhatsApp(
       };
     }
 
-    // Error 131047: Customer service window is closed (>24h). Fall back to approved hello_world template for test pings
+    // Error 131047: Customer service window is closed (>24h). Fall back to approved attendance_alert_notice template
     if (errorCode === 131047 && !isTemplateRequest) {
-      console.warn('[MetaWhatsApp] 24h custom text window closed. Attempting hello_world template fallback...');
+      console.warn('[MetaWhatsApp] 24h custom text window closed. Attempting attendance_alert_notice template fallback...');
+      // Sanitize multi-line text into a single-line string for Meta template variable rules
+      const sanitizedText = message.replace(/[\r\n]+/g, ' · ').replace(/\s{2,}/g, ' ').slice(0, 1000);
       const fallbackPayload = {
         messaging_product: 'whatsapp',
         to: cleanDigits,
         type: 'template',
         template: {
-          name: 'hello_world',
+          name: 'attendance_alert_notice',
           language: { code: 'en_US' },
+          components: [
+            {
+              type: 'body',
+              parameters: [
+                {
+                  type: 'text',
+                  text: sanitizedText,
+                },
+              ],
+            },
+          ],
         },
       };
       const fallbackRes = await makeMetaRequest(fallbackPayload);
       if (fallbackRes.ok) {
         return {
           success: true,
-          data: { ...fallbackRes.data, note: 'Delivered via pre-approved template (24h custom text window was closed)' },
+          data: { ...fallbackRes.data, note: 'Delivered via pre-approved attendance_alert_notice template (24h window fallback)' },
         };
       }
     }

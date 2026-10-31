@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, addDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import {
   getAlertGatewayConfig,
   dispatchAlert,
@@ -12,6 +12,45 @@ export const dynamic = 'force-dynamic';
 
 const ATTENDANCE_COLLECTION = 'newrelic_attendance';
 const EMPLOYEES_COLLECTION = 'newrelic_employees';
+
+// In-Memory Fast Cache (TTL: 60 seconds)
+let cachedConfig: { data: any; expiry: number } | null = null;
+let cachedEmployees: { data: any[]; expiry: number } | null = null;
+
+async function getCachedConfigFast() {
+  const now = Date.now();
+  if (cachedConfig && cachedConfig.expiry > now) {
+    return cachedConfig.data;
+  }
+  const config = await getAlertGatewayConfig();
+  cachedConfig = { data: config, expiry: now + 60_000 };
+  return config;
+}
+
+async function getCachedEmployeesFast() {
+  const now = Date.now();
+  if (cachedEmployees && cachedEmployees.expiry > now) {
+    return cachedEmployees.data;
+  }
+  const empSnap = await getDocs(collection(db, EMPLOYEES_COLLECTION));
+  const employees = empSnap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as any))
+    .filter((e) => e.status !== 'inactive');
+  cachedEmployees = { data: employees, expiry: now + 60_000 };
+  return employees;
+}
+
+function getISTTimeParts(d: Date) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(d);
+  const h = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10);
+  const m = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10);
+  return { hour: h, minute: m, totalMinutes: h * 60 + m };
+}
 
 /** GET handler: Meta Webhook URL Verification */
 export async function GET(req: NextRequest) {
@@ -31,30 +70,33 @@ export async function GET(req: NextRequest) {
   return new Response('Forbidden', { status: 403 });
 }
 
-/** POST handler: Inbound WhatsApp Messages (2-Way Bot) */
+/** POST handler: Inbound WhatsApp Messages (2-Way Interactive Bot) */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Check if this is a WhatsApp message webhook payload
     const entry = body?.entry?.[0];
     const change = entry?.changes?.[0]?.value;
     const messages = change?.messages;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      // Status update (sent/delivered/read) - return 200 immediately
+      // Status update (delivered, read, sent) — return 200 immediately
       return NextResponse.json({ status: 'ignored_non_message' });
     }
 
     const message = messages[0];
     const senderPhone = message.from; // e.g. "917709632898"
     const contactName = change?.contacts?.[0]?.profile?.name || 'Manager';
-    const textBody = message.text?.body?.trim() || '';
+    const textBody = (message.text?.body || message.button?.text || '').trim();
 
-    console.log(`[WhatsAppBot] Incoming message from +${senderPhone} (${contactName}): "${textBody}"`);
+    if (!textBody) {
+      return NextResponse.json({ status: 'empty_body' });
+    }
 
-    // Verify Sender Authorization (Managers / Admins only)
-    const config = await getAlertGatewayConfig();
+    console.log(`[WhatsAppBot] Incoming from +${senderPhone} (${contactName}): "${textBody}"`);
+
+    // 1. Authorize Sender (Managers / Admins only)
+    const config = await getCachedConfigFast();
     const cleanSender = formatPhoneNumber(senderPhone).cleanDigits;
 
     const authorizedPhones = new Set(
@@ -73,26 +115,22 @@ export async function POST(req: NextRequest) {
         to: senderPhone,
         recipientName: contactName,
         alertType: 'custom',
-        customMessage: `👋 Hello ${contactName}!\n\nThis is The Gut Guru Automated Attendance System. Your number (+${senderPhone}) is not currently listed as an authorized manager.\n\nPlease contact administration to add your number to the manager alert list.`,
+        customMessage: `👋 Hello ${contactName}!\n\nThis is The Gut Guru Automated Attendance System. Your number (+${senderPhone}) is not listed as an authorized manager.\n\nPlease contact administration to add your number to the manager alert list.`,
       });
       return NextResponse.json({ status: 'unauthorized_reply_sent' });
     }
 
-    // Process Command
+    // 2. Parse Command (Case-Insensitive & Flexible)
     const cmd = textBody.trim().toUpperCase();
 
-    // Pull live attendance data and config in parallel for maximum speed
+    // 3. Fast Concurrent Data Fetch
     const now = new Date();
     const kolkataDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
 
-    const [empSnap, attSnap] = await Promise.all([
-      getDocs(collection(db, EMPLOYEES_COLLECTION)),
+    const [employees, attSnap] = await Promise.all([
+      getCachedEmployeesFast(),
       getDocs(query(collection(db, ATTENDANCE_COLLECTION), where('date', '==', kolkataDateStr))),
     ]);
-
-    const employees = empSnap.docs
-      .map((d) => ({ id: d.id, ...d.data() } as any))
-      .filter((e) => e.status !== 'inactive');
 
     const attendanceRecords = attSnap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
 
@@ -106,6 +144,7 @@ export async function POST(req: NextRequest) {
 
     let replyMessage = '';
 
+    // --- Command: STATUS / TODAY / SUMMARY / TURNOUT ---
     if (
       cmd.includes('STATUS') ||
       cmd.includes('TODAY') ||
@@ -120,7 +159,10 @@ export async function POST(req: NextRequest) {
         : '  None (100% Turnout! 🎉)';
 
       replyMessage = `📊 Live Shift Status — ${kolkataDateStr}\n📍 Facility: All Sites · Turnout: ${pct}% ${pct >= 75 ? '🟢' : '🔴'}\n━━━━━━━━━━━━━━━━━━━━\nTurnout Meter: [${meter}] ${presentCount} / ${totalRoster} Staff\n\n🟢 On Duty Right Now: ${onDutyRecords.length}\n🔴 Absent / Pending (${absentEmployees.length}):\n${absentList}\n\n🔗 Live Kiosk:\nhttps://studio--invoiceflow-24nxt.us-central1.hosted.app/newrelic/attendance\n\n— The Gut Guru Live Bot`;
-    } else if (cmd.includes('ABSENT') || cmd.includes('MISSING')) {
+    }
+
+    // --- Command: ABSENT / MISSING ---
+    else if (cmd.includes('ABSENT') || cmd.includes('MISSING')) {
       if (absentEmployees.length === 0) {
         replyMessage = `🎉 100% Turnout Today — ${kolkataDateStr}\n\nAll ${totalRoster} scheduled team members have clocked in successfully!\n— The Gut Guru Live Bot`;
       } else {
@@ -132,8 +174,12 @@ export async function POST(req: NextRequest) {
 
         replyMessage = `🔴 Absent / Pending Staff Today (${absentEmployees.length}) — ${kolkataDateStr}\n━━━━━━━━━━━━━━━━━━━━\n${list}\n\n🔗 Live Kiosk:\nhttps://studio--invoiceflow-24nxt.us-central1.hosted.app/newrelic/attendance\n\n— The Gut Guru Live Bot`;
       }
-    } else if (cmd.includes('LATE') || cmd.includes('DELAY')) {
-      const lateStaff: string[] = [];
+    }
+
+    // --- Command: LATE / DELAY ---
+    else if (cmd.includes('LATE') || cmd.includes('DELAY')) {
+      const lateStaff: Array<{ name: string; time: string; delayMins: number }> = [];
+
       for (const r of attendanceRecords) {
         if (r.checkIn?.time) {
           const punchDate = new Date(r.checkIn.time);
@@ -143,11 +189,21 @@ export async function POST(req: NextRequest) {
             minute: '2-digit',
             hour12: true,
           });
-          const punchHour = punchDate.getHours();
-          const punchMin = punchDate.getMinutes();
-          if (r.isLate || punchHour > 6 || (punchHour === 6 && punchMin > 30)) {
-            const minsLate = r.lateMinutes || Math.max(1, punchHour * 60 + punchMin - (6 * 60 + 30));
-            lateStaff.push(`  • ${r.employeeName}: ${punchTimeStr} (+${minsLate}m delay)`);
+
+          const { totalMinutes } = getISTTimeParts(punchDate);
+          const defaultCutoff = 6 * 60 + 30; // 06:30 AM IST (390 mins)
+
+          const isLate = r.isLate === true || totalMinutes > defaultCutoff;
+          if (isLate) {
+            const delayMins = r.lateMinutes && r.lateMinutes > 0
+              ? r.lateMinutes
+              : Math.max(1, totalMinutes - defaultCutoff);
+
+            lateStaff.push({
+              name: r.employeeName || 'Staff',
+              time: punchTimeStr,
+              delayMins,
+            });
           }
         }
       }
@@ -155,9 +211,13 @@ export async function POST(req: NextRequest) {
       if (lateStaff.length === 0) {
         replyMessage = `⏰ Late Arrivals Report — ${kolkataDateStr}\n\n✅ Excellent! Zero staff late arrivals recorded today.\n— The Gut Guru Live Bot`;
       } else {
-        replyMessage = `⏰ Late Arrivals Today (${lateStaff.length}) — ${kolkataDateStr}\n━━━━━━━━━━━━━━━━━━━━\n${lateStaff.join('\n')}\n\n— The Gut Guru Live Bot`;
+        const list = lateStaff.map((s, i) => `  ${i + 1}. ${s.name}: ${s.time} (+${s.delayMins}m past cutoff)`).join('\n');
+        replyMessage = `⏰ Late Arrivals Today (${lateStaff.length}) — ${kolkataDateStr}\n━━━━━━━━━━━━━━━━━━━━\n${list}\n\n🔗 Live Kiosk:\nhttps://studio--invoiceflow-24nxt.us-central1.hosted.app/newrelic/attendance\n\n— The Gut Guru Live Bot`;
       }
-    } else if (
+    }
+
+    // --- Command: ONDUTY / ACTIVE / CHECKOUT / PRESENT ---
+    else if (
       cmd.includes('ONDUTY') ||
       cmd.includes('ON DUTY') ||
       cmd.includes('DUTY') ||
@@ -182,12 +242,14 @@ export async function POST(req: NextRequest) {
 
         replyMessage = `🟢 On-Duty Staff Right Now (${onDutyRecords.length}) — ${kolkataDateStr}\n━━━━━━━━━━━━━━━━━━━━\n${list}\n\n— The Gut Guru Live Bot`;
       }
-    } else {
-      // Default: Help Menu
+    }
+
+    // --- Default: Help & Commands Menu ---
+    else {
       replyMessage = `👋 Hello ${contactName}! I am The Gut Guru Attendance Bot.\n\nAvailable Manager Commands:\n• STATUS — Live shift attendance & turnout meter\n• ABSENT — Who has not checked in today\n• LATE — Today's late arrival log\n• ONDUTY — Staff currently on shift\n• HELP — Show this menu\n\nJust reply with any keyword to query live data!`;
     }
 
-    // Send WhatsApp response
+    // 4. Send WhatsApp Reply
     await dispatchAlert({
       to: senderPhone,
       recipientName: contactName,

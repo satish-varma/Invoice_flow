@@ -402,6 +402,8 @@ export async function getTodayAllAttendance(date: string, siteId?: string): Prom
   }
 }
 
+let isMonthlyIndexMissing = false;
+
 /** Get attendance for one employee for a month */
 export async function getEmployeeMonthlyAttendance(
   employeeDocId: string,
@@ -409,33 +411,41 @@ export async function getEmployeeMonthlyAttendance(
 ): Promise<NewRelicAttendance[]> {
   const start = `${yearMonth}-01`;
   const end = `${yearMonth}-31`;
-  try {
-    const q = query(
-      collection(db, ATTENDANCE_COLLECTION),
-      where('employeeDocId', '==', employeeDocId),
-      where('date', '>=', start),
-      where('date', '<=', end)
-    );
-    const snap = await getDocs(q);
-    const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance));
-    return list.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-  } catch (error) {
-    console.warn('Falling back for getEmployeeMonthlyAttendance:', error);
+
+  // If index is known to be missing in this session, use memory-filtered query directly
+  if (!isMonthlyIndexMissing) {
     try {
-      // Query by employeeDocId only, filter dates in memory to bypass composite index requirement
-      const fallbackQuery = query(
+      const q = query(
         collection(db, ATTENDANCE_COLLECTION),
-        where('employeeDocId', '==', employeeDocId)
+        where('employeeDocId', '==', employeeDocId),
+        where('date', '>=', start),
+        where('date', '<=', end)
       );
-      const snap = await getDocs(fallbackQuery);
-      const list = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance))
-        .filter((d) => d.date >= start && d.date <= end);
+      const snap = await getDocs(q);
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance));
       return list.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-    } catch (e2) {
-      console.error('Error fetching monthly attendance:', e2);
-      return [];
+    } catch (error: any) {
+      if (error?.code === 'failed-precondition' || error?.message?.includes('requires an index')) {
+        isMonthlyIndexMissing = true;
+      }
+      console.warn('Falling back for getEmployeeMonthlyAttendance (using in-memory date filter):', error?.message || error);
     }
+  }
+
+  try {
+    // Query by employeeDocId only, filter dates in memory to bypass composite index requirement
+    const fallbackQuery = query(
+      collection(db, ATTENDANCE_COLLECTION),
+      where('employeeDocId', '==', employeeDocId)
+    );
+    const snap = await getDocs(fallbackQuery);
+    const list = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as NewRelicAttendance))
+      .filter((d) => d.date >= start && d.date <= end);
+    return list.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  } catch (e2) {
+    console.error('Error fetching monthly attendance:', e2);
+    return [];
   }
 }
 

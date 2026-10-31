@@ -3,7 +3,7 @@
 import { NewRelicChallan } from '@/types/challan';
 
 import React, { useState, useRef } from 'react';
-import { Loader2, Paperclip, UploadCloud, Trash2, Camera, Eye, X, Download } from 'lucide-react';
+import { Loader2, Paperclip, UploadCloud, Trash2, Camera, Eye, X, Download, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { hasPermission } from '@/types/permissions';
 import { Badge } from '@/components/ui/badge';
 import { triggerHaptic } from '@/lib/haptics';
+import { compressDocumentFile, formatFileSize } from '@/lib/imageCompression';
 
 interface NewRelicAttachmentModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export function NewRelicAttachmentModal({ isOpen, onClose, challan, onUpdate, ti
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatusText, setUploadStatusText] = useState<string>('');
   const [isDragging, setIsDragging] = useState(false);
   const [deletingUrl, setDeletingUrl] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -58,14 +60,34 @@ export function NewRelicAttachmentModal({ isOpen, onClose, challan, onUpdate, ti
     triggerHaptic('medium');
     try {
       const uploadedUrls: string[] = [];
+      const compressionNotes: string[] = [];
+
       for (let i = 0; i < fileList.length; i++) {
-        const file = fileList[i];
+        let file = fileList[i];
         
-        // Basic validation
-        if (file.size > 12 * 1024 * 1024) {
-          throw new Error(`File ${file.name} is too large (max 12MB)`);
+        // Safety pre-check: Reject absurdly large files (> 35MB) before processing
+        if (file.size > 35 * 1024 * 1024) {
+          throw new Error(`File "${file.name}" is too large (${formatFileSize(file.size)}). Max allowed is 20MB.`);
         }
-        
+
+        // Automatic smart compression for document photos (preserves sharp 2048px text/stamps)
+        if (file.type && file.type.startsWith('image/') && !file.type.includes('svg')) {
+          setUploadStatusText(`Compressing ${file.name}...`);
+          const compResult = await compressDocumentFile(file, 2048, 2048, 0.85);
+          if (compResult.compressed) {
+            compressionNotes.push(
+              `${formatFileSize(compResult.originalSize)} → ${formatFileSize(compResult.compressedSize)} (-${compResult.savingsPercent}%)`
+            );
+            file = compResult.file;
+          }
+        }
+
+        // Enforce 20MB limit (e.g. for PDFs or uncompressed files)
+        if (file.size > 20 * 1024 * 1024) {
+          throw new Error(`File "${file.name}" is too large (${formatFileSize(file.size)}). Max allowed is 20MB.`);
+        }
+
+        setUploadStatusText(`Uploading ${file.name}...`);
         if (type === 'signed_copy') {
           const url = await uploadStorageFile(challan.dcNumber, file, 'newrelic-signed-dcs', 'signed_');
           await addSignedCopyUrl(challan.id, url, user?.email || null);
@@ -87,12 +109,14 @@ export function NewRelicAttachmentModal({ isOpen, onClose, challan, onUpdate, ti
         challan.goodsReceivedInvoiceUrls = nextCopies;
       }
 
-      toast({ title: 'Success', description: `${title} uploaded successfully` });
+      const noteText = compressionNotes.length > 0 ? ` (${compressionNotes.join(', ')})` : '';
+      toast({ title: 'Success', description: `${title} uploaded successfully${noteText}` });
       onUpdate?.(nextCopies);
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Upload failed', description: err.message || 'Could not upload attachment.' });
     } finally {
       setIsUploading(false);
+      setUploadStatusText('');
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -205,7 +229,11 @@ export function NewRelicAttachmentModal({ isOpen, onClose, challan, onUpdate, ti
               </div>
               <div>
                 <p className="font-medium text-gray-900">Click to upload or drag and drop</p>
-                <p className="text-xs text-gray-500 mt-1">SVG, PNG, JPG or PDF (max. 10MB)</p>
+                <p className="text-xs text-gray-500 mt-1">SVG, PNG, JPG or PDF (up to 20MB · Images auto-compressed)</p>
+                <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 rounded-full px-2.5 py-0.5">
+                  <Sparkles className="w-3 h-3 text-emerald-600 shrink-0" />
+                  <span>Smart Auto-Compression Active (Preserves 2048px text clarity)</span>
+                </div>
               </div>
               
               <div className="flex gap-3 mt-2">
@@ -215,8 +243,17 @@ export function NewRelicAttachmentModal({ isOpen, onClose, challan, onUpdate, ti
                   variant="default"
                   className="bg-[#3b2fc9] hover:bg-[#2a229c]"
                 >
-                  {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Paperclip className="h-4 w-4 mr-2" />}
-                  Select File(s)
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <span>{uploadStatusText || 'Uploading...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Paperclip className="h-4 w-4 mr-2" />
+                      <span>Select File(s)</span>
+                    </>
+                  )}
                 </Button>
                 
                 {/* Native mobile camera capture support */}

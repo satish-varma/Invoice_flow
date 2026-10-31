@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Loader2, Paperclip, UploadCloud, Trash2, Camera, Eye, X, Download, FileText } from 'lucide-react';
+import { Loader2, Paperclip, UploadCloud, Trash2, Camera, Eye, X, Download, FileText, Sparkles } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import { uploadStorageFile, deleteStorageFile } from '@/services/storageService'
 import { useAuth } from '@/contexts/AuthContext';
 import { hasPermission } from '@/types/permissions';
 import { triggerHaptic } from '@/lib/haptics';
+import { compressDocumentFile, formatFileSize } from '@/lib/imageCompression';
 
 interface DeliveryChallanAttachmentModalProps {
   isOpen: boolean;
@@ -41,6 +42,7 @@ export function DeliveryChallanAttachmentModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatusText, setUploadStatusText] = useState<string>('');
   const [isDragging, setIsDragging] = useState(false);
   const [deletingUrl, setDeletingUrl] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -81,14 +83,34 @@ export function DeliveryChallanAttachmentModal({
 
     try {
       const uploadedUrls: string[] = [];
-      for (let i = 0; i < fileList.length; i++) {
-        const file = fileList[i];
+      const compressionNotes: string[] = [];
 
-        // Basic validation
-        if (file.size > 12 * 1024 * 1024) {
-          throw new Error(`File ${file.name} is too large (max 12MB)`);
+      for (let i = 0; i < fileList.length; i++) {
+        let file = fileList[i];
+
+        // Safety pre-check: Reject absurdly large files (> 35MB) before processing
+        if (file.size > 35 * 1024 * 1024) {
+          throw new Error(`File "${file.name}" is too large (${formatFileSize(file.size)}). Max allowed is 20MB.`);
         }
 
+        // Automatic smart compression for document photos (preserves sharp 2048px text/stamps)
+        if (file.type && file.type.startsWith('image/') && !file.type.includes('svg')) {
+          setUploadStatusText(`Compressing ${file.name}...`);
+          const compResult = await compressDocumentFile(file, 2048, 2048, 0.85);
+          if (compResult.compressed) {
+            compressionNotes.push(
+              `${formatFileSize(compResult.originalSize)} → ${formatFileSize(compResult.compressedSize)} (-${compResult.savingsPercent}%)`
+            );
+            file = compResult.file;
+          }
+        }
+
+        // Final size check: max 20MB
+        if (file.size > 20 * 1024 * 1024) {
+          throw new Error(`File "${file.name}" is too large (${formatFileSize(file.size)}). Max allowed is 20MB.`);
+        }
+
+        setUploadStatusText(`Uploading ${file.name}...`);
         const url = await uploadStorageFile(safeDcNumber, file, folderName, prefix);
         await addChallanAttachment(challan.id, url, attachmentType, user?.email || null);
         uploadedUrls.push(url);
@@ -104,9 +126,10 @@ export function DeliveryChallanAttachmentModal({
         challan.goodsReceivedInvoiceUrls = nextCopies;
       }
 
+      const noteText = compressionNotes.length > 0 ? ` (${compressionNotes.join(', ')})` : '';
       toast({
         title: 'Success',
-        description: `${displayTitle} uploaded successfully for ${challan.dcNumber}`,
+        description: `${displayTitle} uploaded successfully for ${challan.dcNumber}${noteText}`,
       });
       onUpdate?.(nextCopies);
     } catch (err: any) {
@@ -118,6 +141,7 @@ export function DeliveryChallanAttachmentModal({
       });
     } finally {
       setIsUploading(false);
+      setUploadStatusText('');
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -230,7 +254,11 @@ export function DeliveryChallanAttachmentModal({
               </div>
               <div>
                 <p className="font-medium text-gray-900">Click to upload or drag and drop</p>
-                <p className="text-xs text-gray-500 mt-1">SVG, PNG, JPG or PDF (max. 12MB)</p>
+                <p className="text-xs text-gray-500 mt-1">SVG, PNG, JPG or PDF (up to 20MB · Images auto-compressed)</p>
+                <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 rounded-full px-2.5 py-0.5">
+                  <Sparkles className="w-3 h-3 text-emerald-600 shrink-0" />
+                  <span>Smart Auto-Compression Active (Preserves 2048px text clarity)</span>
+                </div>
               </div>
 
               <div className="flex gap-3 mt-2">
@@ -244,11 +272,16 @@ export function DeliveryChallanAttachmentModal({
                   className="bg-[#3b2fc9] hover:bg-[#2a229c] text-white"
                 >
                   {isUploading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <span>{uploadStatusText || 'Uploading...'}</span>
+                    </>
                   ) : (
-                    <Paperclip className="h-4 w-4 mr-2" />
+                    <>
+                      <Paperclip className="h-4 w-4 mr-2" />
+                      <span>Select File(s)</span>
+                    </>
                   )}
-                  Select File(s)
                 </Button>
 
                 {/* Native mobile camera capture support */}

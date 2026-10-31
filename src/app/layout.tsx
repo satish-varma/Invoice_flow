@@ -88,10 +88,24 @@ export default function RootLayout({
                     };
                   }
                 }
-                if (typeof window !== 'undefined' && 'serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
-                  window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('/sw.js').catch(function() {});
-                  });
+                if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+                  ${
+                    process.env.NODE_ENV === 'development'
+                      ? `
+                    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                      for (var i = 0; i < registrations.length; i++) {
+                        registrations[i].unregister();
+                      }
+                    });
+                  `
+                      : `
+                    if (window.location.protocol === 'https:' || window.location.hostname === 'localhost') {
+                      window.addEventListener('load', function() {
+                        navigator.serviceWorker.register('/sw.js').catch(function() {});
+                      });
+                    }
+                  `
+                  }
                 }
               } catch (e) {}
             `,

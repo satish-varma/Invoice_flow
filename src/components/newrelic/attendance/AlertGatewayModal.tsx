@@ -344,7 +344,7 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         <span className="font-bold text-[11px]">Active Sender Number:</span>
-                        <span className="font-mono text-[11px] font-bold text-emerald-700">+1 711-166-9334 (Thegutguru Official Line)</span>
+                        <span className="font-mono text-[11px] font-bold text-emerald-700">+1 (555) 210-3921 (Meta Test Line)</span>
                       </div>
                       <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-200/60 text-emerald-800">Connected</span>
                     </div>
@@ -359,7 +359,7 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
                             ...prev,
                             meta: { ...prev.meta!, phoneNumberId: e.target.value },
                           }))}
-                          placeholder="e.g. 1406728339194059"
+                          placeholder="e.g. 1478203265366413"
                           className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#3b2fc9]/20 font-mono"
                         />
                       </div>
@@ -372,7 +372,7 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
                             ...prev,
                             meta: { ...prev.meta!, wabaId: e.target.value },
                           }))}
-                          placeholder="e.g. 1353279520061969"
+                          placeholder="e.g. 1138494142069945"
                           className="w-full h-10 px-3 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#3b2fc9]/20 font-mono"
                         />
                       </div>
@@ -392,9 +392,11 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
                       />
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-[11px] leading-relaxed flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span><strong>Thegutguru Official Line Active:</strong> Messages dispatched through this gateway send directly to recipients with status <code>accepted</code>.</span>
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] leading-relaxed flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold">Meta Test Number Requirement:</span> In Meta Developer Console (<em>WhatsApp &gt; API Setup &gt; Step 2 &gt; &ldquo;To&rdquo; dropdown &gt; Manage phone number list</em>), add <strong>+91 7709632898</strong> and verify with OTP. Test numbers can only message verified recipient numbers.
+                      </div>
                     </div>
                   </div>
                 )}

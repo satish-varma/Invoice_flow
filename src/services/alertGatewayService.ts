@@ -29,9 +29,9 @@ export const DEFAULT_ALERT_CONFIG: AlertGatewayConfig = {
     token: '',
   },
   meta: {
-    phoneNumberId: '1406728339194059',
+    phoneNumberId: '1478203265366413',
     accessToken: '',
-    wabaId: '1353279520061969',
+    wabaId: '1138494142069945',
   },
   twilio: {
     accountSid: '',
@@ -79,9 +79,9 @@ export async function getAlertGatewayConfig(): Promise<AlertGatewayConfig> {
   const currentWabaId = config.meta?.wabaId?.trim();
 
   config.meta = {
-    phoneNumberId: currentPhoneId || envPhoneId || '1406728339194059',
+    phoneNumberId: currentPhoneId || envPhoneId || '1478203265366413',
     accessToken: currentToken || envToken || '',
-    wabaId: currentWabaId || envWabaId || '1353279520061969',
+    wabaId: currentWabaId || envWabaId || '1138494142069945',
   };
 
   // If token is available and provider was mock or missing, promote to meta_whatsapp

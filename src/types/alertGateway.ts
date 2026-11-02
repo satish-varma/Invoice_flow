@@ -69,7 +69,7 @@ export interface AlertDispatchRecord {
   channel: 'whatsapp' | 'sms' | 'webhook';
   recipientPhone: string;
   recipientName?: string;
-  alertType: 'absent_notice' | 'late_alert' | 'checkout_reminder' | 'manager_digest' | 'test_ping' | 'custom' | 'gentle_reminder' | 'group_absent_alert';
+  alertType: 'absent_notice' | 'late_alert' | 'checkout_reminder' | 'manager_digest' | 'test_ping' | 'custom' | 'gentle_reminder' | 'group_absent_alert' | 'inbound_bot_query';
   status: 'sent' | 'delivered' | 'failed' | 'simulated';
   messageBody: string;
   providerResponse?: any;
@@ -80,8 +80,10 @@ export interface AlertDispatchRecord {
 export interface SendAlertRequest {
   to: string;
   recipientName?: string;
-  alertType: 'absent_notice' | 'late_alert' | 'checkout_reminder' | 'manager_digest' | 'test_ping' | 'custom' | 'gentle_reminder' | 'group_absent_alert';
+  alertType: 'absent_notice' | 'late_alert' | 'checkout_reminder' | 'manager_digest' | 'test_ping' | 'custom' | 'gentle_reminder' | 'group_absent_alert' | 'inbound_bot_query';
   channel?: 'whatsapp' | 'sms' | 'auto';
   customMessage?: string;
   metadata?: Record<string, any>;
+  preferTemplate?: boolean;
+  isBotReply?: boolean;
 }

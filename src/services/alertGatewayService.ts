@@ -288,7 +288,8 @@ async function sendUltraMsg(
 async function sendMetaWhatsApp(
   config: AlertGatewayConfig,
   recipientPhone: string,
-  message: string
+  message: string,
+  options?: { isBotReply?: boolean; preferTemplate?: boolean }
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   const meta = config.meta;
   const phoneNumberId = meta?.phoneNumberId || process.env.META_WHATSAPP_PHONE_NUMBER_ID;
@@ -315,30 +316,77 @@ async function sendMetaWhatsApp(
   };
 
   try {
-    const isTemplateRequest = message === 'hello_world' || message.startsWith('TEMPLATE:hello_world');
+    const isHelloWorld = message === 'hello_world' || message.startsWith('TEMPLATE:hello_world');
 
-    const primaryPayload = isTemplateRequest
-      ? {
-          messaging_product: 'whatsapp',
-          to: cleanDigits,
-          type: 'template',
-          template: {
-            name: 'hello_world',
-            language: { code: 'en_US' },
-          },
-        }
-      : {
-          messaging_product: 'whatsapp',
-          recipient_type: 'individual',
-          to: cleanDigits,
-          type: 'text',
-          text: {
-            preview_url: false,
-            body: message,
-          },
-        };
+    if (isHelloWorld) {
+      const res = await makeMetaRequest({
+        messaging_product: 'whatsapp',
+        to: cleanDigits,
+        type: 'template',
+        template: {
+          name: 'hello_world',
+          language: { code: 'en_US' },
+        },
+      });
+      if (res.ok) return { success: true, data: res.data };
+      return { success: false, error: res.data?.error?.message || 'Failed to send hello_world template' };
+    }
 
-    const { ok, status, data } = await makeMetaRequest(primaryPayload);
+    // Proactive outbound alerts (shift digests, late arrivals, absent staff) MUST be sent via an approved template
+    // to guarantee delivery 24/7 without being dropped by Meta's 24-hour customer window policy.
+    // Bot replies (when user messaged the bot) use rich freeform text.
+    const isBotReply = options?.isBotReply === true;
+    const preferTemplate = options?.preferTemplate ?? !isBotReply;
+
+    if (preferTemplate) {
+      // Sanitize multi-line text into a single-line string for Meta template variable rules
+      const sanitizedText = message
+        .replace(/[\r\n]+/g, ' · ')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+        .slice(0, 1000);
+
+      const templatePayload = {
+        messaging_product: 'whatsapp',
+        to: cleanDigits,
+        type: 'template',
+        template: {
+          name: 'attendance_alert_notice',
+          language: { code: 'en_US' },
+          components: [
+            {
+              type: 'body',
+              parameters: [
+                {
+                  type: 'text',
+                  text: sanitizedText,
+                },
+              ],
+            },
+          ],
+        },
+      };
+
+      const res = await makeMetaRequest(templatePayload);
+      if (res.ok) {
+        return { success: true, data: res.data };
+      }
+      console.warn('[MetaWhatsApp] Template send failed, falling back to text:', res.data?.error?.message);
+    }
+
+    // Freeform text (for interactive bot responses inside the 24-hour window)
+    const textPayload = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: cleanDigits,
+      type: 'text',
+      text: {
+        preview_url: false,
+        body: message,
+      },
+    };
+
+    const { ok, status, data } = await makeMetaRequest(textPayload);
 
     if (ok) {
       return { success: true, data };
@@ -363,9 +411,8 @@ async function sendMetaWhatsApp(
     }
 
     // Error 131047: Customer service window is closed (>24h). Fall back to approved attendance_alert_notice template
-    if (errorCode === 131047 && !isTemplateRequest) {
+    if (errorCode === 131047 && !isHelloWorld) {
       console.warn('[MetaWhatsApp] 24h custom text window closed. Attempting attendance_alert_notice template fallback...');
-      // Sanitize multi-line text into a single-line string for Meta template variable rules
       const sanitizedText = message.replace(/[\r\n]+/g, ' · ').replace(/\s{2,}/g, ' ').slice(0, 1000);
       const fallbackPayload = {
         messaging_product: 'whatsapp',
@@ -633,7 +680,10 @@ export async function dispatchAlert(
       break;
 
     case 'meta_whatsapp':
-      result = await sendMetaWhatsApp(config, req.to, message);
+      result = await sendMetaWhatsApp(config, req.to, message, {
+        isBotReply: req.isBotReply,
+        preferTemplate: req.preferTemplate,
+      });
       break;
 
     case 'twilio':

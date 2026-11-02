@@ -1,0 +1,44 @@
+name: Automated Shift Attendance Crons
+
+on:
+  schedule:
+    # 06:45 AM IST = 01:15 UTC (Morning Absentee Alert)
+    - cron: '15 1 * * *'
+    # 07:30 AM IST = 02:00 UTC (Morning Shift Turnout Digest)
+    - cron: '0 2 * * *'
+    # 08:30 AM IST = 03:00 UTC (Tracker Audit Cron)
+    - cron: '0 3 * * *'
+    # 07:30 PM IST = 14:00 UTC (Evening Missed Checkout Reminder)
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+    inputs:
+      trigger:
+        description: 'Manual Trigger (digest, absent, checkout, tracker, or all)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - digest
+          - absent
+          - checkout
+          - tracker
+
+jobs:
+  run-shift-cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Shift Attendance Automation
+        run: |
+          TARGET_URL="https://studio--invoiceflow-24nxt.us-central1.hosted.app"
+          TRIGGER="${{ github.event.inputs.trigger || 'all' }}"
+          echo "Executing Attendance Automation Trigger: $TRIGGER at $(date -u)"
+
+          if [ "$TRIGGER" = "tracker" ]; then
+            curl -f -s -S --max-time 30 "$TARGET_URL/api/tracker/cron" || echo "Warning: Tracker cron returned non-200"
+          elif [ "$TRIGGER" = "all" ]; then
+            curl -f -s -S --max-time 30 "$TARGET_URL/api/attendance/cron?trigger=all&force=true" || echo "Warning: Attendance cron returned non-200"
+            curl -f -s -S --max-time 30 "$TARGET_URL/api/tracker/cron" || echo "Warning: Tracker cron returned non-200"
+          else
+            curl -f -s -S --max-time 30 "$TARGET_URL/api/attendance/cron?trigger=${TRIGGER}&force=true" || echo "Warning: Attendance cron returned non-200"
+          fi

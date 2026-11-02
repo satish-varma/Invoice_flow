@@ -6,6 +6,7 @@ import {
   dispatchAlert,
   formatPhoneNumber,
   buildProgressBar,
+  logAlertDispatch,
 } from '@/services/alertGatewayService';
 
 export const dynamic = 'force-dynamic';
@@ -249,15 +250,39 @@ export async function POST(req: NextRequest) {
       replyMessage = `👋 Hello ${contactName}! I am The Gut Guru Attendance Bot.\n\nAvailable Manager Commands:\n• STATUS — Live shift attendance & turnout meter\n• ABSENT — Who has not checked in today\n• LATE — Today's late arrival log\n• ONDUTY — Staff currently on shift\n• HELP — Show this menu\n\nJust reply with any keyword to query live data!`;
     }
 
-    // 4. Send WhatsApp Reply
-    await dispatchAlert({
+    // 4. Log Inbound Command to Firestore Audit Logs
+    await logAlertDispatch({
+      timestamp: new Date().toISOString(),
+      provider: 'meta_whatsapp',
+      channel: 'whatsapp',
+      recipientPhone: senderPhone,
+      recipientName: contactName,
+      alertType: 'inbound_bot_query',
+      status: 'delivered',
+      messageBody: `[Inbound: ${cmd}] "${textBody}"`,
+      providerResponse: { command: cmd },
+      sentBy: `whatsapp:${senderPhone}`,
+    });
+
+    // 5. Send Interactive WhatsApp Reply (Inside active 24h customer window)
+    const dispatchRes = await dispatchAlert({
       to: senderPhone,
       recipientName: contactName,
       alertType: 'custom',
       customMessage: replyMessage,
+      isBotReply: true,
     });
 
-    return NextResponse.json({ success: true, replySent: true, command: cmd });
+    if (!dispatchRes.success) {
+      console.error('[WhatsAppBot] Reply dispatch failed:', dispatchRes.error);
+    }
+
+    return NextResponse.json({
+      success: dispatchRes.success,
+      replySent: dispatchRes.success,
+      command: cmd,
+      error: dispatchRes.error,
+    });
   } catch (err: any) {
     console.error('[WhatsAppBot] Webhook error:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

@@ -598,6 +598,11 @@ function AttendancePageContent() {
     }
   };
 
+  // Autonomous self-healing shift automation check on page load
+  useEffect(() => {
+    fetch('/api/attendance/cron').catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!isAdmin) return;
     setIsLoadingAdmin(true);

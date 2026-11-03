@@ -927,17 +927,17 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
                 </label>
               </div>
 
-              {/* DC Location Supervisor Routing */}
+              {/* DC Location Routing */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
                 <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>📍 Hub Supervisor WhatsApp Routing (BLR &amp; HYD)</span>
+                  <span>📍 DC Routing (Alerts sent to Admin)</span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div>
-                    <label className="font-semibold text-slate-700 block mb-1">Bangalore Hub Supervisor Phone:</label>
+                    <label className="font-semibold text-slate-700 block mb-1">Bangalore Hub Admin/Recipient Phone:</label>
                     <input
                       type="text"
-                      value={config.dcRouting?.bangalore?.[0] || '918897036993'}
+                      value={config.dcRouting?.bangalore?.[0] || '917709632898'}
                       onChange={(e) => {
                         const val = e.target.value.trim();
                         setConfig((prev) => ({
@@ -948,15 +948,15 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
                           },
                         }));
                       }}
-                      placeholder="e.g. 918897036993 (Laxman)"
+                      placeholder="e.g. 917709632898 (Admin)"
                       className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
                     />
                   </div>
                   <div>
-                    <label className="font-semibold text-slate-700 block mb-1">Hyderabad Hub Supervisor Phone:</label>
+                    <label className="font-semibold text-slate-700 block mb-1">Hyderabad Hub Admin/Recipient Phone:</label>
                     <input
                       type="text"
-                      value={config.dcRouting?.hyderabad?.[0] || '918897036993'}
+                      value={config.dcRouting?.hyderabad?.[0] || '917709632898'}
                       onChange={(e) => {
                         const val = e.target.value.trim();
                         setConfig((prev) => ({
@@ -967,7 +967,7 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
                           },
                         }));
                       }}
-                      placeholder="e.g. 918897036993 (Laxman)"
+                      placeholder="e.g. 917709632898 (Admin)"
                       className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
                     />
                   </div>

@@ -61,8 +61,8 @@ export const DEFAULT_ALERT_CONFIG: AlertGatewayConfig = {
   adminPhones: ['917709632898'],
   managerSiteRouting: {},
   dcRouting: {
-    bangalore: ['918897036993'],
-    hyderabad: ['918897036993'],
+    bangalore: ['917709632898'],
+    hyderabad: ['917709632898'],
   },
 };
 
@@ -876,22 +876,20 @@ export async function dispatchDcAlert(
     rawTargets.push(config.managerPhone);
   }
 
-  // 2. Location-specific supervisors
+  // 2. Hub-specific routing (if specified)
   const loc = dcData.location?.toLowerCase().trim() || 'hyderabad';
   if (config.dcRouting?.[loc] && Array.isArray(config.dcRouting[loc]) && config.dcRouting[loc].length > 0) {
     rawTargets.push(...config.dcRouting[loc]);
-  } else {
-    // Default fallback supervisor (Laxman for BLR & HYD)
-    rawTargets.push('918897036993');
   }
 
   if (rawTargets.length === 0) {
     rawTargets.push('917709632898');
   }
 
+  // Deduplicate and filter out Laxman (918897036993) to send strictly to admin
   const uniquePhones = Array.from(
-    new Set(rawTargets.map((p) => formatPhoneNumber(p).cleanDigits).filter(Boolean))
-  ).slice(0, 6);
+    new Set(rawTargets.map((p) => formatPhoneNumber(p).cleanDigits).filter((p) => p && !p.includes('8897036993')))
+  ).slice(0, 5);
 
   const locName = loc === 'bangalore' ? 'Bangalore Hub (Bagmane Tech Park)' : 'Hyderabad Hub (DivyaSree NSL Orion)';
   const message = generateAlertMessage('dc_created', {
@@ -959,19 +957,21 @@ export async function dispatchBillingCycleDigest(
   }
 
   const rawTargets: string[] = [];
+  // Send exclusively to Operational Admins
   if (config.adminPhones && Array.isArray(config.adminPhones)) {
     rawTargets.push(...config.adminPhones);
   }
   if (config.managerPhone) {
     rawTargets.push(config.managerPhone);
   }
-  if (config.dcRouting?.bangalore) rawTargets.push(...config.dcRouting.bangalore);
-  if (config.dcRouting?.hyderabad) rawTargets.push(...config.dcRouting.hyderabad);
-  rawTargets.push('918897036993'); // Laxman
+  if (rawTargets.length === 0) {
+    rawTargets.push('917709632898');
+  }
 
+  // Deduplicate and filter out Laxman (918897036993) to send strictly to admin
   const uniquePhones = Array.from(
-    new Set(rawTargets.map((p) => formatPhoneNumber(p).cleanDigits).filter(Boolean))
-  ).slice(0, 6);
+    new Set(rawTargets.map((p) => formatPhoneNumber(p).cleanDigits).filter((p) => p && !p.includes('8897036993')))
+  ).slice(0, 5);
 
   const message = generateAlertMessage('billing_cycle_digest', {
     cycleLabel: digestData.cycleLabel,

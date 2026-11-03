@@ -12,6 +12,7 @@ import {
 import {
   getAlertGatewayConfig,
   dispatchAlertToAdmins,
+  dispatchBillingCycleDigest,
   generateAlertMessage,
 } from '@/services/alertGatewayService';
 
@@ -26,6 +27,7 @@ interface AutomationState {
   lastDigestDate?: string;
   lastAbsentAlertDate?: string;
   lastMissedCheckoutDate?: string;
+  lastBillingCycleKey?: string;
   updatedAt?: string;
 }
 
@@ -196,6 +198,95 @@ export async function GET(req: NextRequest) {
       autoState.lastMissedCheckoutDate = kolkataDateStr;
       actionsTriggered.push('missed_checkout_alert');
       dispatchResults.missedCheckoutAlert = res;
+    }
+
+    // 4. Bi-Weekly Billing Cycle Summary (Runs on 15th & Month-End at 08:00 PM IST or manual trigger)
+    const isEvening8Pm = currentMinutes >= 20 * 60; // 08:00 PM IST or later
+    const kolkataDateObj = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const kYear = kolkataDateObj.getFullYear();
+    const kMonth = kolkataDateObj.getMonth();
+    const kDay = kolkataDateObj.getDate();
+    const lastDayOfKolkataMonth = new Date(kYear, kMonth + 1, 0).getDate();
+    const is15th = kDay === 15;
+    const isLastDay = kDay === lastDayOfKolkataMonth;
+
+    let targetBillingCycleKey = '';
+    let billingStartStr = '';
+    let billingEndStr = '';
+    let billingCycleLabel = '';
+
+    if (is15th || trigger === 'billing_cycle') {
+      targetBillingCycleKey = `${kYear}-${String(kMonth + 1).padStart(2, '0')}-cycle1-15`;
+      billingStartStr = `${kYear}-${String(kMonth + 1).padStart(2, '0')}-01`;
+      billingEndStr = `${kYear}-${String(kMonth + 1).padStart(2, '0')}-15`;
+      billingCycleLabel = `1st - 15th ${kolkataDateObj.toLocaleString('en-US', { month: 'short' })} ${kYear}`;
+    } else if (isLastDay) {
+      targetBillingCycleKey = `${kYear}-${String(kMonth + 1).padStart(2, '0')}-cycle2-end`;
+      billingStartStr = `${kYear}-${String(kMonth + 1).padStart(2, '0')}-16`;
+      billingEndStr = `${kYear}-${String(kMonth + 1).padStart(2, '0')}-${lastDayOfKolkataMonth}`;
+      billingCycleLabel = `16th - ${lastDayOfKolkataMonth}th ${kolkataDateObj.toLocaleString('en-US', { month: 'short' })} ${kYear}`;
+    }
+
+    const shouldRunBillingCycle =
+      (trigger === 'billing_cycle' || (trigger === 'all' && (is15th || isLastDay)) || (isEvening8Pm && (is15th || isLastDay) && autoState.lastBillingCycleKey !== targetBillingCycleKey)) &&
+      (config.enableBiWeeklyBillingDigest !== false || trigger === 'billing_cycle');
+
+    if (shouldRunBillingCycle && targetBillingCycleKey) {
+      try {
+        const dcSnap = await getDocs(
+          query(
+            collection(db, 'newrelic_challans'),
+            where('dcDate', '>=', billingStartStr),
+            where('dcDate', '<=', billingEndStr)
+          )
+        );
+
+        const dcs = dcSnap.docs
+          .map((d) => ({ id: d.id, ...d.data() } as any))
+          .filter((d) => !d.isDeleted);
+
+        let totalVolume = 0;
+        let totalUnits = 0;
+        const missingSignedDcs: Array<{ dcNumber: string; date: string; value: number }> = [];
+
+        for (const d of dcs) {
+          const lineItems = Array.isArray(d.lineItems) ? d.lineItems : [];
+          const dcUnits = lineItems.reduce((acc: number, it: any) => acc + (Number(it.quantity) || 0), 0);
+          const dcValue = d.totalAmount || lineItems.reduce((acc: number, it: any) => acc + ((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)), 0);
+          totalVolume += dcValue;
+          totalUnits += dcUnits;
+
+          const hasSignedCopy = Array.isArray(d.signedCopyUrls) && d.signedCopyUrls.length > 0;
+          if (!hasSignedCopy) {
+            missingSignedDcs.push({
+              dcNumber: d.dcNumber || 'DC-UNKNOWN',
+              date: d.dcDate || '',
+              value: dcValue,
+            });
+          }
+        }
+
+        const billingRes = await dispatchBillingCycleDigest(
+          {
+            cycleLabel: billingCycleLabel,
+            startDate: billingStartStr,
+            endDate: billingEndStr,
+            totalDcs: dcs.length,
+            totalVolume,
+            totalUnits,
+            missingSignedCount: missingSignedDcs.length,
+            missingSignedDcs,
+          },
+          config,
+          'system:cron-billing-cycle'
+        );
+
+        autoState.lastBillingCycleKey = targetBillingCycleKey;
+        actionsTriggered.push('billing_cycle_digest');
+        dispatchResults.billingCycleDigest = billingRes;
+      } catch (billingErr) {
+        console.warn('Error executing billing cycle summary cron:', billingErr);
+      }
     }
 
     // Save updated state back to Firestore

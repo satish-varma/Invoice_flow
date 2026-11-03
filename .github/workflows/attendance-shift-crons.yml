@@ -10,10 +10,12 @@ on:
     - cron: '0 3 * * *'
     # 07:30 PM IST = 14:00 UTC (Evening Missed Checkout Reminder)
     - cron: '0 14 * * *'
+    # 08:00 PM IST = 14:30 UTC (Bi-Weekly Billing Cycle Digest on 15th & Month-End)
+    - cron: '30 14 * * *'
   workflow_dispatch:
     inputs:
       trigger:
-        description: 'Manual Trigger (digest, absent, checkout, tracker, or all)'
+        description: 'Manual Trigger (digest, absent, checkout, billing_cycle, tracker, or all)'
         required: true
         default: 'all'
         type: choice
@@ -22,6 +24,7 @@ on:
           - digest
           - absent
           - checkout
+          - billing_cycle
           - tracker
 
 jobs:

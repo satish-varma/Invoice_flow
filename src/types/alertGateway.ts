@@ -55,9 +55,12 @@ export interface AlertGatewayConfig {
   enableAutoAbsentAlert?: boolean; // Auto WhatsApp alert to admins when cutoff passes with absentees
   enableAutoCheckoutReminder: boolean; // Remind staff and notify admins of missed checkouts
   enableAutoDailyDigest?: boolean; // Auto morning digest to admins
+  enableAutoDcAlert?: boolean; // Real-time WhatsApp alert to admins and supervisors when new DC is finalized
+  enableBiWeeklyBillingDigest?: boolean; // Bi-weekly scheduled summary on 15th and month-end
   managerPhone: string; // primary admin phone (e.g. "917709632898")
   adminPhones?: string[]; // top 5 manager/admin WhatsApp numbers (e.g. ['917709632898'])
   managerSiteRouting?: Record<string, string>; // siteId -> manager phone number
+  dcRouting?: Record<string, string[]>; // location ('bangalore' | 'hyderabad') -> supervisor phone numbers
   updatedAt?: string;
   updatedBy?: string;
 }
@@ -69,7 +72,18 @@ export interface AlertDispatchRecord {
   channel: 'whatsapp' | 'sms' | 'webhook';
   recipientPhone: string;
   recipientName?: string;
-  alertType: 'absent_notice' | 'late_alert' | 'checkout_reminder' | 'manager_digest' | 'test_ping' | 'custom' | 'gentle_reminder' | 'group_absent_alert' | 'inbound_bot_query';
+  alertType:
+    | 'absent_notice'
+    | 'late_alert'
+    | 'checkout_reminder'
+    | 'manager_digest'
+    | 'test_ping'
+    | 'custom'
+    | 'gentle_reminder'
+    | 'group_absent_alert'
+    | 'inbound_bot_query'
+    | 'dc_created'
+    | 'billing_cycle_digest';
   status: 'sent' | 'delivered' | 'failed' | 'simulated';
   messageBody: string;
   providerResponse?: any;
@@ -80,7 +94,18 @@ export interface AlertDispatchRecord {
 export interface SendAlertRequest {
   to: string;
   recipientName?: string;
-  alertType: 'absent_notice' | 'late_alert' | 'checkout_reminder' | 'manager_digest' | 'test_ping' | 'custom' | 'gentle_reminder' | 'group_absent_alert' | 'inbound_bot_query';
+  alertType:
+    | 'absent_notice'
+    | 'late_alert'
+    | 'checkout_reminder'
+    | 'manager_digest'
+    | 'test_ping'
+    | 'custom'
+    | 'gentle_reminder'
+    | 'group_absent_alert'
+    | 'inbound_bot_query'
+    | 'dc_created'
+    | 'billing_cycle_digest';
   channel?: 'whatsapp' | 'sms' | 'auto';
   customMessage?: string;
   metadata?: Record<string, any>;

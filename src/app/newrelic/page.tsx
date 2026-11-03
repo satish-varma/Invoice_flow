@@ -195,6 +195,30 @@ export default function NewRelicPage() {
   }, [user]);
 
   /* ── Handlers ── */
+  // Deep-link handler: 1-Tap open/preview DC from WhatsApp link (?dc=BLR084)
+  const hasAutoOpenedDcRef = useRef(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || hasAutoOpenedDcRef.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const targetDc = params.get('dc');
+    if (!targetDc || challans.length === 0) return;
+
+    const matched = challans.find(
+      (c) => c.dcNumber?.toLowerCase().trim() === targetDc.toLowerCase().trim()
+    );
+    if (matched) {
+      hasAutoOpenedDcRef.current = true;
+      if (matched.location) {
+        setFilterLocation(matched.location);
+      }
+      setPreviewChallan(matched);
+      toast({
+        title: `Opened DC ${matched.dcNumber}`,
+        description: `Ready to view line items or download PDF.`,
+      });
+    }
+  }, [challans]);
+
   const handleEditChallan = (challan: NewRelicChallan) => {
     setSelectedChallan(challan);
     setIsCreatingNew(null);

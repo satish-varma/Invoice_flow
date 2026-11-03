@@ -4,6 +4,8 @@ import {
   saveAlertGatewayConfig,
   dispatchAlert,
   dispatchAlertToAdmins,
+  dispatchDcAlert,
+  dispatchBillingCycleDigest,
   getRecentAlertLogs,
   generateAlertMessage,
 } from '@/services/alertGatewayService';
@@ -313,6 +315,149 @@ export async function POST(req: NextRequest) {
         provider: config.activeProvider,
         totalSent: dispatchSummary.totalSent,
         dispatchedTo: dispatchSummary.results,
+      });
+    }
+
+    if (action === 'trigger_dc_alert') {
+      const {
+        dcNumber,
+        location,
+        lineItemsCount,
+        totalQty,
+        totalValue,
+        createdBy,
+        date,
+        userEmail,
+      } = body;
+      const config = await getAlertGatewayConfig();
+
+      if (config.enableAutoDcAlert === false) {
+        return NextResponse.json({
+          success: true,
+          skipped: true,
+          message: 'Automated DC creation alerts are disabled in gateway settings.',
+        });
+      }
+
+      const dispatchSummary = await dispatchDcAlert(
+        {
+          dcNumber: dcNumber || 'DC-NEW',
+          location: location || 'bangalore',
+          lineItemsCount: Number(lineItemsCount) || 0,
+          totalQty: Number(totalQty) || 0,
+          totalValue: Number(totalValue) || 0,
+          createdBy: createdBy || userEmail || 'manager@thegutguru.in',
+          date,
+        },
+        config,
+        userEmail || 'system:dc-notice'
+      );
+
+      return NextResponse.json({
+        success: dispatchSummary.totalSent > 0,
+        provider: config.activeProvider,
+        totalSent: dispatchSummary.totalSent,
+        totalFailed: dispatchSummary.totalFailed,
+        dispatchedTo: dispatchSummary.results,
+      });
+    }
+
+    if (action === 'trigger_billing_cycle') {
+      const { cycleLabel, startDate, endDate, userEmail } = body;
+      const config = await getAlertGatewayConfig();
+      if (config.enableBiWeeklyBillingDigest === false) {
+        return NextResponse.json({
+          success: true,
+          skipped: true,
+          message: 'Bi-weekly billing cycle digests are disabled in gateway settings.',
+        });
+      }
+
+      // Default to current 15-day window if not provided
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth(); // 0-based
+      const day = now.getDate();
+
+      let calcCycleLabel = cycleLabel;
+      let startStr = startDate;
+      let endStr = endDate;
+
+      if (!startStr || !endStr) {
+        if (day <= 15) {
+          calcCycleLabel = calcCycleLabel || `1st - 15th ${now.toLocaleString('default', { month: 'short' })} ${year}`;
+          startStr = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+          endStr = `${year}-${String(month + 1).padStart(2, '0')}-15`;
+        } else {
+          const lastDay = new Date(year, month + 1, 0).getDate();
+          calcCycleLabel = calcCycleLabel || `16th - ${lastDay}th ${now.toLocaleString('default', { month: 'short' })} ${year}`;
+          startStr = `${year}-${String(month + 1).padStart(2, '0')}-16`;
+          endStr = `${year}-${String(month + 1).padStart(2, '0')}-${lastDay}`;
+        }
+      }
+
+      // Query challans
+      const { db } = await import('@/lib/firebase');
+      const { collection, getDocs, query, where } = await import('firebase/firestore');
+      const snap = await getDocs(
+        query(
+          collection(db, 'newrelic_challans'),
+          where('dcDate', '>=', startStr),
+          where('dcDate', '<=', endStr)
+        )
+      );
+
+      const dcs = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() } as any))
+        .filter((d) => !d.isDeleted);
+
+      let totalVolume = 0;
+      let totalUnits = 0;
+      const missingSignedDcs: Array<{ dcNumber: string; date: string; value: number }> = [];
+
+      for (const d of dcs) {
+        const lineItems = Array.isArray(d.lineItems) ? d.lineItems : [];
+        const dcUnits = lineItems.reduce((acc: number, it: any) => acc + (Number(it.quantity) || 0), 0);
+        const dcValue = d.totalAmount || lineItems.reduce((acc: number, it: any) => acc + ((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)), 0);
+        totalVolume += dcValue;
+        totalUnits += dcUnits;
+
+        const hasSignedCopy = Array.isArray(d.signedCopyUrls) && d.signedCopyUrls.length > 0;
+        if (!hasSignedCopy) {
+          missingSignedDcs.push({
+            dcNumber: d.dcNumber || 'DC-UNKNOWN',
+            date: d.dcDate || '',
+            value: dcValue,
+          });
+        }
+      }
+
+      const dispatchSummary = await dispatchBillingCycleDigest(
+        {
+          cycleLabel: calcCycleLabel,
+          startDate: startStr,
+          endDate: endStr,
+          totalDcs: dcs.length,
+          totalVolume,
+          totalUnits,
+          missingSignedCount: missingSignedDcs.length,
+          missingSignedDcs,
+        },
+        config,
+        userEmail || 'system:billing-digest'
+      );
+
+      return NextResponse.json({
+        success: dispatchSummary.totalSent > 0,
+        provider: config.activeProvider,
+        totalSent: dispatchSummary.totalSent,
+        dispatchedTo: dispatchSummary.results,
+        summary: {
+          period: `${startStr} to ${endStr}`,
+          totalDcs: dcs.length,
+          totalVolume,
+          missingSignedCount: missingSignedDcs.length,
+        },
       });
     }
 

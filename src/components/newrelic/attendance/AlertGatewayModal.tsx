@@ -94,7 +94,7 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
     triggerHaptic('light');
   };
 
-  const handleTriggerTestAlert = async (type: 'late' | 'absent' | 'digest') => {
+  const handleTriggerTestAlert = async (type: 'late' | 'absent' | 'digest' | 'dc' | 'billing') => {
     setIsTriggeringTest(type);
     triggerHaptic('light');
     try {
@@ -127,6 +127,24 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
           totalRoster: 18,
           onDutyCount: 14,
           absentNames: ['Ramesh Pawar', 'Kavita Shinde', 'Amit More'],
+          userEmail,
+        };
+      } else if (type === 'dc') {
+        payload = {
+          action: 'trigger_dc_alert',
+          dcNumber: 'BLR084',
+          location: 'bangalore',
+          lineItemsCount: 14,
+          totalQty: 320,
+          totalValue: 48650,
+          createdBy: userEmail || 'laxman@thegutguru.in',
+          date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          userEmail,
+        };
+      } else if (type === 'billing') {
+        payload = {
+          action: 'trigger_billing_cycle',
+          cycleLabel: '1st - 15th Nov 2026',
           userEmail,
         };
       }
@@ -869,6 +887,91 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
                     </span>
                   </div>
                 </label>
+
+                {/* Real-time Delivery Challan Notice */}
+                <label className="flex items-start gap-3 cursor-pointer p-2.5 rounded-xl hover:bg-white transition-colors bg-white/60 border border-slate-200/60">
+                  <input
+                    type="checkbox"
+                    checked={config.enableAutoDcAlert !== false}
+                    onChange={(e) => setConfig((prev) => ({ ...prev, enableAutoDcAlert: e.target.checked }))}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-[#3b2fc9] focus:ring-[#3b2fc9]"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 block flex items-center gap-1.5">
+                      <span>📦 Instant Delivery Challan Creation Notice</span>
+                      <span className="text-[10px] uppercase font-black px-1.5 py-0.2 rounded bg-blue-100 text-blue-800">Real-Time DC</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
+                      Immediately alerts Ops Admins &amp; Location Supervisors (Laxman for BLR/HYD) with item count, total quantity, MRP total, creator, and 1-tap PDF link the moment a new DC is finalized.
+                    </span>
+                  </div>
+                </label>
+
+                {/* Bi-Weekly Billing Cycle Summary */}
+                <label className="flex items-start gap-3 cursor-pointer p-2.5 rounded-xl hover:bg-white transition-colors bg-white/60 border border-slate-200/60">
+                  <input
+                    type="checkbox"
+                    checked={config.enableBiWeeklyBillingDigest !== false}
+                    onChange={(e) => setConfig((prev) => ({ ...prev, enableBiWeeklyBillingDigest: e.target.checked }))}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-[#3b2fc9] focus:ring-[#3b2fc9]"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 block flex items-center gap-1.5">
+                      <span>📊 Bi-Weekly Billing Cycle Summary (15th &amp; Month-End)</span>
+                      <span className="text-[10px] uppercase font-black px-1.5 py-0.2 rounded bg-purple-100 text-purple-800">15-Day Cron</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
+                      Runs at 08:00 PM on the 15th and end of the month. Sends total DCs raised, total billing volume, and flags any DCs missing physical signed copies prior to invoice generation.
+                    </span>
+                  </div>
+                </label>
+              </div>
+
+              {/* DC Location Supervisor Routing */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>📍 Hub Supervisor WhatsApp Routing (BLR &amp; HYD)</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Bangalore Hub Supervisor Phone:</label>
+                    <input
+                      type="text"
+                      value={config.dcRouting?.bangalore?.[0] || '918897036993'}
+                      onChange={(e) => {
+                        const val = e.target.value.trim();
+                        setConfig((prev) => ({
+                          ...prev,
+                          dcRouting: {
+                            ...(prev.dcRouting || {}),
+                            bangalore: [val],
+                          },
+                        }));
+                      }}
+                      placeholder="e.g. 918897036993 (Laxman)"
+                      className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Hyderabad Hub Supervisor Phone:</label>
+                    <input
+                      type="text"
+                      value={config.dcRouting?.hyderabad?.[0] || '918897036993'}
+                      onChange={(e) => {
+                        const val = e.target.value.trim();
+                        setConfig((prev) => ({
+                          ...prev,
+                          dcRouting: {
+                            ...(prev.dcRouting || {}),
+                            hyderabad: [val],
+                          },
+                        }));
+                      }}
+                      placeholder="e.g. 918897036993 (Laxman)"
+                      className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-[#3b2fc9]"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Instant Test Triggers Card */}
@@ -876,42 +979,62 @@ export function AlertGatewayModal({ isOpen, onClose, userEmail }: AlertGatewayMo
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
                     <Send className="w-3.5 h-3.5 text-indigo-600" />
-                    Test Automated Alerts to All Top 5 Managers
+                    Test Automated Alerts to All Top Managers
                   </h4>
                   <span className="text-[10px] font-bold text-indigo-600">Live Dispatches</span>
                 </div>
                 <p className="text-xs text-indigo-900/80">
                   Click any button to immediately dispatch a sample automated notification to your configured manager numbers via WhatsApp:
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   <button
                     type="button"
                     onClick={() => handleTriggerTestAlert('late')}
                     disabled={Boolean(isTriggeringTest)}
-                    className="h-10 px-3 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 disabled:opacity-50"
+                    className="h-10 px-2 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center justify-center gap-1 shadow-2xs transition-all active:scale-95 disabled:opacity-50"
                   >
                     {isTriggeringTest === 'late' ? <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" /> : <span>⏰</span>}
-                    <span>Test Late Alert</span>
+                    <span>Late Alert</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleTriggerTestAlert('absent')}
                     disabled={Boolean(isTriggeringTest)}
-                    className="h-10 px-3 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 disabled:opacity-50"
+                    className="h-10 px-2 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center justify-center gap-1 shadow-2xs transition-all active:scale-95 disabled:opacity-50"
                   >
                     {isTriggeringTest === 'absent' ? <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" /> : <span>⚠️</span>}
-                    <span>Test Absent Alert</span>
+                    <span>Absent Alert</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleTriggerTestAlert('digest')}
                     disabled={Boolean(isTriggeringTest)}
-                    className="h-10 px-3 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 disabled:opacity-50"
+                    className="h-10 px-2 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center justify-center gap-1 shadow-2xs transition-all active:scale-95 disabled:opacity-50"
                   >
                     {isTriggeringTest === 'digest' ? <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" /> : <span>📊</span>}
-                    <span>Test Shift Digest</span>
+                    <span>Shift Digest</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleTriggerTestAlert('dc')}
+                    disabled={Boolean(isTriggeringTest)}
+                    className="h-10 px-2 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center justify-center gap-1 shadow-2xs transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {isTriggeringTest === 'dc' ? <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" /> : <span>📦</span>}
+                    <span>Test DC Alert</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleTriggerTestAlert('billing')}
+                    disabled={Boolean(isTriggeringTest)}
+                    className="h-10 px-2 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center justify-center gap-1 shadow-2xs transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {isTriggeringTest === 'billing' ? <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" /> : <span>📑</span>}
+                    <span>Test Billing</span>
                   </button>
                 </div>
               </div>

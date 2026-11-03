@@ -55,9 +55,15 @@ export const DEFAULT_ALERT_CONFIG: AlertGatewayConfig = {
   enableAutoAbsentAlert: true,
   enableAutoCheckoutReminder: true,
   enableAutoDailyDigest: true,
+  enableAutoDcAlert: true,
+  enableBiWeeklyBillingDigest: true,
   managerPhone: '917709632898',
   adminPhones: ['917709632898'],
   managerSiteRouting: {},
+  dcRouting: {
+    bangalore: ['918897036993'],
+    hyderabad: ['918897036993'],
+  },
 };
 
 /** Get the configured Alert Gateway settings from Firestore */
@@ -236,6 +242,44 @@ export function generateAlertMessage(
         ? data.absentNames.map((n, i) => `  ${i + 1}. ${n}`).join('\n')
         : '  All staff present! 🎉';
       return `📢 Morning Shift Cutoff Alert — ${today}\n📍 Facility: ${site} · Cutoff: ${cutoff}\n━━━━━━━━━━━━━━━━━━━━\n⚠️ Absent / Pending Punch (${absentCount}):\n${absentList}\n\n👉 Open Attendance Kiosk:\nhttps://studio--invoiceflow-24nxt.us-central1.hosted.app/newrelic/attendance\n\n— The Gut Guru Hospitality Operations`;
+    }
+
+    case 'dc_created': {
+      const formattedDate = data.date || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const location = (data as any).locationName || ((data as any).location === 'bangalore' ? 'Bangalore Hub (Bagmane Tech Park)' : 'Hyderabad Hub (DivyaSree NSL Orion)');
+      const dcNum = (data as any).dcNumber || 'DC-NEW';
+      const itemsCount = (data as any).lineItemsCount ?? 0;
+      const totalQty = (data as any).totalQty ?? 0;
+      const totalVal = (data as any).totalValue !== undefined
+        ? `₹${Number((data as any).totalValue).toLocaleString('en-IN')}`
+        : '₹0';
+      const createdBy = (data as any).createdBy || 'manager@thegutguru.in';
+
+      return `📦 New Delivery Challan Created — ${formattedDate}\n📍 Location: ${location}\n━━━━━━━━━━━━━━━━━━━━\n📄 DC Number: ${dcNum}\n🛒 Items Count: ${itemsCount} Line Items (Total Qty: ${totalQty})\n💰 Total Value (MRP): ${totalVal}\n👤 Created By: ${createdBy}\n🔗 1-Tap Download PDF:\nhttps://studio--invoiceflow-24nxt.us-central1.hosted.app/newrelic?dc=${encodeURIComponent(dcNum)}\n— The Gut Guru DC System`;
+    }
+
+    case 'billing_cycle_digest': {
+      const cycleLabel = (data as any).cycleLabel || '15-Day Cycle Review';
+      const period = (data as any).period || `${(data as any).startDate || ''} to ${(data as any).endDate || ''}`;
+      const totalDcs = (data as any).totalDcs || 0;
+      const totalVolume = (data as any).totalVolume !== undefined
+        ? `₹${Number((data as any).totalVolume).toLocaleString('en-IN')}`
+        : '₹0';
+      const totalUnits = (data as any).totalUnits || 0;
+      const missingCount = (data as any).missingSignedCount || 0;
+      const missingDcs = (data as any).missingSignedDcs || [];
+      const missingList = missingDcs.length > 0
+        ? missingDcs.slice(0, 8).map((d: any) => `  • DC ${d.dcNumber} (${d.date || 'Recent'}) — ₹${Number(d.value || 0).toLocaleString('en-IN')}`).join('\n')
+        : '';
+      const moreText = missingDcs.length > 8
+        ? `\n  ... and ${missingDcs.length - 8} more`
+        : '';
+
+      const signedSection = missingCount === 0
+        ? `✅ All ${totalDcs} DCs have physical signed copies uploaded & verified!`
+        : `⚠️ ${missingCount} DCs Missing Signed Copies (Action Required before Invoicing):\n${missingList}${moreText}`;
+
+      return `📊 Bi-Weekly Billing Cycle Summary — ${cycleLabel}\n🏢 NewRelic Stall Operations (HYD & BLR Hubs)\n━━━━━━━━━━━━━━━━━━━━\n📅 Billing Period: ${period}\n📦 Total DCs Raised: ${totalDcs}\n💰 Total Billing Volume: ${totalVolume}\n🛒 Total Units Delivered: ${totalUnits}\n\n📑 Signed Copies Status:\n${signedSection}\n\n🔗 Review & Finalize Invoices:\nhttps://studio--invoiceflow-24nxt.us-central1.hosted.app/newrelic/reconcile\n— The Gut Guru Billing Operations`;
     }
 
     case 'test_ping':
@@ -785,6 +829,174 @@ export async function dispatchAlertToAdmins(
       },
       config,
       senderEmail || 'system:auto-alert'
+    );
+    if (res.success) {
+      totalSent++;
+    } else {
+      totalFailed++;
+    }
+    results.push({ phone, success: res.success, error: res.error });
+  }
+
+  return { totalSent, totalFailed, results };
+}
+
+/**
+ * Dispatch real-time WhatsApp notice when a Delivery Challan is finalized and saved
+ * Targets Operational Admins + Location-Specific Supervisors (e.g. Laxman for BLR/HYD)
+ */
+export async function dispatchDcAlert(
+  dcData: {
+    dcNumber: string;
+    location: string;
+    lineItemsCount: number;
+    totalQty: number;
+    totalValue: number;
+    createdBy: string;
+    date?: string;
+  },
+  configOverride?: AlertGatewayConfig,
+  senderEmail?: string | null
+): Promise<{
+  totalSent: number;
+  totalFailed: number;
+  results: Array<{ phone: string; success: boolean; error?: string }>;
+}> {
+  const config = configOverride || (await getAlertGatewayConfig());
+  if (config.enableAutoDcAlert === false) {
+    return { totalSent: 0, totalFailed: 0, results: [] };
+  }
+
+  const rawTargets: string[] = [];
+  // 1. Operational admins
+  if (config.adminPhones && Array.isArray(config.adminPhones)) {
+    rawTargets.push(...config.adminPhones);
+  }
+  if (config.managerPhone) {
+    rawTargets.push(config.managerPhone);
+  }
+
+  // 2. Location-specific supervisors
+  const loc = dcData.location?.toLowerCase().trim() || 'hyderabad';
+  if (config.dcRouting?.[loc] && Array.isArray(config.dcRouting[loc]) && config.dcRouting[loc].length > 0) {
+    rawTargets.push(...config.dcRouting[loc]);
+  } else {
+    // Default fallback supervisor (Laxman for BLR & HYD)
+    rawTargets.push('918897036993');
+  }
+
+  if (rawTargets.length === 0) {
+    rawTargets.push('917709632898');
+  }
+
+  const uniquePhones = Array.from(
+    new Set(rawTargets.map((p) => formatPhoneNumber(p).cleanDigits).filter(Boolean))
+  ).slice(0, 6);
+
+  const locName = loc === 'bangalore' ? 'Bangalore Hub (Bagmane Tech Park)' : 'Hyderabad Hub (DivyaSree NSL Orion)';
+  const message = generateAlertMessage('dc_created', {
+    date: dcData.date,
+    locationName: locName,
+    location: loc,
+    dcNumber: dcData.dcNumber,
+    lineItemsCount: dcData.lineItemsCount,
+    totalQty: dcData.totalQty,
+    totalValue: dcData.totalValue,
+    createdBy: dcData.createdBy,
+  } as any);
+
+  const results: Array<{ phone: string; success: boolean; error?: string }> = [];
+  let totalSent = 0;
+  let totalFailed = 0;
+
+  for (const phone of uniquePhones) {
+    const res = await dispatchAlert(
+      {
+        to: phone,
+        recipientName: 'DC Supervisor / Ops Admin',
+        alertType: 'dc_created',
+        customMessage: message,
+      },
+      config,
+      senderEmail || 'system:dc-notice'
+    );
+    if (res.success) {
+      totalSent++;
+    } else {
+      totalFailed++;
+    }
+    results.push({ phone, success: res.success, error: res.error });
+  }
+
+  return { totalSent, totalFailed, results };
+}
+
+/**
+ * Dispatch Bi-Weekly Billing Cycle Summary (Runs on 15th & end of month at 08:00 PM)
+ * Dispatches total DCs, total billing volume, and any DCs missing signed copies
+ */
+export async function dispatchBillingCycleDigest(
+  digestData: {
+    cycleLabel: string;
+    startDate: string;
+    endDate: string;
+    totalDcs: number;
+    totalVolume: number;
+    totalUnits: number;
+    missingSignedCount: number;
+    missingSignedDcs: Array<{ dcNumber: string; date: string; value: number }>;
+  },
+  configOverride?: AlertGatewayConfig,
+  senderEmail?: string | null
+): Promise<{
+  totalSent: number;
+  totalFailed: number;
+  results: Array<{ phone: string; success: boolean; error?: string }>;
+}> {
+  const config = configOverride || (await getAlertGatewayConfig());
+  if (config.enableBiWeeklyBillingDigest === false) {
+    return { totalSent: 0, totalFailed: 0, results: [] };
+  }
+
+  const rawTargets: string[] = [];
+  if (config.adminPhones && Array.isArray(config.adminPhones)) {
+    rawTargets.push(...config.adminPhones);
+  }
+  if (config.managerPhone) {
+    rawTargets.push(config.managerPhone);
+  }
+  if (config.dcRouting?.bangalore) rawTargets.push(...config.dcRouting.bangalore);
+  if (config.dcRouting?.hyderabad) rawTargets.push(...config.dcRouting.hyderabad);
+  rawTargets.push('918897036993'); // Laxman
+
+  const uniquePhones = Array.from(
+    new Set(rawTargets.map((p) => formatPhoneNumber(p).cleanDigits).filter(Boolean))
+  ).slice(0, 6);
+
+  const message = generateAlertMessage('billing_cycle_digest', {
+    cycleLabel: digestData.cycleLabel,
+    period: `${digestData.startDate} to ${digestData.endDate}`,
+    totalDcs: digestData.totalDcs,
+    totalVolume: digestData.totalVolume,
+    totalUnits: digestData.totalUnits,
+    missingSignedCount: digestData.missingSignedCount,
+    missingSignedDcs: digestData.missingSignedDcs,
+  } as any);
+
+  const results: Array<{ phone: string; success: boolean; error?: string }> = [];
+  let totalSent = 0;
+  let totalFailed = 0;
+
+  for (const phone of uniquePhones) {
+    const res = await dispatchAlert(
+      {
+        to: phone,
+        recipientName: 'Billing & Ops Admin',
+        alertType: 'billing_cycle_digest',
+        customMessage: message,
+      },
+      config,
+      senderEmail || 'system:billing-digest'
     );
     if (res.success) {
       totalSent++;

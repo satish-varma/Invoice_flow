@@ -528,6 +528,30 @@ export function NewRelicChallanForm({
         title: isEditing ? 'Challan updated' : 'Challan saved',
         description: `DC No: ${saved.dcNumber}`,
       });
+
+      // If creating a brand new Delivery Challan, trigger real-time WhatsApp alert to Ops Admins & Location Supervisors
+      if (!isEditing && saved?.dcNumber) {
+        const lineItems = Array.isArray(saved.lineItems) ? saved.lineItems : [];
+        const totalQty = lineItems.reduce((acc: number, it: any) => acc + (Number(it.quantity) || 0), 0);
+        const totalVal = lineItems.reduce((acc: number, it: any) => acc + ((Number(it.quantity) || 0) * (Number(it.mrp || it.unitPrice) || 0)), 0);
+
+        fetch('/api/attendance/alerts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'trigger_dc_alert',
+            dcNumber: saved.dcNumber,
+            location: saved.location,
+            lineItemsCount: lineItems.length,
+            totalQty,
+            totalValue: totalVal,
+            createdBy: user?.email || 'manager@thegutguru.in',
+            date: saved.dcDate ? new Date(saved.dcDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : undefined,
+            userEmail: user?.email || 'manager',
+          }),
+        }).catch((err) => console.warn('Background DC WhatsApp notice:', err));
+      }
+
       onChallanSave(shouldDownload ? saved : undefined);
       reset(defaultValues);
     } catch (err: any) {

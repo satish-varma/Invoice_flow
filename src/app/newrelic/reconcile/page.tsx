@@ -78,7 +78,11 @@ export default function ReconcilePage() {
     }
   }, [user, role, router]);
 
+  const hasInitializedRef = useRef(false);
   useEffect(() => {
+    if (hasInitializedRef.current) return;
+    if (!user) return;
+    hasInitializedRef.current = true;
     if (user?.preferredLocations && user.preferredLocations.length > 0) {
       setFilterLocation('preferred');
     }

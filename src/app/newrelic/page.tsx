@@ -169,10 +169,28 @@ export default function NewRelicPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Initialize filterLocation defaulting to user's preferred location
+  // Initialize filterLocation defaulting to user's preferred location (one-time on mount)
+  const hasInitializedFilterRef = useRef(false);
   useEffect(() => {
+    if (hasInitializedFilterRef.current) return;
+    if (!user) return;
+
+    hasInitializedFilterRef.current = true;
+
+    // 1. Try to restore saved filter from sessionStorage
+    const savedLoc = typeof window !== 'undefined' ? sessionStorage.getItem('newrelic_dc_filter_location') : null;
+    if (savedLoc && (savedLoc === 'all' || savedLoc === 'hyderabad' || savedLoc === 'bangalore')) {
+      setFilterLocation(savedLoc);
+      return;
+    }
+
+    // 2. Multi-location managers (e.g. Hyderabad & Bangalore) default to 'all' to see all hubs; single location defaults to that hub
     if (user?.preferredLocations && user.preferredLocations.length > 0) {
-      setFilterLocation(user.preferredLocations[0]);
+      if (user.preferredLocations.length > 1) {
+        setFilterLocation('all');
+      } else {
+        setFilterLocation(user.preferredLocations[0]);
+      }
     }
   }, [user]);
 
@@ -222,6 +240,13 @@ export default function NewRelicPage() {
         }
         return [saved, ...prev];
       });
+      // Ensure the newly created or updated challan stays visible in the active filter
+      if (saved.location && filterLocation !== 'all' && filterLocation !== saved.location) {
+        setFilterLocation(saved.location);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('newrelic_dc_filter_location', saved.location);
+        }
+      }
       handleDownload(saved);
     }
     fetchData();
@@ -979,6 +1004,9 @@ export default function NewRelicPage() {
                     onClick={() => {
                       triggerHaptic('light');
                       setFilterLocation('all');
+                      if (typeof window !== 'undefined') {
+                        sessionStorage.setItem('newrelic_dc_filter_location', 'all');
+                      }
                     }}
                     className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                       filterLocation === 'all'
@@ -1004,6 +1032,9 @@ export default function NewRelicPage() {
                         onClick={() => {
                           triggerHaptic('light');
                           setFilterLocation(key);
+                          if (typeof window !== 'undefined') {
+                            sessionStorage.setItem('newrelic_dc_filter_location', key);
+                          }
                         }}
                         className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                           isSelected ? activeColor : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60'
@@ -1085,26 +1116,34 @@ export default function NewRelicPage() {
                   </div>
 
                   {/* Reset button if active */}
-                  {(filterLocation !== (user?.preferredLocations?.[0] || 'all') || filterMonth !== 'all' || filterYear !== 'all' || filterCycle !== 'all' || searchQuery.trim() !== '' || facetFilter !== 'all') && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic('medium');
-                        const defaultLoc = user?.preferredLocations?.[0] || 'all';
-                        setFilterLocation(defaultLoc);
-                        setFilterMonth('all');
-                        setFilterYear('all');
-                        setFilterCycle('all');
-                        setSearchQuery('');
-                        setFacetFilter('all');
-                      }}
-                      className="h-9 px-2.5 rounded-xl text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center gap-1 active:scale-95"
-                      title="Reset all filters"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Reset</span>
-                    </button>
-                  )}
+                  {(() => {
+                    const isMultiLocation = (user?.preferredLocations?.length || 0) > 1;
+                    const defaultLoc = isMultiLocation ? 'all' : (user?.preferredLocations?.[0] || 'all');
+                    const isFilterDirty = filterLocation !== defaultLoc || filterMonth !== 'all' || filterYear !== 'all' || filterCycle !== 'all' || searchQuery.trim() !== '' || facetFilter !== 'all';
+                    if (!isFilterDirty) return null;
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('medium');
+                          setFilterLocation(defaultLoc);
+                          if (typeof window !== 'undefined') {
+                            sessionStorage.setItem('newrelic_dc_filter_location', defaultLoc);
+                          }
+                          setFilterMonth('all');
+                          setFilterYear('all');
+                          setFilterCycle('all');
+                          setSearchQuery('');
+                          setFacetFilter('all');
+                        }}
+                        className="h-9 px-2.5 rounded-xl text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center gap-1 active:scale-95"
+                        title="Reset all filters"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Reset</span>
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
 

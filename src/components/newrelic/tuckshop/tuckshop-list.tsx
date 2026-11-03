@@ -49,21 +49,28 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
     return undefined;
   };
   
-  const defaultLoc = getMappedLocation(user?.preferredLocations?.[0]);
-  const [filterLocation, setFilterLocation] = useState<'all' | 'HYD' | 'BLR'>(defaultLoc || 'all');
+  const isMultiLocation = (user?.preferredLocations?.length || 0) > 1;
+  const defaultLoc = isMultiLocation ? 'all' : (getMappedLocation(user?.preferredLocations?.[0]) || 'all');
+  const [filterLocation, setFilterLocation] = useState<'all' | 'HYD' | 'BLR'>(defaultLoc);
 
   // Reset to page 1 when filters change
   React.useEffect(() => {
     setCurrentPage(1);
   }, [filterType, filterLocation, filterSite, filterMonth, filterYear, searchQuery]);
 
-  // Also update if user object loads later
+  // Also update if user object loads later (one-time on mount)
+  const hasInitializedTuckshopFilter = React.useRef(false);
   React.useEffect(() => {
-    const mappedLoc = getMappedLocation(user?.preferredLocations?.[0]);
-    if (mappedLoc && filterLocation === 'all') {
-      setFilterLocation(mappedLoc);
+    if (hasInitializedTuckshopFilter.current) return;
+    if (!user) return;
+    hasInitializedTuckshopFilter.current = true;
+    if (!isMultiLocation) {
+      const mappedLoc = getMappedLocation(user?.preferredLocations?.[0]);
+      if (mappedLoc) {
+        setFilterLocation(mappedLoc);
+      }
     }
-  }, [user?.preferredLocations]);
+  }, [user, isMultiLocation]);
 
   const [recordToDelete, setRecordToDelete] = useState<NewRelicTuckshopRecord | null>(null);
   const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');

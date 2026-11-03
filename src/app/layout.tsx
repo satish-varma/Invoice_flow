@@ -56,6 +56,82 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
+                // ── Suppress Third-Party Extension / Content Script Noise ──
+                (function() {
+                  if (typeof window === 'undefined') return;
+
+                  function isExtensionNoise(errOrMsg, filename) {
+                    if (!errOrMsg && !filename) return false;
+                    var str = '';
+                    if (typeof errOrMsg === 'string') {
+                      str = errOrMsg;
+                    } else if (errOrMsg && errOrMsg.message) {
+                      str = errOrMsg.message + ' ' + (errOrMsg.stack || '');
+                    } else if (errOrMsg) {
+                      str = String(errOrMsg);
+                    }
+                    var fileStr = filename ? String(filename) : '';
+
+                    return (
+                      str.indexOf('Could not establish connection') !== -1 ||
+                      str.indexOf('Receiving end does not exist') !== -1 ||
+                      str.indexOf('useCache') !== -1 ||
+                      str.indexOf('runtime.lastError') !== -1 ||
+                      str.indexOf('content.js') !== -1 ||
+                      fileStr.indexOf('content.js') !== -1 ||
+                      fileStr.indexOf('chrome-extension://') !== -1 ||
+                      fileStr.indexOf('moz-extension://') !== -1
+                    );
+                  }
+
+                  // Suppress unhandled promise rejections from content.js (e.g. useCache TypeError)
+                  window.addEventListener('unhandledrejection', function(event) {
+                    if (isExtensionNoise(event.reason)) {
+                      event.preventDefault();
+                      event.stopImmediatePropagation();
+                      return true;
+                    }
+                  }, true);
+
+                  // Suppress unhandled errors from injected extension scripts
+                  window.addEventListener('error', function(event) {
+                    if (isExtensionNoise(event.error || event.message, event.filename)) {
+                      event.preventDefault();
+                      event.stopImmediatePropagation();
+                      return true;
+                    }
+                  }, true);
+
+                  // Filter console.error from extension connection polling loops
+                  if (window.console && window.console.error) {
+                    var origConsoleError = window.console.error;
+                    window.console.error = function() {
+                      var args = Array.prototype.slice.call(arguments);
+                      var fullText = args.map(function(a) {
+                        return (a && a.stack) ? a.stack : (typeof a === 'object' ? JSON.stringify(a) : String(a));
+                      }).join(' ');
+
+                      if (isExtensionNoise(fullText)) {
+                        return;
+                      }
+                      return origConsoleError.apply(window.console, arguments);
+                    };
+                  }
+
+                  // Filter console.warn from extension connection polling loops
+                  if (window.console && window.console.warn) {
+                    var origConsoleWarn = window.console.warn;
+                    window.console.warn = function() {
+                      var args = Array.prototype.slice.call(arguments);
+                      var fullText = args.map(function(a) { return String(a); }).join(' ');
+                      if (isExtensionNoise(fullText)) {
+                        return;
+                      }
+                      return origConsoleWarn.apply(window.console, arguments);
+                    };
+                  }
+                })();
+
                 if (typeof window !== 'undefined' && window.localStorage) {
                   for (var i = window.localStorage.length - 1; i >= 0; i--) {
                     var k = window.localStorage.key(i);

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, getDocs, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, getDocs, doc, setDoc, deleteDoc, updateDoc, where, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { hashPassword } from '@/lib/hash';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
@@ -600,8 +600,8 @@ export default function AdminUsersPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const effectiveSites = userRole === 'admin' ? ['newrelic', 'dsm', 'ntt_data'] : assignedSites.length > 0 ? assignedSites : [assignedSite];
-      const effectiveSite = effectiveSites[0] || 'newrelic';
+      const effectiveSites: SiteId[] = userRole === 'admin' ? ['newrelic', 'dsm', 'ntt_data'] : assignedSites.length > 0 ? assignedSites : [assignedSite];
+      const effectiveSite: SiteId = effectiveSites[0] || 'newrelic';
       const hasNewRelic = effectiveSites.includes('newrelic') || userRole === 'admin';
       const effectiveLocations = !hasNewRelic ? ['hyderabad'] : preferredLocations;
 
@@ -674,7 +674,7 @@ export default function AdminUsersPage() {
           updateData.password = hashPassword(password);
         }
         await updateDoc(doc(db, 'users', editingUser.id), updateData);
-        await logAuditEvent({
+        logAuditEvent({
           actorEmail: user?.email || 'admin',
           actorRole: role || 'admin',
           action: 'user_updated',
@@ -689,19 +689,36 @@ export default function AdminUsersPage() {
             canDelete: effectiveCanDelete,
             endpointsCount: effectiveTabs.length,
           },
-        });
+        }).catch((e) => console.warn('Audit log write error:', e));
+
+        const updatedUser: DbUser = {
+          ...editingUser,
+          ...updateData,
+        };
+        setUsers((prev) => prev.map((u) => (u.id === editingUser.id ? updatedUser : u)));
+        setIsModalOpen(false);
+        setIsSubmitting(false);
         toast({ title: 'User updated successfully' });
+        loadUsers();
+        return;
       } else {
         // Create new
         const newEmail = email.toLowerCase().trim();
-        const q = query(collection(db, 'users'));
-        const allUsers = await getDocs(q);
-        if (allUsers.docs.some((d) => d.data().email === newEmail)) {
-          throw new Error('Email already exists');
+        // 1. Fast in-memory check against already loaded users
+        if (users.some((u) => u.email?.toLowerCase().trim() === newEmail)) {
+          throw new Error('A user with this email already exists.');
+        }
+
+        // 2. Targeted Firestore index check (limit 1) instead of downloading entire collection
+        const dupCheck = await getDocs(
+          query(collection(db, 'users'), where('email', '==', newEmail), limit(1))
+        );
+        if (!dupCheck.empty) {
+          throw new Error('A user with this email already exists.');
         }
 
         const newDocRef = doc(collection(db, 'users'));
-        await setDoc(newDocRef, {
+        const newUserData = {
           email: newEmail,
           password: hashPassword(password),
           role: userRole,
@@ -717,8 +734,10 @@ export default function AdminUsersPage() {
           allowedTabs: effectiveTabs,
           assignedApps: legacyApps,
           createdAt: new Date().toISOString(),
-        });
-        await logAuditEvent({
+        };
+        await setDoc(newDocRef, newUserData);
+
+        logAuditEvent({
           actorEmail: user?.email || 'admin',
           actorRole: role || 'admin',
           action: 'user_created',
@@ -734,11 +753,20 @@ export default function AdminUsersPage() {
             endpointsCount: effectiveTabs.length,
             accessExpiry: effectiveExpiresAt || 'Permanent',
           },
-        });
+        }).catch((e) => console.warn('Audit log write error:', e));
+
+        const createdUser: DbUser = {
+          id: newDocRef.id,
+          ...newUserData,
+          sessions: {},
+        };
+        setUsers((prev) => [createdUser, ...prev.filter((u) => u.id !== newDocRef.id)]);
+        setIsModalOpen(false);
+        setIsSubmitting(false);
         toast({ title: 'User created successfully' });
+        loadUsers();
+        return;
       }
-      setIsModalOpen(false);
-      loadUsers();
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Error saving user', description: err.message });
     } finally {
@@ -790,12 +818,16 @@ export default function AdminUsersPage() {
 
       if (confirmModal.type === 'suspend') {
         const nextVersion = (target.tokenVersion || 1) + 1;
+        setUsers((prev) =>
+          prev.map((u) => (u.id === target.id ? { ...u, status: 'suspended', tokenVersion: nextVersion } : u))
+        );
+        setConfirmModal({ isOpen: false, type: 'suspend', targetUser: null });
         await updateDoc(userRef, {
           status: 'suspended',
           tokenVersion: nextVersion,
           suspendedAt: new Date().toISOString(),
         });
-        await logAuditEvent({
+        logAuditEvent({
           actorEmail: user?.email || 'admin',
           actorRole: role || 'admin',
           action: 'user_status_changed',
@@ -804,17 +836,22 @@ export default function AdminUsersPage() {
           targetId: target.id,
           targetLabel: target.email,
           details: { status: 'suspended', tokenVersion: nextVersion },
-        });
+        }).catch((e) => console.warn('Audit log write error:', e));
         toast({
           title: 'Account Suspended',
           description: `All active sessions for ${target.email} have been terminated immediately.`,
         });
+        loadUsers();
       } else if (confirmModal.type === 'activate') {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === target.id ? { ...u, status: 'active', suspendedAt: null } : u))
+        );
+        setConfirmModal({ isOpen: false, type: 'suspend', targetUser: null });
         await updateDoc(userRef, {
           status: 'active',
           suspendedAt: null,
         });
-        await logAuditEvent({
+        logAuditEvent({
           actorEmail: user?.email || 'admin',
           actorRole: role || 'admin',
           action: 'user_status_changed',
@@ -823,17 +860,22 @@ export default function AdminUsersPage() {
           targetId: target.id,
           targetLabel: target.email,
           details: { status: 'active' },
-        });
+        }).catch((e) => console.warn('Audit log write error:', e));
         toast({
           title: 'Account Activated',
           description: `${target.email} is now active and can sign in.`,
         });
+        loadUsers();
       } else if (confirmModal.type === 'revoke') {
         const nextVersion = (target.tokenVersion || 1) + 1;
+        setUsers((prev) =>
+          prev.map((u) => (u.id === target.id ? { ...u, tokenVersion: nextVersion } : u))
+        );
+        setConfirmModal({ isOpen: false, type: 'suspend', targetUser: null });
         await updateDoc(userRef, {
           tokenVersion: nextVersion,
         });
-        await logAuditEvent({
+        logAuditEvent({
           actorEmail: user?.email || 'admin',
           actorRole: role || 'admin',
           action: 'sessions_revoked',
@@ -842,15 +884,13 @@ export default function AdminUsersPage() {
           targetId: target.id,
           targetLabel: target.email,
           details: { tokenVersion: nextVersion },
-        });
+        }).catch((e) => console.warn('Audit log write error:', e));
         toast({
           title: 'Active Sessions Revoked',
           description: `Terminated all active desktop and mobile sessions for ${target.email}.`,
         });
+        loadUsers();
       }
-
-      setConfirmModal({ isOpen: false, type: 'suspend', targetUser: null });
-      await loadUsers();
     } catch (err: any) {
       toast({
         variant: 'destructive',
@@ -869,8 +909,10 @@ export default function AdminUsersPage() {
     }
     if (confirm(`Are you sure you want to delete ${userEmail}?`)) {
       try {
+        setUsers((prev) => prev.filter((u) => u.id !== id));
+        toast({ title: 'User deleted' });
         await deleteDoc(doc(db, 'users', id));
-        await logAuditEvent({
+        logAuditEvent({
           actorEmail: user?.email || 'admin',
           actorRole: role || 'admin',
           action: 'user_deleted',
@@ -878,11 +920,11 @@ export default function AdminUsersPage() {
           targetType: 'user',
           targetId: id,
           targetLabel: userEmail,
-        });
-        toast({ title: 'User deleted' });
+        }).catch((e) => console.warn('Audit log write error:', e));
         loadUsers();
       } catch (err: any) {
         toast({ variant: 'destructive', title: 'Error deleting user', description: err.message });
+        loadUsers();
       }
     }
   };

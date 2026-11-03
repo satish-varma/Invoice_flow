@@ -101,7 +101,13 @@ export default function RootLayout({
                       : `
                     if (window.location.protocol === 'https:' || window.location.hostname === 'localhost') {
                       window.addEventListener('load', function() {
-                        navigator.serviceWorker.register('/sw.js').catch(function() {});
+                        fetch('/sw.js', { method: 'HEAD' })
+                          .then(function(res) {
+                            if (res.ok) {
+                              navigator.serviceWorker.register('/sw.js').catch(function() {});
+                            }
+                          })
+                          .catch(function() {});
                       });
                     }
                   `

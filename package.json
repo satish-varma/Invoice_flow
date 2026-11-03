@@ -9,7 +9,7 @@
     "dev": "next dev --turbopack -p 9002",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "next build",
+    "build": "next build && mkdir -p .next/standalone/public && cp -rf public/sw* public/workbox* .next/standalone/public/ 2>/dev/null || true",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",

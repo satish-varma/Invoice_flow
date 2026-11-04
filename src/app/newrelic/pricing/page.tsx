@@ -36,7 +36,13 @@ import {
   ArrowLeft,
   Sparkles,
   Loader2,
+  Download,
+  Copy,
+  Package,
+  BarChart3,
+  Tag,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
 import SeedHistoryModal from '@/components/newrelic/pricing/SeedHistoryModal';
@@ -65,6 +71,7 @@ const emptyEdit = (location: NewRelicLocation): EditRow => ({
 
 export default function PricingPage() {
   const { user, role, isReadOnly } = useAuth();
+  const isAdmin = role === 'admin' || role === 'superadmin';
   const router = useRouter();
 
   const [activeLocation, setActiveLocation] = useState<NewRelicLocation>('hyderabad');
@@ -72,10 +79,12 @@ export default function PricingPage() {
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selectedBrandFilter, setSelectedBrandFilter] = useState<string>('all');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [isSeeding, setIsSeeding] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
+  const [isSyncingLocation, setIsSyncingLocation] = useState(false);
   const [seedResult, setSeedResult] = useState<string | null>(null);
   const [showSeedModal, setShowSeedModal] = useState(false);
 
@@ -134,6 +143,77 @@ export default function PricingPage() {
     [pricingItems, activeLocation]
   );
 
+  // Executive KPI summary calculations
+  const pricingKPIs = useMemo(() => {
+    let totalMrp = 0;
+    let totalCost = 0;
+    let healthyCount = 0;
+    let mediumCount = 0;
+    let lowCount = 0;
+    let discountSum = 0;
+    let validDiscountCount = 0;
+
+    locationItems.forEach(item => {
+      const mrp = Number(item.mrp) || 0;
+      const cost = Number(item.purchaseCost) || 0;
+      const disc = Number(item.discountPercent) || 0;
+
+      if (disc > 0) {
+        discountSum += disc;
+        validDiscountCount++;
+      }
+
+      if (mrp > 0 && cost > 0) {
+        totalMrp += mrp;
+        totalCost += cost;
+        const marginPct = ((mrp - cost) / mrp) * 100;
+        if (marginPct > 25) healthyCount++;
+        else if (marginPct >= 15) mediumCount++;
+        else lowCount++;
+      }
+    });
+
+    const avgMarginPct = totalMrp > 0 ? ((totalMrp - totalCost) / totalMrp) * 100 : 0;
+    const avgDiscountPct = validDiscountCount > 0 ? discountSum / validDiscountCount : 0;
+
+    return {
+      skuCount: locationItems.length,
+      avgMarginPct,
+      avgDiscountPct,
+      healthyCount,
+      mediumCount,
+      lowCount,
+      uniqueBrandCount: new Set(locationItems.map(i => i.brandName).filter(Boolean)).size,
+    };
+  }, [locationItems]);
+
+  // Brand item counts for filter badges
+  const brandCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    locationItems.forEach(i => {
+      const b = (i.brandName || '').trim();
+      if (b) counts[b] = (counts[b] || 0) + 1;
+    });
+    return counts;
+  }, [locationItems]);
+
+  // Cross-Location sync target calculation
+  const targetLocation: NewRelicLocation = activeLocation === 'hyderabad' ? 'bangalore' : 'hyderabad';
+  const targetLabel = NEWRELIC_LOCATIONS[targetLocation].label;
+  const currentLabel = NEWRELIC_LOCATIONS[activeLocation].label;
+
+  const missingInTargetCount = useMemo(() => {
+    const targetSet = new Set(
+      pricingItems
+        .filter(i => i.location === targetLocation)
+        .map(i => `${i.brandName.trim().toLowerCase()}___${i.itemName.trim().toLowerCase()}`)
+    );
+    return locationItems.filter(i => {
+      const key = `${i.brandName.trim().toLowerCase()}___${i.itemName.trim().toLowerCase()}`;
+      return !targetSet.has(key);
+    }).length;
+  }, [pricingItems, locationItems, targetLocation]);
+
   // Count items with alerts
   const missingCostCount = useMemo(() =>
     locationItems.filter(i => !i.purchaseCost || i.purchaseCost <= 0).length,
@@ -153,12 +233,16 @@ export default function PricingPage() {
       list = list.filter(i => !i.mrp || i.mrp <= 0);
     }
 
+    if (selectedBrandFilter !== 'all') {
+      list = list.filter(i => i.brandName.trim().toLowerCase() === selectedBrandFilter.toLowerCase());
+    }
+
     if (!search.trim()) return list;
     const s = search.toLowerCase();
     return list.filter(i =>
       i.brandName.toLowerCase().includes(s) || i.itemName.toLowerCase().includes(s)
     );
-  }, [locationItems, search, filterMode]);
+  }, [locationItems, search, filterMode, selectedBrandFilter]);
 
   // Unique brands from catalog for typeahead and bulk update
   const availableBrands = useMemo(() => {
@@ -166,6 +250,112 @@ export default function PricingPage() {
     const fromCat = catalog.map(c => c.brandName);
     return [...new Set([...fromPricing, ...fromCat].map(b => b.trim()).filter(Boolean))].sort();
   }, [locationItems, catalog]);
+
+  // Cross-Location Sync Handler
+  const handleSyncToTargetLocation = async () => {
+    if (isReadOnly || role === 'guest') {
+      alert('Guest Mode (Read-Only): Syncing pricing items is disabled.');
+      return;
+    }
+
+    const targetSet = new Set(
+      pricingItems
+        .filter(i => i.location === targetLocation)
+        .map(i => `${i.brandName.trim().toLowerCase()}___${i.itemName.trim().toLowerCase()}`)
+    );
+
+    const itemsToCopy = locationItems.filter(i => {
+      const key = `${i.brandName.trim().toLowerCase()}___${i.itemName.trim().toLowerCase()}`;
+      return !targetSet.has(key);
+    });
+
+    if (itemsToCopy.length === 0) {
+      alert(`All ${locationItems.length} items from ${currentLabel} already exist in ${targetLabel}!`);
+      return;
+    }
+
+    if (!confirm(`Found ${itemsToCopy.length} item(s) in ${currentLabel} that are missing in ${targetLabel}.\n\nDo you want to copy them to ${targetLabel} with their current MRP, discount, and P.Cost?`)) {
+      return;
+    }
+
+    setIsSyncingLocation(true);
+    setError('');
+    try {
+      for (const item of itemsToCopy) {
+        await savePricingItem({
+          brandName: item.brandName,
+          itemName: item.itemName,
+          location: targetLocation,
+          mrp: item.mrp,
+          discountPercent: item.discountPercent,
+          purchaseCost: item.purchaseCost,
+          effectiveDate: new Date().toISOString().substring(0, 10),
+        }, user?.email, `Copied from ${currentLabel}`);
+      }
+
+      const refreshed = await getAllPricingItems();
+      setPricingItems(refreshed);
+      setSeedResult(`✓ Successfully copied ${itemsToCopy.length} missing items to ${targetLabel}!`);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to sync items to target location.');
+    } finally {
+      setIsSyncingLocation(false);
+    }
+  };
+
+  // One-Click Excel Export Handler
+  const handleExportExcel = () => {
+    triggerHaptic('medium');
+    if (filteredItems.length === 0) {
+      alert("No pricing items to export.");
+      return;
+    }
+
+    const exportRows = filteredItems.map((item, index) => {
+      const mrp = Number(item.mrp) || 0;
+      const cost = Number(item.purchaseCost) || 0;
+      const profit = mrp > 0 && cost > 0 ? mrp - cost : 0;
+      const marginPct = mrp > 0 ? ((profit / mrp) * 100).toFixed(1) + '%' : '0.0%';
+
+      const row: Record<string, any> = {
+        '#': index + 1,
+        'Brand': item.brandName,
+        'Item Name': item.itemName,
+        'Location': NEWRELIC_LOCATIONS[item.location]?.label || item.location,
+        'MRP (₹)': mrp,
+        'Discount (%)': `${item.discountPercent}%`,
+        'Purchase Cost (₹)': cost,
+      };
+
+      if (isAdmin) {
+        row['Profit per Unit (₹)'] = profit > 0 ? Number(profit.toFixed(2)) : 0;
+        row['Margin (%)'] = marginPct;
+      }
+
+      row['Effective Date'] = item.effectiveDate || '—';
+      return row;
+    });
+
+    const ws = XLSX.utils.json_to_sheet(exportRows);
+    const colWidths = [
+      { wch: 5 },
+      { wch: 18 },
+      { wch: 34 },
+      { wch: 14 },
+      { wch: 12 },
+      { wch: 14 },
+      { wch: 16 },
+      ...(isAdmin ? [{ wch: 18 }, { wch: 14 }] : []),
+      { wch: 16 },
+    ];
+    ws['!cols'] = colWidths;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Pricing Master');
+
+    const fileName = `Pricing_Master_${activeLocation}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  };
 
   const getCatalogItemsForBrand = (brand: string) =>
     catalog.filter(c => c.brandName === brand).map(c => c.itemName).sort();
@@ -398,6 +588,29 @@ export default function PricingPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* One-Click Excel Export */}
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            className="flex-1 sm:flex-initial h-11 sm:h-10 px-3.5 rounded-2xl sm:rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs sm:text-sm font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/60 shadow-xs transition-all flex items-center justify-center gap-1.5 active:scale-95"
+            title="Export Pricing Master to Excel (.xlsx)"
+          >
+            <Download className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <span>Export (.xlsx)</span>
+          </button>
+
+          {/* Cross-Location Sync Button */}
+          <button
+            type="button"
+            onClick={handleSyncToTargetLocation}
+            disabled={isSyncingLocation || saving}
+            className="flex-1 sm:flex-initial h-11 sm:h-10 px-3.5 rounded-2xl sm:rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-300 dark:border-sky-800 text-sky-800 dark:text-sky-300 text-xs sm:text-sm font-bold hover:bg-sky-100 dark:hover:bg-sky-900/60 shadow-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
+            title={`Copy ${missingInTargetCount} missing items from ${currentLabel} to ${targetLabel}`}
+          >
+            <Copy className={cn("h-4 w-4 text-sky-600 dark:text-sky-400", isSyncingLocation && "animate-spin")} />
+            <span>Copy Missing to {targetLabel} ({missingInTargetCount})</span>
+          </button>
+
           <button
             onClick={() => {
               triggerHaptic('medium');
@@ -463,6 +676,75 @@ export default function PricingPage() {
           <button onClick={() => setSeedResult(null)} className="ml-2 text-emerald-600 hover:text-emerald-800 p-1"><X className="h-3.5 w-3.5" /></button>
         </div>
       )}
+
+      {/* Executive KPI & Margin Strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        {/* Card 1: Active SKUs */}
+        <div className="p-3 sm:p-3.5 bg-gradient-to-br from-indigo-50/70 to-indigo-100/30 dark:from-indigo-950/40 dark:to-indigo-900/20 border border-indigo-200/60 dark:border-indigo-800/60 rounded-2xl">
+          <div className="flex items-center justify-between text-indigo-700 dark:text-indigo-400 mb-1">
+            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider">{currentLabel} SKUs</span>
+            <Package className="w-3.5 h-3.5" />
+          </div>
+          <div className="text-base sm:text-lg font-black font-mono text-slate-900 dark:text-white">
+            {pricingKPIs.skuCount.toLocaleString('en-IN')} <span className="text-xs font-semibold text-slate-500">items</span>
+          </div>
+          <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+            Across {pricingKPIs.uniqueBrandCount} distinct brands
+          </div>
+        </div>
+
+        {/* Card 2: Average Margin & Discount */}
+        <div className="p-3 sm:p-3.5 bg-gradient-to-br from-emerald-50/70 to-emerald-100/30 dark:from-emerald-950/40 dark:to-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800/60 rounded-2xl">
+          <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 mb-1">
+            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider">Avg Margin & Disc</span>
+            <TrendingUp className="w-3.5 h-3.5" />
+          </div>
+          <div className="text-base sm:text-lg font-black font-mono text-emerald-700 dark:text-emerald-400">
+            {isAdmin ? `${pricingKPIs.avgMarginPct.toFixed(1)}%` : `${pricingKPIs.avgDiscountPct.toFixed(1)}%`}
+          </div>
+          <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+            {isAdmin ? `Avg Discount: ${pricingKPIs.avgDiscountPct.toFixed(1)}%` : 'Procurement discount'}
+          </div>
+        </div>
+
+        {/* Card 3: Margin Health Breakdown (Admin) */}
+        <div className="p-3 sm:p-3.5 bg-gradient-to-br from-purple-50/70 to-purple-100/30 dark:from-purple-950/40 dark:to-purple-900/20 border border-purple-200/60 dark:border-purple-800/60 rounded-2xl">
+          <div className="flex items-center justify-between text-purple-700 dark:text-purple-400 mb-1">
+            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider">Margin Health</span>
+            <BarChart3 className="w-3.5 h-3.5" />
+          </div>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400" title=">25% margin">
+              {pricingKPIs.healthyCount} high
+            </span>
+            <span className="text-slate-300 dark:text-slate-700">•</span>
+            <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400" title="15-25% margin">
+              {pricingKPIs.mediumCount} med
+            </span>
+            <span className="text-slate-300 dark:text-slate-700">•</span>
+            <span className="text-xs font-mono font-bold text-rose-600 dark:text-rose-400" title="<15% margin">
+              {pricingKPIs.lowCount} low
+            </span>
+          </div>
+          <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-1">
+            {pricingKPIs.healthyCount} items &gt;25% margin
+          </div>
+        </div>
+
+        {/* Card 4: Rate Health & Missing Alerts */}
+        <div className="p-3 sm:p-3.5 bg-gradient-to-br from-amber-50/70 to-amber-100/30 dark:from-amber-950/40 dark:to-amber-900/20 border border-amber-200/60 dark:border-amber-800/60 rounded-2xl">
+          <div className="flex items-center justify-between text-amber-700 dark:text-amber-400 mb-1">
+            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider">Action Needed</span>
+            <AlertTriangle className="w-3.5 h-3.5" />
+          </div>
+          <div className="text-base sm:text-lg font-black font-mono text-slate-900 dark:text-white">
+            {missingCostCount + missingMrpCount} <span className="text-xs font-semibold text-slate-500">alerts</span>
+          </div>
+          <div className="text-[10px] font-mono font-bold text-amber-700 dark:text-amber-400 mt-0.5">
+            {missingCostCount} zero cost • {missingMrpCount} no MRP
+          </div>
+        </div>
+      </div>
 
       {/* Location Tabs + Filter Pills Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -557,7 +839,7 @@ export default function PricingPage() {
       </div>
 
       {/* Search */}
-      <div className="relative mb-4 max-w-md">
+      <div className="relative mb-3 max-w-md">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
         <input
           type="text"
@@ -579,6 +861,65 @@ export default function PricingPage() {
           </button>
         )}
       </div>
+
+      {/* Brand Filter Chips */}
+      {availableBrands.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar mb-4">
+          <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider mr-1 hidden sm:inline">
+            Brand:
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              setSelectedBrandFilter('all');
+            }}
+            className={cn(
+              "h-7 px-3 rounded-full text-xs font-bold transition-all whitespace-nowrap inline-flex items-center gap-1.5",
+              selectedBrandFilter === 'all'
+                ? "bg-indigo-600 text-white shadow-xs shadow-indigo-600/30"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+            )}
+          >
+            <span>All Brands</span>
+            <span className={cn(
+              "text-[10px] px-1.5 py-0.2 rounded-full",
+              selectedBrandFilter === 'all' ? "bg-indigo-700 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+            )}>
+              {locationItems.length}
+            </span>
+          </button>
+          {availableBrands.map(b => {
+            const count = brandCounts[b] || 0;
+            if (count === 0) return null;
+            const isSelected = selectedBrandFilter.toLowerCase() === b.toLowerCase();
+            return (
+              <button
+                key={b}
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setSelectedBrandFilter(isSelected ? 'all' : b);
+                }}
+                className={cn(
+                  "h-7 px-3 rounded-full text-xs font-bold transition-all whitespace-nowrap inline-flex items-center gap-1.5",
+                  isSelected
+                    ? "bg-indigo-600 text-white shadow-xs shadow-indigo-600/30"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                )}
+              >
+                <span>{b}</span>
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.2 rounded-full",
+                  isSelected ? "bg-indigo-700 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                )}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {error && (
         <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
@@ -854,11 +1195,36 @@ export default function PricingPage() {
                       </div>
                       <div>
                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Margin</p>
-                        <p className="text-xs font-mono font-black text-emerald-700 dark:text-emerald-400 mt-0.5 truncate">
-                          {item.mrp > 0 && item.purchaseCost > 0 ? `₹${(item.mrp - item.purchaseCost).toFixed(1)}` : '₹0'}
-                        </p>
+                        {isAdmin ? (
+                          <p className="text-xs font-mono font-black text-emerald-700 dark:text-emerald-400 mt-0.5 truncate">
+                            {item.mrp > 0 && item.purchaseCost > 0 ? `₹${(item.mrp - item.purchaseCost).toFixed(2)}` : '₹0'}
+                          </p>
+                        ) : (
+                          <p className="text-[10px] font-medium text-slate-400 mt-0.5">Admin only</p>
+                        )}
                       </div>
                     </div>
+
+                    {/* Admin Exact Margin Badge */}
+                    {isAdmin && item.mrp > 0 && item.purchaseCost > 0 && (() => {
+                      const margin = item.mrp - item.purchaseCost;
+                      const marginPct = (margin / item.mrp) * 100;
+                      const isHealthy = marginPct > 25;
+                      const isModerate = marginPct >= 15 && marginPct <= 25;
+                      const badgeClasses = isHealthy
+                        ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                        : isModerate
+                        ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                        : "bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800";
+                      return (
+                        <div className="flex items-center justify-between pt-0.5">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Unit Margin</span>
+                          <span className={cn("inline-flex items-center font-mono text-[11px] font-black px-2 py-0.5 rounded-lg border shadow-2xs whitespace-nowrap", badgeClasses)}>
+                            [{marginPct.toFixed(1)}% / ₹{margin.toFixed(2)} Margin]
+                          </span>
+                        </div>
+                      );
+                    })()}
 
                     {/* Card Footer: Effective date & actions */}
                     <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800 text-xs">
@@ -987,15 +1353,25 @@ export default function PricingPage() {
                             />
                           </td>
                           <td className="px-3 py-2 text-right">
-                            {(() => {
+                            {isAdmin ? (() => {
                               const m = parseFloat(editRow.mrp) - parseFloat(editRow.purchaseCost);
                               const pct = parseFloat(editRow.mrp) > 0 ? (m / parseFloat(editRow.mrp)) * 100 : 0;
-                              return !isNaN(m) && !isNaN(pct) ? (
-                                <span className="font-mono text-xs font-bold text-emerald-600">
-                                  ₹{m.toFixed(2)} ({pct.toFixed(0)}%)
+                              if (isNaN(m) || isNaN(pct)) return <span className="text-xs text-slate-400 font-mono">—</span>;
+                              const isHealthy = pct > 25;
+                              const isModerate = pct >= 15 && pct <= 25;
+                              const badgeClasses = isHealthy
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : isModerate
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-rose-50 text-rose-700 border-rose-200";
+                              return (
+                                <span className={cn("inline-flex items-center font-mono text-[11px] font-black px-2 py-0.5 rounded-lg border shadow-2xs whitespace-nowrap", badgeClasses)}>
+                                  [{pct.toFixed(1)}% / ₹{m.toFixed(2)} Margin]
                                 </span>
-                              ) : '-';
-                            })()}
+                              );
+                            })() : (
+                              <span className="text-xs text-slate-400 font-mono">—</span>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-center">
                             <input
@@ -1044,32 +1420,32 @@ export default function PricingPage() {
                             {item.purchaseCost > 0 ? `₹${item.purchaseCost.toFixed(2)}` : <span className="text-red-500 font-bold">₹0.00</span>}
                           </td>
                           <td className="px-4 py-3 text-right">
-                            {item.mrp > 0 && item.purchaseCost > 0 ? (() => {
-                              const margin = item.mrp - item.purchaseCost;
-                              const marginPct = (margin / item.mrp) * 100;
-                              const isHealthy = marginPct >= 25;
-                              const isModerate = marginPct >= 15 && marginPct < 25;
-                              return (
-                                <div className="inline-flex flex-col items-end">
-                                  <span className="font-mono text-xs font-bold text-slate-800">
-                                    ₹{margin.toFixed(2)}
-                                  </span>
+                            {isAdmin ? (
+                              item.mrp > 0 && item.purchaseCost > 0 ? (() => {
+                                const margin = item.mrp - item.purchaseCost;
+                                const marginPct = (margin / item.mrp) * 100;
+                                const isHealthy = marginPct > 25;
+                                const isModerate = marginPct >= 15 && marginPct <= 25;
+                                const badgeClasses = isHealthy
+                                  ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                  : isModerate
+                                  ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                                  : "bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800";
+                                return (
                                   <span
                                     className={cn(
-                                      "text-[10px] font-black px-1.5 py-0.2 rounded-full border",
-                                      isHealthy
-                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                        : isModerate
-                                        ? "bg-amber-50 text-amber-700 border-amber-200"
-                                        : "bg-rose-50 text-rose-700 border-rose-200"
+                                      "inline-flex items-center font-mono text-[11px] font-black px-2.5 py-1 rounded-lg border shadow-2xs whitespace-nowrap",
+                                      badgeClasses
                                     )}
                                   >
-                                    {marginPct.toFixed(1)}%
+                                    [{marginPct.toFixed(1)}% / ₹{margin.toFixed(2)} Margin]
                                   </span>
-                                </div>
-                              );
-                            })() : (
-                              <span className="text-xs text-slate-400 font-mono">-</span>
+                                );
+                              })() : (
+                                <span className="text-xs text-slate-400 font-mono">—</span>
+                              )
+                            ) : (
+                              <span className="text-xs text-slate-400 font-mono italic">Admin only</span>
                             )}
                           </td>
                           <td className="px-4 py-3 text-center text-xs text-gray-500">

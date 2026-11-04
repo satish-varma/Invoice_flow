@@ -1,9 +1,10 @@
 'use client';
 
-import { CatalogItem } from '@/types/challan';
+import { CatalogItem, PricingItem } from '@/types/challan';
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import * as XLSX from 'xlsx';
 import {
   getCatalogItems,
   saveCatalogItem,
@@ -36,6 +37,9 @@ import {
   Loader2,
   Building2,
   GitMerge,
+  FileSpreadsheet,
+  CheckCheck,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
@@ -95,10 +99,12 @@ export default function CatalogPage() {
   const router = useRouter();
 
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [pricingItems, setPricingItems] = useState<PricingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [isCleaningBrands, setIsCleaningBrands] = useState(false);
 
   // Filters & Sorting
   const [filterMode, setFilterMode] = useState<'all' | 'missing-mrp' | 'missing-case'>('all');
@@ -155,14 +161,40 @@ export default function CatalogPage() {
 
   async function loadData() {
     setLoading(true);
-    const catalogData = await getCatalogItems();
-    setCatalog(catalogData);
-    setLoading(false);
+    try {
+      const [catalogData, pricingData] = await Promise.all([
+        getCatalogItems(),
+        getAllPricingItems(),
+      ]);
+      setCatalog(catalogData);
+      setPricingItems(pricingData);
+    } catch (err) {
+      console.error('Error loading catalog and pricing:', err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Hyd and Blr pricing lookup maps
+  const { hydPricingMap, blrPricingMap } = useMemo(() => {
+    const hydMap = new Map<string, PricingItem>();
+    const blrMap = new Map<string, PricingItem>();
+
+    pricingItems.forEach((p) => {
+      const key = `${(p.brandName || '').trim().toLowerCase()}___${(p.itemName || '').trim().toLowerCase()}`;
+      if (p.location === 'hyderabad') {
+        hydMap.set(key, p);
+      } else if (p.location === 'bangalore') {
+        blrMap.set(key, p);
+      }
+    });
+
+    return { hydPricingMap: hydMap, blrPricingMap: blrMap };
+  }, [pricingItems]);
 
   const missingMrpCount = useMemo(() =>
     catalog.filter(c => !c.mrp || c.mrp <= 0).length,
@@ -184,6 +216,30 @@ export default function CatalogPage() {
       .map(([brand, count]) => ({ brand, count }))
       .sort((a, b) => a.brand.localeCompare(b.brand));
   }, [catalog]);
+
+  // Executive KPI summary calculations for Catalog
+  const catalogKPIs = useMemo(() => {
+    let hydPricedCount = 0;
+    let blrPricedCount = 0;
+
+    catalog.forEach((item) => {
+      const key = `${(item.brandName || '').trim().toLowerCase()}___${(item.itemName || '').trim().toLowerCase()}`;
+      if (hydPricingMap.has(key)) hydPricedCount++;
+      if (blrPricingMap.has(key)) blrPricedCount++;
+    });
+
+    const hydCoveragePct = catalog.length > 0 ? (hydPricedCount / catalog.length) * 100 : 0;
+    const blrCoveragePct = catalog.length > 0 ? (blrPricedCount / catalog.length) * 100 : 0;
+
+    return {
+      totalCount: catalog.length,
+      brandsCount: uniqueBrands.length,
+      hydPricedCount,
+      hydCoveragePct,
+      blrPricedCount,
+      blrCoveragePct,
+    };
+  }, [catalog, uniqueBrands.length, hydPricingMap, blrPricingMap]);
 
   const filteredItems = useMemo(() => {
     let list = catalog;
@@ -469,6 +525,111 @@ export default function CatalogPage() {
     URL.revokeObjectURL(url);
   }
 
+  function handleExportExcel(selectedOnly = false) {
+    triggerHaptic('light');
+    const itemsToExport = selectedOnly || selectedIds.size > 0
+      ? (selectedIds.size > 0 ? catalog.filter(i => i.id && selectedIds.has(i.id)) : filteredItems)
+      : filteredItems;
+
+    if (itemsToExport.length === 0) {
+      alert('No items to export based on current filters.');
+      return;
+    }
+
+    const rows = itemsToExport.map((i) => {
+      const key = `${(i.brandName || '').trim().toLowerCase()}___${(i.itemName || '').trim().toLowerCase()}`;
+      const hyd = hydPricingMap.get(key);
+      const blr = blrPricingMap.get(key);
+      const sitesStr = (i.applicableSites && i.applicableSites.length > 0 ? i.applicableSites : ['newrelic']).join(', ');
+
+      const hydMargin = hyd && hyd.mrp > 0 && hyd.purchaseCost > 0
+        ? `${(((hyd.mrp - hyd.purchaseCost) / hyd.mrp) * 100).toFixed(1)}%`
+        : 'N/A';
+      const blrMargin = blr && blr.mrp > 0 && blr.purchaseCost > 0
+        ? `${(((blr.mrp - blr.purchaseCost) / blr.mrp) * 100).toFixed(1)}%`
+        : 'N/A';
+
+      return {
+        'Brand Name': i.brandName,
+        'Item Name': i.itemName,
+        'Case Size': i.caseSize || '',
+        'Ref MRP (₹)': i.mrp || '',
+        'Applicable Sites': sitesStr,
+        'HYD Cost (₹)': hyd?.purchaseCost || '',
+        'HYD Margin': hydMargin,
+        'BLR Cost (₹)': blr?.purchaseCost || '',
+        'BLR Margin': blrMargin,
+        'Status': !i.mrp ? 'Missing MRP' : !i.caseSize ? 'Missing Case Size' : 'Configured',
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Catalog Master');
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const scopeStr = selectedIds.size > 0 ? `selected_${itemsToExport.length}` : `filtered_${itemsToExport.length}`;
+    XLSX.writeFile(workbook, `catalog_master_${scopeStr}_${dateStr}.xlsx`);
+  }
+
+  async function handleScanAndCleanBrands() {
+    if (isReadOnly || role === 'guest') {
+      alert('Read-Only Mode: Guest account cannot clean catalog names.');
+      return;
+    }
+    setIsCleaningBrands(true);
+    try {
+      const candidates: Array<{ original: CatalogItem; cleanedItemName: string }> = [];
+
+      catalog.forEach((item) => {
+        const brand = (item.brandName || '').trim();
+        const itemName = (item.itemName || '').trim();
+        if (!brand || !itemName) return;
+
+        const escapedBrand = brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const brandPrefixRegex = new RegExp(`^${escapedBrand}\\s*[-–—:]*\\s*`, 'i');
+
+        if (brandPrefixRegex.test(itemName)) {
+          const cleaned = itemName.replace(brandPrefixRegex, '').trim();
+          if (cleaned && cleaned.toLowerCase() !== itemName.toLowerCase()) {
+            candidates.push({ original: item, cleanedItemName: cleaned });
+          }
+        }
+      });
+
+      if (candidates.length === 0) {
+        alert('✓ Awesome! All catalog item names are already clean with no duplicate brand prefixes.');
+        return;
+      }
+
+      const confirmMsg = `Found ${candidates.length} item(s) where Brand Name appears inside Item Name (e.g., "${candidates[0].original.brandName}" in "${candidates[0].original.itemName}" ➔ "${candidates[0].cleanedItemName}").\n\nDo you want to automatically clean and update these in the catalog?`;
+      if (!confirm(confirmMsg)) return;
+
+      setSyncProgress({
+        current: 0,
+        total: candidates.length,
+        percent: 5,
+        statusText: `Cleaning brand prefixes for ${candidates.length} items...`,
+      });
+
+      const itemsToUpdate = candidates.map(c => ({
+        ...c.original,
+        itemName: c.cleanedItemName,
+      }));
+
+      const res = await bulkSaveCatalogItems(itemsToUpdate, (p) => setSyncProgress(p));
+      const refreshed = await getCatalogItems();
+      setCatalog(refreshed);
+      alert(`✓ Successfully cleaned ${res.savedCount} catalog item names!`);
+    } catch (err: any) {
+      console.error('Error cleaning brand names in catalog:', err);
+      alert(`Failed to clean brand names: ${err.message || 'Unknown error'}`);
+    } finally {
+      setIsCleaningBrands(false);
+      setSyncProgress(null);
+    }
+  }
+
   async function handleSyncMrp() {
     if (isReadOnly || role === 'guest') {
       alert('Read-Only Mode: Guest account cannot sync MRP.');
@@ -640,7 +801,19 @@ export default function CatalogPage() {
             className="flex-1 sm:flex-initial h-11 sm:h-10 px-3.5 rounded-2xl sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-xs active:scale-95 cursor-pointer"
           >
             <RefreshCw className={`h-4 w-4 ${saving ? 'animate-spin' : ''}`} />
-            <span>Sync from Pricing</span>
+            <span>Sync MRP</span>
+          </button>
+          <button
+            onClick={() => {
+              triggerHaptic('light');
+              handleScanAndCleanBrands();
+            }}
+            disabled={saving || isCleaningBrands}
+            className="flex-1 sm:flex-initial h-11 sm:h-10 px-3.5 rounded-2xl sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all flex items-center justify-center gap-2 shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
+            title="Scan and automatically trim duplicate brand names from item descriptions"
+          >
+            <Sparkles className={cn("h-4 w-4 text-amber-500", isCleaningBrands && "animate-spin")} />
+            <span>Clean Brands</span>
           </button>
           <button
             onClick={() => {
@@ -655,13 +828,24 @@ export default function CatalogPage() {
           <button
             onClick={() => {
               triggerHaptic('light');
+              handleExportExcel(false);
+            }}
+            className="flex-1 sm:flex-initial h-11 sm:h-10 px-3.5 rounded-2xl sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all flex items-center justify-center gap-2 shadow-xs active:scale-95 cursor-pointer"
+            title={selectedIds.size > 0 ? `Export ${selectedIds.size} selected items to Excel` : `Export all ${filteredItems.length} filtered items to Excel (.xlsx)`}
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+            <span>{selectedIds.size > 0 ? `Excel (${selectedIds.size})` : 'Export (.xlsx)'}</span>
+          </button>
+          <button
+            onClick={() => {
+              triggerHaptic('light');
               handleExportCsv(false);
             }}
             className="flex-1 sm:flex-initial h-11 sm:h-10 px-3.5 rounded-2xl sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all flex items-center justify-center gap-2 shadow-xs active:scale-95 cursor-pointer"
-            title={selectedIds.size > 0 ? `Export ${selectedIds.size} selected items` : `Export all ${filteredItems.length} filtered items to CSV`}
+            title={selectedIds.size > 0 ? `Export ${selectedIds.size} selected items to CSV` : `Export all ${filteredItems.length} filtered items to CSV`}
           >
             <Download className="h-4 w-4" />
-            <span>{selectedIds.size > 0 ? `Export (${selectedIds.size})` : 'Export CSV'}</span>
+            <span>CSV</span>
           </button>
           <button
             onClick={() => {
@@ -677,7 +861,7 @@ export default function CatalogPage() {
             title="Scan near-duplicate items, spelling variations, and plural brand inconsistencies"
           >
             <GitMerge className={cn("h-4 w-4", duplicateGroups.length > 0 ? "text-rose-600 dark:text-rose-400" : "text-indigo-600 dark:text-indigo-400")} />
-            <span>Smart Merger</span>
+            <span>Merger</span>
             {duplicateGroups.length > 0 && (
               <span className="px-1.5 py-0.5 text-[10px] font-black rounded-full bg-rose-600 text-white leading-none">
                 {duplicateGroups.length}
@@ -708,12 +892,13 @@ export default function CatalogPage() {
         </div>
       )}
 
-      {/* Summary Stat Cards */}
+      {/* Executive KPI Strip (4 Cards) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Card 1: Total SKUs & Brands */}
         <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              Total Catalog Items
+              Catalog Master
             </span>
             <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-[#3b2fc9] dark:text-indigo-400">
               <Package className="h-4 w-4" />
@@ -721,7 +906,7 @@ export default function CatalogPage() {
           </div>
           <div className="flex items-baseline justify-between gap-2">
             <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-              {catalog.length}
+              {catalog.length} <span className="text-sm font-bold text-slate-500">SKUs</span>
             </p>
             {duplicateGroups.length > 0 && (
               <button
@@ -734,43 +919,81 @@ export default function CatalogPage() {
                 title="View and merge duplicates"
               >
                 <GitMerge className="h-3 w-3" />
-                <span>{duplicateGroups.length} duplicates</span>
+                <span>{duplicateGroups.length} dupes</span>
               </button>
             )}
           </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-            Active cross-site item definitions
+            {uniqueBrands.length} brands configured across sites
           </p>
         </div>
 
+        {/* Card 2: Hyderabad Pricing Coverage */}
         <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              Configured Brands
+            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+              HYD Price Linkage
             </span>
-            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
-              <Layers className="h-4 w-4" />
+            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+              <TrendingUp className="h-4 w-4" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-            {uniqueBrands.length}
-          </p>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-2xl sm:text-3xl font-black text-emerald-700 dark:text-emerald-400">
+              {catalogKPIs.hydPricedCount}
+              <span className="text-xs font-semibold text-slate-400"> / {catalog.length}</span>
+            </p>
+            <span className="text-xs font-mono font-black px-2 py-0.5 rounded-md bg-emerald-100/70 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
+              {catalogKPIs.hydCoveragePct.toFixed(0)}%
+            </span>
+          </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-            {brandFilter === 'all' ? 'All brands shown' : `Filtered: ${brandFilter}`}
+            {catalog.length - catalogKPIs.hydPricedCount > 0
+              ? `${catalog.length - catalogKPIs.hydPricedCount} missing HYD pricing`
+              : '100% priced in Hyderabad'}
           </p>
         </div>
 
+        {/* Card 3: Bangalore Pricing Coverage */}
+        <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-[#3b2fc9] dark:text-indigo-400 uppercase tracking-wider">
+              BLR Price Linkage
+            </span>
+            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-[#3b2fc9] dark:text-indigo-300">
+              <Building2 className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-2xl sm:text-3xl font-black text-[#3b2fc9] dark:text-indigo-400">
+              {catalogKPIs.blrPricedCount}
+              <span className="text-xs font-semibold text-slate-400"> / {catalog.length}</span>
+            </p>
+            <span className="text-xs font-mono font-black px-2 py-0.5 rounded-md bg-indigo-100/70 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-300">
+              {catalogKPIs.blrCoveragePct.toFixed(0)}%
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+            {catalog.length - catalogKPIs.blrPricedCount > 0
+              ? `${catalog.length - catalogKPIs.blrPricedCount} missing BLR pricing`
+              : '100% priced in Bangalore'}
+          </p>
+        </div>
+
+        {/* Card 4: Action Needed & Alerts */}
         <button
           type="button"
           onClick={() => {
             triggerHaptic('light');
-            setFilterMode(filterMode === 'missing-mrp' ? 'all' : 'missing-mrp');
+            if (filterMode === 'all') setFilterMode('missing-mrp');
+            else if (filterMode === 'missing-mrp') setFilterMode('missing-case');
+            else setFilterMode('all');
           }}
           className={cn(
             "p-4 sm:p-5 rounded-2xl sm:rounded-3xl border text-left transition-all active:scale-95 space-y-1 shadow-xs cursor-pointer",
-            filterMode === 'missing-mrp'
+            filterMode !== 'all'
               ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
-              : missingMrpCount > 0
+              : missingMrpCount + missingCaseCount > 0
               ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/60 hover:bg-amber-100/60'
               : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800'
           )}
@@ -778,71 +1001,28 @@ export default function CatalogPage() {
           <div className="flex items-center justify-between">
             <span className={cn(
               "text-[11px] font-bold uppercase tracking-wider",
-              filterMode === 'missing-mrp' ? 'text-amber-100' : 'text-slate-400 dark:text-slate-500'
+              filterMode !== 'all' ? 'text-amber-100' : 'text-slate-400 dark:text-slate-500'
             )}>
-              Missing Ref MRP
+              Action Needed
             </span>
             <div className={cn(
               "p-2 rounded-xl",
-              filterMode === 'missing-mrp' ? 'bg-white/20 text-white' : 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+              filterMode !== 'all' ? 'bg-white/20 text-white' : 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
             )}>
               <AlertTriangle className="h-4 w-4" />
             </div>
           </div>
           <p className={cn(
             "text-2xl sm:text-3xl font-black",
-            filterMode === 'missing-mrp' ? 'text-white' : missingMrpCount > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-slate-900 dark:text-white'
+            filterMode !== 'all' ? 'text-white' : missingMrpCount + missingCaseCount > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-slate-900 dark:text-white'
           )}>
-            {missingMrpCount}
+            {missingMrpCount + missingCaseCount} <span className="text-xs font-semibold opacity-70">alerts</span>
           </p>
           <p className={cn(
             "text-[11px] truncate",
-            filterMode === 'missing-mrp' ? 'text-amber-100' : 'text-slate-500 dark:text-slate-400'
+            filterMode !== 'all' ? 'text-amber-100' : 'text-slate-500 dark:text-slate-400'
           )}>
-            {missingMrpCount > 0 ? 'Click to filter missing MRPs' : 'All items have MRP'}
-          </p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            triggerHaptic('light');
-            setFilterMode(filterMode === 'missing-case' ? 'all' : 'missing-case');
-          }}
-          className={cn(
-            "p-4 sm:p-5 rounded-2xl sm:rounded-3xl border text-left transition-all active:scale-95 space-y-1 shadow-xs cursor-pointer",
-            filterMode === 'missing-case'
-              ? 'bg-blue-600 text-white border-blue-700 shadow-sm'
-              : missingCaseCount > 0
-              ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900/60 hover:bg-blue-100/60'
-              : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800'
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <span className={cn(
-              "text-[11px] font-bold uppercase tracking-wider",
-              filterMode === 'missing-case' ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'
-            )}>
-              Missing Case Size
-            </span>
-            <div className={cn(
-              "p-2 rounded-xl",
-              filterMode === 'missing-case' ? 'bg-white/20 text-white' : 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300'
-            )}>
-              <AlertTriangle className="h-4 w-4" />
-            </div>
-          </div>
-          <p className={cn(
-            "text-2xl sm:text-3xl font-black",
-            filterMode === 'missing-case' ? 'text-white' : missingCaseCount > 0 ? 'text-blue-700 dark:text-blue-400' : 'text-slate-900 dark:text-white'
-          )}>
-            {missingCaseCount}
-          </p>
-          <p className={cn(
-            "text-[11px] truncate",
-            filterMode === 'missing-case' ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'
-          )}>
-            {missingCaseCount > 0 ? 'Click to filter missing cases' : 'All items have case size'}
+            {missingMrpCount} no MRP • {missingCaseCount} no case
           </p>
         </button>
       </div>
@@ -954,6 +1134,63 @@ export default function CatalogPage() {
             <option value="mrp_asc">Sort: Ref MRP (Low to High)</option>
           </select>
         </div>
+
+        {/* Brand Filter Chips Bar */}
+        {uniqueBrands.length > 0 && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar">
+            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider mr-1 hidden sm:inline">
+              Brand:
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setBrandFilter('all');
+              }}
+              className={cn(
+                "h-7 px-3 rounded-full text-xs font-bold transition-all whitespace-nowrap inline-flex items-center gap-1.5 cursor-pointer",
+                brandFilter === 'all'
+                  ? "bg-indigo-600 text-white shadow-xs shadow-indigo-600/30"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+              )}
+            >
+              <span>All Brands</span>
+              <span className={cn(
+                "text-[10px] px-1.5 py-0.2 rounded-full",
+                brandFilter === 'all' ? "bg-indigo-700 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+              )}>
+                {catalog.length}
+              </span>
+            </button>
+            {uniqueBrands.map(({ brand, count }) => {
+              const isSelected = brandFilter.toLowerCase() === brand.toLowerCase();
+              return (
+                <button
+                  key={brand}
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setBrandFilter(isSelected ? 'all' : brand);
+                  }}
+                  className={cn(
+                    "h-7 px-3 rounded-full text-xs font-bold transition-all whitespace-nowrap inline-flex items-center gap-1.5 cursor-pointer",
+                    isSelected
+                      ? "bg-indigo-600 text-white shadow-xs shadow-indigo-600/30"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                  )}
+                >
+                  <span>{brand}</span>
+                  <span className={cn(
+                    "text-[10px] px-1.5 py-0.2 rounded-full",
+                    isSelected ? "bg-indigo-700 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                  )}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Quick Filter Pills & Selection Counter */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1339,6 +1576,42 @@ export default function CatalogPage() {
                         {item.brandName}
                       </span>
                       {renderItemSiteBadges(item.applicableSites)}
+                      {/* Pricing Master Linkage (HYD / BLR) */}
+                      {(() => {
+                        const key = `${(item.brandName || '').trim().toLowerCase()}___${(item.itemName || '').trim().toLowerCase()}`;
+                        const hyd = hydPricingMap.get(key);
+                        const blr = blrPricingMap.get(key);
+                        return (
+                          <div className="inline-flex items-center gap-1 flex-wrap">
+                            {hyd ? (
+                              <span
+                                className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                title={`HYD Cost: ₹${hyd.purchaseCost} (MRP: ₹${hyd.mrp})`}
+                              >
+                                <span className="font-sans font-black text-[8px] uppercase tracking-wider text-emerald-600">HYD</span>
+                                <span>₹{hyd.purchaseCost > 0 ? hyd.purchaseCost.toFixed(0) : '0'}</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[8px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700" title="Missing HYD price">
+                                No HYD
+                              </span>
+                            )}
+                            {blr ? (
+                              <span
+                                className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950/60 text-[#3b2fc9] dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
+                                title={`BLR Cost: ₹${blr.purchaseCost} (MRP: ₹${blr.mrp})`}
+                              >
+                                <span className="font-sans font-black text-[8px] uppercase tracking-wider text-[#3b2fc9]">BLR</span>
+                                <span>₹{blr.purchaseCost > 0 ? blr.purchaseCost.toFixed(0) : '0'}</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[8px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700" title="Missing BLR price">
+                                No BLR
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                       {isMissingCase && (
                         <button
                           type="button"
@@ -1525,7 +1798,7 @@ export default function CatalogPage() {
       {/* Desktop Table (hidden md:block) */}
       <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left min-w-[700px]">
+          <table className="w-full text-sm text-left min-w-[860px]">
             <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-wider">
               <tr>
                 <th className="px-3 py-3 w-10 text-center">
@@ -1556,6 +1829,7 @@ export default function CatalogPage() {
                   </div>
                 </th>
                 <th className="px-4 py-3 w-[150px]">Sites</th>
+                <th className="px-4 py-3 min-w-[160px]">Pricing Linkage</th>
                 <th
                   onClick={() => setSortBy(sortBy === 'case_desc' ? 'case_asc' : 'case_desc')}
                   className="px-4 py-3 w-[110px] cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800 transition-colors select-none"
@@ -1631,6 +1905,7 @@ export default function CatalogPage() {
                       })}
                     </div>
                   </td>
+                  <td className="px-4 py-2" />
                   <td className="px-4 py-2">
                     <input
                       type="number"
@@ -1674,7 +1949,7 @@ export default function CatalogPage() {
 
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-slate-400 text-sm">
+                  <td colSpan={8} className="px-4 py-12 text-center text-slate-400 text-sm">
                     <div className="flex items-center justify-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin text-[#3b2fc9]" />
                       <span>Loading catalog items...</span>
@@ -1683,7 +1958,7 @@ export default function CatalogPage() {
                 </tr>
               ) : filteredItems.length === 0 && !showAdd ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-slate-400 text-sm">
+                  <td colSpan={8} className="px-4 py-12 text-center text-slate-400 text-sm">
                     No catalog items found matching your filters.
                   </td>
                 </tr>
@@ -1817,6 +2092,47 @@ export default function CatalogPage() {
                         ) : (
                           renderItemSiteBadges(item.applicableSites)
                         )}
+                      </td>
+                      {/* Pricing Master Linkage (HYD / BLR) */}
+                      <td className="px-4 py-2">
+                        {isEditing ? (
+                          <span className="text-xs text-slate-400 font-mono">—</span>
+                        ) : (() => {
+                          const key = `${(item.brandName || '').trim().toLowerCase()}___${(item.itemName || '').trim().toLowerCase()}`;
+                          const hyd = hydPricingMap.get(key);
+                          const blr = blrPricingMap.get(key);
+                          return (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {hyd ? (
+                                <span
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                  title={`HYD Cost: ₹${hyd.purchaseCost} (MRP: ₹${hyd.mrp})`}
+                                >
+                                  <span className="font-sans font-black text-[9px] uppercase tracking-wider text-emerald-600">HYD</span>
+                                  <span>₹{hyd.purchaseCost > 0 ? hyd.purchaseCost.toFixed(1) : '0'}</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700" title="Missing HYD price">
+                                  No HYD
+                                </span>
+                              )}
+
+                              {blr ? (
+                                <span
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950/60 text-[#3b2fc9] dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
+                                  title={`BLR Cost: ₹${blr.purchaseCost} (MRP: ₹${blr.mrp})`}
+                                >
+                                  <span className="font-sans font-black text-[9px] uppercase tracking-wider text-[#3b2fc9]">BLR</span>
+                                  <span>₹{blr.purchaseCost > 0 ? blr.purchaseCost.toFixed(1) : '0'}</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700" title="Missing BLR price">
+                                  No BLR
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-2 text-slate-700 dark:text-slate-300 font-mono">
                         {isEditing ? (

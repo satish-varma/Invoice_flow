@@ -234,6 +234,20 @@ export function findPricingForItem(
   const alphaBrand = cleanBrand.replace(/[^a-z0-9]/g, '');
   const alphaName = cleanName.replace(/[^a-z0-9]/g, '');
 
+  const matchesNameWithBrandFlex = (pName: string, qName: string, bBrand: string) => {
+    if (pName === qName) return true;
+    if (pName.replace(/[^a-z0-9]/g, '') === qName.replace(/[^a-z0-9]/g, '')) return true;
+    if (bBrand) {
+      const pStripped = pName.startsWith(bBrand) ? pName.slice(bBrand.length).replace(/^[\s\-:]+/, '').trim() : pName;
+      const qStripped = qName.startsWith(bBrand) ? qName.slice(bBrand.length).replace(/^[\s\-:]+/, '').trim() : qName;
+      if (pStripped && qStripped) {
+        if (pStripped === qStripped) return true;
+        if (pStripped.replace(/[^a-z0-9]/g, '') === qStripped.replace(/[^a-z0-9]/g, '')) return true;
+      }
+    }
+    return false;
+  };
+
   // 1. Check pricingMap for exact "brand__item"
   if (cleanBrand) {
     const cost = pricingMap.get(`${cleanBrand}__${cleanName}`) ??
@@ -243,7 +257,7 @@ export function findPricingForItem(
         const pBrand = p.brandName.trim().toLowerCase();
         const pName = p.itemName.trim().toLowerCase();
         return (pBrand === cleanBrand || pBrand.replace(/[^a-z0-9]/g, '') === alphaBrand) &&
-               (pName === cleanName || pName.replace(/[^a-z0-9]/g, '') === alphaName);
+               matchesNameWithBrandFlex(pName, cleanName, cleanBrand);
       });
       return {
         purchaseCost: cost,
@@ -253,7 +267,7 @@ export function findPricingForItem(
     }
   }
 
-  // 2. Direct search in pricingItems (exact item name + brand match)
+  // 2. Direct search in pricingItems (item name + brand match with flexible prefix stripping)
   if (cleanBrand) {
     const match = pricingItems.find(p => {
       const pBrand = p.brandName.trim().toLowerCase();
@@ -261,7 +275,7 @@ export function findPricingForItem(
       const brandMatch = pBrand === cleanBrand || 
                          pBrand.replace(/s$/, '') === cleanBrand.replace(/s$/, '') ||
                          pBrand.replace(/[^a-z0-9]/g, '') === alphaBrand;
-      return brandMatch && (pName === cleanName || pName.replace(/[^a-z0-9]/g, '') === alphaName);
+      return brandMatch && matchesNameWithBrandFlex(pName, cleanName, cleanBrand);
     });
     if (match) {
       return {

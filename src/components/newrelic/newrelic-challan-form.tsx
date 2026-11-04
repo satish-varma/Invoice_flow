@@ -291,13 +291,21 @@ export function NewRelicChallanForm({
         const baseTime = Date.now();
         const primaryBrand = data.brandName?.trim() || '';
 
-        const newRows = data.lineItems.map((item, idx) => ({
-          id: baseTime + idx,
-          brandName: item.brandName?.trim() || primaryBrand,
-          itemName: item.itemName,
-          quantity: Number(item.quantity) || 1,
-          expiry: item.expiry || '',
-        }));
+        const newRows = data.lineItems.map((item, idx) => {
+          const rowBrand = item.brandName?.trim() || primaryBrand;
+          let rowItem = (item.itemName || '').trim();
+          if (rowBrand && rowItem.toLowerCase().startsWith(rowBrand.toLowerCase())) {
+            const stripped = rowItem.slice(rowBrand.length).replace(/^[\s\-:]+/, '').trim();
+            if (stripped) rowItem = stripped;
+          }
+          return {
+            id: baseTime + idx,
+            brandName: rowBrand,
+            itemName: rowItem,
+            quantity: Number(item.quantity) || 1,
+            expiry: item.expiry || '',
+          };
+        });
 
         // Replace form items completely with newly extracted invoice items
         setValue('lineItems', newRows);
@@ -343,10 +351,20 @@ export function NewRelicChallanForm({
   const handleItemNameChange = (index: number, selectedItemName: string, currentBrandName?: string) => {
     if (!selectedItemName || !selectedItemName.trim()) return;
 
+    let cleanItemName = selectedItemName.trim();
+    const effectiveBrandInitial = (currentBrandName || watchedLineItems?.[index]?.brandName || '').trim();
+    if (effectiveBrandInitial && cleanItemName.toLowerCase().startsWith(effectiveBrandInitial.toLowerCase())) {
+      const rest = cleanItemName.slice(effectiveBrandInitial.length).replace(/^[\s\-:]+/, '').trim();
+      if (rest) {
+        cleanItemName = rest;
+        setValue(`lineItems.${index}.itemName`, cleanItemName);
+      }
+    }
+
     // 1. Try finding in catalog for defaultQuantity & canonical brand name
     const catalogMatch = catalog.find(
       (c) => 
-        c.itemName.toLowerCase() === selectedItemName.trim().toLowerCase() && 
+        (c.itemName.toLowerCase() === cleanItemName.toLowerCase() || c.itemName.toLowerCase() === selectedItemName.trim().toLowerCase()) && 
         (!currentBrandName || c.brandName.toLowerCase() === currentBrandName.trim().toLowerCase())
     );
     if (catalogMatch) {
@@ -363,7 +381,7 @@ export function NewRelicChallanForm({
 
     // 2. Comprehensive pricing lookup using findPricingForItem
     const effectiveBrand = currentBrandName?.trim() || catalogMatch?.brandName || watchedLineItems?.[index]?.brandName || '';
-    const pricingMatch = findPricingForItem(pricingItems, pricingMap, selectedItemName, effectiveBrand);
+    const pricingMatch = findPricingForItem(pricingItems, pricingMap, cleanItemName, effectiveBrand);
 
     // Auto-fill brand name if still empty and pricingMatch has one
     if (pricingMatch.brandName && (!watchedLineItems?.[index]?.brandName || !watchedLineItems?.[index]?.brandName.trim())) {
@@ -425,10 +443,17 @@ export function NewRelicChallanForm({
           const rawQty = Number(item.quantity);
           const finalQty = (!rawQty || isNaN(rawQty) || rawQty < 1) ? 1 : rawQty;
 
+          const brand = item.brandName?.trim() || '';
+          let name = item.itemName!.trim();
+          if (brand && name.toLowerCase().startsWith(brand.toLowerCase())) {
+            const stripped = name.slice(brand.length).replace(/^[\s\-:]+/, '').trim();
+            if (stripped) name = stripped;
+          }
+
           return {
             ...item,
-            brandName: item.brandName?.trim() || '',
-            itemName: item.itemName!.trim(),
+            brandName: brand,
+            itemName: name,
             quantity: finalQty,
             expiry: item.expiry?.trim() || '',
             mrp,

@@ -84,7 +84,9 @@ export function NewRelicItemDashboard({ challans }: NewRelicItemDashboardProps) 
       c.lineItems?.forEach(item => {
         const rawName = (item.itemName || 'Unknown Item').trim();
         const brandName = (item.brandName || '').trim();
-        const fullName = `${brandName} ${rawName}`.trim();
+        const fullName = (brandName && rawName.toLowerCase().startsWith(brandName.toLowerCase()))
+          ? rawName
+          : `${brandName} ${rawName}`.trim();
         const mrp = Number(item.mrp) || 0;
         const qty = Number(item.quantity) || 0;
 

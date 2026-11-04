@@ -142,7 +142,9 @@ export default function ReconcilePage() {
       c.lineItems?.forEach(item => {
         const brand = (item.brandName || '').trim();
         const desc = (item.itemName || '').trim();
-        const fullName = `${brand} ${desc}`.trim();
+        const fullName = (brand && desc.toLowerCase().startsWith(brand.toLowerCase()))
+          ? desc
+          : `${brand} ${desc}`.trim();
         const mrp = Number(item.mrp) || 0;
         const qty = Number(item.quantity) || 0;
         const key = `${fullName.toLowerCase()}__${mrp}`;

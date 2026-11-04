@@ -148,10 +148,18 @@ function cleanItemName(name: string, brand?: string): string {
   cleaned = cleaned.replace(/\s+\d{1,2}$/, '');
 
   // Strip brand prefix from item name since brand is provided separately
-  if (brand) {
-    const escapedBrand = brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    cleaned = cleaned.replace(new RegExp('^' + escapedBrand + '\\s*', 'i'), '');
+  const allKnownBrands = [
+    brand,
+    'Storia', 'Epigamia', 'Akshaykalpa', 'Fab Box', 'Peping', 'Yogabar', 'Farmley',
+    'Healthy Master', 'Unibic', 'The Drill', 'Britannia', 'Paperboat', 'Pepsi', 'Tropicana', 'Happilo', 'Zumi', 'Beyond Snacks'
+  ].filter(Boolean) as string[];
 
+  for (const b of allKnownBrands) {
+    const escaped = b.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    cleaned = cleaned.replace(new RegExp('^' + escaped + '\\s*[-:]*\\s*', 'i'), '');
+  }
+
+  if (brand) {
     if (brand.toLowerCase().includes('town bus')) {
       cleaned = cleaned.replace(/^TB\s+/i, '');
     }
@@ -202,6 +210,17 @@ function detectBrandFromItemName(itemName: string, fallbackBrand: string): strin
   if (/^Pepsi/i.test(name)) return 'Pepsi';
   if (/^Happilo/i.test(name)) return 'Happilo';
   if (/^Tropicana/i.test(name)) return 'Tropicana';
+  if (/^Storia/i.test(name)) return 'Storia';
+  if (/^Epigamia/i.test(name)) return 'Epigamia';
+  if (/^Fab\s*Box/i.test(name)) return 'Fab Box';
+  if (/^Peping/i.test(name)) return 'Peping';
+  if (/^Akshaykalpa/i.test(name)) return 'Akshaykalpa';
+  if (/^Yogabar|Yoga\s*bar/i.test(name)) return 'Yogabar';
+  if (/^Farmley/i.test(name)) return 'Farmley';
+  if (/^Britannia/i.test(name)) return 'Britannia';
+  if (/^Paperboat/i.test(name)) return 'Paperboat';
+  if (/^Zumi/i.test(name)) return 'Zumi';
+  if (/^Beyond\s*Snacks|^Beyond/i.test(name)) return 'Beyond Snacks';
   if (/^Lassi|^Butter\s*Milk/i.test(name)) return 'Dairy';
   if (/^The\s*Drill/i.test(name)) return 'The Drill';
   if (/^Healthy\s*Master/i.test(name)) return 'Healthy Master';

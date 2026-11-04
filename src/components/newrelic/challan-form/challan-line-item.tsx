@@ -47,12 +47,34 @@ export function ChallanLineItem({
     ...pricingItems.map((p) => ({ brandName: p.brandName, itemName: p.itemName })),
   ];
 
+  // Helper to cleanly strip leading brand name if present so suggestions never duplicate the brand
+  const stripBrandPrefix = (name: string, brand: string) => {
+    if (!name || !brand) return name;
+    const b = brand.trim().toLowerCase();
+    const n = name.trim();
+    if (n.toLowerCase().startsWith(b)) {
+      const rest = n.slice(b.length).replace(/^[\s\-:]+/, '').trim();
+      return rest || n;
+    }
+    return n;
+  };
+
   const rawFilteredItems = rowBrand
     ? allItems.filter((c) => (c.brandName || '').trim().toLowerCase() === rowBrand)
     : allItems;
     
-  // Deduplicate item names for the datalist
-  const uniqueItemNames = Array.from(new Set(rawFilteredItems.map((c) => (c.itemName || '').trim()).filter(Boolean)));
+  // Deduplicate and strip brand prefix for clean, non-duplicated suggestions in the datalist
+  const uniqueItemNames = Array.from(
+    new Set(
+      rawFilteredItems
+        .map((c) => {
+          const rawItem = (c.itemName || '').trim();
+          const effectiveBrand = (c.brandName || watchedLineItems?.[index]?.brandName || '').trim();
+          return stripBrandPrefix(rawItem, effectiveBrand);
+        })
+        .filter(Boolean)
+    )
+  );
   const datalistId = `newrelic-item-list-${index}`;
 
   return (

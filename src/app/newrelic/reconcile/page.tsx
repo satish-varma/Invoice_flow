@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Upload, CheckCircle2, FileSpreadsheet, ArrowLeft, Filter, Sparkles, X, BookOpen, Package, Search, ChevronDown, ChevronUp, Eye, EyeOff, Layers } from 'lucide-react';
+import { Upload, CheckCircle2, FileSpreadsheet, ArrowLeft, Filter, Sparkles, X, BookOpen, Package, Search, ChevronDown, ChevronUp, Eye, EyeOff, Layers, Download, Award, TrendingUp, Tag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import { NewRelicChallan } from '@/types/challan';
@@ -55,6 +55,7 @@ export default function ReconcilePage() {
   // Cycle Items Ledger View
   const [showCycleLedger, setShowCycleLedger] = useState(false);
   const [cycleSearchTerm, setCycleSearchTerm] = useState('');
+  const [selectedBrandFilter, setSelectedBrandFilter] = useState<string>('all');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -130,12 +131,14 @@ export default function ReconcilePage() {
       desc: string;
       fullName: string;
       dcs: Set<string>;
+      dcSplits: Record<string, number>;
       totalQty: number;
       mrp: number;
       totalVal: number;
     }>();
 
     displayChallans.forEach(c => {
+      const dcNum = c.dcNumber || 'Unknown DC';
       c.lineItems?.forEach(item => {
         const brand = (item.brandName || '').trim();
         const desc = (item.itemName || '').trim();
@@ -149,11 +152,13 @@ export default function ReconcilePage() {
           desc,
           fullName,
           dcs: new Set<string>(),
+          dcSplits: {},
           totalQty: 0,
           mrp,
           totalVal: 0,
         };
         if (c.dcNumber) existing.dcs.add(c.dcNumber);
+        existing.dcSplits[dcNum] = (existing.dcSplits[dcNum] || 0) + qty;
         existing.totalQty += qty;
         existing.totalVal += qty * mrp;
         map.set(key, existing);
@@ -162,6 +167,27 @@ export default function ReconcilePage() {
 
     return Array.from(map.values()).sort((a, b) => a.fullName.localeCompare(b.fullName));
   }, [displayChallans]);
+
+  const availableBrands = useMemo(() => {
+    const set = new Set<string>();
+    cycleItemsBreakdown.forEach(item => {
+      if (item.brand) set.add(item.brand);
+    });
+    return Array.from(set).sort();
+  }, [cycleItemsBreakdown]);
+
+  const filteredCycleItems = useMemo(() => {
+    return cycleItemsBreakdown.filter(item => {
+      if (selectedBrandFilter !== 'all' && item.brand.toLowerCase() !== selectedBrandFilter.toLowerCase()) {
+        return false;
+      }
+      if (!cycleSearchTerm) return true;
+      const term = cycleSearchTerm.toLowerCase();
+      const matchName = item.fullName.toLowerCase().includes(term);
+      const matchDC = Array.from(item.dcs).some(dc => dc.toLowerCase().includes(term));
+      return matchName || matchDC;
+    });
+  }, [cycleItemsBreakdown, selectedBrandFilter, cycleSearchTerm]);
 
   const cycleTotals = useMemo(() => {
     return cycleItemsBreakdown.reduce(
@@ -172,6 +198,99 @@ export default function ReconcilePage() {
       { totalQty: 0, totalVal: 0 }
     );
   }, [cycleItemsBreakdown]);
+
+  const ledgerKPIs = useMemo(() => {
+    let totalQty = 0;
+    let totalVal = 0;
+    let mrpSum = 0;
+    const brandMap: Record<string, { qty: number; val: number }> = {};
+    let topItem: { name: string; qty: number } = { name: '—', qty: 0 };
+
+    cycleItemsBreakdown.forEach(item => {
+      totalQty += item.totalQty;
+      totalVal += item.totalVal;
+      mrpSum += item.mrp * item.totalQty;
+
+      const brandKey = item.brand || 'Unbranded';
+      if (!brandMap[brandKey]) brandMap[brandKey] = { qty: 0, val: 0 };
+      brandMap[brandKey].qty += item.totalQty;
+      brandMap[brandKey].val += item.totalVal;
+
+      if (item.totalQty > topItem.qty) {
+        topItem = { name: item.fullName, qty: item.totalQty };
+      }
+    });
+
+    let topBrand: { name: string; qty: number; val: number } = { name: '—', qty: 0, val: 0 };
+    Object.entries(brandMap).forEach(([bName, bData]) => {
+      if (bData.qty > topBrand.qty) {
+        topBrand = { name: bName, qty: bData.qty, val: bData.val };
+      }
+    });
+
+    const avgMrp = totalQty > 0 ? mrpSum / totalQty : 0;
+
+    return {
+      totalQty,
+      totalVal,
+      topBrand,
+      topItem,
+      avgMrp,
+      uniqueSkuCount: cycleItemsBreakdown.length,
+    };
+  }, [cycleItemsBreakdown]);
+
+  const handleExportLedgerExcel = () => {
+    triggerHaptic('medium');
+    if (cycleItemsBreakdown.length === 0) {
+      alert("No cycle items to export.");
+      return;
+    }
+
+    const monthName = !isNaN(Number(filterMonth))
+      ? new Date(2000, Number(filterMonth), 1).toLocaleString('default', { month: 'short' })
+      : filterMonth;
+
+    const exportRows = cycleItemsBreakdown.map((item, index) => {
+      const dcSplitsText = Object.entries(item.dcSplits)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([dc, q]) => `${dc}: ${q} pcs`)
+        .join(' | ');
+
+      return {
+        '#': index + 1,
+        'Brand': item.brand,
+        'Item Description': item.desc,
+        'Full Product Name': item.fullName,
+        'Dispatched DCs': Array.from(item.dcs).join(', '),
+        'Per-DC Quantities': dcSplitsText,
+        'MRP (₹)': item.mrp,
+        'Total Cycle Qty (pcs)': item.totalQty,
+        'Total Value (₹)': item.totalVal,
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(exportRows);
+
+    const colWidths = [
+      { wch: 5 },
+      { wch: 18 },
+      { wch: 32 },
+      { wch: 36 },
+      { wch: 22 },
+      { wch: 38 },
+      { wch: 10 },
+      { wch: 18 },
+      { wch: 16 },
+    ];
+    ws['!cols'] = colWidths;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Cycle Item Ledger');
+
+    const outFileName = `Cycle_Ledger_${filterLocation}_${monthName}_${filterYear}_Cycle${filterCycle}.xlsx`;
+    XLSX.writeFile(wb, outFileName);
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -698,14 +817,73 @@ export default function ReconcilePage() {
             </div>
 
             {showCycleLedger && (
-              <div className="p-4 sm:p-5 space-y-3.5 animate-in fade-in duration-200">
-                {/* Search & Quick Stat Bar */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                  <div className="relative flex-1 max-w-sm">
+              <div className="p-4 sm:p-5 space-y-4 animate-in fade-in duration-200">
+                {/* 5. Executive KPI Strip */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+                  {/* Total Units */}
+                  <div className="p-3 sm:p-3.5 bg-gradient-to-br from-indigo-50/70 to-indigo-100/30 dark:from-indigo-950/40 dark:to-indigo-900/20 border border-indigo-200/60 dark:border-indigo-800/60 rounded-2xl">
+                    <div className="flex items-center justify-between text-indigo-700 dark:text-indigo-400 mb-1">
+                      <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider">Total Dispatched</span>
+                      <Package className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-base sm:text-lg font-black font-mono text-slate-900 dark:text-white">
+                      {ledgerKPIs.totalQty.toLocaleString('en-IN')} <span className="text-xs font-semibold text-slate-500">pcs</span>
+                    </div>
+                    <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                      Across {displayChallans.length} challans • {ledgerKPIs.uniqueSkuCount} SKUs
+                    </div>
+                  </div>
+
+                  {/* Gross Value */}
+                  <div className="p-3 sm:p-3.5 bg-gradient-to-br from-emerald-50/70 to-emerald-100/30 dark:from-emerald-950/40 dark:to-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800/60 rounded-2xl">
+                    <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 mb-1">
+                      <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider">Gross Value</span>
+                      <TrendingUp className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-base sm:text-lg font-black font-mono text-emerald-700 dark:text-emerald-400">
+                      ₹{ledgerKPIs.totalVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    </div>
+                    <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                      Avg MRP: ₹{ledgerKPIs.avgMrp.toFixed(2)} / unit
+                    </div>
+                  </div>
+
+                  {/* Top Brand */}
+                  <div className="p-3 sm:p-3.5 bg-gradient-to-br from-amber-50/70 to-amber-100/30 dark:from-amber-950/40 dark:to-amber-900/20 border border-amber-200/60 dark:border-amber-800/60 rounded-2xl">
+                    <div className="flex items-center justify-between text-amber-700 dark:text-amber-400 mb-1">
+                      <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider">Top Brand</span>
+                      <Award className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate" title={ledgerKPIs.topBrand.name}>
+                      {ledgerKPIs.topBrand.name}
+                    </div>
+                    <div className="text-[10px] font-mono font-bold text-amber-700 dark:text-amber-400 mt-0.5">
+                      {ledgerKPIs.topBrand.qty.toLocaleString('en-IN')} pcs (₹{ledgerKPIs.topBrand.val.toLocaleString('en-IN', { maximumFractionDigits: 0 })})
+                    </div>
+                  </div>
+
+                  {/* Top SKU by Qty */}
+                  <div className="p-3 sm:p-3.5 bg-gradient-to-br from-sky-50/70 to-sky-100/30 dark:from-sky-950/40 dark:to-sky-900/20 border border-sky-200/60 dark:border-sky-800/60 rounded-2xl">
+                    <div className="flex items-center justify-between text-sky-700 dark:text-sky-400 mb-1">
+                      <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider">Top Volume SKU</span>
+                      <Tag className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate" title={ledgerKPIs.topItem.name}>
+                      {ledgerKPIs.topItem.name}
+                    </div>
+                    <div className="text-[10px] font-mono font-bold text-sky-700 dark:text-sky-400 mt-0.5">
+                      {ledgerKPIs.topItem.qty.toLocaleString('en-IN')} units dispatched
+                    </div>
+                  </div>
+                </div>
+
+                {/* Search Bar & 3. Export Excel Button */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1">
+                  <div className="relative flex-1 max-w-md">
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Search items, brands, or flavours..."
+                      placeholder="Search items, brands, or DC numbers..."
                       value={cycleSearchTerm}
                       onChange={(e) => setCycleSearchTerm(e.target.value)}
                       className="h-9 w-full pl-9 pr-8 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800 dark:text-slate-100"
@@ -720,42 +898,112 @@ export default function ReconcilePage() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs font-mono">
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
-                      Qty: {cycleTotals.totalQty.toLocaleString('en-IN')} pcs
-                    </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-black border border-emerald-200/60 dark:border-emerald-800/60">
-                      Total: ₹{cycleTotals.totalVal.toLocaleString('en-IN')}
-                    </span>
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={handleExportLedgerExcel}
+                      className="h-9 px-3.5 rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all"
+                      title="Download Cycle Item Ledger as Excel (.xlsx)"
+                    >
+                      <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Export Ledger (.xlsx)</span>
+                    </button>
                   </div>
                 </div>
 
-                {/* Ledger Table */}
-                <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-2xs max-h-[420px] overflow-y-auto">
-                  <table className="w-full text-xs text-left">
-                    <thead className="bg-slate-100/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black uppercase tracking-wider sticky top-0 shadow-xs text-[10px]">
-                      <tr>
-                        <th className="px-3.5 py-2.5">Item & Brand</th>
-                        <th className="px-3.5 py-2.5">Dispatched In DCs</th>
-                        <th className="px-3.5 py-2.5 text-right">MRP</th>
-                        <th className="px-3.5 py-2.5 text-right">Cycle Qty</th>
-                        <th className="px-3.5 py-2.5 text-right">Total Value</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900 font-medium">
-                      {cycleItemsBreakdown
-                        .filter(item => {
-                          if (!cycleSearchTerm) return true;
-                          const term = cycleSearchTerm.toLowerCase();
-                          return item.fullName.toLowerCase().includes(term) || Array.from(item.dcs).some(dc => dc.toLowerCase().includes(term));
-                        })
-                        .map((item, idx) => (
+                {/* 2. Brand Filter Chips */}
+                {availableBrands.length > 0 && (
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar">
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider mr-1 hidden sm:inline">
+                      Brand:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setSelectedBrandFilter('all');
+                      }}
+                      className={`h-7 px-3 rounded-full text-xs font-bold transition-all whitespace-nowrap inline-flex items-center gap-1.5 ${
+                        selectedBrandFilter === 'all'
+                          ? 'bg-indigo-600 text-white shadow-xs shadow-indigo-600/30'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      <span>All Brands</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${selectedBrandFilter === 'all' ? 'bg-indigo-700 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                        {cycleItemsBreakdown.length}
+                      </span>
+                    </button>
+                    {availableBrands.map(b => {
+                      const count = cycleItemsBreakdown.filter(i => i.brand.toLowerCase() === b.toLowerCase()).length;
+                      const isSelected = selectedBrandFilter.toLowerCase() === b.toLowerCase();
+                      return (
+                        <button
+                          key={b}
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setSelectedBrandFilter(isSelected ? 'all' : b);
+                          }}
+                          className={`h-7 px-3 rounded-full text-xs font-bold transition-all whitespace-nowrap inline-flex items-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-indigo-600 text-white shadow-xs shadow-indigo-600/30'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          <span>{b}</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-indigo-700 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Ledger Table with 1. Per-DC Quantity Breakdown */}
+                <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-2xs max-h-[440px] overflow-y-auto">
+                  {filteredCycleItems.length === 0 ? (
+                    <div className="p-8 text-center text-slate-500 dark:text-slate-400 text-xs font-medium">
+                      No items match your filter criteria. Try clearing search or choosing &ldquo;All Brands&rdquo;.
+                    </div>
+                  ) : (
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-slate-100/90 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black uppercase tracking-wider sticky top-0 shadow-xs text-[10px] z-10">
+                        <tr>
+                          <th className="px-3.5 py-2.5">Item & Brand</th>
+                          <th className="px-3.5 py-2.5">DC Breakdown (1. Per-DC Qty)</th>
+                          <th className="px-3.5 py-2.5 text-right">MRP</th>
+                          <th className="px-3.5 py-2.5 text-right">Cycle Total Qty</th>
+                          <th className="px-3.5 py-2.5 text-right">Total Value</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900 font-medium">
+                        {filteredCycleItems.map((item, idx) => (
                           <tr key={idx} className="hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 transition-colors">
-                            <td className="px-3.5 py-2.5">
-                              <span className="font-bold text-slate-900 dark:text-white block">{item.fullName}</span>
+                            <td className="px-3.5 py-2.5 max-w-[240px]">
+                              <span className="font-bold text-slate-900 dark:text-white block leading-tight">{item.fullName}</span>
+                              {item.brand && (
+                                <span className="inline-block mt-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                                  {item.brand}
+                                </span>
+                              )}
                             </td>
-                            <td className="px-3.5 py-2.5 font-mono text-[11px] text-indigo-600 dark:text-indigo-400">
-                              {Array.from(item.dcs).join(', ')}
+                            {/* 1. Per-DC breakdown badges */}
+                            <td className="px-3.5 py-2.5">
+                              <div className="flex flex-wrap gap-1 max-w-sm">
+                                {Object.entries(item.dcSplits)
+                                  .sort(([a], [b]) => a.localeCompare(b))
+                                  .map(([dc, q]) => (
+                                    <span
+                                      key={dc}
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200/60 dark:border-indigo-800/60 font-mono text-[10px] text-indigo-700 dark:text-indigo-300 font-semibold"
+                                    >
+                                      <span>{dc}:</span>
+                                      <span className="text-slate-900 dark:text-white font-extrabold">{q}</span>
+                                    </span>
+                                  ))}
+                              </div>
                             </td>
                             <td className="px-3.5 py-2.5 text-right font-mono font-bold text-slate-800 dark:text-slate-200">
                               ₹{item.mrp.toFixed(2)}
@@ -768,8 +1016,9 @@ export default function ReconcilePage() {
                             </td>
                           </tr>
                         ))}
-                    </tbody>
-                  </table>
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
             )}

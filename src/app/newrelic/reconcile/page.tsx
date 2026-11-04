@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Upload, CheckCircle2, FileSpreadsheet, ArrowLeft, Filter, Sparkles, X, BookOpen } from 'lucide-react';
+import { Upload, CheckCircle2, FileSpreadsheet, ArrowLeft, Filter, Sparkles, X, BookOpen, Package, Search, ChevronDown, ChevronUp, Eye, EyeOff, Layers } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import { NewRelicChallan } from '@/types/challan';
@@ -14,6 +14,7 @@ import { hasPermission } from '@/types/permissions';
 interface Difference {
   dcs: string[];
   item: string;
+  mrp: number;
   aggQty: number;
   aggVal: number;
   ourQty: number;
@@ -50,6 +51,10 @@ export default function ReconcilePage() {
   });
   
   const [filterTab, setFilterTab] = useState<'all' | 'issues' | 'matches'>('issues');
+  
+  // Cycle Items Ledger View
+  const [showCycleLedger, setShowCycleLedger] = useState(false);
+  const [cycleSearchTerm, setCycleSearchTerm] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -119,6 +124,55 @@ export default function ReconcilePage() {
     return list;
   }, [challans, filterLocation, filterMonth, filterYear, filterCycle, user]);
 
+  const cycleItemsBreakdown = useMemo(() => {
+    const map = new Map<string, {
+      brand: string;
+      desc: string;
+      fullName: string;
+      dcs: Set<string>;
+      totalQty: number;
+      mrp: number;
+      totalVal: number;
+    }>();
+
+    displayChallans.forEach(c => {
+      c.lineItems?.forEach(item => {
+        const brand = (item.brandName || '').trim();
+        const desc = (item.itemName || '').trim();
+        const fullName = `${brand} ${desc}`.trim();
+        const mrp = Number(item.mrp) || 0;
+        const qty = Number(item.quantity) || 0;
+        const key = `${fullName.toLowerCase()}__${mrp}`;
+
+        const existing = map.get(key) || {
+          brand,
+          desc,
+          fullName,
+          dcs: new Set<string>(),
+          totalQty: 0,
+          mrp,
+          totalVal: 0,
+        };
+        if (c.dcNumber) existing.dcs.add(c.dcNumber);
+        existing.totalQty += qty;
+        existing.totalVal += qty * mrp;
+        map.set(key, existing);
+      });
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.fullName.localeCompare(b.fullName));
+  }, [displayChallans]);
+
+  const cycleTotals = useMemo(() => {
+    return cycleItemsBreakdown.reduce(
+      (acc, item) => ({
+        totalQty: acc.totalQty + item.totalQty,
+        totalVal: acc.totalVal + item.totalVal,
+      }),
+      { totalQty: 0, totalVal: 0 }
+    );
+  }, [cycleItemsBreakdown]);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -187,9 +241,11 @@ export default function ReconcilePage() {
         const dcRaw = row[dcCol];
         if (!dcRaw) continue;
         
-        const dcs = String(dcRaw).split(',').map(s => s.trim()).filter(Boolean);
-        const brand = brandCol !== -1 && row[brandCol] ? String(row[brandCol]) : '';
-        const desc = descCol !== -1 && row[descCol] ? String(row[descCol]) : '';
+        const dcs = (String(dcRaw).match(/[A-Za-z]{2,}\s*\d+/g) || String(dcRaw).split(/[,./;\s]+/))
+          .map(s => s.replace(/\s+/g, '').toUpperCase())
+          .filter(Boolean);
+        const brand = brandCol !== -1 && row[brandCol] ? String(row[brandCol]).trim() : '';
+        const desc = descCol !== -1 && row[descCol] ? String(row[descCol]).trim() : '';
         const totalQty = parseInt(row[qtyCol], 10) || 0;
         const totalVal = parseFloat(row[valCol]) || 0;
         
@@ -206,8 +262,19 @@ export default function ReconcilePage() {
         }
       }
 
-      // Parse our items, now including date
-      const ourItems: { dcNumber: string, dateStr: string, brand: string, desc: string, qty: number, val: number }[] = [];
+      // Parse our items, including date, mrp, and fullName
+      const ourItems: {
+        dcNumber: string;
+        dateStr: string;
+        brand: string;
+        desc: string;
+        fullName: string;
+        qty: number;
+        mrp: number;
+        val: number;
+        _matched?: boolean;
+      }[] = [];
+
       displayChallans.forEach(c => {
         const cDate = new Date(c.dcDate);
         const y = cDate.getFullYear();
@@ -217,127 +284,168 @@ export default function ReconcilePage() {
 
         if (c.lineItems) {
           c.lineItems.forEach(item => {
+            const brand = (item.brandName || '').trim();
+            const desc = (item.itemName || '').trim();
+            const qty = Number(item.quantity) || 0;
+            const mrp = Number(item.mrp) || 0;
             ourItems.push({
-              dcNumber: c.dcNumber,
+              dcNumber: (c.dcNumber || '').trim(),
               dateStr,
-              brand: item.brandName || '',
-              desc: item.itemName || '',
-              qty: item.quantity,
-              val: item.quantity * (item.mrp || 0)
+              brand,
+              desc,
+              fullName: `${brand} ${desc}`.trim(),
+              qty,
+              mrp,
+              val: qty * mrp,
+              _matched: false,
             });
           });
         }
       });
 
-      const diffs: Difference[] = [];
-      
-      const isMatch = (brand1: string, desc1: string, brand2: string, desc2: string) => {
-         let s1 = (brand1 + ' ' + desc1).toLowerCase().replace(/&/g, 'and').replace(/juice/g, '');
-         let s2 = (brand2 + ' ' + desc2).toLowerCase().replace(/&/g, 'and').replace(/juice/g, '');
-         const words1 = s1.split(/[^a-z0-9]/).filter(Boolean);
-         const words2 = s2.split(/[^a-z0-9]/).filter(Boolean);
-         let matches = 0;
-         words1.forEach(w1 => {
-             if (words2.some(w2 => w2 === w1 || (w2.length > 3 && w1.includes(w2)) || (w1.length > 3 && w2.includes(w1)))) matches++;
-         });
-         const score = matches / Math.max(words1.length, words2.length);
-         return score >= 0.5; // at least 50% match
+      const normalize = (s: string) =>
+        s
+          .toLowerCase()
+          .replace(/&/g, 'and')
+          .replace(/juice/g, '')
+          .replace(/alphonse/g, 'alphonso')
+          .replace(/penut/g, 'peanut')
+          .replace(/yogabar/g, 'yoga bar')
+          .replace(/butter\s*milk/g, 'buttermilk')
+          .replace(/[^a-z0-9]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+      const getMatchScore = (name1: string, name2: string) => {
+        const n1 = normalize(name1);
+        const n2 = normalize(name2);
+        if (n1 === n2) return 1.0;
+        const w1 = n1.split(' ').filter(Boolean);
+        const w2 = n2.split(' ').filter(Boolean);
+        let matches = 0;
+        for (const word of w1) {
+          if (w2.includes(word)) matches += 1;
+          else if (w2.some(w => (w.length > 3 && word.includes(w)) || (word.length > 3 && w.includes(word)))) matches += 0.8;
+        }
+        const union = w1.length + w2.length - matches;
+        return union > 0 ? matches / union : 0;
       };
-      
+
+      const diffs: Difference[] = [];
+
       aggData.forEach(aggItem => {
         const aggFullName = `${aggItem.brand} ${aggItem.desc}`.trim();
         const alias = aliases.find(a => a.aggregatorName.toLowerCase() === aggFullName.toLowerCase());
-        
-        // Find matching items in our system regardless of strict date
-        const matchedOurItemsTotal = ourItems.filter(item => {
-          if (!aggItem.dcs.includes(item.dcNumber)) return false;
-          
-          if (alias) {
-             const ourFullName = `${item.brand} ${item.desc}`.trim();
-             return ourFullName.toLowerCase() === alias.internalName.toLowerCase();
-          }
-          
-          return isMatch(item.brand, item.desc, aggItem.brand, aggItem.desc);
-        });
-        
+
         let actualOurTotalQty = 0;
         let actualOurTotalVal = 0;
-        matchedOurItemsTotal.forEach(i => {
-           actualOurTotalQty += i.qty;
-           actualOurTotalVal += i.val;
-           // Mark as matched so we can find orphans later
-           (i as any)._matched = true;
-        });
+        let matchedMrp = 0;
 
-        // If quantities don't match, or they do but price doesn't
-        if (actualOurTotalQty !== aggItem.totalQty || actualOurTotalVal !== aggItem.totalVal) {
-             diffs.push({
-               dcs: aggItem.dcs,
-               item: `${aggItem.brand} ${aggItem.desc}`,
-               aggQty: aggItem.totalQty,
-               aggVal: aggItem.totalVal,
-               ourQty: actualOurTotalQty,
-               ourVal: actualOurTotalVal,
-               issue: actualOurTotalQty === 0 ? "Missing in our system" : actualOurTotalQty !== aggItem.totalQty ? "Quantity mismatch" : "Price mismatch",
-               status: actualOurTotalQty === 0 ? 'missing' : 'mismatch'
-             });
-        } else {
-             diffs.push({
-               dcs: aggItem.dcs,
-               item: `${aggItem.brand} ${aggItem.desc}`,
-               aggQty: aggItem.totalQty,
-               aggVal: aggItem.totalVal,
-               ourQty: actualOurTotalQty,
-               ourVal: actualOurTotalVal,
-               issue: "Perfect Match",
-               status: 'match'
-             });
-        }
-      });
-      
-      // Check for items in our system that were never matched to an aggregator row
-      ourItems.forEach(ourItem => {
-        if (!(ourItem as any)._matched) {
-          diffs.push({
-            dcs: [ourItem.dcNumber],
-            item: `${ourItem.brand} ${ourItem.desc}`,
-            aggQty: 0,
-            aggVal: 0,
-            ourQty: ourItem.qty,
-            ourVal: ourItem.val,
-            issue: "Missing in aggregator invoice",
-            status: 'missing'
-          });
-        }
-      });
-      
-      ourItems.forEach(ourItem => {
-        const ourFullName = `${ourItem.brand} ${ourItem.desc}`.trim();
-        const alias = aliases.find(a => a.internalName.toLowerCase() === ourFullName.toLowerCase());
-        
-        const matched = aggData.find(a => {
-          if (!a.dcs.includes(ourItem.dcNumber)) return false;
-          
-          if (alias) {
-            const aggFullName = `${a.brand} ${a.desc}`.trim();
-            return aggFullName.toLowerCase() === alias.aggregatorName.toLowerCase();
+        for (const dc of aggItem.dcs) {
+          const dcUpper = dc.toUpperCase();
+          const candidates = ourItems.filter(i => !i._matched && i.dcNumber.toUpperCase() === dcUpper);
+
+          let bestItem: typeof ourItems[0] | null = null;
+          let bestScore = 0;
+
+          for (const cand of candidates) {
+            let score = 0;
+            if (alias && cand.fullName.toLowerCase() === alias.internalName.toLowerCase()) {
+              score = 10.0;
+            } else {
+              score = getMatchScore(aggFullName, cand.fullName);
+            }
+
+            if (score > bestScore) {
+              bestScore = score;
+              bestItem = cand;
+            }
           }
-          
-          return isMatch(ourItem.brand, ourItem.desc, a.brand, a.desc);
-        });
-        
-        if (!matched) {
+
+          if (bestItem && bestScore >= 0.55) {
+            bestItem._matched = true;
+            actualOurTotalQty += bestItem.qty;
+            actualOurTotalVal += bestItem.val;
+            matchedMrp = bestItem.mrp;
+          }
+        }
+
+        if (matchedMrp === 0 && aggItem.totalQty > 0) {
+          matchedMrp = Math.round((aggItem.totalVal / aggItem.totalQty) * 100) / 100;
+        }
+
+        const isExactMatch = actualOurTotalQty === aggItem.totalQty && actualOurTotalVal === aggItem.totalVal;
+
+        if (isExactMatch) {
           diffs.push({
-            dcs: [ourItem.dcNumber],
-            item: `${ourItem.brand} ${ourItem.desc}`,
-            aggQty: 0,
-            aggVal: 0,
-            ourQty: ourItem.qty,
-            ourVal: ourItem.val,
-            issue: "Missing in aggregator invoice",
-            status: 'missing'
+            dcs: aggItem.dcs,
+            item: aggFullName,
+            mrp: matchedMrp,
+            aggQty: aggItem.totalQty,
+            aggVal: aggItem.totalVal,
+            ourQty: actualOurTotalQty,
+            ourVal: actualOurTotalVal,
+            issue: 'Perfect Match',
+            status: 'match',
+          });
+        } else {
+          diffs.push({
+            dcs: aggItem.dcs,
+            item: aggFullName,
+            mrp: matchedMrp,
+            aggQty: aggItem.totalQty,
+            aggVal: aggItem.totalVal,
+            ourQty: actualOurTotalQty,
+            ourVal: actualOurTotalVal,
+            issue:
+              actualOurTotalQty === 0
+                ? 'Missing in our system'
+                : actualOurTotalQty !== aggItem.totalQty
+                ? 'Quantity mismatch'
+                : 'Price mismatch',
+            status: actualOurTotalQty === 0 ? 'missing' : 'mismatch',
           });
         }
+      });
+
+      // Collect remaining unmatched items from our system (grouped by name & MRP across DCs)
+      const unmatchedMap = new Map<string, {
+        dcs: Set<string>;
+        fullName: string;
+        qty: number;
+        mrp: number;
+        val: number;
+      }>();
+
+      ourItems.forEach(ourItem => {
+        if (!ourItem._matched) {
+          const key = `${ourItem.fullName.toLowerCase()}__${ourItem.mrp}`;
+          const existing = unmatchedMap.get(key) || {
+            dcs: new Set<string>(),
+            fullName: ourItem.fullName,
+            qty: 0,
+            mrp: ourItem.mrp,
+            val: 0,
+          };
+          existing.dcs.add(ourItem.dcNumber);
+          existing.qty += ourItem.qty;
+          existing.val += ourItem.val;
+          unmatchedMap.set(key, existing);
+        }
+      });
+
+      unmatchedMap.forEach(item => {
+        diffs.push({
+          dcs: Array.from(item.dcs),
+          item: item.fullName,
+          mrp: item.mrp,
+          aggQty: 0,
+          aggVal: 0,
+          ourQty: item.qty,
+          ourVal: item.val,
+          issue: 'Missing in aggregator invoice',
+          status: 'missing',
+        });
       });
 
       const totalOurVal = ourItems.reduce((acc, curr) => acc + curr.val, 0);
@@ -544,6 +652,130 @@ export default function ReconcilePage() {
           </div>
         </div>
 
+        {/* Cycle Dispatch Ledger: Item Quantities & MRPs */}
+        {displayChallans.length > 0 && (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] overflow-hidden">
+            <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-200/60 dark:border-indigo-800/60">
+                  <Package className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-black text-slate-900 dark:text-white text-sm sm:text-base">
+                      Cycle Dispatch Ledger
+                    </h3>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-mono">
+                      {cycleItemsBreakdown.length} Items
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                    Individual quantities and MRPs dispatched across the {displayChallans.length} challans in this cycle.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <div className="text-right mr-2 hidden sm:block">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Dispatched</span>
+                  <span className="text-xs font-mono font-black text-slate-900 dark:text-white">
+                    {cycleTotals.totalQty.toLocaleString('en-IN')} pcs • ₹{cycleTotals.totalVal.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setShowCycleLedger(!showCycleLedger);
+                  }}
+                  className="h-9 px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 inline-flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all"
+                >
+                  {showCycleLedger ? <EyeOff className="w-3.5 h-3.5 text-slate-500" /> : <Eye className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />}
+                  <span>{showCycleLedger ? 'Hide Ledger' : 'View Item Ledger & MRPs'}</span>
+                  {showCycleLedger ? <ChevronUp className="w-3.5 h-3.5 ml-0.5 opacity-60" /> : <ChevronDown className="w-3.5 h-3.5 ml-0.5 opacity-60" />}
+                </button>
+              </div>
+            </div>
+
+            {showCycleLedger && (
+              <div className="p-4 sm:p-5 space-y-3.5 animate-in fade-in duration-200">
+                {/* Search & Quick Stat Bar */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search items, brands, or flavours..."
+                      value={cycleSearchTerm}
+                      onChange={(e) => setCycleSearchTerm(e.target.value)}
+                      className="h-9 w-full pl-9 pr-8 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800 dark:text-slate-100"
+                    />
+                    {cycleSearchTerm && (
+                      <button
+                        onClick={() => setCycleSearchTerm('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 text-xs font-mono">
+                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
+                      Qty: {cycleTotals.totalQty.toLocaleString('en-IN')} pcs
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-black border border-emerald-200/60 dark:border-emerald-800/60">
+                      Total: ₹{cycleTotals.totalVal.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Ledger Table */}
+                <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-2xs max-h-[420px] overflow-y-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-100/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black uppercase tracking-wider sticky top-0 shadow-xs text-[10px]">
+                      <tr>
+                        <th className="px-3.5 py-2.5">Item & Brand</th>
+                        <th className="px-3.5 py-2.5">Dispatched In DCs</th>
+                        <th className="px-3.5 py-2.5 text-right">MRP</th>
+                        <th className="px-3.5 py-2.5 text-right">Cycle Qty</th>
+                        <th className="px-3.5 py-2.5 text-right">Total Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900 font-medium">
+                      {cycleItemsBreakdown
+                        .filter(item => {
+                          if (!cycleSearchTerm) return true;
+                          const term = cycleSearchTerm.toLowerCase();
+                          return item.fullName.toLowerCase().includes(term) || Array.from(item.dcs).some(dc => dc.toLowerCase().includes(term));
+                        })
+                        .map((item, idx) => (
+                          <tr key={idx} className="hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 transition-colors">
+                            <td className="px-3.5 py-2.5">
+                              <span className="font-bold text-slate-900 dark:text-white block">{item.fullName}</span>
+                            </td>
+                            <td className="px-3.5 py-2.5 font-mono text-[11px] text-indigo-600 dark:text-indigo-400">
+                              {Array.from(item.dcs).join(', ')}
+                            </td>
+                            <td className="px-3.5 py-2.5 text-right font-mono font-bold text-slate-800 dark:text-slate-200">
+                              ₹{item.mrp.toFixed(2)}
+                            </td>
+                            <td className="px-3.5 py-2.5 text-right font-mono font-black text-slate-900 dark:text-white">
+                              {item.totalQty.toLocaleString('en-IN')} pcs
+                            </td>
+                            <td className="px-3.5 py-2.5 text-right font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                              ₹{item.totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Upload & Results */}
         {!differences ? (
           <div className="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] space-y-4">
@@ -694,7 +926,9 @@ export default function ReconcilePage() {
                             <span className="text-slate-500 font-mono block text-[11px]">₹{diff.aggVal.toLocaleString('en-IN')}</span>
                           </div>
                           <div className="text-right">
-                            <span className="text-[10px] text-slate-400 uppercase font-bold block">Our Record</span>
+                            <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                              Our Record {diff.mrp > 0 ? `(MRP ₹${diff.mrp.toFixed(0)})` : ''}
+                            </span>
                             <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{diff.ourQty} pcs</span>
                             <span className="text-slate-500 font-mono block text-[11px]">₹{diff.ourVal.toLocaleString('en-IN')}</span>
                           </div>
@@ -705,11 +939,12 @@ export default function ReconcilePage() {
 
                 {/* Desktop Table (hidden md:block) */}
                 <div className="hidden md:block overflow-x-auto max-h-[500px]">
-                  <table className="w-full text-sm text-left min-w-[700px]">
+                  <table className="w-full text-sm text-left min-w-[760px]">
                     <thead className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold sticky top-0 shadow-xs">
                       <tr>
                         <th className="px-4 py-3 border-b">DC Numbers</th>
                         <th className="px-4 py-3 border-b">Item Name</th>
+                        <th className="px-4 py-3 border-b text-right">MRP</th>
                         <th className="px-4 py-3 border-b text-right">Agg. Qty</th>
                         <th className="px-4 py-3 border-b text-right">Our Qty</th>
                         <th className="px-4 py-3 border-b text-right">Agg. Value</th>
@@ -726,6 +961,9 @@ export default function ReconcilePage() {
                             {diff.dcs.join(', ')}
                           </td>
                           <td className="px-4 py-3 text-slate-600 dark:text-slate-300 max-w-[200px] truncate" title={diff.item}>{diff.item}</td>
+                          <td className="px-4 py-3 text-right font-mono font-bold text-slate-700 dark:text-slate-300">
+                            {diff.mrp > 0 ? `₹${diff.mrp.toFixed(2)}` : '—'}
+                          </td>
                           <td className="px-4 py-3 text-right font-mono text-slate-900 dark:text-white">{diff.aggQty}</td>
                           <td className="px-4 py-3 text-right font-mono text-slate-900 dark:text-white">{diff.ourQty}</td>
                           <td className="px-4 py-3 text-right font-mono font-bold text-slate-900 dark:text-white">₹{diff.aggVal.toLocaleString('en-IN')}</td>

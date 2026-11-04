@@ -15,6 +15,7 @@ import {
   getCatalogDocId,
 } from '@/services/newrelicCatalogService';
 import { getAllPricingItems } from '@/services/newrelicPricingService';
+import { getNewRelicChallans } from '@/services/newrelicChallanService';
 import {
   Trash2,
   Plus,
@@ -630,23 +631,87 @@ export default function CatalogPage() {
     }
   }
 
+function normalizeBrand(b: string): string {
+  let s = (b || '').trim().toLowerCase().replace(/['’]/g, '');
+  if (s === 'haldiram' || s === 'haldirams') return 'haldiram';
+  if (s === 'paperboat' || s === 'paper boat' || s === 'pepper boat' || s === 'paper-boat') return 'paper boat';
+  if (s === 'yogabar' || s === 'yoga bar' || s === 'yoga-bar') return 'yogabar';
+  if (s === 'too yumm' || s === 'too yummi' || s === 'too-yumm') return 'too yumm';
+  if (s === 'lays' || s === 'lay') return 'lays';
+  if (s === 'coca cola' || s === 'coca-cola') return 'coca cola';
+  if (s === 'jarsy' || s === 'jersey') return 'jersey';
+  if (s.startsWith('bisleri')) return 'bisleri';
+  if (s.startsWith('kinley')) return 'kinley';
+  if (s === 'cadbury' || s === 'cadburys') return 'cadbury';
+  if (s === 'britania' || s === 'britannia') return 'britannia';
+  if (s === 'parle' || s === 'parle-g') return 'parle';
+  if (s.startsWith('happilo')) return 'happilo';
+  return s;
+}
+
+function normalizeItem(n: string, b: string): string {
+  let s = (n || '').trim().toLowerCase().replace(/['’]/g, '');
+  const nb = normalizeBrand(b);
+  const rawB = (b || '').trim().toLowerCase();
+  if (s.startsWith(rawB)) s = s.slice(rawB.length).trim();
+  if (s.startsWith(nb)) s = s.slice(nb.length).trim();
+  s = s.replace(/^[\s\-–—:]+/, '').trim();
+
+  // Clean exact minor typographical differences
+  s = s.replace(/&/g, ' and ');
+  s = s.replace(/\bpotatos?\b/g, '');
+  s = s.replace(/\bchips\b/g, '');
+  s = s.replace(/\bshke\b/g, 'shake');
+  s = s.replace(/\bchassa\b/g, 'chaas');
+  s = s.replace(/\blasi\b/g, 'lassi');
+  s = s.replace(/\bcoffe\b/g, 'coffee');
+  s = s.replace(/\bpenut\b/g, 'peanut');
+  s = s.replace(/\bchocolete\b/g, 'chocolate');
+  s = s.replace(/\bpomogranate\b/g, 'pomegranate');
+  s = s.replace(/\boranage\b/g, 'orange');
+  s = s.replace(/\bchiwda\b/g, 'chivda');
+  s = s.replace(/\bbhakharwadi\b/g, 'bhakarwadi');
+  s = s.replace(/\bcookies\b/g, '');
+  s = s.replace(/\s+/g, ' ').trim();
+  return s;
+}
+
   async function handleSyncMrp() {
     if (isReadOnly || role === 'guest') {
       alert('Read-Only Mode: Guest account cannot sync MRP.');
       return;
     }
-    if (!confirm('This will pull MRPs from the Procurement Pricing table to populate the Catalog Reference MRPs. Continue?')) return;
+    if (!confirm('This will search all historical Delivery Challans (DCs) and the Pricing Master to populate missing or updated MRPs in your Catalog. Continue?')) return;
     setSaving(true);
-    setSyncProgress({ current: 0, total: 0, percent: 0, statusText: 'Fetching pricing records...' });
+    setSyncProgress({ current: 0, total: 0, percent: 0, statusText: 'Fetching Delivery Challan records & Pricing Master...' });
     setError('');
     try {
-      const pricingItems = await getAllPricingItems();
+      const [pricingItems, challans] = await Promise.all([
+        getAllPricingItems(),
+        getNewRelicChallans(),
+      ]);
 
       const mrpMap = new Map<string, number>();
+
+      function register(b: string, it: string, mrpNum: number) {
+        if (!mrpNum || mrpNum <= 0 || !b || !it) return;
+        const nb = normalizeBrand(b);
+        const ni = normalizeItem(it, b);
+        const key = `${nb}___${ni}`;
+        if (!mrpMap.has(key)) mrpMap.set(key, mrpNum);
+      }
+
+      // 1. First register from DC line items (highest fidelity actual billed MRPs)
+      challans.forEach((dc) => {
+        if (dc.isDeleted) return;
+        (dc.lineItems || []).forEach((it) => {
+          register(it.brandName, it.itemName, Number(it.mrp));
+        });
+      });
+
+      // 2. Fallback to Pricing master
       pricingItems.forEach((p) => {
-        const key = `${(p.brandName || '').trim().toLowerCase()}__${(p.itemName || '').trim().toLowerCase()}`;
-        const mrpNum = Number(p.mrp);
-        if (mrpNum > 0) mrpMap.set(key, mrpNum);
+        register(p.brandName, p.itemName, Number(p.mrp));
       });
 
       const itemsToUpdate: Array<{
@@ -660,16 +725,19 @@ export default function CatalogPage() {
       }> = [];
 
       for (const cat of catalog) {
-        const key = `${(cat.brandName || '').trim().toLowerCase()}__${(cat.itemName || '').trim().toLowerCase()}`;
-        const pricingMrp = mrpMap.get(key);
-        if (pricingMrp !== undefined && Number(cat.mrp) !== pricingMrp) {
+        const nb = normalizeBrand(cat.brandName);
+        const ni = normalizeItem(cat.itemName, cat.brandName);
+        const key = `${nb}___${ni}`;
+        const foundMrp = mrpMap.get(key);
+
+        if (foundMrp !== undefined && (!cat.mrp || Number(cat.mrp) !== foundMrp)) {
           itemsToUpdate.push({
             id: cat.id,
             brandName: cat.brandName,
             itemName: cat.itemName,
             defaultQuantity: cat.defaultQuantity,
             caseSize: cat.caseSize,
-            mrp: pricingMrp,
+            mrp: foundMrp,
             applicableSites: cat.applicableSites,
           });
         }
@@ -680,7 +748,7 @@ export default function CatalogPage() {
           current: 0,
           total: itemsToUpdate.length,
           percent: 5,
-          statusText: `Syncing ${itemsToUpdate.length} items with Pricing...`,
+          statusText: `Populating MRPs for ${itemsToUpdate.length} items from DCs...`,
         });
         const res = await bulkSaveCatalogItems(itemsToUpdate, (p) => {
           setSyncProgress(p);
@@ -688,10 +756,10 @@ export default function CatalogPage() {
         const refreshed = await getCatalogItems();
         setCatalog(refreshed);
         setSyncProgress(null);
-        alert(`✓ Successfully synced ${res.savedCount} items with MRP from the Pricing table!`);
+        alert(`✓ Successfully populated ${res.savedCount} catalog items with MRP from Delivery Challans!`);
       } else {
         setSyncProgress(null);
-        alert(`All ${catalog.length} catalog items already have matching MRPs with the Pricing table.`);
+        alert(`All ${catalog.length} catalog items already have matching MRPs with Delivery Challans.`);
       }
     } catch (e: any) {
       console.error(e);
@@ -799,9 +867,10 @@ export default function CatalogPage() {
             }}
             disabled={saving}
             className="flex-1 sm:flex-initial h-11 sm:h-10 px-3.5 rounded-2xl sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800/60 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-xs active:scale-95 cursor-pointer"
+            title="Pull and populate missing or updated MRPs from all Delivery Challans and the Pricing Master"
           >
             <RefreshCw className={`h-4 w-4 ${saving ? 'animate-spin' : ''}`} />
-            <span>Sync MRP</span>
+            <span>Sync MRP (DCs)</span>
           </button>
           <button
             onClick={() => {

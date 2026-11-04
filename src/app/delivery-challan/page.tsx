@@ -509,7 +509,7 @@ export default function DeliveryChallanPage() {
                 className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-2xs active:scale-95"
               >
                 <Plus className="w-4 h-4" />
-                <span>{selectedChallan ? 'Edit Form' : 'New Form'}</span>
+                <span>{selectedChallan?.id ? 'Edit Form' : (selectedChallan ? 'New Form (Copy)' : 'New Form')}</span>
               </button>
 
               <button
@@ -536,7 +536,7 @@ export default function DeliveryChallanPage() {
                   title="Cancel editing and create a new delivery challan"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Exit Edit &amp;</span> New
+                  <span className="hidden sm:inline">{selectedChallan.id ? 'Exit Edit &' : 'Clear &'}</span> New
                 </button>
               )}
             </div>

@@ -36,10 +36,7 @@ export function NewRelicItemDashboard({ challans }: NewRelicItemDashboardProps) 
   const [dateFilter, setDateFilter] = useState<string>('all');
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedItem, setSelectedItem] = useState<AggregatedItem | null>(null);
-
-  const ITEMS_PER_PAGE = 25;
 
   // Extract all unique brands from the challans
   const uniqueBrands = useMemo(() => {
@@ -212,14 +209,6 @@ export function NewRelicItemDashboard({ challans }: NewRelicItemDashboardProps) 
 
     return result;
   }, [aggregatedData, selectedBrandFilter, searchItem, sortKey]);
-
-  // Reset page when filters change
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [searchItem, selectedBrandFilter, sortKey, dateFilter, customStart, customEnd]);
-
-  const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
-  const paginatedData = filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const filteredTotals = useMemo(() => {
     return filteredData.reduce(
@@ -501,8 +490,8 @@ export function NewRelicItemDashboard({ challans }: NewRelicItemDashboardProps) 
         )}
       </div>
 
-      {/* 1. Desktop Table with Per-DC Breakdown */}
-      <div className="hidden md:block overflow-x-auto">
+      {/* 1. Desktop Table with Per-DC Breakdown (Continuous scroll, no page break) */}
+      <div className="hidden md:block overflow-x-auto max-h-[640px] overflow-y-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead className="bg-slate-100/90 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black uppercase tracking-wider sticky top-0 shadow-xs text-[10px] z-10">
             <tr>
@@ -515,8 +504,8 @@ export function NewRelicItemDashboard({ challans }: NewRelicItemDashboardProps) 
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900 font-medium">
-            {paginatedData.length > 0 ? (
-              paginatedData.map((item) => (
+            {filteredData.length > 0 ? (
+              filteredData.map((item) => (
                 <tr
                   key={item.id}
                   onClick={() => {
@@ -601,10 +590,10 @@ export function NewRelicItemDashboard({ challans }: NewRelicItemDashboardProps) 
         </table>
       </div>
 
-      {/* 1. Mobile Card Layout with Per-DC Breakdown */}
-      <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
-        {paginatedData.length > 0 ? (
-          paginatedData.map((item) => (
+      {/* 1. Mobile Card Layout with Per-DC Breakdown (Continuous scroll, no page break) */}
+      <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800 max-h-[640px] overflow-y-auto">
+        {filteredData.length > 0 ? (
+          filteredData.map((item) => (
             <div
               key={item.id}
               onClick={() => {
@@ -665,33 +654,18 @@ export function NewRelicItemDashboard({ challans }: NewRelicItemDashboardProps) 
         )}
       </div>
 
-      {/* Footer / Pagination */}
+      {/* Footer / Summary (No page break) */}
       <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
         <span className="text-slate-500 dark:text-slate-400">
-          Showing {filteredData.length === 0 ? 0 : ((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)} of {filteredData.length} SKUs
+          Showing all <strong className="text-slate-900 dark:text-white font-mono font-bold">{filteredData.length}</strong> SKUs in view
         </span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              triggerHaptic('light');
-              setCurrentPage(p => Math.max(1, p - 1));
-            }}
-            disabled={currentPage === 1}
-            className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-          >
-            Prev
-          </button>
-          <span className="text-slate-600 dark:text-slate-300 font-medium">Page {currentPage} of {totalPages || 1}</span>
-          <button
-            onClick={() => {
-              triggerHaptic('light');
-              setCurrentPage(p => Math.min(totalPages, p + 1));
-            }}
-            disabled={currentPage === totalPages || totalPages === 0}
-            className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-          >
-            Next
-          </button>
+        <div className="flex items-center gap-2.5 text-xs font-mono">
+          <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
+            Qty: {filteredTotals.totalQty.toLocaleString('en-IN')} pcs
+          </span>
+          <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-black border border-emerald-200/60 dark:border-emerald-800/60">
+            Total: ₹{filteredTotals.totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          </span>
         </div>
       </div>
 

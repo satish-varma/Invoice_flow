@@ -63,8 +63,20 @@ export async function GET(
     if (invoice.pdfPath.startsWith('r2://')) {
       const r2Key = invoice.pdfPath.replace('r2://', '');
       if (isR2Configured()) {
-        const signedUrl = await getR2SignedUrl(r2Key, 3600);
-        return NextResponse.redirect(signedUrl);
+        try {
+          const fileBuffer = await getFromR2(r2Key);
+          return new NextResponse(fileBuffer, {
+            headers: {
+              'Content-Type': 'application/pdf',
+              'Content-Disposition': `inline; filename="${id}.pdf"`,
+              'Cache-Control': 'public, max-age=3600',
+            },
+          });
+        } catch (r2Err) {
+          console.warn('[R2 download proxy error, falling back to signed URL]:', r2Err);
+          const signedUrl = await getR2SignedUrl(r2Key, 3600);
+          return NextResponse.redirect(signedUrl);
+        }
       }
     }
 
@@ -78,8 +90,24 @@ export async function GET(
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `inline; filename="${id}.pdf"`,
+          'Cache-Control': 'public, max-age=3600',
         },
       });
+    }
+
+    // Secondary fallback: if local file missing but R2 has it under standard path
+    if (isR2Configured()) {
+      try {
+        const fallbackKey = localRelPath.startsWith('documents/') ? localRelPath : `documents/${localRelPath}`;
+        const fileBuffer = await getFromR2(fallbackKey);
+        return new NextResponse(fileBuffer, {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `inline; filename="${id}.pdf"`,
+            'Cache-Control': 'public, max-age=3600',
+          },
+        });
+      } catch {}
     }
 
     return NextResponse.json({ error: 'PDF file not found on storage' }, { status: 404 });

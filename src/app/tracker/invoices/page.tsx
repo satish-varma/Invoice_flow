@@ -405,25 +405,37 @@ export default function TrackerInvoicesPage() {
   };
 
   const handleDownloadInvoice = async (inv: Invoice) => {
+    const apiUrl = `/api/tracker/download/${encodeURIComponent(inv.id)}`;
     try {
-      const apiUrl = `/api/tracker/download/${encodeURIComponent(inv.id)}`;
       const response = await fetch(apiUrl);
-      if (!response.ok) {
-        alert('Failed to download PDF');
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${inv.id}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
         return;
       }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+    } catch (e) {
+      console.warn('[Fetch download fallback to direct anchor link]:', e);
+    }
+
+    // Direct native browser download fallback (bypasses CORS restrictions)
+    try {
       const link = document.createElement('a');
-      link.href = url;
+      link.href = apiUrl;
       link.download = `${inv.id}.pdf`;
+      link.target = '_blank';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error('Download error:', e);
-      alert('Failed to download PDF');
+    } catch (err) {
+      console.error('Download error:', err);
+      window.open(apiUrl, '_blank');
     }
   };
 

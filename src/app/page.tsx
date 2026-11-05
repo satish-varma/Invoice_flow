@@ -57,10 +57,17 @@ export default function RootHomePage() {
     const isGuest = role === 'guest';
     const canAccessBilling = isAdmin || (!isGuest && hasPermission(user, 'invoices'));
 
-    // Guests cannot see invoices; redirect to delivery challan hub
+    // Redirect to configured default landing page if user lacks billing access or is guest
+    if (user.defaultLandingPage && user.defaultLandingPage !== '/' && (isGuest || !canAccessBilling)) {
+      setRedirecting(true);
+      router.replace(user.defaultLandingPage);
+      return;
+    }
+
+    // Guests cannot see invoices; redirect to configured landing page or delivery challans
     if (isGuest) {
       setRedirecting(true);
-      router.replace('/delivery-challan');
+      router.replace(user.defaultLandingPage || (hasPermission(user, 'general_dc') ? '/delivery-challan' : '/tracker'));
       return;
     }
 

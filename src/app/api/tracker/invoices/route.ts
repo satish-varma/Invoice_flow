@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getInvoices, deleteAllInvoices } from '@/lib/tracker/turso';
+import { isInvoiceInScope } from '@/lib/tracker/scoping';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -34,22 +35,13 @@ export async function GET(request: Request) {
           : [];
       const assignedStalls: string[] = Array.isArray(user.assignedStalls) ? user.assignedStalls : [];
 
-      if (assignedStartDate) {
-        invoices = invoices.filter((inv) => {
-          if (!inv.date) return false;
-          return inv.date >= assignedStartDate;
-        });
-      }
-
-      if (assignedLocations.length > 0) {
-        const locSet = new Set(assignedLocations.map((l: string) => l.trim().toLowerCase()));
-        invoices = invoices.filter((inv) => inv.location && locSet.has(inv.location.trim().toLowerCase()));
-      }
-
-      if (assignedStalls.length > 0) {
-        const stallSet = new Set(assignedStalls.map((s: string) => s.trim().toLowerCase()));
-        invoices = invoices.filter((inv) => inv.stall && stallSet.has(inv.stall.trim().toLowerCase()));
-      }
+      invoices = invoices.filter((inv) =>
+        isInvoiceInScope(inv, {
+          assignedStartDate,
+          assignedLocations,
+          assignedStalls,
+        })
+      );
     }
 
     const paidCount = invoices.filter((i) => i.status === 'Paid').length;

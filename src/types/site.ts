@@ -57,7 +57,7 @@ export function resolveSiteId(siteId?: string | null): SiteId {
 export function getUserAllowedSites(user?: {
   role?: string | null;
   assignedSites?: SiteId[];
-  assignedSite?: SiteId;
+  assignedSite?: SiteId | null;
 } | null): SiteId[] {
   if (!user) return ['newrelic'];
   if (user.role === 'admin' || user.role === 'superadmin') {

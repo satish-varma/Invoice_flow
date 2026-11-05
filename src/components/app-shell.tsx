@@ -189,6 +189,12 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                 <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
                 Multi-Site Operations (HYD &amp; BLR)
               </span>
+            ) : (user?.allowedTabs?.includes('hungerbox_tracker') && (!user?.allowedTabs?.includes('tuckshop') && !user?.allowedTabs?.includes('attendance'))) || (user?.assignedLocations && user.assignedLocations.length > 0) ? (
+              <span className="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border-emerald-200">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                📍 Cash &amp; Carry: {user?.assignedLocations && user.assignedLocations.length > 0 ? user.assignedLocations.join(' · ') : 'All Locations'}
+                {user?.assignedStalls && user.assignedStalls.length > 0 ? ` (${user.assignedStalls.length} Stalls)` : ''}
+              </span>
             ) : user?.assignedSites && user.assignedSites.length > 1 ? (
               <span
                 className="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1.5 bg-indigo-50 text-[#3b2fc9] border-indigo-200"

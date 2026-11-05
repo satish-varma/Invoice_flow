@@ -408,12 +408,13 @@ export const ROLE_PRESETS: RolePreset[] = [
   },
   {
     id: 'tracker_readonly',
-    name: 'Cash & Carry Auditor (Tracker Read-Only)',
+    name: 'Cash & Carry Partner (Tracker & Remittances)',
     description:
-      'Strict read-only access limited to Cash & Carry overview portal with date, location, and stall filters. All other staff modules are blocked.',
+      'Dedicated scoped access to Cash & Carry overview and remittance invoices based on chosen location/site and stalls. Attendance, payroll, and operational tools are blocked.',
     defaultPage: '/tracker',
     tabs: [
       'hungerbox_tracker',
+      'hungerbox_tracker_invoices',
     ],
   },
   {

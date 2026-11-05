@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getInvoiceById } from '@/lib/tracker/turso';
+import { isInvoiceInScope } from '@/lib/tracker/scoping';
 import { isR2Configured, getR2SignedUrl, getFromR2 } from '@/lib/tracker/r2';
 import fs from 'fs';
 import path from 'path';
@@ -43,20 +44,14 @@ export async function GET(
           : [];
       const assignedStalls: string[] = Array.isArray(user.assignedStalls) ? user.assignedStalls : [];
 
-      if (assignedStartDate && invoice.date && invoice.date < assignedStartDate) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
-      if (assignedLocations.length > 0) {
-        const locSet = new Set(assignedLocations.map((l: string) => l.trim().toLowerCase()));
-        if (!invoice.location || !locSet.has(invoice.location.trim().toLowerCase())) {
-          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
-      }
-      if (assignedStalls.length > 0) {
-        const stallSet = new Set(assignedStalls.map((s: string) => s.trim().toLowerCase()));
-        if (!invoice.stall || !stallSet.has(invoice.stall.trim().toLowerCase())) {
-          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
+      if (
+        !isInvoiceInScope(invoice, {
+          assignedStartDate,
+          assignedLocations,
+          assignedStalls,
+        })
+      ) {
+        return NextResponse.json({ error: 'Forbidden: Invoice outside assigned scope' }, { status: 403 });
       }
     }
 

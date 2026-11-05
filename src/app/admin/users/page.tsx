@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, query, getDocs, doc, setDoc, deleteDoc, updateDoc, where, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -67,6 +67,12 @@ import {
   RolePreset,
   hasPermission,
 } from '@/types/permissions';
+import {
+  LOCATION_STALLS_MAP,
+  TRACKER_LOCATIONS,
+  TRACKER_STALLS,
+  getStallsForLocations,
+} from '@/lib/tracker/scoping';
 
 interface DbUser {
   id: string;
@@ -79,7 +85,7 @@ interface DbUser {
   suspendedAt?: string | null;
   expiresAt?: string | null;
   canDelete?: boolean;
-  assignedSite?: SiteId;
+  assignedSite?: SiteId | null;
   assignedSites?: SiteId[];
   preferredLocations?: string[];
   assignedLocations?: string[];
@@ -92,36 +98,7 @@ interface DbUser {
   lastActiveAt?: string;
 }
 
-const TRACKER_LOCATIONS = [
-  'Broadridge',
-  'CGI Information Systems',
-  'Covance',
-  'DSM Shared Services',
-  'IBM',
-  'NTT Data',
-  'New Relic',
-  'Qualcomm',
-];
 
-const TRACKER_STALLS = [
-  'Covance SoftSol',
-  'Gut Guru Tuckshop',
-  'Juice Counter',
-  'Juicytailes Juice Counter',
-  'Live Counter',
-  'Munchbox Live Counter',
-  'Orion 14th Floor Cafeteria Tuckshop',
-  'Relic Fresh',
-  'SipnByte DLF',
-  'SipnByte Skyview',
-  'Slurpstore Bakery',
-  'Snack On DLF',
-  'The Gut Guru',
-  'The Gut Guru Event',
-  'Tuck Shop',
-  'Tuckshop Covance',
-  'Tuckshop NTT DATA',
-];
 
 const ROLE_OPTIONS: Array<{
   value: UserRole;
@@ -300,6 +277,30 @@ export default function AdminUsersPage() {
   const [assignedStartDate, setAssignedStartDate] = useState<string>('');
   const [assignedLocations, setAssignedLocations] = useState<string[]>([]);
   const [assignedStalls, setAssignedStalls] = useState<string[]>([]);
+
+  // Dynamic available stalls based on currently selected locations
+  const availableStalls = useMemo(() => {
+    return getStallsForLocations(assignedLocations);
+  }, [assignedLocations]);
+
+  const handleToggleTrackerLocation = (loc: string, checked: boolean) => {
+    let next: string[];
+    if (checked) {
+      next = Array.from(new Set([...assignedLocations, loc]));
+    } else {
+      next = assignedLocations.filter((l) => l !== loc);
+    }
+    setAssignedLocations(next);
+
+    // Prune stalls that don't belong to any remaining location
+    if (next.length > 0) {
+      const allowed = new Set<string>();
+      next.forEach((l) => {
+        (LOCATION_STALLS_MAP[l] || []).forEach((s) => allowed.add(s));
+      });
+      setAssignedStalls((prev) => prev.filter((s) => allowed.has(s)));
+    }
+  };
   const [defaultLandingPage, setDefaultLandingPage] = useState<string>('/newrelic/tuckshop');
   const [allowedTabs, setAllowedTabs] = useState<PermissionKey[]>([
     'tuckshop',
@@ -504,7 +505,10 @@ export default function AdminUsersPage() {
     } else if (preset.id === 'guest_auditor' || preset.id === 'tracker_readonly') {
       setUserRole('guest');
       if (preset.id === 'tracker_readonly') {
+        landing = '/tracker';
+        tabs = ['hungerbox_tracker', 'hungerbox_tracker_invoices'];
         setDefaultLandingPage('/tracker');
+        setAllowedTabs(['hungerbox_tracker', 'hungerbox_tracker_invoices']);
       }
     }
 
@@ -659,10 +663,27 @@ export default function AdminUsersPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const effectiveSites: SiteId[] = userRole === 'admin' ? ['newrelic', 'dsm', 'ntt_data'] : assignedSites.length > 0 ? assignedSites : [assignedSite];
-      const effectiveSite: SiteId = effectiveSites[0] || 'newrelic';
+      const isTrackerOnly =
+        allowedTabs.includes('hungerbox_tracker') &&
+        !allowedTabs.includes('tuckshop') &&
+        !allowedTabs.includes('attendance') &&
+        !allowedTabs.includes('newrelic_dc');
+
+      const effectiveSites: SiteId[] =
+        userRole === 'admin'
+          ? ['newrelic', 'dsm', 'ntt_data']
+          : isTrackerOnly
+          ? []
+          : assignedSites.length > 0
+          ? assignedSites
+          : [assignedSite];
+      const effectiveSite: SiteId | null = isTrackerOnly ? null : effectiveSites[0] || 'newrelic';
       const hasNewRelic = effectiveSites.includes('newrelic') || userRole === 'admin';
-      const effectiveLocations = !hasNewRelic ? ['hyderabad'] : preferredLocations;
+      const effectiveLocations = isTrackerOnly
+        ? []
+        : !hasNewRelic
+        ? ['hyderabad']
+        : preferredLocations;
 
       // Filter out newrelic_dc if no newrelic site assigned
       let effectiveTabs = !hasNewRelic
@@ -2504,8 +2525,8 @@ export default function AdminUsersPage() {
               </div>
             </div>
 
-            {/* Assigned Company Site: Checkbox / Multi-Select Cards */}
-            {userRole !== 'admin' && (
+            {/* Assigned Company Site: Checkbox / Multi-Select Cards (Hidden for Cash & Carry users who use Scoped Locations) */}
+            {userRole !== 'admin' && !(allowedTabs.includes('hungerbox_tracker') && !allowedTabs.includes('tuckshop') && !allowedTabs.includes('attendance') && !allowedTabs.includes('newrelic_dc')) && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-1.5">

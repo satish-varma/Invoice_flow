@@ -256,15 +256,28 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
   }
 
   // Cash & Carry Tracker
-  if (hasPermission(user, 'hungerbox_tracker') || hasPermission(user, 'hungerbox_tracker_invoices')) {
+  if (hasPermission(user, 'hungerbox_tracker')) {
     allModules.push({
       id: 'hungerbox_tracker',
       label: 'Tracker',
       href: '/tracker',
       icon: Receipt,
-      isActive: pathname.startsWith('/tracker'),
+      isActive: pathname === '/tracker',
       glowTheme: GLOW_THEMES.emerald,
       permissionKey: 'hungerbox_tracker',
+    });
+  }
+
+  // Cash & Carry Remittances
+  if (hasPermission(user, 'hungerbox_tracker_invoices')) {
+    allModules.push({
+      id: 'hungerbox_tracker_invoices',
+      label: 'Remittances',
+      href: '/tracker/invoices',
+      icon: FileText,
+      isActive: pathname.startsWith('/tracker/invoices'),
+      glowTheme: GLOW_THEMES.indigo,
+      permissionKey: 'hungerbox_tracker_invoices',
     });
   }
 
@@ -343,6 +356,22 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
       href: '/newrelic/stock-request',
       icon: Send,
       desc: 'Order raw materials, snacks and inventory',
+    });
+  }
+  if (hasPermission(user, 'hungerbox_tracker')) {
+    operationItems.push({
+      label: 'Cash & Carry Tracker',
+      href: '/tracker',
+      icon: Receipt,
+      desc: 'Sales tracking & multi-site remittance summaries',
+    });
+  }
+  if (hasPermission(user, 'hungerbox_tracker_invoices')) {
+    operationItems.push({
+      label: 'Remittance Invoices',
+      href: '/tracker/invoices',
+      icon: FileText,
+      desc: 'Cycle-wise payments, PDF downloads & audit',
     });
   }
 

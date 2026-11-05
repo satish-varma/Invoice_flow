@@ -30,7 +30,13 @@ export function MobileAppBar({ children }: MobileAppBarProps) {
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
           {/* Brand Logo & Name */}
           <Link
-            href={hasChallanAccess ? '/newrelic' : '/newrelic/tuckshop'}
+            href={
+              user?.defaultLandingPage
+                ? user.defaultLandingPage
+                : hasChallanAccess
+                ? '/newrelic'
+                : '/newrelic/tuckshop'
+            }
             className="flex items-center gap-2.5 active:opacity-80 transition-opacity"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -44,7 +50,13 @@ export function MobileAppBar({ children }: MobileAppBarProps) {
                 The Gut Guru Tracker
               </span>
               <span className="text-[10px] text-gray-400 font-medium truncate max-w-[150px]">
-                {role === 'admin' ? 'Multi-Site DC Portal' : role === 'guest' ? '👁️ Guest (Read-Only)' : `${siteConfig.name} Portal`}
+                {role === 'admin'
+                  ? 'Multi-Site DC Portal'
+                  : user?.assignedLocations && user.assignedLocations.length > 0
+                  ? `📍 ${user.assignedLocations.join(' · ')}`
+                  : role === 'guest'
+                  ? '👁️ Guest (Read-Only)'
+                  : `${siteConfig.name} Portal`}
               </span>
             </div>
           </Link>

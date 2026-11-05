@@ -188,10 +188,10 @@ export async function performSync(
           /For the Date Range\s*:?[\s]*(\d{4}-\d{2}-\d{2})[\s\S]*?to[\s\S]*?(\d{4}-\d{2}-\d{2})/i
         );
         let serviceDateRange = '';
-        if (dateRangeMatch) {
-          serviceDateRange = `${dateRangeMatch[1]} to ${dateRangeMatch[2]}`;
-        } else if (extracted.serviceDateRange) {
+        if (extracted.serviceDateRange) {
           serviceDateRange = extracted.serviceDateRange;
+        } else if (dateRangeMatch) {
+          serviceDateRange = `${dateRangeMatch[1]} to ${dateRangeMatch[2]}`;
         }
 
         if (amount > 0) {

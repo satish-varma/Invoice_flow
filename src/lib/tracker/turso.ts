@@ -129,12 +129,10 @@ function mapInvoiceRow(row: any): Invoice {
   let location = row.location as string;
   let serviceDateRange = (row.service_date_range as string) || undefined;
 
-  if (isGarbageText(stall) || isGarbageText(location) || !serviceDateRange) {
-    const fixed = extractStallAndLocation(row.id as string, undefined, stall, location);
-    if (isGarbageText(stall)) stall = fixed.stall;
-    if (isGarbageText(location)) location = fixed.location;
-    if (!serviceDateRange && fixed.serviceDateRange) serviceDateRange = fixed.serviceDateRange;
-  }
+  const fixed = extractStallAndLocation(row.id as string, undefined, stall, location);
+  if (isGarbageText(stall) || (fixed.stall && fixed.stall !== 'General Stall')) stall = fixed.stall;
+  if (isGarbageText(location) || (fixed.location && fixed.location !== 'Other')) location = fixed.location;
+  if (fixed.serviceDateRange) serviceDateRange = fixed.serviceDateRange;
 
   return {
     id: row.id as string,

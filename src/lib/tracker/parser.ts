@@ -68,6 +68,25 @@ export function extractStallAndLocation(
 
   // 1. Resolve Stall
   let stall = KNOWN_STALL_MAP[stallRaw];
+
+  if (!stall) {
+    const candidate = stallRaw || existingStall || '';
+    const cleanCand = candidate.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (cleanCand) {
+      // Sort known stall entries by key length descending so specific stalls match before generic ones
+      const sortedEntries = Object.entries(KNOWN_STALL_MAP).sort(
+        (a, b) => b[0].length - a[0].length
+      );
+      for (const [k, v] of sortedEntries) {
+        const cleanK = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (cleanCand === cleanK || cleanCand.startsWith(cleanK) || (cleanK.length >= 5 && cleanCand.includes(cleanK))) {
+          stall = v;
+          break;
+        }
+      }
+    }
+  }
+
   if (!stall) {
     if (stallRaw) {
       stall = stallRaw.replace(/([a-z])([A-Z])/g, '$1 $2').trim();

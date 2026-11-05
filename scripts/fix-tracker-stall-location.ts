@@ -1,3 +1,5 @@
+import { config } from 'dotenv';
+config({ path: '.env.local' });
 import { turso } from '../src/lib/tracker/turso';
 import { extractStallAndLocation, isGarbageText } from '../src/lib/tracker/parser';
 
@@ -12,6 +14,8 @@ async function migrate() {
   let updatedCount = 0;
   const locationBreakdown = new Map<string, Set<string>>();
 
+  const updates: Array<{ sql: string; args: any[] }> = [];
+
   for (const row of rs.rows) {
     const id = String(row.id);
     const existingStall = row.stall ? String(row.stall) : '';
@@ -22,14 +26,14 @@ async function migrate() {
 
     const needStallUpdate = isGarbageText(existingStall) || existingStall !== parsed.stall;
     const needLocUpdate = isGarbageText(existingLoc) || existingLoc !== parsed.location;
-    const needServiceUpdate = !existingService && !!parsed.serviceDateRange;
+    const needServiceUpdate = !!parsed.serviceDateRange && existingService !== parsed.serviceDateRange;
 
     if (needStallUpdate || needLocUpdate || needServiceUpdate) {
       const finalStall = parsed.stall;
       const finalLoc = parsed.location;
-      const finalService = existingService || parsed.serviceDateRange || null;
+      const finalService = parsed.serviceDateRange || existingService || null;
 
-      await turso.execute({
+      updates.push({
         sql: 'UPDATE invoices SET stall = ?, location = ?, service_date_range = ? WHERE id = ?',
         args: [finalStall, finalLoc, finalService, id],
       });
@@ -41,6 +45,15 @@ async function migrate() {
     }
     locationBreakdown.get(parsed.location)!.add(parsed.stall);
   }
+
+  console.log(`Found ${updates.length} updates needed. Executing in batches...`);
+  const chunkSize = 50;
+  for (let i = 0; i < updates.length; i += chunkSize) {
+    const chunk = updates.slice(i, i + chunkSize);
+    await turso.batch(chunk, 'write');
+    process.stdout.write(`Processed ${Math.min(i + chunkSize, updates.length)} / ${updates.length}\r`);
+  }
+  console.log('\nAll batches committed.');
 
   console.log(`\nUpdated ${updatedCount} / ${rs.rows.length} invoices in database.`);
   console.log('\n--- VERIFIED LOCATIONS & STALLS ---');

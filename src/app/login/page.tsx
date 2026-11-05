@@ -18,16 +18,23 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const errorParam = searchParams.get('error');
   const { toast } = useToast();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // If already logged in, check if today's check-in has happened
+  // If redirected with error (revoked, suspended, expired, device_revoked), purge stale session and stop loops
   useEffect(() => {
-    if (user) {
+    if (errorParam) {
+      signOut();
+    }
+  }, [errorParam, signOut]);
+
+  // If already logged in and no error param, redirect to landing page
+  useEffect(() => {
+    if (user && !errorParam) {
       if (user.role === 'guest') {
-        router.replace(user.defaultLandingPage || '/delivery-challan');
+        router.replace(user.defaultLandingPage || '/tracker');
         return;
       }
       checkUserCheckedInToday(user.id, user.email).then((checkedIn) => {
@@ -38,7 +45,7 @@ function LoginForm() {
         }
       });
     }
-  }, [user, router]);
+  }, [user, router, errorParam]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

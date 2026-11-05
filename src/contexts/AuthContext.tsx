@@ -86,6 +86,14 @@ function AuthProviderInner({ children }: { children: React.ReactNode }) {
             const docSnap = snapshot.docs[0];
             const data = docSnap.data();
 
+            // Prevent redirect loops if already on login page
+            const isOnLoginPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/login');
+            if (isOnLoginPage) {
+              setLiveUser(null);
+              setGlobalUserRole(null);
+              return;
+            }
+
             // Real-time security enforcement: Immediate termination on suspension
             if (data.status === 'suspended') {
               setLiveUser(null);

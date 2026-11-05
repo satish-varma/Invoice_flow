@@ -54,6 +54,11 @@ export default withAuth(
       return NextResponse.next();
     }
 
+    // Login page bypass - never redirect /login back to /login (prevents redirect loops)
+    if (pathname.startsWith('/login')) {
+      return NextResponse.next();
+    }
+
     if (!token) {
       return NextResponse.redirect(new URL('/login', req.url));
     }

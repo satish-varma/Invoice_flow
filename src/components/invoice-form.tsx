@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -711,41 +712,111 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                         </p>
                     </div>
                 </div>
-                <div className='bg-card p-2 rounded-lg shadow-sm w-full flex flex-col sm:flex-row items-center justify-between gap-2 flex-wrap'>
-                    <nav className="flex items-center gap-1 flex-wrap">
-                        <Button variant="ghost" onClick={handleNewClick}>
-                            <FilePlus /> New Invoice
-                        </Button>
-                        <Button asChild variant="ghost" className={pathname === '/quotation' ? 'text-primary' : ''}>
-                            <Link href="/quotation"><FileText /> New Quotation</Link>
-                        </Button>
-                        <Button asChild variant="ghost" className={pathname === '/invoices' ? 'text-primary' : ''}>
-                            <Link href="/invoices"><ListOrdered /> Saved Invoices</Link>
-                        </Button>
-                        <Button asChild variant="ghost" className={pathname === '/delivery-challan' ? 'text-primary' : ''}>
-                            <Link href="/delivery-challan"><Truck /> Delivery Challan</Link>
-                        </Button>
-                        <Button asChild variant="ghost" className={pathname === '/settings' ? 'text-primary' : ''}>
-                            <Link href="/settings"><SettingsIcon /> Settings</Link>
-                        </Button>
-                    </nav>
-                    {/* Desktop action buttons — hidden on mobile (mobile gets sticky bar) */}
-                    <div className="hidden sm:flex items-center gap-2 flex-wrap">
-                        <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={isExtracting}>
-                            {isExtracting ? (
-                                <><Loader className="animate-spin" /> Extracting...</>
-                            ) : (
-                                <><Wand2 /> Autofill</>
-                            )}
-                        </Button>
-                        <Button onClick={() => handleSaveInvoice('save')} disabled={isSaving || isReadOnly || role === 'guest'} variant="secondary" title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}>
-                            {isSaving ? <Loader className="animate-spin" /> : <Save />}
-                            {isReadOnly || role === 'guest' ? 'Read-Only' : (initialData ? 'Update' : 'Save')}
-                        </Button>
-                        <Button onClick={() => handleSaveInvoice('preview')} disabled={isSaving || isReadOnly || role === 'guest'} className="bg-accent text-accent-foreground hover:bg-accent/90" title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}>
-                            {isSaving ? <Loader className="animate-spin" /> : <Wand2 />}
-                            Preview PDF
-                        </Button>
+                {/* Glass Card Nav Bar — Option D: frosted glass over animated background */}
+                <div className='relative w-full overflow-hidden rounded-2xl border border-white/30 dark:border-white/10 shadow-lg shadow-indigo-500/5 dark:shadow-black/20'>
+                    {/* Frosted glass base */}
+                    <div className="absolute inset-0 backdrop-blur-xl bg-white/70 dark:bg-slate-900/60 rounded-2xl" />
+                    {/* Subtle gradient sheen */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-purple-500/5 dark:from-indigo-500/10 dark:to-purple-500/10 rounded-2xl pointer-events-none" />
+                    {/* Inner content */}
+                    <div className='relative flex flex-col sm:flex-row items-center justify-between gap-2 flex-wrap px-3 py-2'>
+                        <nav className="flex items-center gap-0.5 flex-wrap">
+                            <Button
+                                variant="ghost"
+                                onClick={handleNewClick}
+                                className={cn(
+                                    "rounded-xl text-sm font-medium transition-all duration-200 h-9 px-3",
+                                    pathname === '/'
+                                        ? "bg-primary/10 text-primary shadow-xs shadow-primary/20 hover:bg-primary/15"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10"
+                                )}
+                            >
+                                <FilePlus className="size-4" /> New Invoice
+                            </Button>
+                            <Button
+                                asChild
+                                variant="ghost"
+                                className={cn(
+                                    "rounded-xl text-sm font-medium transition-all duration-200 h-9 px-3",
+                                    pathname === '/quotation'
+                                        ? "bg-primary/10 text-primary shadow-xs shadow-primary/20 hover:bg-primary/15"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10"
+                                )}
+                            >
+                                <Link href="/quotation"><FileText className="size-4" /> New Quotation</Link>
+                            </Button>
+                            <Button
+                                asChild
+                                variant="ghost"
+                                className={cn(
+                                    "rounded-xl text-sm font-medium transition-all duration-200 h-9 px-3",
+                                    pathname === '/invoices'
+                                        ? "bg-primary/10 text-primary shadow-xs shadow-primary/20 hover:bg-primary/15"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10"
+                                )}
+                            >
+                                <Link href="/invoices"><ListOrdered className="size-4" /> Saved Invoices</Link>
+                            </Button>
+                            <Button
+                                asChild
+                                variant="ghost"
+                                className={cn(
+                                    "rounded-xl text-sm font-medium transition-all duration-200 h-9 px-3",
+                                    pathname === '/delivery-challan'
+                                        ? "bg-primary/10 text-primary shadow-xs shadow-primary/20 hover:bg-primary/15"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10"
+                                )}
+                            >
+                                <Link href="/delivery-challan"><Truck className="size-4" /> Delivery Challan</Link>
+                            </Button>
+                            <Button
+                                asChild
+                                variant="ghost"
+                                className={cn(
+                                    "rounded-xl text-sm font-medium transition-all duration-200 h-9 px-3",
+                                    pathname === '/settings'
+                                        ? "bg-primary/10 text-primary shadow-xs shadow-primary/20 hover:bg-primary/15"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10"
+                                )}
+                            >
+                                <Link href="/settings"><SettingsIcon className="size-4" /> Settings</Link>
+                            </Button>
+                        </nav>
+                        {/* Desktop action buttons — hidden on mobile (mobile gets sticky bar) */}
+                        <div className="hidden sm:flex items-center gap-1.5 flex-wrap">
+                            {/* Thin vertical divider */}
+                            <div className="hidden sm:block w-px h-6 bg-border/50 mx-1" />
+                            <Button
+                                variant="ghost"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isExtracting}
+                                className="rounded-xl h-9 px-3 text-sm text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10 transition-all duration-200"
+                            >
+                                {isExtracting ? (
+                                    <><Loader className="animate-spin size-4" /> Extracting...</>
+                                ) : (
+                                    <><Wand2 className="size-4" /> Autofill</>
+                                )}
+                            </Button>
+                            <Button
+                                onClick={() => handleSaveInvoice('save')}
+                                disabled={isSaving || isReadOnly || role === 'guest'}
+                                title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
+                                className="rounded-xl h-9 px-4 text-sm font-semibold bg-white/80 dark:bg-white/10 border border-white/60 dark:border-white/20 text-foreground hover:bg-white dark:hover:bg-white/20 shadow-xs transition-all duration-200"
+                            >
+                                {isSaving ? <Loader className="animate-spin size-4" /> : <Save className="size-4" />}
+                                {isReadOnly || role === 'guest' ? 'Read-Only' : (initialData ? 'Update' : 'Save')}
+                            </Button>
+                            <Button
+                                onClick={() => handleSaveInvoice('preview')}
+                                disabled={isSaving || isReadOnly || role === 'guest'}
+                                title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
+                                className="rounded-xl h-9 px-4 text-sm font-semibold bg-primary text-white hover:bg-primary/90 shadow-sm shadow-primary/30 transition-all duration-200"
+                            >
+                                {isSaving ? <Loader className="animate-spin size-4" /> : <Wand2 className="size-4" />}
+                                Preview PDF
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>

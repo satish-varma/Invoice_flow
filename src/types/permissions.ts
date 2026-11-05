@@ -514,6 +514,7 @@ export function hasPermission(
       if (user.allowedTabs.includes(key)) return true;
 
       // Granular parent/child checks
+      if (key === 'hungerbox_tracker' && user.allowedTabs.includes('hungerbox_tracker_invoices')) return true;
       if (key === 'tuckshop_pos' && user.allowedTabs.includes('tuckshop')) return true;
       if (key === 'newrelic_dc_create' && user.allowedTabs.includes('newrelic_dc')) return true;
       if (key === 'general_dc_create' && user.allowedTabs.includes('general_dc')) return true;
@@ -555,6 +556,7 @@ export function hasPermission(
     if (user.allowedTabs.includes(key)) return true;
 
     // Granular fallbacks & hierarchy
+    if (key === 'hungerbox_tracker' && user.allowedTabs.includes('hungerbox_tracker_invoices')) return true;
     if (key === 'billing' && (user.allowedTabs.includes('invoices') || user.allowedTabs.includes('quotations'))) return true;
     if (key === 'invoices' && user.allowedTabs.includes('billing')) return true;
     if (key === 'quotations' && user.allowedTabs.includes('billing')) return true;

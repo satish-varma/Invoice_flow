@@ -21,11 +21,12 @@ export default function TrackerLayout({ children }: { children: React.ReactNode 
     );
   }
 
-  // Permission verification: check if user has hungerbox_tracker or is admin
+  // Permission verification: check if user has hungerbox_tracker, hungerbox_tracker_invoices, or is admin
   const isAllowed =
     user?.role === 'admin' ||
     user?.role === 'superadmin' ||
-    hasPermission(user, 'hungerbox_tracker');
+    hasPermission(user, 'hungerbox_tracker') ||
+    hasPermission(user, 'hungerbox_tracker_invoices');
 
   if (!isAllowed) {
     return (

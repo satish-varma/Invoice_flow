@@ -256,7 +256,7 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
   }
 
   // Cash & Carry Tracker
-  if (hasPermission(user, 'hungerbox_tracker')) {
+  if (hasPermission(user, 'hungerbox_tracker') || hasPermission(user, 'hungerbox_tracker_invoices')) {
     allModules.push({
       id: 'hungerbox_tracker',
       label: 'Tracker',

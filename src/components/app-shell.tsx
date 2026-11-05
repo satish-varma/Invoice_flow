@@ -343,7 +343,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           )}
 
           {/* Direct Tab 6: Cash & Carry Portal */}
-          {hasPermission(user, 'hungerbox_tracker') && (
+          {(hasPermission(user, 'hungerbox_tracker') || hasPermission(user, 'hungerbox_tracker_invoices')) && (
             <Link
               href="/tracker"
               prefetch={false}

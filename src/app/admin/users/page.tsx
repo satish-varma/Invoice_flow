@@ -516,9 +516,17 @@ export default function AdminUsersPage() {
 
   const handleToggleTab = (tabId: PermissionKey, checked: boolean) => {
     if (checked) {
-      setAllowedTabs((prev) => (prev.includes(tabId) ? prev : [...prev, tabId]));
+      if (tabId === 'hungerbox_tracker_invoices') {
+        setAllowedTabs((prev) => Array.from(new Set([...prev, 'hungerbox_tracker', 'hungerbox_tracker_invoices'])));
+      } else {
+        setAllowedTabs((prev) => (prev.includes(tabId) ? prev : [...prev, tabId]));
+      }
     } else {
-      setAllowedTabs((prev) => prev.filter((t) => t !== tabId));
+      if (tabId === 'hungerbox_tracker') {
+        setAllowedTabs((prev) => prev.filter((t) => t !== 'hungerbox_tracker' && t !== 'hungerbox_tracker_invoices'));
+      } else {
+        setAllowedTabs((prev) => prev.filter((t) => t !== tabId));
+      }
     }
   };
 

@@ -197,81 +197,144 @@ export function GroupedInvoiceView({
                                 </div>
                             </div>
 
-                            {/* Expanded Content - Invoice List */}
+                            {/* Expanded Content - Invoice List (Responsive) */}
                             {expandedPeriods.has(group.period) && (
                                 <div className="period-invoices">
-                                    <table className="invoice-table">
-                                        <thead>
-                                            <tr>
-                                                <th className="w-10"></th>
-                                                <th>Stall</th>
-                                                <th>Location</th>
-                                                <th>Invoice ID</th>
-                                                <th className="text-right">Amount</th>
-                                                <th>Status</th>
-                                                <th></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {group.invoices.map(inv => (
-                                                <tr
-                                                    key={inv.id}
-                                                    onClick={() => onInvoiceClick(inv)}
-                                                    className={`invoice-row ${selectedIds.has(inv.id) ? 'selected' : ''}`}
-                                                >
-                                                    <td onClick={(e) => e.stopPropagation()}>
+                                    {/* 1. Mobile Cards View (Visible on phones) */}
+                                    <div className="mobile-invoice-list">
+                                        {group.invoices.map(inv => (
+                                            <div
+                                                key={inv.id}
+                                                onClick={() => onInvoiceClick(inv)}
+                                                className={`mobile-invoice-card ${selectedIds.has(inv.id) ? 'selected' : ''}`}
+                                            >
+                                                <div className="mobile-card-header">
+                                                    <div className="mobile-card-title-wrap" onClick={(e) => e.stopPropagation()}>
                                                         <input
                                                             type="checkbox"
                                                             checked={selectedIds.has(inv.id)}
                                                             onChange={() => onToggleSelect(inv.id)}
                                                             className="row-checkbox"
                                                         />
-                                                    </td>
-                                                    <td className="stall-name">{inv.stall}</td>
-                                                    <td className="location">{inv.location}</td>
-                                                    <td className="invoice-id">{inv.id.split('_')[0]}</td>
-                                                    <td className="amount text-right">
+                                                        <span className="mobile-stall-name">{inv.stall}</span>
+                                                    </div>
+                                                    <div className="mobile-status-wrap">
+                                                        {inv.status?.toLowerCase() === 'paid' ? (
+                                                            <span className="status-badge paid">Paid</span>
+                                                        ) : (
+                                                            <span className="status-badge pending">Pending</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mobile-card-meta">
+                                                    <span className="mobile-meta-loc">📍 {inv.location}</span>
+                                                    <span className="mobile-meta-id">#{inv.id.split('_')[0]}</span>
+                                                </div>
+
+                                                <div className="mobile-card-footer">
+                                                    <div className="mobile-amount">
                                                         ₹{inv.amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                                                    </td>
-                                                    <td>
-                                                        <div className="status-cell">
-                                                            {inv.status?.toLowerCase() === 'paid' ? (
-                                                                <span className="status-badge paid">Paid</span>
-                                                            ) : (
-                                                                <div className="status-cell">
-                                                                    <span className="status-badge pending">Pending</span>
-                                                                    {onPay && userRole !== 'user' && (
-                                                                        <button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                onPay(inv);
-                                                                            }}
-                                                                            className="pay-btn"
-                                                                        >
-                                                                            <CreditCard size={12} />
-                                                                            Pay Now
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td>
+                                                    </div>
+                                                    <div className="mobile-card-actions" onClick={(e) => e.stopPropagation()}>
+                                                        {onPay && userRole !== 'user' && inv.status?.toLowerCase() !== 'paid' && (
+                                                            <button
+                                                                onClick={() => onPay(inv)}
+                                                                className="pay-btn"
+                                                            >
+                                                                <CreditCard size={12} />
+                                                                Pay
+                                                            </button>
+                                                        )}
                                                         <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                onDownload(inv);
-                                                            }}
-                                                            className="action-btn"
-                                                            title="Download"
+                                                            onClick={() => onDownload(inv)}
+                                                            className="mobile-download-btn"
+                                                            title="Download PDF"
                                                         >
-                                                            <Download size={14} />
+                                                            <Download size={13} />
+                                                            <span>PDF</span>
                                                         </button>
-                                                    </td>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* 2. Desktop Table View (Visible on tablets & desktops) */}
+                                    <div className="desktop-table-view">
+                                        <table className="invoice-table">
+                                            <thead>
+                                                <tr>
+                                                    <th className="w-10"></th>
+                                                    <th>Stall</th>
+                                                    <th>Location</th>
+                                                    <th>Invoice ID</th>
+                                                    <th className="text-right">Amount</th>
+                                                    <th>Status</th>
+                                                    <th></th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                                {group.invoices.map(inv => (
+                                                    <tr
+                                                        key={inv.id}
+                                                        onClick={() => onInvoiceClick(inv)}
+                                                        className={`invoice-row ${selectedIds.has(inv.id) ? 'selected' : ''}`}
+                                                    >
+                                                        <td onClick={(e) => e.stopPropagation()}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedIds.has(inv.id)}
+                                                                onChange={() => onToggleSelect(inv.id)}
+                                                                className="row-checkbox"
+                                                            />
+                                                        </td>
+                                                        <td className="stall-name">{inv.stall}</td>
+                                                        <td className="location">{inv.location}</td>
+                                                        <td className="invoice-id">{inv.id.split('_')[0]}</td>
+                                                        <td className="amount text-right">
+                                                            ₹{inv.amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td>
+                                                            <div className="status-cell">
+                                                                {inv.status?.toLowerCase() === 'paid' ? (
+                                                                    <span className="status-badge paid">Paid</span>
+                                                                ) : (
+                                                                    <div className="status-cell">
+                                                                        <span className="status-badge pending">Pending</span>
+                                                                        {onPay && userRole !== 'user' && (
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    onPay(inv);
+                                                                                }}
+                                                                                className="pay-btn"
+                                                                            >
+                                                                                <CreditCard size={12} />
+                                                                                Pay Now
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    onDownload(inv);
+                                                                }}
+                                                                className="action-btn"
+                                                                title="Download"
+                                                            >
+                                                                <Download size={14} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -601,6 +664,161 @@ export function GroupedInvoiceView({
                     background: linear-gradient(135deg, #059669, #047857);
                     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
                     transform: translateY(-1px);
+                }
+
+                .desktop-table-view {
+                    width: 100%;
+                    overflow-x: auto;
+                }
+
+                .mobile-invoice-list {
+                    display: none;
+                }
+
+                @media (max-width: 640px) {
+                    .period-header {
+                        padding: 0.75rem 0.875rem;
+                        gap: 0.5rem;
+                        flex-wrap: wrap;
+                    }
+
+                    .period-info {
+                        min-width: calc(100% - 60px);
+                    }
+
+                    .period-date {
+                        font-size: 0.85rem;
+                    }
+
+                    .period-stats {
+                        gap: 0.5rem;
+                        font-size: 0.7rem;
+                    }
+
+                    .period-amount {
+                        min-width: auto;
+                        text-align: left;
+                        font-size: 0.95rem;
+                        margin-left: 2rem;
+                    }
+
+                    .period-actions {
+                        margin-left: auto;
+                    }
+
+                    .desktop-table-view {
+                        display: none;
+                    }
+
+                    .mobile-invoice-list {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.5rem;
+                        padding: 0.625rem;
+                    }
+
+                    .mobile-invoice-card {
+                        background: white;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 0.75rem;
+                        padding: 0.75rem;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.5rem;
+                        cursor: pointer;
+                        transition: all 0.15s;
+                    }
+
+                    .mobile-invoice-card.selected {
+                        background: #f0f7ff;
+                        border-color: #6366f1;
+                    }
+
+                    .mobile-card-header {
+                        display: flex;
+                        align-items: flex-start;
+                        justify-content: space-between;
+                        gap: 0.5rem;
+                    }
+
+                    .mobile-card-title-wrap {
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 0.5rem;
+                        flex: 1;
+                        min-width: 0;
+                    }
+
+                    .mobile-stall-name {
+                        font-weight: 700;
+                        color: #0f172a;
+                        font-size: 0.825rem;
+                        line-height: 1.25;
+                        word-break: break-word;
+                    }
+
+                    .mobile-card-meta {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        font-size: 0.725rem;
+                        color: #64748b;
+                        background: #f8fafc;
+                        padding: 0.25rem 0.5rem;
+                        border-radius: 0.5rem;
+                        border: 1px solid #f1f5f9;
+                    }
+
+                    .mobile-meta-loc {
+                        font-weight: 600;
+                    }
+
+                    .mobile-meta-id {
+                        font-family: monospace;
+                        font-weight: 700;
+                        color: #475569;
+                    }
+
+                    .mobile-card-footer {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding-top: 0.375rem;
+                        border-top: 1px dashed #e2e8f0;
+                    }
+
+                    .mobile-amount {
+                        font-weight: 900;
+                        font-size: 0.95rem;
+                        color: #0f172a;
+                        font-family: monospace;
+                    }
+
+                    .mobile-card-actions {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.375rem;
+                    }
+
+                    .mobile-download-btn {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 0.25rem;
+                        padding: 0.375rem 0.625rem;
+                        border-radius: 0.5rem;
+                        border: 1px solid #cbd5e1;
+                        background: white;
+                        color: #3b2fc9;
+                        font-weight: 700;
+                        font-size: 0.725rem;
+                        cursor: pointer;
+                        transition: all 0.15s;
+                    }
+
+                    .mobile-download-btn:active {
+                        background: #e0e7ff;
+                        transform: scale(0.97);
+                    }
                 }
             `}</style>
         </div>

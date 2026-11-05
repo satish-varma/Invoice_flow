@@ -855,10 +855,118 @@ export default function TrackerInvoicesPage() {
             onToggleAll={toggleGroupSelection}
           />
         ) : (
-          /* ── Flat Table View with Clean Styling ── */
+          /* ── Flat List View: Mobile Cards (sm:hidden) + Desktop Table (hidden sm:block) ── */
           <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
+            {/* 1. Mobile Cards View (Visible on phones) */}
+            <div className="block sm:hidden divide-y divide-slate-100 dark:divide-slate-800">
+              <div className="p-3 bg-slate-50/75 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size > 0 && selectedIds.size === paginatedInvoices.length}
+                    onChange={toggleSelectAll}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer h-4 w-4"
+                  />
+                  <span>Select All ({paginatedInvoices.length})</span>
+                </label>
+                <span className="text-[11px] font-mono text-slate-400 font-semibold">
+                  Page {currentPage} of {totalPages}
+                </span>
+              </div>
+
+              <div className="p-3 space-y-3 bg-slate-50/40 dark:bg-slate-950/20">
+                {paginatedInvoices.map((inv) => {
+                  const isSelected = selectedIds.has(inv.id);
+                  return (
+                    <div
+                      key={inv.id}
+                      onClick={() => setSelectedInvoice(inv)}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer space-y-2.5 ${
+                        isSelected
+                          ? 'bg-indigo-50/80 dark:bg-indigo-950/50 border-indigo-400 dark:border-indigo-600 shadow-xs ring-1 ring-indigo-400/30'
+                          : 'bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-slate-300'
+                      }`}
+                    >
+                      {/* Top: Checkbox, Stall name, Status */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2.5 min-w-0 flex-1" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelection(inv.id)}
+                            className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer h-4 w-4 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-xs text-slate-900 dark:text-white leading-tight break-words">
+                              {inv.stall}
+                            </h4>
+                            <p className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1">
+                              <span>📍</span>
+                              <span className="truncate">{inv.location}</span>
+                            </p>
+                          </div>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                            inv.status === 'Paid'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400'
+                              : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400'
+                          }`}
+                        >
+                          {inv.status || 'Pending'}
+                        </Badge>
+                      </div>
+
+                      {/* Meta: Advice ID & Service Period */}
+                      <div className="flex items-center justify-between text-[11px] bg-slate-50 dark:bg-slate-800/60 px-2.5 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <span className="font-mono text-slate-700 dark:text-slate-300 font-bold">
+                          #{inv.id.split('_')[0]}
+                        </span>
+                        <span className="font-mono text-slate-500 text-[10px]">
+                          {inv.serviceDateRange || 'N/A'}
+                        </span>
+                      </div>
+
+                      {/* Bottom: Net Payable Amount & Action Buttons */}
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800/60">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                            Net Payable
+                          </span>
+                          <span className="font-black text-sm text-slate-900 dark:text-white font-mono tabular-nums">
+                            ₹{inv.amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSelectedInvoice(inv)}
+                            className="h-8 px-2.5 text-xs rounded-xl font-bold border-slate-200 text-slate-700 hover:bg-slate-50"
+                          >
+                            <Eye size={13} className="mr-1 text-indigo-600" />
+                            View
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleDownloadInvoice(inv)}
+                            className="h-8 px-2.5 text-xs rounded-xl font-bold bg-[#3b2fc9] hover:bg-[#2f24a8] text-white shadow-xs"
+                          >
+                            <Download size={13} className="mr-1" />
+                            PDF
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. Desktop Table View (hidden on small mobile screens) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full min-w-[750px] text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-50/75 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase text-[10px] tracking-wider">
                     <th className="py-3 px-4 w-10">

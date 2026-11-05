@@ -270,64 +270,126 @@ export default function TrackerDashboardPage() {
                 No remittance invoices matching your filter criteria.
               </div>
             ) : (
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-gray-50/75 border-b border-gray-200 text-gray-600 font-bold uppercase text-[10px] tracking-wider">
-                    <th className="py-2.5 px-4">Raised Date</th>
-                    <th className="py-2.5 px-4">Location</th>
-                    <th className="py-2.5 px-4">Stall / Vendor</th>
-                    <th className="py-2.5 px-4">Service Period</th>
-                    <th className="py-2.5 px-4 text-right">Net Amount</th>
-                    <th className="py-2.5 px-4 text-center">Status</th>
-                    <th className="py-2.5 px-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
+              <>
+                {/* 1. Mobile Cards View (sm:hidden) */}
+                <div className="block sm:hidden p-3 space-y-3 bg-slate-50/40 dark:bg-slate-950/20">
                   {filteredInvoices.slice(0, 15).map((inv) => (
-                    <tr
+                    <div
                       key={inv.id}
-                      className="hover:bg-indigo-50/20 transition-colors cursor-pointer"
                       onClick={() => setSelectedInvoice(inv)}
+                      className="p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-2.5 active:scale-[0.99] transition-all cursor-pointer"
                     >
-                      <td className="py-2.5 px-4 font-semibold text-gray-900 whitespace-nowrap">{inv.date}</td>
-                      <td className="py-2.5 px-4 text-gray-700 font-medium">{inv.location}</td>
-                      <td className="py-2.5 px-4 text-gray-900 font-bold">{inv.stall}</td>
-                      <td className="py-2.5 px-4 text-gray-500 font-mono text-[11px]">
-                        {inv.serviceDateRange || 'N/A'}
-                      </td>
-                      <td className="py-2.5 px-4 text-right font-extrabold text-indigo-900 whitespace-nowrap">
-                        ₹{inv.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-2.5 px-4 text-center">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-bold text-xs text-slate-900 dark:text-white leading-tight break-words">
+                            {inv.stall}
+                          </h4>
+                          <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                            📍 {inv.location}
+                          </p>
+                        </div>
                         <Badge
                           variant="outline"
-                          className={
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                             inv.status === 'Paid'
-                              ? 'text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 font-bold'
-                              : 'text-[10px] bg-amber-50 text-amber-700 border-amber-200 font-bold'
-                          }
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400'
+                              : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400'
+                          }`}
                         >
-                          {inv.status}
+                          {inv.status || 'Pending'}
                         </Badge>
-                      </td>
-                      <td className="py-2.5 px-4 text-right">
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] bg-slate-50 dark:bg-slate-800/60 px-2.5 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800 font-mono">
+                        <span className="text-slate-500 text-[10px]">
+                          {inv.serviceDateRange || inv.date}
+                        </span>
+                        <span className="font-bold text-slate-700 dark:text-slate-300">
+                          #{inv.id.split('_')[0]}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800/60">
+                        <span className="font-black text-sm text-slate-900 dark:text-white font-mono tabular-nums">
+                          ₹{inv.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </span>
                         <Button
                           size="sm"
-                          variant="ghost"
-                          className="h-7 text-xs text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
+                          variant="outline"
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedInvoice(inv);
                           }}
+                          className="h-7 px-2.5 text-xs rounded-xl font-bold border-slate-200 text-indigo-600 hover:bg-indigo-50"
                         >
                           <Eye className="h-3.5 w-3.5 mr-1" />
                           View
                         </Button>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+
+                {/* 2. Desktop Table View (hidden sm:block) */}
+                <table className="hidden sm:table w-full min-w-[700px] text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-gray-50/75 border-b border-gray-200 text-gray-600 font-bold uppercase text-[10px] tracking-wider">
+                      <th className="py-2.5 px-4">Raised Date</th>
+                      <th className="py-2.5 px-4">Location</th>
+                      <th className="py-2.5 px-4">Stall / Vendor</th>
+                      <th className="py-2.5 px-4">Service Period</th>
+                      <th className="py-2.5 px-4 text-right">Net Amount</th>
+                      <th className="py-2.5 px-4 text-center">Status</th>
+                      <th className="py-2.5 px-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredInvoices.slice(0, 15).map((inv) => (
+                      <tr
+                        key={inv.id}
+                        className="hover:bg-indigo-50/20 transition-colors cursor-pointer"
+                        onClick={() => setSelectedInvoice(inv)}
+                      >
+                        <td className="py-2.5 px-4 font-semibold text-gray-900 whitespace-nowrap">{inv.date}</td>
+                        <td className="py-2.5 px-4 text-gray-700 font-medium">{inv.location}</td>
+                        <td className="py-2.5 px-4 text-gray-900 font-bold">{inv.stall}</td>
+                        <td className="py-2.5 px-4 text-gray-500 font-mono text-[11px]">
+                          {inv.serviceDateRange || 'N/A'}
+                        </td>
+                        <td className="py-2.5 px-4 text-right font-extrabold text-indigo-900 whitespace-nowrap">
+                          ₹{inv.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-2.5 px-4 text-center">
+                          <Badge
+                            variant="outline"
+                            className={
+                              inv.status === 'Paid'
+                                ? 'text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 font-bold'
+                                : 'text-[10px] bg-amber-50 text-amber-700 border-amber-200 font-bold'
+                            }
+                          >
+                            {inv.status}
+                          </Badge>
+                        </td>
+                        <td className="py-2.5 px-4 text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedInvoice(inv);
+                            }}
+                          >
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            View
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
             )}
           </div>
         </div>

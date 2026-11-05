@@ -83,20 +83,32 @@ export async function generateAndSavePdf(
         const imgWidth = canvas.width;
         const imgHeight = (canvas.height * pdfWidth) / imgWidth;
         
-        let heightLeft = imgHeight;
-        let position = 0;
-
         // Use JPEG for PDF embedding - much more stable for large files
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
-        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight, undefined, 'FAST');
-        heightLeft -= pdfHeight;
+        // Smart auto-fit: If content is within 15% of 1 A4 page (e.g. up to ~341mm),
+        // scale slightly to fit on 1 clean page instead of slicing the stamp or signature across 2 pages!
+        if (imgHeight <= pdfHeight * 1.15) {
+            const scale = Math.min(1, pdfHeight / imgHeight);
+            const fittedWidth = pdfWidth * scale;
+            const fittedHeight = imgHeight * scale;
+            const xOffset = (pdfWidth - fittedWidth) / 2;
+            pdf.addImage(imgData, 'JPEG', xOffset, 0, fittedWidth, fittedHeight, undefined, 'FAST');
+        } else {
+            let heightLeft = imgHeight;
+            let position = 0;
 
-        while (heightLeft > 0) {
-            position = heightLeft - imgHeight;
-            pdf.addPage();
             pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight, undefined, 'FAST');
             heightLeft -= pdfHeight;
+
+            // Only add subsequent pages if there is significant content remaining (> 8mm)
+            // to avoid blank/tiny slice pages from trailing margins or padding
+            while (heightLeft > 8) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight, undefined, 'FAST');
+                heightLeft -= pdfHeight;
+            }
         }
 
         if (mode === 'save') {

@@ -174,16 +174,16 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
     };
 
     return (
-        <div ref={ref} className="invoice-preview-container bg-white text-black p-8">
+        <div ref={ref} className="invoice-preview-container bg-white text-black p-6">
             <Card className="w-full shadow-none border-0" style={{ width: '800px', borderRadius: '0' }}>
                 <div data-pdf-body>
-                    <CardHeader className="p-6">
+                    <CardHeader className="p-4 pb-2">
                         {renderHeader()}
                     </CardHeader>
-                    <CardContent className="px-6 pt-0">
+                    <CardContent className="px-4 pt-0">
                         {template === 'classic' && <Separator className='bg-gray-200' />}
 
-                        <div className={`grid grid-cols-[65%_35%] gap-8 items-start py-6 ${template === 'minimal' ? 'border-b mb-6' : ''}`}>
+                        <div className={`grid grid-cols-[65%_35%] gap-8 items-start py-4 ${template === 'minimal' ? 'border-b mb-4' : ''}`}>
                             <div className="space-y-1">
                                 <p className='font-bold text-gray-500 uppercase text-[10px] tracking-wider'>Bill To:</p>
                                 <p className='font-bold text-lg'>{invoice.billToName}</p>
@@ -198,7 +198,7 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                             </div>
                         </div>
 
-                        <div className="mt-2">
+                        <div className="mt-1">
                             <Table>
                                 <TableHeader>
                                     <TableRow className={`border-b ${template === 'minimal' ? 'bg-transparent' : 'bg-gray-50'}`} style={{ borderBottomColor: template === 'modern' ? primaryColor : undefined }}>
@@ -218,24 +218,24 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                                 <TableBody>
                                     {invoice.lineItems.map((item, index) => (
                                         <TableRow key={index} className="border-b-0 hover:bg-transparent">
-                                            <TableCell className='py-4'>{index + 1}</TableCell>
-                                            <TableCell className='py-4 font-medium'>{item.name}</TableCell>
+                                            <TableCell className='py-2.5'>{index + 1}</TableCell>
+                                            <TableCell className='py-2.5 font-medium'>{item.name}</TableCell>
                                             {invoice.lineItems.some(i => i.hsnCode) && (
-                                                <TableCell className='py-4 text-gray-500 text-[11px]'>{item.hsnCode || '-'}</TableCell>
+                                                <TableCell className='py-2.5 text-gray-500 text-[11px]'>{item.hsnCode || '-'}</TableCell>
                                             )}
                                             {invoice.lineItems.some(i => i.unit) && (
-                                                <TableCell className='py-4 text-gray-500 text-[11px]'>{item.unit || '-'}</TableCell>
+                                                <TableCell className='py-2.5 text-gray-500 text-[11px]'>{item.unit || '-'}</TableCell>
                                             )}
-                                            <TableCell className="text-right py-4">{item.quantity}</TableCell>
-                                            <TableCell className="text-right py-4">{currencySymbol} {(Number(item.unitPrice) || 0).toFixed(2)}</TableCell>
-                                            <TableCell className="font-bold text-right py-4">{currencySymbol} {(Number(item.quantity || 0) * Number(item.unitPrice || 0)).toFixed(2)}</TableCell>
+                                            <TableCell className="text-right py-2.5">{item.quantity}</TableCell>
+                                            <TableCell className="text-right py-2.5">{currencySymbol} {(Number(item.unitPrice) || 0).toFixed(2)}</TableCell>
+                                            <TableCell className="font-bold text-right py-2.5">{currencySymbol} {(Number(item.quantity || 0) * Number(item.unitPrice || 0)).toFixed(2)}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
                             </Table>
                         </div>
 
-                        <div className='mt-8 pt-4 border-t' style={{ borderTopWidth: template === 'modern' ? '2px' : '1px', borderTopColor: template === 'modern' ? primaryColor : undefined }}>
+                        <div className='mt-4 pt-3 border-t' style={{ borderTopWidth: template === 'modern' ? '2px' : '1px', borderTopColor: template === 'modern' ? primaryColor : undefined }}>
                             <div className='flex justify-between items-start'>
                                 <div className="w-3/5">
                                     <div className='text-sm'>
@@ -245,20 +245,20 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                                 </div>
                                 <div className="w-2/5 max-w-sm text-sm">
                                     <table className="w-full">
-                                        <tbody className='space-y-2'>
+                                        <tbody className='space-y-1.5'>
                                             <tr>
-                                                <td className="py-1 text-gray-500 font-medium">Subtotal</td>
-                                                <td className="py-1 text-right font-bold">{currencySymbol} {(Number(invoice.subtotal) || 0).toFixed(2)}</td>
+                                                <td className="py-0.5 text-gray-500 font-medium">Subtotal</td>
+                                                <td className="py-0.5 text-right font-bold">{currencySymbol} {(Number(invoice.subtotal) || 0).toFixed(2)}</td>
                                             </tr>
                                             {invoice.taxes?.map((tax, index) => (
                                                 <tr key={index}>
-                                                    <td className="py-1 text-gray-500 font-medium">{tax.name}</td>
-                                                    <td className="py-1 text-right font-bold">{currencySymbol} {(Number(tax.amount) || 0).toFixed(2)}</td>
+                                                    <td className="py-0.5 text-gray-500 font-medium">{tax.name}</td>
+                                                    <td className="py-0.5 text-right font-bold">{currencySymbol} {(Number(tax.amount) || 0).toFixed(2)}</td>
                                                 </tr>
                                             ))}
                                             <tr className="border-t-2" style={{ borderTopColor: template === 'modern' ? primaryColor : undefined }}>
-                                                <td className="py-3 font-bold text-lg uppercase tracking-wider" style={{ color: template === 'modern' ? primaryColor : undefined }}>Grand Total</td>
-                                                <td className="py-3 text-right font-black text-xl" style={{ color: template === 'modern' ? primaryColor : undefined }}>{currencySymbol} {(Number(invoice.total) || 0).toFixed(2)}</td>
+                                                <td className="py-2 font-bold text-lg uppercase tracking-wider" style={{ color: template === 'modern' ? primaryColor : undefined }}>Grand Total</td>
+                                                <td className="py-2 text-right font-black text-xl" style={{ color: template === 'modern' ? primaryColor : undefined }}>{currencySymbol} {(Number(invoice.total) || 0).toFixed(2)}</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -269,11 +269,11 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                 </div>
                 {activeProfile && (
                     <div data-pdf-footer>
-                        <CardFooter className="p-6 flex-col items-start gap-4 border-t border-gray-100 mt-12">
+                        <CardFooter className="px-4 py-3 flex-col items-start gap-3 border-t border-gray-100 mt-4">
                             <div className='w-full grid grid-cols-[70%_30%] gap-8'>
                                 <div className='text-[10px] text-gray-400'>
-                                    <p className='font-bold mb-2 uppercase tracking-widest text-gray-500'>Payment Information</p>
-                                    <div className='grid grid-cols-[100px_1fr] gap-y-1'>
+                                    <p className='font-bold mb-1.5 uppercase tracking-widest text-gray-500'>Payment Information</p>
+                                    <div className='grid grid-cols-[100px_1fr] gap-y-0.5'>
                                         <div className='font-bold uppercase'>Beneficiary:</div>
                                         <div className='text-gray-600'>{activeProfile.bankBeneficiary}</div>
                                         <div className='font-bold uppercase'>Bank:</div>
@@ -286,20 +286,20 @@ export const InvoicePreview = React.forwardRef<HTMLDivElement, InvoicePreviewPro
                                 </div>
                                 <div className='flex flex-col justify-end items-center h-full text-xs'>
                                     <div className='text-center w-full'>
-                                        <p className="mb-2 font-bold text-gray-500 uppercase tracking-widest">Authorized Signatory</p>
-                                        <div className='relative w-[80px] h-[80px] mx-auto my-2 opacity-80 flex items-center justify-center'>
+                                        <p className="mb-1 font-bold text-gray-500 uppercase tracking-widest">Authorized Signatory</p>
+                                        <div className='relative w-[85px] h-[75px] mx-auto my-1 opacity-90 flex items-center justify-center'>
                                             <img 
-                                                src="/sigwithsign.png" 
+                                                src={activeProfile.stampLogoUrl || "/sigwithsign.png"} 
                                                 alt="Company Stamp" 
                                                 className="max-w-full max-h-full object-contain"
                                                 crossOrigin="anonymous" 
                                             />
                                         </div>
-                                        <p className="mt-2 text-gray-600 italic">For {activeProfile.companyName}</p>
+                                        <p className="mt-1 text-gray-600 italic">For {activeProfile.companyName}</p>
                                     </div>
                                 </div>
                             </div>
-                            <div className='w-full border-t border-gray-100 pt-4 flex justify-between items-center text-[9px] text-gray-400'>
+                            <div className='w-full border-t border-gray-100 pt-3 flex justify-between items-center text-[9px] text-gray-400'>
                                 <p>Thank you for your business!</p>
                                 <div className='flex gap-4'>
                                     {activeProfile.companyPhone && <span><span className='font-bold'>Tel:</span> {activeProfile.companyPhone}</span>}

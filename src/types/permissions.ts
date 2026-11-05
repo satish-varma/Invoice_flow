@@ -569,6 +569,8 @@ export function hasPermission(
     if (key === 'hr_docs_create' && user.allowedTabs.includes('hr_docs')) return true;
     if (key === 'exports_download' && (user.allowedTabs.includes('analytics') || user.allowedTabs.includes('stock_admin'))) return true;
     if (key === 'leaves' && (user.allowedTabs.includes('attendance') || user.allowedTabs.includes('payroll') || user.allowedTabs.includes('leaves'))) return true;
+
+    return false;
   }
 
   // Backwards compatibility with legacy assignedApps

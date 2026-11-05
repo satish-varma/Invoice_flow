@@ -52,19 +52,25 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-function FinancialStatusBadge() {
+function FinancialStatusBadge({ darkHeader }: { darkHeader?: boolean }) {
   const { isUnlocked, remainingMinutes, lockFinancials } = useFinancialAuth();
   const [showModal, setShowModal] = useState(false);
 
   if (isUnlocked) {
     return (
-      <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] px-2.5 py-1 rounded-full font-medium shadow-xs">
-        <Unlock className="w-3 h-3 text-emerald-600" />
+      <div
+        className={
+          darkHeader
+            ? "flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400/30 text-emerald-100 text-[11px] px-2.5 py-1 rounded-full font-medium shadow-xs backdrop-blur-sm"
+            : "flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] px-2.5 py-1 rounded-full font-medium shadow-xs"
+        }
+      >
+        <Unlock className={`w-3 h-3 ${darkHeader ? 'text-emerald-300' : 'text-emerald-600'}`} />
         <span>Financials ({remainingMinutes}m)</span>
         <button
           onClick={lockFinancials}
           title="Lock financials now"
-          className="ml-1 text-emerald-950 hover:text-red-600 transition-colors p-0.5 rounded"
+          className={`ml-1 transition-colors p-0.5 rounded ${darkHeader ? 'text-emerald-200 hover:text-red-300' : 'text-emerald-950 hover:text-red-600'}`}
         >
           <Lock className="w-2.5 h-2.5" />
         </button>
@@ -76,10 +82,14 @@ function FinancialStatusBadge() {
     <>
       <button
         onClick={() => setShowModal(true)}
-        className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors border border-gray-200"
+        className={
+          darkHeader
+            ? "flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white/90 text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors border border-white/20 backdrop-blur-sm"
+            : "flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors border border-gray-200"
+        }
         title="Financials are locked. Click to enter admin password."
       >
-        <Lock className="w-3 h-3 text-gray-500" />
+        <Lock className={`w-3 h-3 ${darkHeader ? 'text-white/70' : 'text-gray-500'}`} />
         <span>Financials Locked</span>
       </button>
 
@@ -161,58 +171,52 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Desktop Top Header (hidden sm:block) */}
-      <header className="hidden sm:block border-b border-gray-200/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 shadow-xs">
+      <header className="hidden sm:block border-b border-indigo-950/40 bg-gradient-to-r from-[#1e1b4b] via-[#3b2fc9] to-[#4f46e5] text-white sticky top-0 z-30 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 h-14 flex items-center justify-between gap-3">
           {/* Brand & Site Scoping */}
           <div className="flex items-center gap-3 shrink-0">
             <Link
               href="/"
               onClick={() => triggerHaptic('light')}
-              className="flex items-center gap-2.5 hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2.5 hover:opacity-95 transition-opacity"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/gut_guru_logo.png"
                 alt="The Gut Guru Tracker"
-                className="h-8 sm:h-9 w-8 sm:w-9 rounded-full object-contain shadow-xs border border-amber-900/10"
+                className="h-8 sm:h-9 w-8 sm:w-9 rounded-full object-contain shadow-xs border border-white/20 bg-white/10 p-0.5"
               />
-              <span className="text-base font-black tracking-tight text-gray-900">
+              <span className="text-base font-black tracking-tight text-white">
                 The Gut Guru Tracker
               </span>
             </Link>
 
-            <span className="text-gray-300 font-light">|</span>
+            <span className="text-white/30 font-light">|</span>
 
             {/* Site Indicator Badge */}
             {isAdmin ? (
-              <span className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-full px-3 py-1 font-semibold flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+              <span className="text-xs text-white/90 bg-white/15 border border-white/20 backdrop-blur-sm rounded-full px-3 py-1 font-semibold flex items-center gap-1.5 shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 Multi-Site Operations (HYD &amp; BLR)
               </span>
             ) : (user?.allowedTabs?.includes('hungerbox_tracker') && (!user?.allowedTabs?.includes('tuckshop') && !user?.allowedTabs?.includes('attendance'))) || (user?.assignedLocations && user.assignedLocations.length > 0) ? (
-              <span className="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border-emerald-200">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1.5 bg-emerald-500/20 text-emerald-200 border-emerald-400/30 backdrop-blur-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 📍 Cash &amp; Carry: {user?.assignedLocations && user.assignedLocations.length > 0 ? user.assignedLocations.join(' · ') : 'All Locations'}
                 {user?.assignedStalls && user.assignedStalls.length > 0 ? ` (${user.assignedStalls.length} Stalls)` : ''}
               </span>
             ) : user?.assignedSites && user.assignedSites.length > 1 ? (
               <span
-                className="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1.5 bg-indigo-50 text-[#3b2fc9] border-indigo-200"
+                className="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1.5 bg-white/15 text-white border-white/20 backdrop-blur-sm"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 📍 Multi-Stall: {user.assignedSites.map((s) => COMPANY_SITES[s]?.name || s).join(' · ')}
               </span>
             ) : (
               <span
-                className={`text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1.5 ${
-                  site === 'dsm'
-                    ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
-                    : site === 'ntt_data'
-                    ? 'bg-amber-50 text-amber-800 border-amber-200'
-                    : 'bg-indigo-50 text-[#3b2fc9] border-indigo-200'
-                }`}
+                className="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1.5 bg-white/15 text-white border-white/20 backdrop-blur-sm"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 📍 {siteConfig.name} Stall
               </span>
             )}
@@ -220,11 +224,11 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
           {/* Right Action Items */}
           <div className="flex items-center gap-3">
-            {isAdmin && <FinancialStatusBadge />}
+            {isAdmin && <FinancialStatusBadge darkHeader />}
 
             {role === 'guest' && (
-              <span className="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700/60 rounded-full px-3 py-1 font-bold flex items-center gap-1.5 shadow-2xs">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span className="text-xs text-amber-200 bg-amber-500/20 border border-amber-400/30 backdrop-blur-sm rounded-full px-3 py-1 font-bold flex items-center gap-1.5 shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                 👁️ Guest Mode (Read-Only)
               </span>
             )}
@@ -232,26 +236,26 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             {isAdmin && (
               <Link
                 href="/admin/users"
-                className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-[#3b2fc9] bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 px-3 py-1.5 rounded-full transition-colors"
+                className="flex items-center gap-1.5 text-xs font-semibold text-white/90 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 rounded-full transition-colors backdrop-blur-sm"
               >
-                <Shield className="h-3.5 w-3.5 text-[#3b2fc9]" />
+                <Shield className="h-3.5 w-3.5 text-indigo-200" />
                 Access &amp; Users
               </Link>
             )}
 
             <Link
               href="/profile"
-              className="flex items-center gap-2 px-2.5 py-1 rounded-xl hover:bg-gray-100 transition-colors group cursor-pointer"
+              className="flex items-center gap-2 px-2.5 py-1 rounded-xl hover:bg-white/10 transition-colors group cursor-pointer"
               title="View account and employee details"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#3b2fc9] to-[#6366f1] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              <div className="w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center font-bold text-xs border border-white/30 shadow-xs">
                 {user?.email ? user.email.substring(0, 2).toUpperCase() : 'GG'}
               </div>
               <div className="flex flex-col items-start text-left">
-                <span className="text-xs font-bold text-gray-800 group-hover:text-[#3b2fc9] transition-colors truncate max-w-[170px]">
+                <span className="text-xs font-bold text-white group-hover:text-indigo-200 transition-colors truncate max-w-[170px]">
                   {user?.email}
                 </span>
-                <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+                <span className="text-[10px] text-white/60 uppercase font-bold tracking-wider">
                   {role || 'User'}
                 </span>
               </div>
@@ -259,7 +263,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
             <button
               onClick={signOut}
-              className="p-1.5 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50 cursor-pointer"
+              className="p-1.5 text-white/60 hover:text-red-300 transition-colors rounded-lg hover:bg-white/10 cursor-pointer"
               title="Sign out from device"
             >
               <LogOut className="h-4 w-4" />
@@ -269,19 +273,19 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Desktop Secondary Navigation Bar with Categorized Dropdowns */}
-      <div className="hidden sm:block bg-white/75 dark:bg-slate-900/75 backdrop-blur-md border-b border-gray-200/80 sticky top-14 z-20 shadow-2xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center gap-2 overflow-x-auto">
+      <div className="hidden sm:block bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-200/80 sticky top-14 z-20 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-2 flex items-center gap-1.5 overflow-x-auto">
           {/* Direct Tab 1: Tuckshop (Counter sales & ledger for assigned site) */}
           {hasPermission(user, 'tuckshop') && (
             <Link
               href="/newrelic/tuckshop"
-              className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border ${
                 pathname.startsWith('/newrelic/tuckshop') || pathname === '/tuckshop'
-                  ? 'border-[#3b2fc9] text-[#3b2fc9]'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                  ? 'bg-indigo-50 border-indigo-200 text-[#3b2fc9] dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 shadow-xs'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
               }`}
             >
-              <Store className="h-4 w-4" />
+              <Store className="h-3.5 w-3.5" />
               Tuckshop
             </Link>
           )}
@@ -290,14 +294,14 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           {hasPermission(user, 'attendance') && (
             <Link
               href="/newrelic/attendance"
-              className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border ${
                 (pathname.startsWith('/newrelic/attendance') || pathname === '/attendance') &&
                 !pathname.includes('payroll')
-                  ? 'border-[#3b2fc9] text-[#3b2fc9]'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                  ? 'bg-indigo-50 border-indigo-200 text-[#3b2fc9] dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 shadow-xs'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
               }`}
             >
-              <CalendarCheck className="h-4 w-4" />
+              <CalendarCheck className="h-3.5 w-3.5" />
               Attendance
             </Link>
           )}
@@ -307,13 +311,13 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             <Link
               href="/newrelic"
               prefetch={false}
-              className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border ${
                 pathname === '/newrelic'
-                  ? 'border-[#3b2fc9] text-[#3b2fc9]'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                  ? 'bg-indigo-50 border-indigo-200 text-[#3b2fc9] dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 shadow-xs'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
               }`}
             >
-              <FileText className="h-4 w-4" />
+              <FileText className="h-3.5 w-3.5" />
               NewRelic DC
             </Link>
           )}
@@ -322,13 +326,13 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           {hasPermission(user, 'general_dc') && (
             <Link
               href="/delivery-challan"
-              className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border ${
                 pathname === '/delivery-challan'
-                  ? 'border-[#3b2fc9] text-[#3b2fc9]'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                  ? 'bg-indigo-50 border-indigo-200 text-[#3b2fc9] dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 shadow-xs'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
               }`}
             >
-              <Truck className="h-4 w-4" />
+              <Truck className="h-3.5 w-3.5" />
               General DC
             </Link>
           )}
@@ -337,13 +341,13 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           {hasPermission(user, 'invoices') && role !== 'guest' && (
             <Link
               href="/"
-              className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border ${
                 pathname === '/'
-                  ? 'border-[#3b2fc9] text-[#3b2fc9]'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                  ? 'bg-indigo-50 border-indigo-200 text-[#3b2fc9] dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 shadow-xs'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
               }`}
             >
-              <LayoutDashboard className="h-4 w-4" />
+              <LayoutDashboard className="h-3.5 w-3.5" />
               Invoices &amp; Dashboard
             </Link>
           )}
@@ -353,28 +357,28 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             <Link
               href="/tracker"
               prefetch={false}
-              className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border ${
                 pathname.startsWith('/tracker')
-                  ? 'border-[#3b2fc9] text-[#3b2fc9]'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                  ? 'bg-indigo-50 border-indigo-200 text-[#3b2fc9] dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 shadow-xs'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
               }`}
             >
-              <Receipt className="h-4 w-4" />
+              <Receipt className="h-3.5 w-3.5" />
               Cash &amp; Carry
             </Link>
           )}
 
-          {/* Direct Tab 6: Stock Requests (Operator view) */}
+          {/* Direct Tab 7: Stock Requests (Operator view) */}
           {hasPermission(user, 'stock_request') && !hasPermission(user, 'stock_admin') && (
             <Link
               href="/newrelic/stock-request"
-              className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border ${
                 pathname === '/newrelic/stock-request' || pathname === '/stock-request'
-                  ? 'border-[#3b2fc9] text-[#3b2fc9]'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                  ? 'bg-indigo-50 border-indigo-200 text-[#3b2fc9] dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 shadow-xs'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
               }`}
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-3.5 w-3.5" />
               Request Stock
             </Link>
           )}
@@ -387,13 +391,13 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             hasPermission(user, 'hr_docs')) && (
             <DropdownMenu>
               <DropdownMenuTrigger
-                className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 outline-none cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border outline-none cursor-pointer ${
                   isRecordsAndHrActive
-                    ? 'border-[#3b2fc9] text-[#3b2fc9]'
-                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    ? 'bg-indigo-50 border-indigo-200 text-[#3b2fc9] dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 shadow-xs'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
                 }`}
               >
-                <Package className="h-4 w-4" />
+                <Package className="h-3.5 w-3.5" />
                 Records, HR &amp; Legal
                 <ChevronDown className="h-3.5 w-3.5 opacity-60 ml-0.5" />
               </DropdownMenuTrigger>
@@ -525,13 +529,13 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             hasPermission(user, 'settings')) && (
             <DropdownMenu>
               <DropdownMenuTrigger
-                className={`py-3 px-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 outline-none cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border outline-none cursor-pointer ${
                   isAdminActive
-                    ? 'border-[#3b2fc9] text-[#3b2fc9]'
-                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    ? 'bg-indigo-50 border-indigo-200 text-[#3b2fc9] dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 shadow-xs'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
                 }`}
               >
-                <Settings className="h-4 w-4" />
+                <Settings className="h-3.5 w-3.5" />
                 Admin Tools
                 {pendingStockCount > 0 && (
                   <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full min-w-[18px] text-center ml-0.5">

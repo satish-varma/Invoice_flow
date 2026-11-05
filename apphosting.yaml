@@ -6,3 +6,17 @@ runConfig:
   minInstances: 1
   maxInstances: 2
 
+env:
+  - variable: TURSO_DATABASE_URL
+    value: "libsql://thegutguru-tracker-satish-varma.aws-ap-south-1.turso.io"
+  - variable: TURSO_AUTH_TOKEN
+    value: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NjY2MzkyMjMsImlkIjoiOGYzZTQwZTktNjViYi00NzkwLTkwMDctMzI4NmYyYjUyNWU5IiwicmlkIjoiZTZhM2E2NWItZjAwNy00NTZlLTkxNmUtNDJlOGUxODlmZTQzIn0.deac8HFFNKwjRaC5wCE1YA_gSnjJxP3Q6eYw7qaPEtEmqxckqRJNXsbIqD1frcKcJc0V03Cizr1OTB5S_JWSDg"
+  - variable: R2_ACCOUNT_ID
+    value: "463b6dd20d0af29c19a23fd9bd2dd99c"
+  - variable: R2_ACCESS_KEY_ID
+    value: "7c89bf8fe4e19239cfb699782f22dbf0"
+  - variable: R2_SECRET_ACCESS_KEY
+    value: "9aa6a9aeddfb74635f3c01afb36ce7c4f2b96c3c76857f35ddcd1d25ad1445b3"
+  - variable: R2_BUCKET_NAME
+    value: "thegutguru-invoices"
+

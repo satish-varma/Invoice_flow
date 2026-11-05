@@ -1,9 +1,9 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || '463b6dd20d0af29c19a23fd9bd2dd99c';
+const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '7c89bf8fe4e19239cfb699782f22dbf0';
+const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '9aa6a9aeddfb74635f3c01afb36ce7c4f2b96c3c76857f35ddcd1d25ad1445b3';
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'thegutguru-invoices';
 
 export function isR2Configured(): boolean {

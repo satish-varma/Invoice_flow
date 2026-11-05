@@ -6,8 +6,12 @@ let client: Client | null = null;
 
 export function getTursoClient(): Client {
   if (!client) {
-    const url = process.env.TURSO_DATABASE_URL || 'file:local-tracker.db';
-    const authToken = process.env.TURSO_AUTH_TOKEN;
+    const url =
+      process.env.TURSO_DATABASE_URL ||
+      'libsql://thegutguru-tracker-satish-varma.aws-ap-south-1.turso.io';
+    const authToken =
+      process.env.TURSO_AUTH_TOKEN ||
+      'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NjY2MzkyMjMsImlkIjoiOGYzZTQwZTktNjViYi00NzkwLTkwMDctMzI4NmYyYjUyNWU5IiwicmlkIjoiZTZhM2E2NWItZjAwNy00NTZlLTkxNmUtNDJlOGUxODlmZTQzIn0.deac8HFFNKwjRaC5wCE1YA_gSnjJxP3Q6eYw7qaPEtEmqxckqRJNXsbIqD1frcKcJc0V03Cizr1OTB5S_JWSDg';
     client = createClient({
       url,
       authToken,

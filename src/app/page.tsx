@@ -155,13 +155,29 @@ export default function RootHomePage() {
     }
   }, [invoices]);
 
-  const handleInvoiceSave = (savedInvoice?: Invoice) => {
-    fetchData();
-    setSelectedInvoice(null);
-    setActiveTab('list');
-    if (savedInvoice) {
-      handleDownload(savedInvoice);
+  const handleInvoiceSave = (savedInvoice: Invoice, action: 'save' | 'preview' = 'save') => {
+    // Immediately update invoices state optimistically (sub-second UI transition)
+    setInvoices((prev) => {
+      const idx = prev.findIndex((i) => i.id === savedInvoice.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = savedInvoice;
+        return next;
+      }
+      return [savedInvoice, ...prev];
+    });
+
+    if (action === 'preview') {
+      handlePreviewInvoice(savedInvoice);
+    } else {
+      setSelectedInvoice(null);
+      setActiveTab('list');
     }
+
+    // Silent background sync without unmounting or blocking the UI
+    getInvoices()
+      .then((updated) => setInvoices(updated))
+      .catch((err) => console.error('Silent invoice refresh error:', err));
   };
 
   const handleSelectInvoice = (invoice: Invoice) => {

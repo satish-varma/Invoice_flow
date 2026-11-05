@@ -63,7 +63,20 @@ export interface Settings {
 const SETTINGS_COLLECTION = 'settings';
 const SINGLETON_DOC_ID = 'invoiceDefaults';
 
-export async function getSettings(): Promise<Settings> {
+let cachedSettings: Settings | null = null;
+let lastSettingsFetchTime = 0;
+const SETTINGS_CACHE_TTL_MS = 60000; // 1 minute in-memory cache
+
+export function invalidateSettingsCache() {
+    cachedSettings = null;
+    lastSettingsFetchTime = 0;
+}
+
+export async function getSettings(forceRefresh = false): Promise<Settings> {
+    const now = Date.now();
+    if (!forceRefresh && cachedSettings && (now - lastSettingsFetchTime < SETTINGS_CACHE_TTL_MS)) {
+        return cachedSettings;
+    }
     try {
         console.log("Fetching settings from Firestore...");
         const docRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
@@ -136,7 +149,10 @@ export async function getSettings(): Promise<Settings> {
         }
 
         // Ensure deep serialization to avoid any hidden non-serializable objects
-        return JSON.parse(JSON.stringify(result));
+        const serialized = JSON.parse(JSON.stringify(result));
+        cachedSettings = serialized;
+        lastSettingsFetchTime = Date.now();
+        return serialized;
 
     } catch (error) {
         console.error("Error fetching settings: ", error);
@@ -167,6 +183,7 @@ export async function saveCompanyProfile(profile: Omit<CompanyProfile, 'id'>): P
 
     const updatedProfiles = [...profiles, newProfile];
     await setDoc(settingsRef, { companyProfiles: updatedProfiles }, { merge: true });
+    invalidateSettingsCache();
 
     // If this is the first profile, make it the default
     if (updatedProfiles.length === 1) {
@@ -190,6 +207,7 @@ export async function updateCompanyProfile(profile: CompanyProfile): Promise<voi
 
     const updatedProfiles = profiles.map(p => p.id === profile.id ? profile : p);
     await updateDoc(settingsRef, { companyProfiles: updatedProfiles });
+    invalidateSettingsCache();
 }
 
 export async function deleteCompanyProfile(id: string): Promise<void> {
@@ -210,12 +228,14 @@ export async function deleteCompanyProfile(id: string): Promise<void> {
     }
 
     await updateDoc(settingsRef, updatePayload);
+    invalidateSettingsCache();
 }
 
 export async function setDefaultCompanyProfile(id: string): Promise<void> {
     await assertWritePermission('Setting Default Company Profile');
     const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
     await updateDoc(settingsRef, { defaultCompanyProfile: id });
+    invalidateSettingsCache();
 }
 
 
@@ -242,6 +262,7 @@ export async function saveBillToContact(contact: Omit<BillToContact, 'id'>): Pro
 
         const updatedContacts = [...(settings.billToContacts || []), newContact];
         await setDoc(settingsRef, { ...settings, billToContacts: updatedContacts }, { merge: true });
+        invalidateSettingsCache();
 
     } catch (error) {
         console.error("Error saving Bill To contact: ", error);
@@ -269,6 +290,7 @@ export async function saveShipToContact(contact: Omit<ShipToContact, 'id'>): Pro
 
         const updatedContacts = [...(settings.shipToContacts || []), newContact];
         await setDoc(settingsRef, { ...settings, shipToContacts: updatedContacts }, { merge: true });
+        invalidateSettingsCache();
 
     } catch (error) {
         console.error("Error saving Ship To contact: ", error);
@@ -292,6 +314,7 @@ export async function deleteBillToContact(id: string): Promise<void> {
         const updatedContacts = settings.billToContacts.filter(c => c.id !== id);
 
         await updateDoc(settingsRef, { billToContacts: updatedContacts });
+        invalidateSettingsCache();
 
     } catch (error) {
         console.error("Error deleting Bill To contact: ", error);
@@ -311,6 +334,7 @@ export async function deleteShipToContact(id: string): Promise<void> {
         const updatedContacts = settings.shipToContacts.filter(c => c.id !== id);
 
         await updateDoc(settingsRef, { shipToContacts: updatedContacts });
+        invalidateSettingsCache();
 
     } catch (error) {
         console.error("Error deleting Ship To contact: ", error);
@@ -337,6 +361,7 @@ export async function updateBillToContact(contact: BillToContact): Promise<void>
             c.id === contact.id ? contact : c
         );
         await updateDoc(settingsRef, { billToContacts: updatedContacts });
+        invalidateSettingsCache();
     } catch (error) {
         console.error("Error updating Bill To contact: ", error);
         if (error instanceof Error && error.message.includes("already exists")) {
@@ -364,6 +389,7 @@ export async function updateShipToContact(contact: ShipToContact): Promise<void>
             c.id === contact.id ? contact : c
         );
         await updateDoc(settingsRef, { shipToContacts: updatedContacts });
+        invalidateSettingsCache();
     } catch (error) {
         console.error("Error updating Ship To contact: ", error);
         if (error instanceof Error && error.message.includes("already exists")) {
@@ -381,6 +407,7 @@ export async function setDefaultBillToContact(id: string): Promise<void> {
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         await setDoc(settingsRef, { defaultBillToContact: id }, { merge: true });
+        invalidateSettingsCache();
     } catch (error) {
         console.error("Error setting default Bill To contact: ", error);
         throw new Error(`Failed to set default Bill To contact: ${error instanceof Error ? error.message : String(error)}`);
@@ -395,6 +422,7 @@ export async function setDefaultShipToContact(id: string): Promise<void> {
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         await setDoc(settingsRef, { defaultShipToContact: id }, { merge: true });
+        invalidateSettingsCache();
     } catch (error) {
         console.error("Error setting default Ship To contact: ", error);
         throw new Error(`Failed to set default Ship To contact: ${error instanceof Error ? error.message : String(error)}`);
@@ -409,6 +437,7 @@ export async function saveGeneralSettings(updates: Partial<Settings>): Promise<v
     try {
         const settingsRef = doc(db, SETTINGS_COLLECTION, SINGLETON_DOC_ID);
         await setDoc(settingsRef, updates, { merge: true });
+        invalidateSettingsCache();
     } catch (error) {
         console.error("Error saving general settings: ", error);
         throw new Error("Failed to save settings.");

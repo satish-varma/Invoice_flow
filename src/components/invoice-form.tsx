@@ -40,7 +40,7 @@ type LineItem = {
 
 interface InvoiceFormProps {
     initialData?: Invoice | null;
-    onInvoiceSave: (savedInvoice?: Invoice) => void;
+    onInvoiceSave: (savedInvoice: Invoice, action?: 'save' | 'preview') => void;
     onAddNew: () => void;
 }
 
@@ -95,6 +95,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
     const [isExtracting, setIsExtracting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const poUploadPromiseRef = useRef<Promise<string> | null>(null);
     const pathname = usePathname();
     const router = useRouter();
 
@@ -345,7 +346,6 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
             });
             return;
         }
-        const andDownload = mode === 'save';
         if (!billToName) {
             toast({
                 variant: "destructive",
@@ -365,7 +365,13 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         setIsSaving(true);
         try {
             let currentPoUrl = poFileUrl;
-            if (poFile) {
+            if (!currentPoUrl && poUploadPromiseRef.current) {
+                try {
+                    currentPoUrl = await poUploadPromiseRef.current;
+                } catch (err) {
+                    console.error("Failed awaiting background PO upload:", err);
+                }
+            } else if (!currentPoUrl && poFile) {
                 try {
                     const uniquePrefix = `po_${Date.now()}_`;
                     currentPoUrl = await uploadStorageFile(
@@ -380,7 +386,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 }
             }
 
-            const invoiceData: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & { id?: string } = {
+            const invoiceData: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & { id?: string; invoiceNumber?: string } = {
                 date: date?.toISOString() || new Date().toISOString(),
                 companyProfileId: activeCompanyProfile.id,
                 period,
@@ -413,23 +419,27 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
 
             if (initialData?.id) {
                 invoiceData.id = initialData.id;
+                invoiceData.invoiceNumber = initialData.invoiceNumber;
             }
 
-            const savedInvoice = await saveInvoice(invoiceData);
+            // Save invoice using in-memory settings to avoid extra network queries
+            const savedInvoice = await saveInvoice(invoiceData, settings);
 
-            // Save client if checkbox is checked and it's a new name
+            // Save client in background if checkbox is checked and it's a new name
             if (saveAsClient && billToName) {
                 const existingClient = clients.find(c => c.name.toLowerCase() === billToName.toLowerCase());
                 if (!existingClient) {
-                    await saveClient({
+                    const newClient = {
                         name: billToName,
                         address: billToAddress,
                         gst: billToGst,
-                        type: 'business'
-                    });
-                    // Refresh clients
-                    const updatedClients = await getClients();
-                    setClients(updatedClients);
+                        type: 'business' as const
+                    };
+                    saveClient(newClient)
+                        .then(newId => {
+                            setClients(prev => [...prev, { ...newClient, id: newId }]);
+                        })
+                        .catch(err => console.error("Error saving client:", err));
                 }
             }
 
@@ -438,11 +448,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                 description: `Your invoice has been successfully ${initialData ? 'updated' : 'saved'}.`,
             });
 
-            if (andDownload) {
-                onInvoiceSave(savedInvoice);
-            } else {
-                onInvoiceSave();
-            }
+            onInvoiceSave(savedInvoice, mode);
 
         } catch (error) {
             console.error("Failed to save invoice:", error);
@@ -465,6 +471,20 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
         setPoFile(file);
         setPoFileName(file.name);
         setIsExtracting(true);
+
+        // Pre-upload PO file to Storage in the background while extraction happens
+        const uniquePrefix = `po_${Date.now()}_`;
+        const tempId = invoiceNumber || initialData?.invoiceNumber || `inv_${Date.now()}`;
+        poUploadPromiseRef.current = uploadStorageFile(tempId, file, 'invoice-pos', uniquePrefix)
+            .then(url => {
+                setPoFileUrl(url);
+                return url;
+            })
+            .catch(err => {
+                console.error("Background PO upload failed:", err);
+                return '';
+            });
+
         try {
             const dataUri = await fileToDataUri(file);
             const req = await fetch('/api/extract-invoice', {

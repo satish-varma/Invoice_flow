@@ -1,7 +1,7 @@
 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, runTransaction, serverTimestamp, query, orderBy, updateDoc, deleteDoc, writeBatch, getDoc, Timestamp } from 'firebase/firestore';
-import { getSettings, CompanyProfile } from './settingsService';
+import { getSettings, CompanyProfile, Settings } from './settingsService';
 import { assertWritePermission } from '@/lib/readOnlyGuard';
 
 export interface LineItem {
@@ -141,7 +141,10 @@ async function getNextInvoiceNumber(prefix: string): Promise<string> {
 }
 
 
-export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & { id?: string }): Promise<Invoice> {
+export async function saveInvoice(
+    invoice: Omit<Invoice, 'invoiceNumber' | 'createdAt'> & { id?: string; invoiceNumber?: string },
+    existingSettings?: Settings
+): Promise<Invoice> {
     await assertWritePermission('Saving Invoice');
     try {
         let finalInvoiceData: any;
@@ -157,11 +160,16 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
                 ...invoiceData,
                 invoiceType,
             });
-            const updatedDocSnap = await getDoc(docRef);
-            finalInvoiceData = { id: invoice.id, ...updatedDocSnap.data() };
+            // Return directly without redundant Firestore getDoc roundtrip
+            finalInvoiceData = {
+                id: invoice.id,
+                ...invoiceData,
+                invoiceType,
+                invoiceNumber: invoice.invoiceNumber,
+            };
         } else {
             // Create new invoice
-            const settings = await getSettings();
+            const settings = existingSettings || await getSettings();
             let prefix = 'INV-'; // Default prefix
             if (invoice.companyProfileId) {
                 const profile = settings.companyProfiles?.find(p => p.id === invoice.companyProfileId);
@@ -183,11 +191,15 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
                 invoiceNumber: newInvoiceNumber,
                 invoiceType,
                 createdAt: serverTimestamp(),
-            }
+            };
             docRef = await addDoc(collection(db, INVOICES_COLLECTION), completeInvoiceData);
 
-            const newDocSnap = await getDoc(docRef);
-            finalInvoiceData = { id: docRef.id, ...newDocSnap.data() };
+            // Return directly without redundant Firestore getDoc roundtrip
+            finalInvoiceData = {
+                id: docRef.id,
+                ...completeInvoiceData,
+                createdAt: new Date(),
+            };
         }
 
         // Create a serializable version of the invoice to return to the client
@@ -196,8 +208,12 @@ export async function saveInvoice(invoice: Omit<Invoice, 'invoiceNumber' | 'crea
             // Ensure the invoice number is correctly assigned for new invoices
             invoiceNumber: finalInvoiceData.invoiceNumber,
             // Convert Firestore Timestamp or Date object to ISO string
-            date: finalInvoiceData.date instanceof Timestamp ? finalInvoiceData.date.toDate().toISOString() : new Date(finalInvoiceData.date).toISOString(),
-            createdAt: finalInvoiceData.createdAt instanceof Timestamp ? finalInvoiceData.createdAt.toDate().toISOString() : new Date().toISOString(),
+            date: finalInvoiceData.date instanceof Timestamp
+                ? finalInvoiceData.date.toDate().toISOString()
+                : (finalInvoiceData.date ? new Date(finalInvoiceData.date).toISOString() : new Date().toISOString()),
+            createdAt: finalInvoiceData.createdAt instanceof Timestamp
+                ? finalInvoiceData.createdAt.toDate().toISOString()
+                : (finalInvoiceData.createdAt ? new Date(finalInvoiceData.createdAt).toISOString() : new Date().toISOString()),
         };
 
         return serializableInvoice;

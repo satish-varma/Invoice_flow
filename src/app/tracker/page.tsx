@@ -21,8 +21,14 @@ import {
   Filter,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/types/permissions';
 
 export default function TrackerDashboardPage() {
+  const { user, isReadOnly } = useAuth();
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+  const canViewInvoices = isAdmin || hasPermission(user, 'hungerbox_tracker_invoices');
+
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -242,12 +248,14 @@ export default function TrackerDashboardPage() {
               ))}
             </div>
 
-            <Button asChild size="sm" variant="outline" className="h-9 rounded-xl font-bold text-xs">
-              <Link href="/tracker/invoices">
-                View All
-                <ArrowRight className="h-3.5 w-3.5 ml-1" />
-              </Link>
-            </Button>
+            {canViewInvoices && (
+              <Button asChild size="sm" variant="outline" className="h-9 rounded-xl font-bold text-xs">
+                <Link href="/tracker/invoices">
+                  View All
+                  <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -328,7 +336,7 @@ export default function TrackerDashboardPage() {
         invoice={selectedInvoice}
         isOpen={!!selectedInvoice}
         onClose={() => setSelectedInvoice(null)}
-        onStatusChange={handleStatusChange}
+        onStatusChange={!isReadOnly ? handleStatusChange : undefined}
       />
     </div>
   );

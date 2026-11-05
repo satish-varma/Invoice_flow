@@ -255,6 +255,19 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
     });
   }
 
+  // Cash & Carry Tracker
+  if (hasPermission(user, 'hungerbox_tracker')) {
+    allModules.push({
+      id: 'hungerbox_tracker',
+      label: 'Tracker',
+      href: '/tracker',
+      icon: Receipt,
+      isActive: pathname.startsWith('/tracker'),
+      glowTheme: GLOW_THEMES.emerald,
+      permissionKey: 'hungerbox_tracker',
+    });
+  }
+
   // Prioritize User's assigned default landing page to Slot 1 if configured
   if (user?.defaultLandingPage) {
     const landingIdx = allModules.findIndex(

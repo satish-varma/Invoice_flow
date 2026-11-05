@@ -30,6 +30,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { triggerHaptic } from '@/lib/haptics';
+import { hasPermission } from '@/types/permissions';
+import Link from 'next/link';
+import { ShieldAlert } from 'lucide-react';
 
 interface SavedFilter {
   id: string;
@@ -48,8 +51,10 @@ interface SavedFilter {
 }
 
 export default function TrackerInvoicesPage() {
-  const { user } = useAuth();
+  const { user, isReadOnly } = useAuth();
   const router = useRouter();
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+  const isAllowed = isAdmin || hasPermission(user, 'hungerbox_tracker_invoices');
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -460,6 +465,25 @@ export default function TrackerInvoicesPage() {
     alert(`Successfully updated ${successCount} invoice(s) to "${newStatus}"`);
   };
 
+  if (!isAllowed) {
+    return (
+      <div className="max-w-md mx-auto my-16 p-8 bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900 rounded-3xl shadow-sm text-center">
+        <div className="h-12 w-12 bg-rose-50 dark:bg-rose-950/60 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <ShieldAlert className="h-6 w-6" />
+        </div>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Remittances Access Restricted</h2>
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+          Your account is restricted to the Cash &amp; Carry Overview portal only. You do not have permission to access the full remittances list.
+        </p>
+        <div className="mt-6">
+          <Button asChild variant="outline" size="sm" className="rounded-xl font-bold text-xs">
+            <Link href="/tracker">Back to Overview</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* ── Top Header & Tab Navigation ── */}
@@ -467,7 +491,7 @@ export default function TrackerInvoicesPage() {
         title="Remittance Invoices"
         subtitle="Payment invoices from HungerBox to GutGuru for employee-paid orders (received in 2 cycles per week)."
         count={invoices.length}
-        onSync={handleSync}
+        onSync={isAdmin || hasPermission(user, 'hungerbox_tracker_sync') ? handleSync : undefined}
         isSyncing={isSyncing}
         actions={
           <>
@@ -481,24 +505,28 @@ export default function TrackerInvoicesPage() {
                   <CheckSquare className="h-3.5 w-3.5 mr-1.5" />
                   Download ({selectedIds.size})
                 </Button>
-                <Button
-                  size="sm"
-                  disabled={isUpdatingStatus}
-                  onClick={() => handleBulkStatusUpdate('Paid')}
-                  className="h-10 px-3.5 rounded-2xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs active:scale-95 transition-all"
-                >
-                  <CreditCard className="h-3.5 w-3.5 mr-1.5" />
-                  Mark Paid ({selectedIds.size})
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={isUpdatingStatus}
-                  onClick={() => handleBulkStatusUpdate('Pending')}
-                  className="h-10 px-3 rounded-2xl font-bold text-xs border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 shadow-2xs active:scale-95 transition-all"
-                >
-                  Pending
-                </Button>
+                {!isReadOnly && (
+                  <>
+                    <Button
+                      size="sm"
+                      disabled={isUpdatingStatus}
+                      onClick={() => handleBulkStatusUpdate('Paid')}
+                      className="h-10 px-3.5 rounded-2xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs active:scale-95 transition-all"
+                    >
+                      <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+                      Mark Paid ({selectedIds.size})
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isUpdatingStatus}
+                      onClick={() => handleBulkStatusUpdate('Pending')}
+                      className="h-10 px-3 rounded-2xl font-bold text-xs border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 shadow-2xs active:scale-95 transition-all"
+                    >
+                      Pending
+                    </Button>
+                  </>
+                )}
               </div>
             )}
 
@@ -976,16 +1004,20 @@ export default function TrackerInvoicesPage() {
         isOpen={!!selectedInvoice}
         invoice={selectedInvoice}
         onClose={() => setSelectedInvoice(null)}
-        onStatusChange={async (id, newStatus) => {
-          await fetch(`/api/tracker/invoices/${encodeURIComponent(id)}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus }),
-          });
-          setInvoices((prev) =>
-            prev.map((inv) => (inv.id === id ? { ...inv, status: newStatus as any } : inv))
-          );
-        }}
+        onStatusChange={
+          !isReadOnly
+            ? async (id, newStatus) => {
+                await fetch(`/api/tracker/invoices/${encodeURIComponent(id)}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ status: newStatus }),
+                });
+                setInvoices((prev) =>
+                  prev.map((inv) => (inv.id === id ? { ...inv, status: newStatus as any } : inv))
+                );
+              }
+            : undefined
+        }
       />
     </div>
   );

@@ -58,6 +58,9 @@ export const authOptions: NextAuthOptions = {
           expiresAt: userData.expiresAt || null,
           canDelete: userData.canDelete ?? (userData.allowedTabs?.includes('can_delete') || false),
           preferredLocations: userData.preferredLocations || [],
+          assignedLocations: userData.assignedLocations || [],
+          assignedStalls: userData.assignedStalls || [],
+          assignedStartDate: userData.assignedStartDate || null,
           assignedApps: userData.assignedApps || [],
           assignedSite: userData.assignedSite || (userData.role === "admin" ? undefined : "newrelic"),
           defaultLandingPage: userData.defaultLandingPage || "",
@@ -77,6 +80,9 @@ export const authOptions: NextAuthOptions = {
         token.expiresAt = (user as any).expiresAt || null;
         token.canDelete = (user as any).canDelete || false;
         token.preferredLocations = (user as any).preferredLocations;
+        token.assignedLocations = (user as any).assignedLocations;
+        token.assignedStalls = (user as any).assignedStalls;
+        token.assignedStartDate = (user as any).assignedStartDate;
         token.assignedApps = (user as any).assignedApps;
         token.assignedSite = (user as any).assignedSite;
         token.defaultLandingPage = (user as any).defaultLandingPage || "";
@@ -99,6 +105,9 @@ export const authOptions: NextAuthOptions = {
             token.expiresAt = userData.expiresAt || null;
             token.canDelete = userData.canDelete ?? (userData.allowedTabs?.includes('can_delete') || false);
             token.preferredLocations = userData.preferredLocations || [];
+            token.assignedLocations = userData.assignedLocations || [];
+            token.assignedStalls = userData.assignedStalls || [];
+            token.assignedStartDate = userData.assignedStartDate || null;
             token.assignedApps = userData.assignedApps || [];
             token.assignedSite = userData.assignedSite || (userData.role === "admin" ? undefined : "newrelic");
             token.defaultLandingPage = userData.defaultLandingPage || "";
@@ -133,6 +142,9 @@ export const authOptions: NextAuthOptions = {
           expiresAt: (token.expiresAt as string | null) || null,
           canDelete: (token.canDelete as boolean) || false,
           preferredLocations: token.preferredLocations as string[],
+          assignedLocations: (token.assignedLocations as string[]) || [],
+          assignedStalls: (token.assignedStalls as string[]) || [],
+          assignedStartDate: (token.assignedStartDate as string | null) || null,
           assignedApps: token.assignedApps as string[],
           assignedSite: token.assignedSite as string | undefined,
           defaultLandingPage: (token.defaultLandingPage as string) || "",

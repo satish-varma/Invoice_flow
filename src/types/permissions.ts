@@ -33,6 +33,7 @@ export type PermissionKey =
   | 'settings'
   // HungerBox Remittance & Sales Portal
   | 'hungerbox_tracker'
+  | 'hungerbox_tracker_invoices'
   | 'hungerbox_tracker_sync'
   | 'hungerbox_tracker_settings'
   // Data Safety & Delete Protection
@@ -195,6 +196,12 @@ export const PERMISSION_CATEGORIES: PermissionCategory[] = [
         label: 'Cash & Carry Hub',
         description: 'View employee-paid payment invoices from HungerBox to GutGuru (received in 2 cycles per week)',
         route: '/tracker',
+      },
+      {
+        id: 'hungerbox_tracker_invoices',
+        label: 'Cash & Carry Remittances List',
+        description: 'View and search full remittance list and remittance details (/tracker/invoices)',
+        route: '/tracker/invoices',
       },
       {
         id: 'hungerbox_tracker_sync',
@@ -393,9 +400,20 @@ export const ROLE_PRESETS: RolePreset[] = [
       'users_admin',
       'settings',
       'hungerbox_tracker',
+      'hungerbox_tracker_invoices',
       'hungerbox_tracker_sync',
       'hungerbox_tracker_settings',
       'can_delete',
+    ],
+  },
+  {
+    id: 'tracker_readonly',
+    name: 'Cash & Carry Auditor (Tracker Read-Only)',
+    description:
+      'Strict read-only access limited to Cash & Carry overview portal with date, location, and stall filters. All other staff modules are blocked.',
+    defaultPage: '/tracker',
+    tabs: [
+      'hungerbox_tracker',
     ],
   },
   {
@@ -441,6 +459,7 @@ export const DEFAULT_LANDING_PAGES = [
   { label: 'Salaries & Advances Payroll (Admin)', path: '/newrelic/attendance?tab=payroll', category: 'Admin' },
   { label: 'Executive Analytics (Admin)', path: '/newrelic/analytics', category: 'Admin' },
   { label: 'Cash & Carry Portal', path: '/tracker', category: 'Operations' },
+  { label: 'Cash & Carry Remittances', path: '/tracker/invoices', category: 'Operations' },
   { label: 'User Management & Security (Admin)', path: '/admin/users', category: 'Admin' },
   { label: 'Company Settings (Admin)', path: '/settings', category: 'Admin' },
 ];
@@ -475,6 +494,10 @@ export function hasPermission(
       key === 'billing' ||
       key === 'signed_copies'
     ) {
+      return false;
+    }
+
+    if (key === 'hungerbox_tracker_invoices' && !user.allowedTabs?.includes('hungerbox_tracker_invoices')) {
       return false;
     }
 

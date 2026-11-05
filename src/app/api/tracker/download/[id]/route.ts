@@ -27,6 +27,39 @@ export async function GET(
       return NextResponse.json({ error: 'Invoice or PDF not found' }, { status: 404 });
     }
 
+    const user = session.user as any;
+    const isAdmin = user.role === 'admin' || user.role === 'superadmin';
+
+    // Scoping for non-admin users
+    if (!isAdmin) {
+      const assignedStartDate: string | undefined | null = user.assignedStartDate;
+      const assignedLocations: string[] =
+        Array.isArray(user.assignedLocations) && user.assignedLocations.length > 0
+          ? user.assignedLocations
+          : Array.isArray(user.preferredLocations) &&
+            user.preferredLocations.length > 0 &&
+            !user.preferredLocations.every((l: string) => l === 'hyderabad' || l === 'bangalore')
+          ? user.preferredLocations
+          : [];
+      const assignedStalls: string[] = Array.isArray(user.assignedStalls) ? user.assignedStalls : [];
+
+      if (assignedStartDate && invoice.date && invoice.date < assignedStartDate) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      if (assignedLocations.length > 0) {
+        const locSet = new Set(assignedLocations.map((l: string) => l.trim().toLowerCase()));
+        if (!invoice.location || !locSet.has(invoice.location.trim().toLowerCase())) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+      }
+      if (assignedStalls.length > 0) {
+        const stallSet = new Set(assignedStalls.map((s: string) => s.trim().toLowerCase()));
+        if (!invoice.stall || !stallSet.has(invoice.stall.trim().toLowerCase())) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+      }
+    }
+
     if (invoice.pdfPath.startsWith('r2://')) {
       const r2Key = invoice.pdfPath.replace('r2://', '');
       if (isR2Configured()) {

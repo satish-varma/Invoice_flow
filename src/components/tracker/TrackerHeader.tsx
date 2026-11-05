@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { triggerHaptic } from '@/lib/haptics';
+import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/types/permissions';
 
 interface TrackerHeaderProps {
   title?: string;
@@ -36,14 +38,20 @@ export function TrackerHeader({
   actions,
 }: TrackerHeaderProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+
+  const canViewInvoices = isAdmin || hasPermission(user, 'hungerbox_tracker_invoices');
+  const canSyncOrSettings = isAdmin || hasPermission(user, 'hungerbox_tracker_sync');
+  const canAccessSettings = isAdmin || hasPermission(user, 'hungerbox_tracker_settings');
 
   const navItems = [
-    { label: 'Overview', href: '/tracker', icon: LayoutDashboard, exact: true },
-    { label: 'Remittances', href: '/tracker/invoices', icon: FileText },
-    { label: 'Sales Feed', href: '/tracker/sales', icon: ShoppingBag },
-    { label: 'Analytics', href: '/tracker/analytics', icon: BarChart3 },
-    { label: 'Sync & Settings', href: '/tracker/settings', icon: Settings },
-  ];
+    { label: 'Overview', href: '/tracker', icon: LayoutDashboard, exact: true, show: true },
+    { label: 'Remittances', href: '/tracker/invoices', icon: FileText, show: canViewInvoices },
+    { label: 'Sales Feed', href: '/tracker/sales', icon: ShoppingBag, show: canSyncOrSettings },
+    { label: 'Analytics', href: '/tracker/analytics', icon: BarChart3, show: canSyncOrSettings },
+    { label: 'Sync & Settings', href: '/tracker/settings', icon: Settings, show: canAccessSettings },
+  ].filter((item) => item.show);
 
   return (
     <div className="space-y-4">
@@ -88,7 +96,7 @@ export function TrackerHeader({
         <div className="flex items-center gap-2 flex-wrap">
           {actions}
 
-          {onSync && (
+          {onSync && canSyncOrSettings && (
             <Button
               onClick={() => {
                 triggerHaptic('light');

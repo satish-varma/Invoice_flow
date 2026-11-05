@@ -12,6 +12,8 @@ function checkPermByRoute(
   if (route.includes('tuckshop')) return checkPerm('tuckshop');
   if (route.includes('attendance')) return checkPerm('attendance');
   if (route.includes('stock-request')) return checkPerm('stock_request');
+  if (route.startsWith('/tracker/invoices')) return checkPerm('hungerbox_tracker_invoices');
+  if (route.startsWith('/tracker')) return checkPerm('hungerbox_tracker');
   if (route.startsWith('/invoices') || route === '/') return checkPerm('billing');
   if (route.startsWith('/payslip') || route.startsWith('/offer-letter')) return checkPerm('hr_docs');
   return true;
@@ -22,6 +24,7 @@ function findFirstAccessibleRoute(
   site?: string
 ): string {
   const effectiveSite = site === 'dsm' || site === 'ntt_data' ? site : 'newrelic';
+  if (checkPerm('hungerbox_tracker')) return '/tracker';
   if (checkPerm('tuckshop')) return '/newrelic/tuckshop';
   if (checkPerm('attendance')) return '/newrelic/attendance';
   if (checkPerm('stock_request')) return '/newrelic/stock-request';
@@ -86,33 +89,6 @@ export default withAuth(
       (token.defaultLandingPage as string) ||
       (!isNewRelicSite ? '/newrelic/tuckshop' : '/newrelic');
 
-    // Strict security boundaries for Guest users: block admin and corporate invoices
-    if (role === 'guest') {
-      if (pathname.startsWith('/admin') || pathname === '/' || pathname.startsWith('/invoices')) {
-        const fallback =
-          defaultLandingPage &&
-          !defaultLandingPage.startsWith('/invoices') &&
-          !defaultLandingPage.startsWith('/admin') &&
-          defaultLandingPage !== '/'
-            ? defaultLandingPage
-            : '/delivery-challan';
-        return NextResponse.redirect(new URL(fallback, req.url));
-      }
-    }
-
-    // Protect /admin routes from non-admins
-    if (pathname.startsWith('/admin')) {
-      const fallback = defaultLandingPage.startsWith('/admin')
-        ? '/newrelic/tuckshop'
-        : defaultLandingPage;
-      return NextResponse.redirect(new URL(fallback, req.url));
-    }
-
-    // Site Isolation: NewRelic cafeteria DC Hub (/newrelic) is strictly forbidden for non-NewRelic sites
-    if (pathname === '/newrelic' && !isNewRelicSite) {
-      return NextResponse.redirect(new URL('/newrelic/tuckshop', req.url));
-    }
-
     // Helper to evaluate permission with backwards compatibility
     const checkPerm = (key: string): boolean => {
       // NewRelic DC is strictly blocked for non-NewRelic sites (DSM / NTT Data)
@@ -138,6 +114,35 @@ export default withAuth(
       if (key === 'settings') return assignedApps.includes('/settings');
       return role === 'guest';
     };
+
+    // Strict security boundaries for Guest users: block admin and corporate invoices
+    if (role === 'guest') {
+      if (pathname.startsWith('/admin') || pathname === '/' || pathname.startsWith('/invoices')) {
+        const fallback =
+          defaultLandingPage &&
+          !defaultLandingPage.startsWith('/invoices') &&
+          !defaultLandingPage.startsWith('/admin') &&
+          defaultLandingPage !== '/'
+            ? defaultLandingPage
+            : checkPerm('hungerbox_tracker')
+            ? '/tracker'
+            : '/delivery-challan';
+        return NextResponse.redirect(new URL(fallback, req.url));
+      }
+    }
+
+    // Protect /admin routes from non-admins
+    if (pathname.startsWith('/admin')) {
+      const fallback = defaultLandingPage.startsWith('/admin')
+        ? '/newrelic/tuckshop'
+        : defaultLandingPage;
+      return NextResponse.redirect(new URL(fallback, req.url));
+    }
+
+    // Site Isolation: NewRelic cafeteria DC Hub (/newrelic) is strictly forbidden for non-NewRelic sites
+    if (pathname === '/newrelic' && !isNewRelicSite) {
+      return NextResponse.redirect(new URL('/newrelic/tuckshop', req.url));
+    }
 
     // Map URL path to required permission key
     let requiredPerm: string | null = null;
@@ -169,6 +174,12 @@ export default withAuth(
     } else if (pathname.startsWith('/delivery-challan')) {
       // General DC (Other companies like HungerBox)
       requiredPerm = 'general_dc';
+    } else if (pathname === '/tracker/settings') {
+      requiredPerm = 'hungerbox_tracker_settings';
+    } else if (pathname === '/tracker/invoices') {
+      requiredPerm = 'hungerbox_tracker_invoices';
+    } else if (pathname.startsWith('/tracker')) {
+      requiredPerm = 'hungerbox_tracker';
     } else if (pathname === '/' || pathname.startsWith('/invoices')) {
       requiredPerm = 'billing';
     } else if (pathname.startsWith('/products') || pathname.startsWith('/clients')) {

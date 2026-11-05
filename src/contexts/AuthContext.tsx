@@ -22,6 +22,9 @@ export interface AppUser {
   expiresAt?: string | null;
   canDelete?: boolean;
   preferredLocations?: string[];
+  assignedLocations?: string[];
+  assignedStalls?: string[];
+  assignedStartDate?: string | null;
   assignedApps?: string[];
   assignedSite?: SiteId;
   assignedSites?: SiteId[];
@@ -139,6 +142,9 @@ function AuthProviderInner({ children }: { children: React.ReactNode }) {
               expiresAt: data.expiresAt || null,
               canDelete: data.canDelete ?? (data.allowedTabs?.includes('can_delete') || false),
               preferredLocations: data.preferredLocations || [],
+              assignedLocations: data.assignedLocations || [],
+              assignedStalls: data.assignedStalls || [],
+              assignedStartDate: data.assignedStartDate || null,
               assignedApps: data.assignedApps || [],
               assignedSite: data.assignedSite,
               defaultLandingPage: data.defaultLandingPage || '',

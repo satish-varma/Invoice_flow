@@ -45,6 +45,8 @@ import {
   ShieldX,
   Hourglass,
   Monitor,
+  Wallet,
+  Store,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -80,12 +82,46 @@ interface DbUser {
   assignedSite?: SiteId;
   assignedSites?: SiteId[];
   preferredLocations?: string[];
+  assignedLocations?: string[];
+  assignedStalls?: string[];
+  assignedStartDate?: string | null;
   assignedApps?: string[];
   defaultLandingPage?: string;
   allowedTabs?: PermissionKey[];
   sessions?: Record<string, DeviceSession>;
   lastActiveAt?: string;
 }
+
+const TRACKER_LOCATIONS = [
+  'Broadridge',
+  'CGI Information Systems',
+  'Covance',
+  'DSM Shared Services',
+  'IBM',
+  'NTT Data',
+  'New Relic',
+  'Qualcomm',
+];
+
+const TRACKER_STALLS = [
+  'Covance SoftSol',
+  'Gut Guru Tuckshop',
+  'Juice Counter',
+  'Juicytailes Juice Counter',
+  'Live Counter',
+  'Munchbox Live Counter',
+  'Orion 14th Floor Cafeteria Tuckshop',
+  'Relic Fresh',
+  'SipnByte DLF',
+  'SipnByte Skyview',
+  'Slurpstore Bakery',
+  'Snack On DLF',
+  'The Gut Guru',
+  'The Gut Guru Event',
+  'Tuck Shop',
+  'Tuckshop Covance',
+  'Tuckshop NTT DATA',
+];
 
 const ROLE_OPTIONS: Array<{
   value: UserRole;
@@ -261,6 +297,9 @@ export default function AdminUsersPage() {
   const [assignedSite, setAssignedSite] = useState<SiteId>('newrelic');
   const [assignedSites, setAssignedSites] = useState<SiteId[]>(['newrelic']);
   const [preferredLocations, setPreferredLocations] = useState<string[]>([]);
+  const [assignedStartDate, setAssignedStartDate] = useState<string>('');
+  const [assignedLocations, setAssignedLocations] = useState<string[]>([]);
+  const [assignedStalls, setAssignedStalls] = useState<string[]>([]);
   const [defaultLandingPage, setDefaultLandingPage] = useState<string>('/newrelic/tuckshop');
   const [allowedTabs, setAllowedTabs] = useState<PermissionKey[]>([
     'tuckshop',
@@ -400,6 +439,9 @@ export default function AdminUsersPage() {
           assignedSites: Array.isArray(data.assignedSites) && data.assignedSites.length > 0
             ? data.assignedSites
             : [resolveSiteId(data.assignedSite)],
+          assignedLocations: Array.isArray(data.assignedLocations) ? data.assignedLocations : [],
+          assignedStalls: Array.isArray(data.assignedStalls) ? data.assignedStalls : [],
+          assignedStartDate: data.assignedStartDate || null,
           sessions: data.sessions || {},
           lastActiveAt: data.lastActiveAt || null,
         };
@@ -459,8 +501,11 @@ export default function AdminUsersPage() {
       setUserRole('admin');
     } else if (preset.id === 'store_manager') {
       setUserRole('manager');
-    } else if (preset.id === 'guest_auditor') {
+    } else if (preset.id === 'guest_auditor' || preset.id === 'tracker_readonly') {
       setUserRole('guest');
+      if (preset.id === 'tracker_readonly') {
+        setDefaultLandingPage('/tracker');
+      }
     }
 
     toast({
@@ -553,6 +598,9 @@ export default function AdminUsersPage() {
       setPreferredLocations(
         userToEdit.preferredLocations || (site !== 'newrelic' ? ['hyderabad'] : [])
       );
+      setAssignedStartDate(userToEdit.assignedStartDate || '');
+      setAssignedLocations(Array.isArray(userToEdit.assignedLocations) ? userToEdit.assignedLocations : []);
+      setAssignedStalls(Array.isArray(userToEdit.assignedStalls) ? userToEdit.assignedStalls : []);
 
       const userTabs =
         userToEdit.allowedTabs && userToEdit.allowedTabs.length > 0
@@ -587,6 +635,9 @@ export default function AdminUsersPage() {
       setAssignedSite('newrelic');
       setAssignedSites(['newrelic']);
       setPreferredLocations(['hyderabad']);
+      setAssignedStartDate('');
+      setAssignedLocations([]);
+      setAssignedStalls([]);
       setDefaultLandingPage('/newrelic/tuckshop');
       setAllowedTabs(['tuckshop', 'tuckshop_pos', 'attendance', 'stock_request']);
       setExpiresAt('');
@@ -652,6 +703,9 @@ export default function AdminUsersPage() {
           assignedSite: effectiveSite,
           assignedSites: effectiveSites,
           preferredLocations: effectiveLocations,
+          assignedLocations: assignedLocations,
+          assignedStalls: assignedStalls,
+          assignedStartDate: assignedStartDate.trim() || null,
           defaultLandingPage: defaultLandingPage,
           allowedTabs: effectiveTabs,
           assignedApps: legacyApps,
@@ -730,6 +784,9 @@ export default function AdminUsersPage() {
           assignedSite: effectiveSite,
           assignedSites: effectiveSites,
           preferredLocations: effectiveLocations,
+          assignedLocations: assignedLocations,
+          assignedStalls: assignedStalls,
+          assignedStartDate: assignedStartDate.trim() || null,
           defaultLandingPage: defaultLandingPage,
           allowedTabs: effectiveTabs,
           assignedApps: legacyApps,
@@ -1945,7 +2002,32 @@ export default function AdminUsersPage() {
                         {u.role === 'admin' ? (
                           <span className="text-xs text-purple-700 dark:text-purple-300 font-bold">Unrestricted Access</span>
                         ) : u.role === 'guest' ? (
-                          <span className="text-xs text-amber-700 dark:text-amber-400 font-bold">Read-Only (Invoices &amp; Signed Hidden)</span>
+                          <div className="flex flex-col gap-1 items-start">
+                            <span className="text-xs text-amber-700 dark:text-amber-400 font-bold">
+                              {u.allowedTabs?.includes('hungerbox_tracker') && (!u.allowedTabs.includes('tuckshop') && !u.allowedTabs.includes('attendance'))
+                                ? 'Cash & Carry Auditor (Scoped)'
+                                : 'Read-Only (Invoices & Signed Hidden)'}
+                            </span>
+                            {(u.assignedStartDate || (u.assignedLocations && u.assignedLocations.length > 0) || (u.assignedStalls && u.assignedStalls.length > 0)) && (
+                              <div className="flex flex-wrap gap-1 text-[10px]">
+                                {u.assignedStartDate && (
+                                  <span className="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+                                    ≥ {u.assignedStartDate}
+                                  </span>
+                                )}
+                                {u.assignedLocations && u.assignedLocations.length > 0 && (
+                                  <span className="px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                                    {u.assignedLocations.length} Locs
+                                  </span>
+                                )}
+                                {u.assignedStalls && u.assignedStalls.length > 0 && (
+                                  <span className="px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                                    {u.assignedStalls.length} Stalls
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         ) : u.allowedTabs && u.allowedTabs.length > 0 ? (
                           <div className="flex items-center gap-1 flex-wrap max-w-xs">
                             <span className="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-[#3b2fc9] dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900 text-[11px] font-bold">
@@ -2641,6 +2723,160 @@ export default function AdminUsersPage() {
                       <span className="text-[10px] text-gray-400 font-normal">(Unavailable for DSM/NTT Data)</span>
                     )}
                   </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Cash & Carry Remittance Scoping (Read-Only & Auditor Restrictions) */}
+            <div className="space-y-4 p-4 sm:p-5 rounded-2xl border border-emerald-200/90 dark:border-emerald-800/60 bg-emerald-50/40 dark:bg-emerald-950/20">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-black uppercase tracking-wider text-emerald-950 dark:text-emerald-200 flex items-center gap-1.5">
+                  <Wallet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  Cash &amp; Carry Scoping (Read-Only &amp; Auditor Data Isolation)
+                </Label>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200">
+                  Data Isolation
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                Permanently restrict this user to remittances on/after a specific starting date, and/or specific locations and stalls. (Leave blank or empty for all records).
+              </p>
+
+              {/* Starting Date Filter */}
+              <div className="space-y-1.5 bg-white dark:bg-slate-800/80 p-3 rounded-xl border border-emerald-100 dark:border-emerald-900/40">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                    Assigned Starting Date
+                  </Label>
+                  {assignedStartDate && (
+                    <button
+                      type="button"
+                      onClick={() => setAssignedStartDate('')}
+                      className="text-[10px] text-rose-600 hover:underline font-semibold cursor-pointer"
+                    >
+                      Clear Date Filter
+                    </button>
+                  )}
+                </div>
+                <Input
+                  type="date"
+                  value={assignedStartDate}
+                  onChange={(e) => setAssignedStartDate(e.target.value)}
+                  className="h-9 text-xs rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                />
+                <p className="text-[10px] text-slate-500">
+                  Only remittances on or after {assignedStartDate ? <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">{assignedStartDate}</span> : 'the specified starting date'} will be accessible.
+                </p>
+              </div>
+
+              {/* Scoped Locations */}
+              <div className="space-y-2 bg-white dark:bg-slate-800/80 p-3 rounded-xl border border-emerald-100 dark:border-emerald-900/40">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                    Assigned Locations ({assignedLocations.length === 0 ? 'All 8 Locations' : `${assignedLocations.length} Selected`})
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAssignedLocations(TRACKER_LOCATIONS)}
+                      className="text-[10px] text-indigo-600 hover:underline font-semibold cursor-pointer"
+                    >
+                      Select All
+                    </button>
+                    <span className="text-slate-300">|</span>
+                    <button
+                      type="button"
+                      onClick={() => setAssignedLocations([])}
+                      className="text-[10px] text-rose-600 hover:underline font-semibold cursor-pointer"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pt-1">
+                  {TRACKER_LOCATIONS.map((loc) => {
+                    const isChecked = assignedLocations.includes(loc);
+                    return (
+                      <label
+                        key={loc}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer transition-all",
+                          isChecked
+                            ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-500 text-emerald-900 dark:text-emerald-200 font-bold"
+                            : "bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                        )}
+                      >
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setAssignedLocations((prev) => [...prev, loc]);
+                            } else {
+                              setAssignedLocations((prev) => prev.filter((l) => l !== loc));
+                            }
+                          }}
+                        />
+                        <span className="truncate">{loc}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Scoped Stalls */}
+              <div className="space-y-2 bg-white dark:bg-slate-800/80 p-3 rounded-xl border border-emerald-100 dark:border-emerald-900/40">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Store className="w-3.5 h-3.5 text-emerald-600" />
+                    Assigned Stalls ({assignedStalls.length === 0 ? 'All 17 Stalls' : `${assignedStalls.length} Selected`})
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAssignedStalls(TRACKER_STALLS)}
+                      className="text-[10px] text-indigo-600 hover:underline font-semibold cursor-pointer"
+                    >
+                      Select All
+                    </button>
+                    <span className="text-slate-300">|</span>
+                    <button
+                      type="button"
+                      onClick={() => setAssignedStalls([])}
+                      className="text-[10px] text-rose-600 hover:underline font-semibold cursor-pointer"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1 max-h-48 overflow-y-auto pr-1">
+                  {TRACKER_STALLS.map((st) => {
+                    const isChecked = assignedStalls.includes(st);
+                    return (
+                      <label
+                        key={st}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer transition-all",
+                          isChecked
+                            ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-500 text-emerald-900 dark:text-emerald-200 font-bold"
+                            : "bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                        )}
+                      >
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setAssignedStalls((prev) => [...prev, st]);
+                            } else {
+                              setAssignedStalls((prev) => prev.filter((s) => s !== st));
+                            }
+                          }}
+                        />
+                        <span className="truncate">{st}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             </div>

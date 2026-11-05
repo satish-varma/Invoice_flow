@@ -16,7 +16,42 @@ export async function GET(request: Request) {
   const orgId = searchParams.get('orgId') || 'default';
 
   try {
-    const invoices = await getInvoices(orgId);
+    let invoices = await getInvoices(orgId);
+
+    const user = session.user as any;
+    const isAdmin = user.role === 'admin' || user.role === 'superadmin';
+
+    // Scoping for non-admin users (starting date, locations, stalls)
+    if (!isAdmin) {
+      const assignedStartDate: string | undefined | null = user.assignedStartDate;
+      const assignedLocations: string[] =
+        Array.isArray(user.assignedLocations) && user.assignedLocations.length > 0
+          ? user.assignedLocations
+          : Array.isArray(user.preferredLocations) &&
+            user.preferredLocations.length > 0 &&
+            !user.preferredLocations.every((l: string) => l === 'hyderabad' || l === 'bangalore')
+          ? user.preferredLocations
+          : [];
+      const assignedStalls: string[] = Array.isArray(user.assignedStalls) ? user.assignedStalls : [];
+
+      if (assignedStartDate) {
+        invoices = invoices.filter((inv) => {
+          if (!inv.date) return false;
+          return inv.date >= assignedStartDate;
+        });
+      }
+
+      if (assignedLocations.length > 0) {
+        const locSet = new Set(assignedLocations.map((l: string) => l.trim().toLowerCase()));
+        invoices = invoices.filter((inv) => inv.location && locSet.has(inv.location.trim().toLowerCase()));
+      }
+
+      if (assignedStalls.length > 0) {
+        const stallSet = new Set(assignedStalls.map((s: string) => s.trim().toLowerCase()));
+        invoices = invoices.filter((inv) => inv.stall && stallSet.has(inv.stall.trim().toLowerCase()));
+      }
+    }
+
     const paidCount = invoices.filter((i) => i.status === 'Paid').length;
     const paidSum = invoices.filter((i) => i.status === 'Paid').reduce((s, i) => s + i.amount, 0);
     console.log(`[API Invoices] orgId: ${orgId}, total: ${invoices.length}, paidCount: ${paidCount}, paidSum: ₹${paidSum}`);

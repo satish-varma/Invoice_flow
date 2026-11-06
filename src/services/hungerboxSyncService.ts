@@ -17,8 +17,8 @@ export interface FeedResult {
 
 /**
  * HungerBox Vendor Configuration:
- * - MRP Vendors (19% fee): Packaged items, tuckshop stalls, confectionery, bakery
- * - Non-MRP Vendors (3% fee): Fresh kitchen foods, live counters, freshly brewed tea/coffee, juice
+ * - MRP Vendors (3% fee): Packaged items, tuckshop stalls, confectionery, packaged retail goods
+ * - Non-MRP Vendors (19% fee): Fresh kitchen foods, live counters, freshly brewed tea/coffee, juice, Maggi, sandwich, omelette
  */
 export const HUNGERBOX_MRP_VENDOR_IDS = [25577, 25579, 26122, 26200, 30225];
 export const HUNGERBOX_NON_MRP_VENDOR_IDS = [23221, 25576, 26121, 26123, 31127, 31142];
@@ -336,8 +336,8 @@ export async function syncHungerBoxDirectFromPortal(params?: {
   const dailyAggregates: HungerBoxDailyAggregate[] = Object.values(ledger).map((row) => {
     const mrpSales = Math.round(row.mrpSales * 100) / 100;
     const nonMrpSales = Math.round(row.nonMrpSales * 100) / 100;
-    const mrpCommission = Math.round(mrpSales * 0.19 * 100) / 100;
-    const nonMrpCommission = Math.round(nonMrpSales * 0.03 * 100) / 100;
+    const mrpCommission = Math.round(mrpSales * 0.03 * 100) / 100;
+    const nonMrpCommission = Math.round(nonMrpSales * 0.19 * 100) / 100;
     const mrpNet = Math.round((mrpSales - mrpCommission) * 100) / 100;
     const nonMrpNet = Math.round((nonMrpSales - nonMrpCommission) * 100) / 100;
     const totalCommission = Math.round((mrpCommission + nonMrpCommission) * 100) / 100;

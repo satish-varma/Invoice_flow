@@ -283,14 +283,14 @@ async function runRegressionSuite() {
     assert(parsed.dailyAggregates.length === 1, 'Grouped rows into 1 daily aggregate for 2026-11-06');
     assert(parsed.dailyAggregates[0]?.mealSessions.length === 2, 'Categorized into 2 meal sessions (Breakfast & Lunch)');
 
-    // Commission test assertions (MRP 19%, Non-MRP 3%)
+    // Commission test assertions (MRP 3%, Non-MRP 19%)
     const agg = parsed.dailyAggregates[0];
     assert(agg.mrpSales === 125, 'MRP gross sales correctly identified as 125');
-    assert(agg.mrpCommission === 23.75, 'MRP commission is exact 19% (23.75)');
+    assert(agg.mrpCommission === 3.75, 'MRP commission is exact 3% (3.75)');
     assert(agg.nonMrpSales === 85, 'Non-MRP gross sales correctly identified as 85 (60+25)');
-    assert(agg.nonMrpCommission === 2.55, 'Non-MRP commission is exact 3% (2.55)');
-    assert(agg.totalCommission === 26.3, 'Total commission is exact sum (23.75 + 2.55 = 26.3)');
-    assert(agg.netSales === 183.7, 'Total net sale after commission is exact (210 - 26.3 = 183.7)');
+    assert(agg.nonMrpCommission === 16.15, 'Non-MRP commission is exact 19% (16.15)');
+    assert(agg.totalCommission === 19.9, 'Total commission is exact sum (3.75 + 16.15 = 19.9)');
+    assert(agg.netSales === 190.1, 'Total net sale after commission is exact (210 - 19.9 = 190.1)');
     assert(agg.displayDate === '6th-nov-26', 'Aggregate display date formatted as 6th-nov-26');
   }
 

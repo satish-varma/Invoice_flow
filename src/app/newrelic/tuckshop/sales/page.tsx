@@ -64,22 +64,13 @@ function getRecordFinancials(r: NewRelicTuckshopRecord) {
     }
   }
 
-  const mrpComm =
-    r.mrpCommission !== undefined
-      ? Number(r.mrpCommission)
-      : Math.round(mrp * 0.19 * 100) / 100;
-  const nonMrpComm =
-    r.nonMrpCommission !== undefined
-      ? Number(r.nonMrpCommission)
-      : Math.round(nonMrp * 0.03 * 100) / 100;
-  const totalComm =
-    r.totalCommission !== undefined
-      ? Number(r.totalCommission)
-      : Math.round((mrpComm + nonMrpComm) * 100) / 100;
-  const net =
-    r.netSales !== undefined
-      ? Number(r.netSales)
-      : Math.round((gross - totalComm) * 100) / 100;
+  // Exact HungerBox Commission Rules (Clarified):
+  // - MRP Packaged Sales: 3% commission
+  // - Non-MRP Fresh Kitchen Food Sales (Maggi, Sandwich, Juice, Omelette, etc.): 19% commission
+  const mrpComm = Math.round(mrp * 0.03 * 100) / 100;
+  const nonMrpComm = Math.round(nonMrp * 0.19 * 100) / 100;
+  const totalComm = Math.round((mrpComm + nonMrpComm) * 100) / 100;
+  const net = Math.round((gross - totalComm) * 100) / 100;
 
   return {
     gross,
@@ -460,11 +451,11 @@ export default function AllSitesSalesPage() {
         'Site': COMPANY_SITES[sId]?.name || sId,
         'Location / Stall': r.location || 'Main Cafeteria',
         'MRP Sales (₹)': Math.round(f.mrp),
-        'MRP Comm (19%) (₹)': Math.round(f.mrpComm),
-        'MRP Net (81%) (₹)': Math.round(f.mrpNet),
+        'MRP Comm (3%) (₹)': Math.round(f.mrpComm),
+        'MRP Net (97%) (₹)': Math.round(f.mrpNet),
         'Non-MRP Sales (₹)': Math.round(f.nonMrp),
-        'Non-MRP Comm (3%) (₹)': Math.round(f.nonMrpComm),
-        'Non-MRP Net (97%) (₹)': Math.round(f.nonMrpNet),
+        'Non-MRP Comm (19%) (₹)': Math.round(f.nonMrpComm),
+        'Non-MRP Net (81%) (₹)': Math.round(f.nonMrpNet),
         'Total Gross Sale (₹)': Math.round(f.gross),
         'Total Commission (₹)': Math.round(f.totalComm),
         'Net Sale After Comm (₹)': Math.round(f.net),
@@ -505,7 +496,7 @@ export default function AllSitesSalesPage() {
             variant="outline"
             className="text-[10px] bg-indigo-50 text-indigo-900 border-indigo-300 font-black uppercase tracking-wider"
           >
-            📊 MRP (19%) &amp; Non-MRP (3%) Split
+            📊 MRP (3%) &amp; Non-MRP (19%) Split
           </Badge>
         </div>
       </div>
@@ -533,7 +524,7 @@ export default function AllSitesSalesPage() {
                 All Sites Sales &amp; Commission Reconciliation
               </h1>
               <p className="text-xs text-rose-100/80 font-medium mt-0.5">
-                Separate MRP (19% fee) &amp; Non-MRP (3% fee) breakdown, HungerBox digital ledger, and site-by-site net payouts.
+                Separate MRP (3% fee) &amp; Non-MRP (19% fee) breakdown, HungerBox digital ledger, and site-by-site net payouts.
               </p>
             </div>
           </div>
@@ -560,6 +551,24 @@ export default function AllSitesSalesPage() {
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* 🧭 NAVIGATION TABS (Daily Ledger vs Item-Level Breakdown) */}
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+        <Link
+          href="/newrelic/tuckshop/sales"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm"
+        >
+          <Building2 className="w-4 h-4" />
+          Consolidated Daily Ledger
+        </Link>
+        <Link
+          href="/newrelic/tuckshop/sales/items"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+        >
+          <ShoppingBag className="w-4 h-4 text-amber-500" />
+          Item Sales Breakdown (Maggi, Sandwich, Juices...)
+        </Link>
       </div>
 
       {/* 🔴 LIVE DATA PULL STATUS BANNER */}
@@ -731,14 +740,14 @@ export default function AllSitesSalesPage() {
           </p>
         </div>
 
-        {/* 2. MRP Sales (19% Fee) */}
+        {/* 2. MRP Sales (3% Fee) */}
         <div className="p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-amber-50/50 to-white dark:from-amber-950/20 dark:to-slate-900 border border-amber-200 dark:border-amber-900/40 shadow-sm">
           <div className="flex items-center justify-between text-amber-800 dark:text-amber-400 mb-1">
             <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider flex items-center gap-1">
               <Tag className="w-3 h-3 text-amber-600" /> MRP Sales
             </span>
             <Badge className="text-[9px] bg-amber-500 text-white font-mono px-1 py-0 h-4">
-              19% Comm
+              3% Comm
             </Badge>
           </div>
           <p className="text-xl sm:text-2xl font-mono font-black text-amber-950 dark:text-amber-200 tracking-tight">
@@ -749,14 +758,14 @@ export default function AllSitesSalesPage() {
           </p>
         </div>
 
-        {/* 3. Non-MRP Sales (3% Fee) */}
+        {/* 3. Non-MRP Sales (19% Fee) */}
         <div className="p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-purple-50/50 to-white dark:from-purple-950/20 dark:to-slate-900 border border-purple-200 dark:border-purple-900/40 shadow-sm">
           <div className="flex items-center justify-between text-purple-800 dark:text-purple-400 mb-1">
             <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider flex items-center gap-1">
               <Receipt className="w-3 h-3 text-purple-600" /> Non-MRP Sales
             </span>
             <Badge className="text-[9px] bg-purple-600 text-white font-mono px-1 py-0 h-4">
-              3% Comm
+              19% Comm
             </Badge>
           </div>
           <p className="text-xl sm:text-2xl font-mono font-black text-purple-950 dark:text-purple-200 tracking-tight">
@@ -796,7 +805,7 @@ export default function AllSitesSalesPage() {
             ₹{financials.totalNet.toLocaleString('en-IN')}
           </p>
           <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold mt-0.5">
-            After 19% &amp; 3% cuts
+            After 3% &amp; 19% cuts
           </p>
         </div>
 
@@ -1072,13 +1081,13 @@ export default function AllSitesSalesPage() {
                       <th className="py-3.5 px-4 text-right bg-amber-50/60 dark:bg-amber-950/20 text-amber-950 dark:text-amber-300">
                         <div className="flex items-center justify-end gap-1">
                           <Tag className="w-3 h-3 text-amber-600" />
-                          <span>MRP Sale &amp; Comm (19%)</span>
+                          <span>MRP Sale &amp; Comm (3%)</span>
                         </div>
                       </th>
                       <th className="py-3.5 px-4 text-right bg-purple-50/60 dark:bg-purple-950/20 text-purple-950 dark:text-purple-300">
                         <div className="flex items-center justify-end gap-1">
                           <Receipt className="w-3 h-3 text-purple-600" />
-                          <span>Non-MRP Sale &amp; Comm (3%)</span>
+                          <span>Non-MRP Sale &amp; Comm (19%)</span>
                         </div>
                       </th>
                       <th className="py-3.5 px-4 text-right bg-slate-100/70 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100">
@@ -1131,28 +1140,28 @@ export default function AllSitesSalesPage() {
                             </span>
                           </td>
 
-                          {/* Merged: MRP Sale & Comm (19%) */}
+                          {/* Merged: MRP Sale & Comm (3%) */}
                           <td className="py-3.5 px-4 text-right font-mono bg-amber-50/30 dark:bg-amber-950/10 whitespace-nowrap">
                             <div className="font-bold text-amber-950 dark:text-amber-200 text-xs sm:text-[13px]">
                               ₹{Math.round(f.mrp).toLocaleString('en-IN')}
                             </div>
                             <div className="text-[10px] text-amber-700/90 dark:text-amber-400 font-semibold mt-0.5">
                               {f.mrp > 0 ? (
-                                `-₹${Math.round(f.mrpComm).toLocaleString('en-IN')} (19%)`
+                                `-₹${Math.round(f.mrpComm).toLocaleString('en-IN')} (3%)`
                               ) : (
                                 <span className="text-slate-300 dark:text-slate-600">-₹0</span>
                               )}
                             </div>
                           </td>
 
-                          {/* Merged: Non-MRP Sale & Comm (3%) */}
+                          {/* Merged: Non-MRP Sale & Comm (19%) */}
                           <td className="py-3.5 px-4 text-right font-mono bg-purple-50/30 dark:bg-purple-950/10 whitespace-nowrap">
                             <div className="font-bold text-purple-950 dark:text-purple-200 text-xs sm:text-[13px]">
                               ₹{Math.round(f.nonMrp).toLocaleString('en-IN')}
                             </div>
                             <div className="text-[10px] text-purple-700/90 dark:text-purple-400 font-semibold mt-0.5">
                               {f.nonMrp > 0 ? (
-                                `-₹${Math.round(f.nonMrpComm).toLocaleString('en-IN')} (3%)`
+                                `-₹${Math.round(f.nonMrpComm).toLocaleString('en-IN')} (19%)`
                               ) : (
                                 <span className="text-slate-300 dark:text-slate-600">-₹0</span>
                               )}
@@ -1194,7 +1203,7 @@ export default function AllSitesSalesPage() {
                           ₹{financials.totalMrp.toLocaleString('en-IN')}
                         </div>
                         <div className="text-[10px] text-amber-800 dark:text-amber-400 font-bold mt-0.5">
-                          -₹{financials.totalMrpComm.toLocaleString('en-IN')} (19%)
+                          -₹{financials.totalMrpComm.toLocaleString('en-IN')} (3%)
                         </div>
                       </td>
                       <td className="py-4 px-4 text-right bg-purple-100/40 dark:bg-purple-950/30">
@@ -1202,7 +1211,7 @@ export default function AllSitesSalesPage() {
                           ₹{financials.totalNonMrp.toLocaleString('en-IN')}
                         </div>
                         <div className="text-[10px] text-purple-800 dark:text-purple-400 font-bold mt-0.5">
-                          -₹{financials.totalNonMrpComm.toLocaleString('en-IN')} (3%)
+                          -₹{financials.totalNonMrpComm.toLocaleString('en-IN')} (19%)
                         </div>
                       </td>
                       <td className="py-4 px-4 text-right bg-slate-200/50 dark:bg-slate-800/60">

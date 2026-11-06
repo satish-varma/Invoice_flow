@@ -29,11 +29,11 @@ export interface HungerBoxDailyAggregate {
   
   // MRP vs Non-MRP Sales & Commissions
   mrpSales: number; // Gross MRP sales
-  mrpCommission: number; // 19% deduction on MRP sales
-  mrpNet: number; // MRP after 19% deduction
+  mrpCommission: number; // 3% deduction on MRP sales
+  mrpNet: number; // MRP after 3% deduction
   nonMrpSales: number; // Gross Non-MRP sales
-  nonMrpCommission: number; // 3% deduction on Non-MRP sales
-  nonMrpNet: number; // Non-MRP after 3% deduction
+  nonMrpCommission: number; // 19% deduction on Non-MRP sales
+  nonMrpNet: number; // Non-MRP after 19% deduction
   totalCommission: number; // mrpCommission + nonMrpCommission
   netSales: number; // Total Sale After Commission (Gross Sale - Total Commission)
 
@@ -125,32 +125,47 @@ export function formatOrdinalDate(dateStr: string): string {
 }
 
 /**
- * Classifies whether an item is an MRP packaged product (19% fee) or NON-MRP prepared food/beverage (3% fee)
+ * Classifies whether an item is an MRP packaged product (3% fee) or NON-MRP prepared food/beverage (19% fee)
+ * 
+ * Rules:
+ * 1. If explicit column "is_mrp", "is_mrp/other", "is_mrp_item" == 1 or true -> MRP (3% fee)
+ * 2. If explicit column == 0 or false -> NON-MRP (19% fee)
+ * 3. Fresh kitchen items (Maggi, Sandwich, Juice, Omelette, Tea, Coffee, etc.) -> NON-MRP (19% fee)
+ * 4. Branded packaged snacks, biscuits, confectionery -> MRP (3% fee)
  */
 export function isMrpItem(itemName: string, vendorName?: string, rawRow?: Record<string, any>): boolean {
   if (rawRow) {
+    // Check explicit HungerBox is_mrp / other columns
+    for (const key of ['is_mrp', 'is_mrp/other', 'ismrp', 'ismrpother', 'is_mrp_item', 'mrp/other', 'mrp_other']) {
+      if (rawRow[key] !== undefined && rawRow[key] !== null && rawRow[key] !== '') {
+        const val = String(rawRow[key]).trim().toLowerCase();
+        if (val === '1' || val === 'true' || val === 'yes' || val === 'mrp') return true;
+        if (val === '0' || val === 'false' || val === 'no' || val === 'non-mrp' || val === 'other') return false;
+      }
+    }
+
     const rawCategory = String(rawRow['category'] || rawRow['type'] || rawRow['ratetype'] || rawRow['itemtype'] || '').toLowerCase();
     if (rawCategory.includes('non-mrp') || rawCategory.includes('non_mrp') || rawCategory.includes('kitchen')) return false;
     if (rawCategory.includes('mrp') || rawCategory.includes('retail') || rawCategory.includes('packaged')) return true;
   }
 
   const v = (vendorName || '').toLowerCase();
-  if (v.includes('live counter') || v.includes('juice counter') || v.includes('kitchen') || v.includes('food court')) {
+  if (v.includes('live counter') || v.includes('juice counter') || v.includes('kitchen') || v.includes('food court') || v.includes('relic fresh')) {
     return false;
   }
 
   const name = (itemName || '').toLowerCase();
-  // Prepared food and freshly brewed beverages -> NON-MRP (3% commission)
-  if (/tea|coffee|chai|milk|horlicks|boost|dosa|idly|idli|rice|chapthi|chapathi|roti|paratha|punugulu|bajji|bonda|curry|curd|puff|samosa|bhel|upma|poha|vada|lemonade|juice|shake|meal|biryani|pulao/i.test(name)) {
+  // Prepared food and freshly brewed beverages (Maggi, Sandwich, Juice, Omelette, Tea, etc.) -> NON-MRP (19% commission)
+  if (/maggi|maggie|sandwich|toast|juice|shake|omlet|omelet|egg|tea|coffee|chai|milk|horlicks|boost|bournvita|dosa|idly|idli|rice|chapthi|chapathi|roti|paratha|punugulu|bajji|bonda|curry|curd|puff|samosa|bhel|upma|poha|vada|lemonade|meal|biryani|pulao|fries|combo|soup|noodles/i.test(name)) {
     return false;
   }
 
-  // Branded packaged snacks, biscuits, confectionery -> MRP (19% commission)
-  if (/lays|haldiram|cadbury|britannia|biscuit|cookie|chikki|chips|chocolate|amul|thumsup|coke|pepsi|kurkure|bingo|parle|snickers|kitkat|dairy milk|wafer|namkeen|packaged|sweet chilli|salted/i.test(name)) {
+  // Branded packaged snacks, biscuits, confectionery -> MRP (3% commission)
+  if (/lays|haldiram|cadbury|britannia|biscuit|cookie|chikki|chips|chocolate|amul|thumsup|coke|pepsi|kurkure|bingo|parle|snickers|kitkat|dairy milk|wafer|namkeen|packaged|sweet chilli|salted|tropicana|paper boat/i.test(name)) {
     return true;
   }
 
-  // By default, tuckshop items without fresh kitchen food keywords are considered packaged MRP goods
+  // By default, tuckshop packaged counters are considered packaged MRP goods
   if (v.includes('tuckshop') || v.includes('tuck shop')) {
     return true;
   }
@@ -416,13 +431,13 @@ export function parseHungerBoxRows(
       curI.amount += o.amount;
     }
 
-    // Exact commission deductions: 19% on MRP, 3% on Non-MRP
+    // Exact commission deductions: 3% on MRP, 19% on Non-MRP
     agg.mrpSales = Math.round(mrpSum * 100) / 100;
-    agg.mrpCommission = Math.round(mrpSum * 0.19 * 100) / 100;
+    agg.mrpCommission = Math.round(mrpSum * 0.03 * 100) / 100;
     agg.mrpNet = Math.round((agg.mrpSales - agg.mrpCommission) * 100) / 100;
 
     agg.nonMrpSales = Math.round(nonMrpSum * 100) / 100;
-    agg.nonMrpCommission = Math.round(nonMrpSum * 0.03 * 100) / 100;
+    agg.nonMrpCommission = Math.round(nonMrpSum * 0.19 * 100) / 100;
     agg.nonMrpNet = Math.round((agg.nonMrpSales - agg.nonMrpCommission) * 100) / 100;
 
     agg.totalCommission = Math.round((agg.mrpCommission + agg.nonMrpCommission) * 100) / 100;

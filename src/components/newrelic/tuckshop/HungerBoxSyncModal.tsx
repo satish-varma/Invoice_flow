@@ -362,14 +362,14 @@ export function HungerBoxSyncModal({
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                     <div>
-                      <p className="font-bold flex items-center gap-1.5">
+                      <div className="font-bold flex items-center gap-1.5 text-slate-900 dark:text-white">
                         HungerBox Portal API Connected
                         <Badge variant="outline" className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-300 py-0 h-4">
                           Direct Feed
                         </Badge>
-                      </p>
+                      </div>
                       <p className="text-[11px] opacity-80">
-                        admin.hungerbox.com • MRP (19%) & Non-MRP (3%) auto-split • Zero local files
+                        admin.hungerbox.com • MRP (3%) &amp; Non-MRP (19%) auto-split • Zero local files
                       </p>
                     </div>
                   </div>

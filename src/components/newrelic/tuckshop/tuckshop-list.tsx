@@ -22,6 +22,7 @@ import {
   Sparkles,
   Check,
   Eye,
+  Zap,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { NewRelicTuckshopRecord, deleteTuckshopRecord } from '@/services/newrelicTuckshopService';
@@ -772,6 +773,12 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                         {isExp ? <TrendingDown className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
                         {record.type.toUpperCase()}
                       </span>
+                      {(record.source === 'hungerbox' || Boolean(record.orderCount)) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300">
+                          <Zap className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
+                          HB {record.orderCount ? `(${record.orderCount})` : ''}
+                        </span>
+                      )}
                       {(() => {
                         const sId = resolveSiteId(record.siteId);
                         const sName = COMPANY_SITES[sId]?.name || sId;
@@ -944,6 +951,12 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                           {isExp ? <TrendingDown className="h-2.5 w-2.5" /> : <TrendingUp className="h-2.5 w-2.5" />}
                           {record.type}
                         </span>
+                        {(record.source === 'hungerbox' || Boolean(record.orderCount)) && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300">
+                            <Zap className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
+                            HB {record.orderCount ? `(${record.orderCount})` : ''}
+                          </span>
+                        )}
                       </div>
                     </td>
 

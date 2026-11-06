@@ -5,8 +5,9 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { TuckshopForm } from '@/components/newrelic/tuckshop/tuckshop-form';
 import { TuckshopList } from '@/components/newrelic/tuckshop/tuckshop-list';
 import { TuckshopShiftPulse } from '@/components/newrelic/tuckshop/TuckshopShiftPulse';
+import { HungerBoxSyncModal } from '@/components/newrelic/tuckshop/HungerBoxSyncModal';
 import { subscribeToTuckshopRecords, NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
-import { Loader2, Plus, TrendingDown, IndianRupee } from 'lucide-react';
+import { Loader2, Plus, TrendingDown, IndianRupee, Zap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
@@ -26,6 +27,7 @@ export default function TuckshopPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogInitialTab, setDialogInitialTab] = useState<'expense' | 'sale'>('expense');
   const [editingRecord, setEditingRecord] = useState<NewRelicTuckshopRecord | null>(null);
+  const [isHungerBoxModalOpen, setIsHungerBoxModalOpen] = useState(false);
 
   const isAdmin = role === 'admin' || role === 'superadmin';
   const assignedSite = user?.assignedSite || 'newrelic';
@@ -120,6 +122,16 @@ export default function TuckshopPage() {
             <button 
               onClick={() => {
                 triggerHaptic('medium');
+                setIsHungerBoxModalOpen(true);
+              }}
+              className="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 font-black rounded-2xl text-xs sm:text-sm shadow-lg shadow-amber-950/20 hover:from-amber-300 hover:to-orange-400 transition-all active:scale-95"
+            >
+              <Zap className="h-4 w-4 fill-slate-950" /> Sync HungerBox
+            </button>
+
+            <button 
+              onClick={() => {
+                triggerHaptic('medium');
                 openDialog('expense');
               }}
               className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 bg-gradient-to-r from-rose-600 to-red-600 text-white rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-rose-950/30 hover:from-rose-700 hover:to-red-700 transition-all active:scale-95"
@@ -145,7 +157,15 @@ export default function TuckshopPage() {
         records={records}
         onOpenExpense={() => openDialog('expense')}
         onOpenSale={() => openDialog('sale')}
+        onOpenHungerBoxSync={() => setIsHungerBoxModalOpen(true)}
         siteName={isAdmin ? undefined : siteConfig.name}
+      />
+
+      {/* HungerBox Cashless Automated Sync Modal */}
+      <HungerBoxSyncModal
+        open={isHungerBoxModalOpen}
+        onOpenChange={setIsHungerBoxModalOpen}
+        siteId={assignedSite}
       />
         
       <Dialog open={isDialogOpen} onOpenChange={(open) => {

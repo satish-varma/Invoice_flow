@@ -18,6 +18,11 @@ import {
   COMPANY_SITES,
   CompanySite,
 } from '../src/types/site';
+import {
+  parseDateToYmd,
+  matchSiteFromLocation,
+  parseHungerBoxRows,
+} from '../src/services/hungerboxParser';
 
 let passed = 0;
 let failed = 0;
@@ -206,6 +211,67 @@ async function runRegressionSuite() {
     };
     const multiAllowed = getUserAllowedSites(multiSiteUser);
     assert(multiAllowed.length === 2 && multiAllowed.includes('google_cafeteria'), 'Multi-site manager retains both assigned sites');
+  }
+
+  // --- SUITE 6: HungerBox Cashless Sales Telemetry & Parser ---
+  console.log('\n⚡ 6. HungerBox Cashless Sales Telemetry & Parser:');
+  {
+    // Test 1: Date formatting
+    assert(parseDateToYmd('2026-11-06') === '2026-11-06', 'Parses YYYY-MM-DD cleanly');
+    assert(parseDateToYmd('06-11-2026') === '2026-11-06', 'Parses DD-MM-YYYY accurately');
+    assert(parseDateToYmd('06/11/2026') === '2026-11-06', 'Parses DD/MM/YYYY accurately');
+
+    // Test 2: Site matching
+    assert(matchSiteFromLocation('New Relic Hyderabad').siteId === 'newrelic', 'Matches New Relic location to newrelic');
+    assert(matchSiteFromLocation('DSM Firmenich Cafeteria').siteId === 'dsm', 'Matches DSM Firmenich location to dsm');
+    assert(matchSiteFromLocation('NTT Data Knowledge Park').siteId === 'ntt_data', 'Matches NTT Data location to ntt_data');
+
+    // Test 3: Tabular HungerBox rows extraction
+    const sampleRows = [
+      {
+        'Order ID': 'HB-1001',
+        'Date': '2026-11-06',
+        'Cafeteria': 'New Relic Floor 8',
+        'Meal Type': 'Breakfast',
+        'Item Name': 'Masala Dosa',
+        'Total Amount': 60,
+        'Status': 'Completed',
+      },
+      {
+        'Order ID': 'HB-1002',
+        'Date': '2026-11-06',
+        'Cafeteria': 'New Relic Floor 8',
+        'Meal Type': 'Breakfast',
+        'Item Name': 'Filter Coffee',
+        'Total Amount': 25,
+        'Status': 'Completed',
+      },
+      {
+        'Order ID': 'HB-1003',
+        'Date': '2026-11-06',
+        'Cafeteria': 'New Relic Floor 8',
+        'Meal Type': 'Lunch',
+        'Item Name': 'Curd Rice & Pickle',
+        'Total Amount': 80,
+        'Status': 'Completed',
+      },
+      {
+        'Order ID': 'HB-1004',
+        'Date': '2026-11-06',
+        'Cafeteria': 'New Relic Floor 8',
+        'Meal Type': 'Lunch',
+        'Item Name': 'Fruit Bowl',
+        'Total Amount': 70,
+        'Status': 'Cancelled', // Should be skipped
+      },
+    ];
+
+    const parsed = parseHungerBoxRows(sampleRows, 'newrelic');
+    assert(parsed.success === true, 'Successfully parsed HungerBox report rows');
+    assert(parsed.validOrders === 3, 'Skipped cancelled orders and kept 3 valid completed orders');
+    assert(parsed.totalSales === 165, 'Calculated total gross sales (60 + 25 + 80 = 165)');
+    assert(parsed.dailyAggregates.length === 1, 'Grouped rows into 1 daily aggregate for 2026-11-06');
+    assert(parsed.dailyAggregates[0]?.mealSessions.length === 2, 'Categorized into 2 meal sessions (Breakfast & Lunch)');
   }
 
   // --- Summary ---

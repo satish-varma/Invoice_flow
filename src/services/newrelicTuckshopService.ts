@@ -32,6 +32,9 @@ export interface NewRelicTuckshopRecord {
   amount: number;
   description?: string;
   billUrl?: string; // Link to uploaded bill in Storage
+  source?: 'hungerbox' | 'manual';
+  orderCount?: number;
+  mealSessions?: { session: string; amount: number; count?: number }[];
   createdAt?: string | Timestamp | any;
   createdBy?: string | null;
   updatedAt?: string | Timestamp | any;

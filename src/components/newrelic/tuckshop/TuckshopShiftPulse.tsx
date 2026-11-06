@@ -12,6 +12,8 @@ import {
   IndianRupee,
   CalendarCheck2,
   Store,
+  Zap,
+  RefreshCw,
 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 import { cn } from '@/lib/utils';
@@ -20,6 +22,7 @@ interface Props {
   records: NewRelicTuckshopRecord[];
   onOpenExpense?: () => void;
   onOpenSale?: () => void;
+  onOpenHungerBoxSync?: () => void;
   siteName?: string;
 }
 
@@ -27,6 +30,7 @@ export function TuckshopShiftPulse({
   records,
   onOpenExpense,
   onOpenSale,
+  onOpenHungerBoxSync,
   siteName,
 }: Props) {
   const pulseData = useMemo(() => {
@@ -37,6 +41,8 @@ export function TuckshopShiftPulse({
     let salesCount = 0;
     let expenses = 0;
     let expensesCount = 0;
+    let hungerBoxOrders = 0;
+    let isHungerBoxSynced = false;
     let latestTodayRecord: NewRelicTuckshopRecord | null = null;
 
     for (const r of records) {
@@ -45,6 +51,10 @@ export function TuckshopShiftPulse({
         if (r.type === 'sale') {
           sales += Number(r.amount) || 0;
           salesCount++;
+          if (r.source === 'hungerbox' || r.orderCount) {
+            isHungerBoxSynced = true;
+            hungerBoxOrders += r.orderCount || 1;
+          }
         } else {
           expenses += Number(r.amount) || 0;
           expensesCount++;
@@ -70,6 +80,8 @@ export function TuckshopShiftPulse({
       netSales,
       netProfit,
       cashInHand,
+      isHungerBoxSynced,
+      hungerBoxOrders,
       latestTodayRecord,
       hasActivity: salesCount > 0 || expensesCount > 0,
       totalEntries: salesCount + expensesCount,
@@ -111,7 +123,21 @@ export function TuckshopShiftPulse({
         </div>
 
         {/* Quick action triggers */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          {onOpenHungerBoxSync && (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('medium');
+                onOpenHungerBoxSync();
+              }}
+              className="h-8 px-2.5 sm:px-3 rounded-xl bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-indigo-500/10 hover:from-amber-500/20 hover:to-indigo-500/20 text-indigo-900 dark:text-indigo-200 border border-indigo-200/80 dark:border-indigo-800 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              <span>Sync HungerBox</span>
+            </button>
+          )}
+
           {onOpenExpense && (
             <button
               type="button"
@@ -119,7 +145,7 @@ export function TuckshopShiftPulse({
                 triggerHaptic('light');
                 onOpenExpense();
               }}
-              className="h-8 px-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900 text-xs font-bold flex items-center gap-1 transition-all active:scale-95"
+              className="h-8 px-2.5 sm:px-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900 text-xs font-bold flex items-center gap-1 transition-all active:scale-95"
             >
               <Plus className="w-3.5 h-3.5 text-rose-600" />
               <span>Expense</span>
@@ -133,7 +159,7 @@ export function TuckshopShiftPulse({
                 triggerHaptic('light');
                 onOpenSale();
               }}
-              className="h-8 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 text-xs font-bold flex items-center gap-1 transition-all active:scale-95"
+              className="h-8 px-2.5 sm:px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 text-xs font-bold flex items-center gap-1 transition-all active:scale-95"
             >
               <Plus className="w-3.5 h-3.5 text-emerald-600" />
               <span>Sale</span>
@@ -152,14 +178,20 @@ export function TuckshopShiftPulse({
               Today's Sales
             </span>
             <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200">
-              {pulseData.salesCount} {pulseData.salesCount === 1 ? 'bill' : 'bills'}
+              {pulseData.isHungerBoxSynced ? `${pulseData.hungerBoxOrders} HB orders` : `${pulseData.salesCount} ${pulseData.salesCount === 1 ? 'bill' : 'bills'}`}
             </span>
           </div>
           <p className="text-xl sm:text-2xl font-mono font-black text-emerald-950 dark:text-emerald-100 tracking-tight">
             {formatCurrency(pulseData.sales)}
           </p>
-          <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400 font-medium mt-0.5">
-            Gross counter sales
+          <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400 font-medium mt-0.5 flex items-center gap-1">
+            {pulseData.isHungerBoxSynced ? (
+              <span className="inline-flex items-center gap-0.5 font-bold text-amber-600 dark:text-amber-400">
+                <Zap className="w-2.5 h-2.5 fill-amber-500" /> 100% HungerBox App
+              </span>
+            ) : (
+              'Digital counter sales'
+            )}
           </p>
         </div>
 
@@ -217,22 +249,26 @@ export function TuckshopShiftPulse({
           </p>
         </div>
 
-        {/* 4. Counter Cash Flow Balance */}
+        {/* 4. Cashless Settlement Balance */}
         <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100/50 dark:from-slate-800 dark:to-slate-800/80 border border-slate-200/80 dark:border-slate-700 shadow-2xs">
           <div className="flex items-center justify-between gap-1 mb-1">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1">
               <CalendarCheck2 className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
-              Counter Cash Delta
+              Digital Settlement
             </span>
-            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-              Drawer
+            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-200">
+              Cashless
             </span>
           </div>
           <p className="text-xl sm:text-2xl font-mono font-black text-slate-900 dark:text-white tracking-tight">
             {pulseData.cashInHand >= 0 ? '+' : ''}{formatCurrency(pulseData.cashInHand)}
           </p>
           <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5 truncate">
-            {pulseData.latestTodayRecord ? (
+            {pulseData.isHungerBoxSynced ? (
+              <span className="text-indigo-600 dark:text-indigo-400 font-bold">
+                100% HungerBox App &bull; Net settlement
+              </span>
+            ) : pulseData.latestTodayRecord ? (
               <span className="flex items-center gap-1">
                 <Clock className="w-2.5 h-2.5 inline" />
                 Latest: {pulseData.latestTodayRecord.category} ({pulseData.latestTodayRecord.createdBy || 'Staff'})

@@ -59,8 +59,9 @@ export const CATEGORY_STYLES: Record<string, { emoji: string; bg: string; text: 
 
 export function getCategoryBadge(category: string, type: 'expense' | 'sale') {
   if (type === 'sale') {
+    const isHB = (category || '').toLowerCase().includes('hungerbox');
     return {
-      emoji: '💰',
+      emoji: isHB ? '⚡' : '💰',
       label: category ? category.replace(/_/g, ' ') : 'Sale',
       color: 'text-emerald-900 bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-300',
     };

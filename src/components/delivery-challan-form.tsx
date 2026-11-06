@@ -51,7 +51,7 @@ const defaultHungerBoxBillTo = {
 
 interface DeliveryChallanFormProps {
     initialData?: Challan | null;
-    onChallanSave: (savedChallan?: Challan) => void;
+    onChallanSave: (savedChallan?: Challan, action?: 'save' | 'download') => void;
     onAddNew: () => void;
 }
 
@@ -247,41 +247,62 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
         }
     }, [initialData, isEditing]);
 
-    useEffect(() => {
-        setLineItems(items => items.map(item => ({
-            ...item,
-            total: (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)
-        })));
-    }, [lineItems.map(i => `${i.quantity}-${i.unitPrice}`).join(',')]);
-
     const handleAddItem = () => {
         triggerHaptic('light');
-        setLineItems([...lineItems, { id: Date.now(), name: '', hsnCode: '', unit: '', quantity: 0, unitPrice: 0, procurementCost: 0, total: 0 }]);
+        setLineItems(prev => [
+            ...prev,
+            {
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                name: '',
+                hsnCode: '',
+                unit: '',
+                quantity: 0,
+                unitPrice: 0,
+                procurementCost: 0,
+                total: 0,
+                mrp: 0,
+                marginPercent: 0,
+            }
+        ]);
     };
 
     const handleRemoveItem = (id: number) => {
         triggerHaptic('light');
-        setLineItems(lineItems.filter(item => item.id !== id));
+        setLineItems(prev => prev.filter(item => item.id !== id));
     };
 
     const handleItemChange = (id: number, field: keyof Omit<ChallanLineItem, 'id' | 'total'>, value: string | number) => {
-        setLineItems(lineItems.map(item =>
-            item.id === id ? { ...item, [field]: value } : item
-        ));
+        setLineItems(prev => prev.map(item => {
+            if (item.id !== id) return item;
+            const updated = { ...item, [field]: value };
+            const q = field === 'quantity' ? (Number(value) || 0) : (Number(item.quantity) || 0);
+            const p = field === 'unitPrice' ? (Number(value) || 0) : (Number(item.unitPrice) || 0);
+            const cost = field === 'procurementCost' ? (Number(value) || 0) : (Number(item.procurementCost) || 0);
+            updated.total = q * p;
+            updated.marginPercent = p > 0 ? ((p - cost) / p) * 100 : 0;
+            return updated;
+        }));
     };
 
     const handleProductSelect = (id: number, productId: string) => {
         const product = products.find(p => p.id === productId);
         if (product) {
-            setLineItems(lineItems.map(item =>
-                item.id === id ? {
+            setLineItems(prev => prev.map(item => {
+                if (item.id !== id) return item;
+                const p = Number(product.unitPrice) || 0;
+                const q = Number(item.quantity) || 0;
+                const cost = Number((product as any).procurementCost) || Number(item.procurementCost) || 0;
+                return {
                     ...item,
                     name: product.name,
                     unit: product.unit || '',
-                    unitPrice: product.unitPrice,
-                    hsnCode: product.hsnCode || ''
-                } : item
-            ));
+                    unitPrice: p,
+                    hsnCode: product.hsnCode || '',
+                    procurementCost: cost,
+                    total: q * p,
+                    marginPercent: p > 0 ? ((p - cost) / p) * 100 : 0,
+                };
+            }));
 
             if (product.taxCategory) {
                 const match = product.taxCategory.match(/\d+/);
@@ -433,13 +454,11 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
             if (saveAsClient && finalBillToName) {
                 const existingClient = clients.find(c => c.name.toLowerCase() === finalBillToName.toLowerCase());
                 if (!existingClient) {
-                    await saveClient({
+                    saveClient({
                         name: finalBillToName,
                         address: finalBillToAddress,
                         type: 'business'
-                    });
-                    const updatedClients = await getClients();
-                    setClients(updatedClients);
+                    }).then(() => getClients().then(setClients)).catch(console.error);
                 }
             }
             toast({
@@ -447,11 +466,7 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                 description: `Challan ${savedChallan.dcNumber} saved by ${creatorDisplayName}.`,
             });
 
-            if (andDownload) {
-                onChallanSave(savedChallan);
-            } else {
-                onChallanSave();
-            }
+            onChallanSave(savedChallan, andDownload ? 'download' : 'save');
 
         } catch (error) {
             console.error("Failed to save challan:", error);
@@ -772,12 +787,12 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                             </Button>
 
                             <Button
+                                type="button"
                                 onClick={handleAddItem}
-                                variant="outline"
                                 size="sm"
-                                className="h-9 px-3 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold active:scale-95 shadow-2xs"
+                                className="h-9 px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold active:scale-95 shadow-xs flex items-center gap-1.5 cursor-pointer"
                             >
-                                <PlusCircle className="mr-1.5 h-3.5 w-3.5" /> Add Item
+                                <PlusCircle className="h-4 w-4" /> Add Item
                             </Button>
                         </div>
                     </div>
@@ -1076,6 +1091,37 @@ export function DeliveryChallanForm({ initialData, onChallanSave, onAddNew }: De
                             </TableBody>
                         </Table>
                     </div>
+
+                    {/* Desktop Table View Add Item Footer */}
+                    <div className="hidden md:flex items-center justify-between pt-3 mt-1 border-t border-gray-100">
+                        <Button
+                            type="button"
+                            onClick={handleAddItem}
+                            variant="outline"
+                            className="h-9 px-4 rounded-xl border-dashed border-2 border-indigo-300 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100/70 text-xs font-bold active:scale-95 flex items-center gap-2 shadow-2xs transition-all cursor-pointer"
+                        >
+                            <PlusCircle className="h-4 w-4 text-indigo-600" />
+                            <span>Add New Line Item</span>
+                        </Button>
+                        <span className="text-xs text-gray-500 font-medium">
+                            {lineItems.length} {lineItems.length === 1 ? 'item' : 'items'} in this delivery challan
+                        </span>
+                    </div>
+
+                    {lineItems.length === 0 && (
+                        <div className="p-8 text-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50 my-2">
+                            <PlusCircle className="w-8 h-8 text-indigo-400 mx-auto mb-2" />
+                            <p className="text-sm font-bold text-gray-700">No Line Items Added Yet</p>
+                            <p className="text-xs text-gray-500 mb-3">Add items manually or import from an Excel sheet</p>
+                            <Button
+                                type="button"
+                                onClick={handleAddItem}
+                                className="h-9 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+                            >
+                                <PlusCircle className="h-4 w-4 mr-1.5" /> Add First Line Item
+                            </Button>
+                        </div>
+                    )}
                 </CardContent>
 
                 {/* ── Card Footer: Notes, Clean Summary & Actions ── */}

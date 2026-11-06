@@ -106,8 +106,12 @@ export async function saveChallan(challan: Omit<Challan, 'dcNumber' | 'createdAt
         ...challanData,
         updatedAt: serverTimestamp(),
       });
-      const updatedDocSnap = await getDoc(docRef);
-      finalChallanData = { id: challan.id, ...updatedDocSnap.data() };
+      // Direct return without redundant network roundtrip
+      finalChallanData = {
+        id: challan.id,
+        ...challanData,
+        updatedAt: new Date().toISOString(),
+      };
     } else {
       // Create new challan
       const prefix = "TGG/SL/";
@@ -123,8 +127,12 @@ export async function saveChallan(challan: Omit<Challan, 'dcNumber' | 'createdAt
       };
       docRef = await addDoc(collection(db, CHALLANS_COLLECTION), completeChallanData);
 
-      const newDocSnap = await getDoc(docRef);
-      finalChallanData = { id: docRef.id, ...newDocSnap.data() };
+      // Direct return without redundant network roundtrip
+      finalChallanData = {
+        id: docRef.id,
+        ...completeChallanData,
+        createdAt: new Date().toISOString(),
+      };
     }
 
     const serializableChallan: Challan = {

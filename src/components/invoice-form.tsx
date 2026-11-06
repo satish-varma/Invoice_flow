@@ -727,7 +727,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 className={cn(
                                     "rounded-xl text-sm font-medium transition-all duration-200 h-9 px-3",
                                     pathname === '/'
-                                        ? "bg-primary/10 text-primary shadow-xs shadow-primary/20 hover:bg-primary/15"
+                                        ? "bg-primary/10 text-primary shadow-sm shadow-primary/20 hover:bg-primary/15"
                                         : "text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10"
                                 )}
                             >
@@ -739,7 +739,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 className={cn(
                                     "rounded-xl text-sm font-medium transition-all duration-200 h-9 px-3",
                                     pathname === '/quotation'
-                                        ? "bg-primary/10 text-primary shadow-xs shadow-primary/20 hover:bg-primary/15"
+                                        ? "bg-primary/10 text-primary shadow-sm shadow-primary/20 hover:bg-primary/15"
                                         : "text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10"
                                 )}
                             >
@@ -751,7 +751,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 className={cn(
                                     "rounded-xl text-sm font-medium transition-all duration-200 h-9 px-3",
                                     pathname === '/invoices'
-                                        ? "bg-primary/10 text-primary shadow-xs shadow-primary/20 hover:bg-primary/15"
+                                        ? "bg-primary/10 text-primary shadow-sm shadow-primary/20 hover:bg-primary/15"
                                         : "text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10"
                                 )}
                             >
@@ -763,7 +763,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 className={cn(
                                     "rounded-xl text-sm font-medium transition-all duration-200 h-9 px-3",
                                     pathname === '/delivery-challan'
-                                        ? "bg-primary/10 text-primary shadow-xs shadow-primary/20 hover:bg-primary/15"
+                                        ? "bg-primary/10 text-primary shadow-sm shadow-primary/20 hover:bg-primary/15"
                                         : "text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10"
                                 )}
                             >
@@ -775,7 +775,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 className={cn(
                                     "rounded-xl text-sm font-medium transition-all duration-200 h-9 px-3",
                                     pathname === '/settings'
-                                        ? "bg-primary/10 text-primary shadow-xs shadow-primary/20 hover:bg-primary/15"
+                                        ? "bg-primary/10 text-primary shadow-sm shadow-primary/20 hover:bg-primary/15"
                                         : "text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10"
                                 )}
                             >
@@ -802,7 +802,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                                 onClick={() => handleSaveInvoice('save')}
                                 disabled={isSaving || isReadOnly || role === 'guest'}
                                 title={isReadOnly || role === 'guest' ? 'Saving is disabled in guest mode' : undefined}
-                                className="rounded-xl h-9 px-4 text-sm font-semibold bg-white/80 dark:bg-white/10 border border-white/60 dark:border-white/20 text-foreground hover:bg-white dark:hover:bg-white/20 shadow-xs transition-all duration-200"
+                                className="rounded-xl h-9 px-4 text-sm font-semibold bg-white/80 dark:bg-white/10 border border-white/60 dark:border-white/20 text-foreground hover:bg-white dark:hover:bg-white/20 shadow-sm transition-all duration-200"
                             >
                                 {isSaving ? <Loader className="animate-spin size-4" /> : <Save className="size-4" />}
                                 {isReadOnly || role === 'guest' ? 'Read-Only' : (initialData ? 'Update' : 'Save')}
@@ -838,7 +838,7 @@ export function InvoiceForm({ initialData, onInvoiceSave, onAddNew }: InvoiceFor
                     </div>
 
                     {(poFileName || poFileUrl) && (
-                        <div className="flex items-center gap-2 p-2 px-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/80 dark:border-indigo-800 text-xs shadow-xs">
+                        <div className="flex items-center gap-2 p-2 px-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/80 dark:border-indigo-800 text-xs shadow-sm">
                             <Paperclip className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
                             <div className="min-w-0 max-w-[200px]">
                                 <span className="font-bold text-slate-800 dark:text-slate-200 truncate block" title={poFileName || 'Attached PO'}>

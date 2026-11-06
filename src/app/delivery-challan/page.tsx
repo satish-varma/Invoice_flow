@@ -106,10 +106,24 @@ export default function DeliveryChallanPage() {
     fetchData();
   }, []);
 
-  const handleChallanSave = (savedChallan?: Challan) => {
-    fetchData();
+  const handleChallanSave = (savedChallan?: Challan, action: 'save' | 'download' = 'save') => {
     setSelectedChallan(null);
     if (savedChallan) {
+      setChallans((prev) => {
+        const idx = prev.findIndex((c) => c.id === savedChallan.id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = savedChallan;
+          return next;
+        }
+        return [savedChallan, ...prev];
+      });
+    }
+
+    // Refresh data in background without blanking or unmounting the list
+    getChallans().then((fresh) => setChallans(fresh)).catch(console.error);
+
+    if (action === 'download' && savedChallan) {
       handleDownload(savedChallan);
     }
   };
@@ -142,6 +156,11 @@ export default function DeliveryChallanPage() {
       dcNumber: '',
       dcDate: new Date().toISOString(),
       createdAt: undefined,
+      updatedAt: undefined,
+      lineItems: (challan.lineItems || []).map((item, idx) => ({
+        ...item,
+        id: Date.now() + idx + Math.floor(Math.random() * 1000),
+      })),
     };
     setSelectedChallan(duplicated);
     if (typeof window !== 'undefined') {
@@ -663,7 +682,7 @@ export default function DeliveryChallanPage() {
           {/* ── 1. NEW / EDIT CHALLAN FORM ── */}
           <div id="challan-form-section" className="w-full">
             <DeliveryChallanForm
-              key={selectedChallan?.id || 'new'}
+              key={selectedChallan?.id ? `edit-${selectedChallan.id}` : (selectedChallan ? `copy-${selectedChallan.dcDate}` : 'new')}
               initialData={selectedChallan}
               onChallanSave={handleChallanSave}
               onAddNew={handleAddNew}

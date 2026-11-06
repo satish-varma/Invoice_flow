@@ -13,7 +13,7 @@ import {
   orderBy,
   where,
 } from 'firebase/firestore';
-import { NewRelicEmployee, NewRelicSalaryAdvance, NewRelicSalaryPayment } from '@/types/employee';
+import { NewRelicEmployee, NewRelicSalaryAdvance, NewRelicSalaryPayment, isEmployeeActive } from '@/types/employee';
 
 const EMPLOYEES_COLLECTION = 'newrelic_employees';
 const SALARY_ADVANCES_COLLECTION = 'newrelic_salary_advances';
@@ -40,7 +40,7 @@ export async function getActiveEmployees(location?: string, siteId?: string): Pr
   if (isOffline) {
     const cached = await getCachedData<NewRelicEmployee[]>('active_employees_roster');
     if (cached && cached.length) {
-      let filtered = cached.filter((e) => e.isActive !== false);
+      let filtered = cached.filter(isEmployeeActive);
       if (location) filtered = filtered.filter((e) => e.location === location);
       if (siteId) filtered = filtered.filter((e) => (e.siteId || 'newrelic') === siteId);
       return filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -55,10 +55,12 @@ export async function getActiveEmployees(location?: string, siteId?: string): Pr
       siteId: d.data().siteId || 'newrelic',
     } as NewRelicEmployee));
     
+    // Filter active employees before caching
+    list = list.filter(isEmployeeActive);
+    
     // Save to IndexedDB offline cache
     setCachedData('active_employees_roster', list).catch(() => {});
 
-    list = list.filter((e) => e.isActive !== false);
     if (location) {
       list = list.filter((e) => e.location === location);
     }
@@ -71,7 +73,7 @@ export async function getActiveEmployees(location?: string, siteId?: string): Pr
     const cached = await getCachedData<NewRelicEmployee[]>('active_employees_roster');
     if (cached && cached.length) {
       console.log('[Offline] Serving active employees roster from IndexedDB cache');
-      let filtered = cached.filter((e) => e.isActive !== false);
+      let filtered = cached.filter(isEmployeeActive);
       if (location) filtered = filtered.filter((e) => e.location === location);
       if (siteId) filtered = filtered.filter((e) => (e.siteId || 'newrelic') === siteId);
       return filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));

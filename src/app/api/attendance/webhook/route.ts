@@ -8,6 +8,7 @@ import {
   buildProgressBar,
   logAlertDispatch,
 } from '@/services/alertGatewayService';
+import { isEmployeeActive } from '@/types/employee';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +37,7 @@ async function getCachedEmployeesFast() {
   const empSnap = await getDocs(collection(db, EMPLOYEES_COLLECTION));
   const employees = empSnap.docs
     .map((d) => ({ id: d.id, ...d.data() } as any))
-    .filter((e) => e.status !== 'inactive');
+    .filter(isEmployeeActive);
   cachedEmployees = { data: employees, expiry: now + 60_000 };
   return employees;
 }

@@ -474,8 +474,8 @@ export async function checkUserCheckedInToday(userId?: string, email?: string): 
       );
     });
 
-    // If user is not an employee on the roster, don't force attendance
-    if (!matchedEmp) {
+    // If user is not an employee on the roster or is inactive, don't force attendance
+    if (!matchedEmp || matchedEmp.data().isActive === false || matchedEmp.data().status === 'inactive') {
       return true;
     }
 

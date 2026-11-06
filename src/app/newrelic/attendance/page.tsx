@@ -9,7 +9,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { NewRelicEmployee, NewRelicAttendance, NewRelicSalaryAdvance, NewRelicSalaryPayment } from '@/types/employee';
+import { NewRelicEmployee, NewRelicAttendance, NewRelicSalaryAdvance, NewRelicSalaryPayment, isEmployeeActive } from '@/types/employee';
 import { SiteId, resolveSiteId, SITE_OPTIONS, COMPANY_SITES } from '@/types/site';
 import {
   getActiveEmployees,
@@ -232,7 +232,7 @@ function AttendancePageContent() {
 
   const payrollEmployees = useMemo(() => {
     return employees.filter(
-      (e) => e.isActive && (adminSiteFilter === 'all' || resolveSiteId(e.siteId) === adminSiteFilter)
+      (e) => isEmployeeActive(e) && (adminSiteFilter === 'all' || resolveSiteId(e.siteId) === adminSiteFilter)
     );
   }, [employees, adminSiteFilter]);
 
@@ -402,6 +402,7 @@ function AttendancePageContent() {
     const presentNames = new Set(displayTodayAll.map((r) => r.employeeName?.toLowerCase().trim()));
 
     const absentEmployees = payrollEmployees.filter((emp) => {
+      if (!isEmployeeActive(emp)) return false;
       if (emp.id && presentDocIds.has(emp.id)) return false;
       if (emp.employeeId && presentEmpIds.has(emp.employeeId)) return false;
       if (emp.name && presentNames.has(emp.name.toLowerCase().trim())) return false;

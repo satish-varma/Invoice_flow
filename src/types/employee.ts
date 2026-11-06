@@ -29,6 +29,18 @@ export interface NewRelicEmployee {
   createdBy?: string | null;
 }
 
+/**
+ * Universal active check for employee records.
+ * Accurately excludes employees flagged as inactive across boolean, string, or status fields.
+ */
+export function isEmployeeActive(emp: any): boolean {
+  if (!emp) return false;
+  if (emp.isActive === false || emp.isActive === 'false' || emp.isActive === 0) return false;
+  if (emp.status === 'inactive' || emp.status === 'disabled' || emp.status === 'resigned' || emp.status === 'terminated') return false;
+  if (emp.isDeleted === true || emp.deleted === true) return false;
+  return emp.isActive === true || emp.isActive === 'true' || emp.isActive !== false;
+}
+
 export interface NewRelicAttendance {
   id?: string;
   siteId?: SiteId;          // defaults to 'newrelic'

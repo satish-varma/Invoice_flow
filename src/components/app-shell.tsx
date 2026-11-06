@@ -32,6 +32,7 @@ import {
   Unlock,
   LayoutDashboard,
   CalendarDays,
+  Building2,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { FinancialAuthProvider, useFinancialAuth } from '@/contexts/FinancialAuthContext';
@@ -292,17 +293,31 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-2 flex items-center gap-1.5 overflow-x-auto">
           {/* Direct Tab 1: Tuckshop (Counter sales & ledger for assigned site) */}
           {hasPermission(user, 'tuckshop') && (
-            <Link
-              href="/newrelic/tuckshop"
-              className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border ${
-                pathname.startsWith('/newrelic/tuckshop') || pathname === '/tuckshop'
-                  ? 'bg-indigo-50 border-indigo-200 text-[#3b2fc9] dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 shadow-xs'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
-              }`}
-            >
-              <Store className="h-3.5 w-3.5" />
-              Tuckshop
-            </Link>
+            <>
+              <Link
+                href="/newrelic/tuckshop"
+                className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border ${
+                  (pathname === '/newrelic/tuckshop' || pathname === '/tuckshop')
+                    ? 'bg-indigo-50 border-indigo-200 text-[#3b2fc9] dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 shadow-xs'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <Store className="h-3.5 w-3.5" />
+                Tuckshop
+              </Link>
+
+              <Link
+                href="/newrelic/tuckshop/sales"
+                className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border ${
+                  pathname === '/newrelic/tuckshop/sales' || pathname === '/tuckshop/sales'
+                    ? 'bg-indigo-50 border-indigo-200 text-[#3b2fc9] dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 shadow-xs'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <Building2 className="h-3.5 w-3.5 text-amber-500" />
+                All Sites Sales
+              </Link>
+            </>
           )}
 
           {/* Direct Tab 2: Attendance (Daily check-in/out for assigned site) */}
@@ -586,6 +601,14 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                     <Link href="/newrelic/reconcile" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
                       <FileCheck2 className="h-3.5 w-3.5 text-emerald-600" />
                       Daily Cash Reconcile
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                {hasPermission(user, 'tuckshop') && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/newrelic/tuckshop/sales" className="flex items-center gap-2 cursor-pointer font-medium text-xs">
+                      <Building2 className="h-3.5 w-3.5 text-amber-500" />
+                      All Sites Sales (HungerBox)
                     </Link>
                   </DropdownMenuItem>
                 )}

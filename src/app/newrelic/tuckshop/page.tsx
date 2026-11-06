@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
+import Link from 'next/link';
 
 import { TuckshopForm } from '@/components/newrelic/tuckshop/tuckshop-form';
 import { TuckshopList } from '@/components/newrelic/tuckshop/tuckshop-list';
 import { TuckshopShiftPulse } from '@/components/newrelic/tuckshop/TuckshopShiftPulse';
 import { HungerBoxSyncModal } from '@/components/newrelic/tuckshop/HungerBoxSyncModal';
 import { subscribeToTuckshopRecords, NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
-import { Loader2, Plus, TrendingDown, IndianRupee, Zap } from 'lucide-react';
+import { Loader2, Plus, TrendingDown, IndianRupee, Zap, Building2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
@@ -119,6 +120,13 @@ export default function TuckshopPage() {
           </div>
 
           <div className="grid grid-cols-2 sm:flex gap-2.5">
+            <Link
+              href="/newrelic/tuckshop/sales"
+              className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 px-3.5 py-3 sm:py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-2xl text-xs sm:text-sm transition-all active:scale-95 shadow-md"
+            >
+              <Building2 className="h-4 w-4 text-amber-300" /> All Sites Sales
+            </Link>
+
             <button 
               onClick={() => {
                 triggerHaptic('medium');

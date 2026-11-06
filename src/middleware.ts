@@ -154,7 +154,7 @@ export default withAuth(
 
     if (pathname === '/newrelic') {
       requiredPerm = 'newrelic_dc';
-    } else if (pathname === '/newrelic/tuckshop' || pathname === '/tuckshop') {
+    } else if (pathname === '/newrelic/tuckshop' || pathname === '/tuckshop' || pathname.startsWith('/newrelic/tuckshop/') || pathname.startsWith('/tuckshop/')) {
       requiredPerm = 'tuckshop';
     } else if (pathname === '/newrelic/attendance' || pathname === '/attendance') {
       if (search.includes('tab=payroll')) {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getSettings, getHungerBoxSales, createAuditLog } from '@/lib/tracker/turso';
+import { getSettings, getHungerBoxSales, createAuditLog, getAuditLogs, turso } from '@/lib/tracker/turso';
 import { parseHungerBoxFileBuffer, parseHungerBoxRows, matchSiteFromLocation, parseDateToYmd } from '@/services/hungerboxParser';
 import { feedHungerBoxAggregatesToTuckshop, triggerHungerBoxWorker } from '@/services/hungerboxSyncService';
 import { headers } from 'next/headers';
@@ -16,14 +16,34 @@ export async function GET() {
 
   try {
     const settings = await getSettings('default');
-    const recentSales = await getHungerBoxSales('default', 5);
+    const recentSales = await getHungerBoxSales('default', 10);
+    
+    // Count total orders in Turso
+    let totalSalesCount = recentSales.length;
+    try {
+      const countRes = await turso.execute('SELECT COUNT(*) as count FROM hungerbox_sales');
+      if (countRes.rows.length > 0 && countRes.rows[0]?.count !== undefined) {
+        totalSalesCount = Number(countRes.rows[0].count);
+      }
+    } catch {
+      // Ignore count error fallback
+    }
+
+    // Get recent sync logs
+    const allAuditLogs = await getAuditLogs('default', 25);
+    const recentSyncLogs = allAuditLogs.filter(
+      (l) => l.action.toLowerCase().includes('hungerbox') || l.action.toLowerCase().includes('sync')
+    );
 
     return NextResponse.json({
       success: true,
       workerConfigured: Boolean(settings.hungerboxWorkerUrl && settings.hungerboxWorkerApiKey),
       workerUrl: settings.hungerboxWorkerUrl ? `${settings.hungerboxWorkerUrl.substring(0, 25)}...` : null,
-      recentTelemetryCount: recentSales.length,
+      recentTelemetryCount: totalSalesCount,
       latestOrderDate: recentSales[0]?.orderDate || null,
+      latestSyncedAt: recentSales[0]?.syncedAt || (recentSyncLogs[0]?.timestamp) || null,
+      recentOrders: recentSales,
+      recentSyncLogs: recentSyncLogs.slice(0, 10),
     });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

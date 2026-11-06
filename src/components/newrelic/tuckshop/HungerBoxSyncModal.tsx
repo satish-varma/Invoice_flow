@@ -52,6 +52,7 @@ export function HungerBoxSyncModal({
     workerUrl?: string;
     recentOrders?: number;
     latestOrderDate?: string;
+    latestSyncedAt?: string;
   }>({ configured: false });
 
   const [selectedSite, setSelectedSite] = useState<string>(siteId);
@@ -93,6 +94,7 @@ export function HungerBoxSyncModal({
               workerUrl: data.workerUrl,
               recentOrders: data.recentTelemetryCount,
               latestOrderDate: data.latestOrderDate,
+              latestSyncedAt: data.latestSyncedAt,
             });
           }
         })
@@ -350,36 +352,48 @@ export function HungerBoxSyncModal({
             <div className="space-y-5">
               {/* Worker Status Notice */}
               <div
-                className={`p-3.5 rounded-2xl border text-xs flex items-center justify-between gap-3 ${
+                className={`p-3.5 rounded-2xl border text-xs space-y-2 ${
                   workerStatus.configured
                     ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300'
                     : 'bg-amber-50/80 border-amber-200 text-amber-900 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-300'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`w-2.5 h-2.5 rounded-full ${
-                      workerStatus.configured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
-                    }`}
-                  />
-                  <div>
-                    <p className="font-bold">
-                      {workerStatus.configured
-                        ? 'HungerBox Background Worker Configured'
-                        : 'HungerBox Worker Not Configured Yet'}
-                    </p>
-                    <p className="text-[11px] opacity-80">
-                      {workerStatus.configured
-                        ? `Connected to background worker: ${workerStatus.workerUrl || 'active'}`
-                        : 'You can configure credentials in Tracker Settings or upload reports directly.'}
-                    </p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-2.5 h-2.5 rounded-full ${
+                        workerStatus.configured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+                      }`}
+                    />
+                    <div>
+                      <p className="font-bold">
+                        {workerStatus.configured
+                          ? 'HungerBox Background Worker Configured'
+                          : 'HungerBox Worker Not Configured Yet'}
+                      </p>
+                      <p className="text-[11px] opacity-80">
+                        {workerStatus.configured
+                          ? `Endpoint: ${workerStatus.workerUrl || 'active'}`
+                          : 'You can configure credentials in Tracker Settings or upload reports directly.'}
+                      </p>
+                    </div>
                   </div>
+                  <Button asChild size="sm" variant="outline" className="h-7 text-[11px] font-bold rounded-xl shrink-0">
+                    <a href="/tracker/settings" target="_blank" rel="noopener noreferrer">
+                      Settings <ExternalLink className="w-3 h-3 ml-1" />
+                    </a>
+                  </Button>
                 </div>
-                <Button asChild size="sm" variant="outline" className="h-7 text-[11px] font-bold rounded-xl shrink-0">
-                  <a href="/tracker/settings" target="_blank" rel="noopener noreferrer">
-                    Settings <ExternalLink className="w-3 h-3 ml-1" />
-                  </a>
-                </Button>
+
+                {/* Real-time Telemetry Health Strip */}
+                <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-between text-[11px] font-mono">
+                  <span>
+                    Pulled Telemetry: <strong className="font-black">{workerStatus.recentOrders || 0} orders</strong>
+                  </span>
+                  <span>
+                    Last Synced: <strong>{workerStatus.latestSyncedAt ? new Date(workerStatus.latestSyncedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Never'}</strong>
+                  </span>
+                </div>
               </div>
 
               {/* Date Presets */}

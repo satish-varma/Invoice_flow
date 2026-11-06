@@ -11,6 +11,13 @@
 import { challanSchema, lineItemSchema, PricingItem } from '../src/types/challan';
 import { buildPricingMap, findPricingForItem } from '../src/services/newrelicPricingService';
 import { detectDuplicateCatalogGroups } from '../src/services/newrelicDuplicateDetector';
+import {
+  resolveSiteId,
+  registerCompanySites,
+  getUserAllowedSites,
+  COMPANY_SITES,
+  CompanySite,
+} from '../src/types/site';
 
 let passed = 0;
 let failed = 0;
@@ -155,6 +162,50 @@ async function runRegressionSuite() {
 
     const pomegranateGroup = groups.find(g => g.items.some(i => i.itemName.includes('Pomegranate')));
     assert(Boolean(pomegranateGroup && pomegranateGroup.suggestedKeeperId === '6'), 'Detects noise word difference and suggests keeper with defined MRP');
+  }
+
+  // --- SUITE 5: Dynamic Site Management & Scoping ---
+  console.log('\n🏢 5. Dynamic Site Management & Scoping:');
+  {
+    // Test: resolveSiteId handles default sites
+    assert(resolveSiteId('newrelic') === 'newrelic', 'Resolves newrelic correctly');
+    assert(resolveSiteId('dsm') === 'dsm', 'Resolves dsm correctly');
+    assert(resolveSiteId('ntt_data') === 'ntt_data', 'Resolves ntt_data correctly');
+    assert(resolveSiteId(null) === 'newrelic', 'Null siteId safely defaults to newrelic');
+    assert(resolveSiteId('') === 'newrelic', 'Empty siteId safely defaults to newrelic');
+
+    // Test: resolveSiteId supports dynamic custom sites
+    assert(resolveSiteId('google_cafeteria') === 'google_cafeteria', 'Preserves custom dynamic site ID');
+
+    // Test: registerCompanySites registers new custom stall into in-memory dictionary
+    const customSite: CompanySite = {
+      id: 'google_cafeteria',
+      name: 'Google Cafeteria',
+      allowedLocations: ['hyderabad', 'bangalore'],
+      hasChallans: false,
+      tagline: 'Google Main Cafeteria',
+      isCustom: true,
+    };
+    registerCompanySites([customSite]);
+
+    assert(COMPANY_SITES['google_cafeteria']?.name === 'Google Cafeteria', 'Custom site is registered into COMPANY_SITES in memory');
+    assert(COMPANY_SITES['google_cafeteria']?.isCustom === true, 'Custom site metadata isCustom is preserved');
+
+    // Test: getUserAllowedSites scoping
+    const userWithCustomSite = {
+      role: 'user',
+      assignedSite: 'google_cafeteria',
+      assignedSites: ['google_cafeteria'],
+    };
+    const allowed = getUserAllowedSites(userWithCustomSite);
+    assert(allowed.includes('google_cafeteria'), 'User assigned to custom site receives custom site access');
+
+    const multiSiteUser = {
+      role: 'manager',
+      assignedSites: ['newrelic', 'google_cafeteria'],
+    };
+    const multiAllowed = getUserAllowedSites(multiSiteUser);
+    assert(multiAllowed.length === 2 && multiAllowed.includes('google_cafeteria'), 'Multi-site manager retains both assigned sites');
   }
 
   // --- Summary ---

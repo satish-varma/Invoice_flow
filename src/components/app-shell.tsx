@@ -41,6 +41,7 @@ import { MobileAppBar } from '@/components/newrelic/mobile-app-bar';
 import { NetworkStatusIndicator } from '@/components/newrelic/network-status-indicator';
 import { getStockRequests } from '@/services/newrelicStockRequestService';
 import { COMPANY_SITES } from '@/types/site';
+import { subscribeCompanySites } from '@/services/siteService';
 import { hasPermission } from '@/types/permissions';
 import { triggerHaptic } from '@/lib/haptics';
 import {
@@ -108,7 +109,21 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
   const isAdmin = role === 'admin' || role === 'superadmin';
   const site = user?.assignedSite || 'newrelic';
-  const siteConfig = COMPANY_SITES[site] || COMPANY_SITES.newrelic;
+  const [, setSitesVersion] = useState(0);
+  const siteConfig = COMPANY_SITES[site] || {
+    id: site,
+    name: site,
+    allowedLocations: ['hyderabad'],
+    hasChallans: false,
+    tagline: `${site} Stall`,
+  };
+
+  useEffect(() => {
+    const unsub = subscribeCompanySites(() => {
+      setSitesVersion((v) => v + 1);
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     // Configure mobile status bar for native Android/iOS Capacitor wrapper

@@ -51,7 +51,9 @@ import {
 import * as XLSX from 'xlsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { SiteId, COMPANY_SITES, resolveSiteId } from '@/types/site';
+import { SiteId, COMPANY_SITES, resolveSiteId, CompanySite, DEFAULT_COMPANY_SITES } from '@/types/site';
+import { subscribeCompanySites } from '@/services/siteService';
+import { ManageSitesModal } from '@/components/admin/ManageSitesModal';
 import { triggerHaptic } from '@/lib/haptics';
 import { cn } from '@/lib/utils';
 import { DeviceSession } from '@/types/audit';
@@ -142,31 +144,7 @@ const ROLE_OPTIONS: Array<{
   },
 ];
 
-const SITE_OPTIONS: Array<{
-  value: SiteId;
-  label: string;
-  locations: string;
-  description: string;
-}> = [
-  {
-    value: 'newrelic',
-    label: 'NewRelic Stall',
-    locations: 'Hyderabad & Bangalore',
-    description: 'Dedicated NewRelic Delivery Challans Hub enabled. Multi-city location support.',
-  },
-  {
-    value: 'dsm',
-    label: 'DSM Stall',
-    locations: 'Hyderabad Stall Only',
-    description: 'Tuckshop counter sales and daily staff attendance. Dedicated NewRelic DC is forbidden.',
-  },
-  {
-    value: 'ntt_data',
-    label: 'NTT Data Stall',
-    locations: 'Hyderabad Stall Only',
-    description: 'Tuckshop counter sales and daily staff attendance. Dedicated NewRelic DC is forbidden.',
-  },
-];
+
 
 function deriveLegacyApps(tabs: PermissionKey[]): string[] {
   const apps = new Set<string>();
@@ -277,6 +255,38 @@ export default function AdminUsersPage() {
   const [assignedStartDate, setAssignedStartDate] = useState<string>('');
   const [assignedLocations, setAssignedLocations] = useState<string[]>([]);
   const [assignedStalls, setAssignedStalls] = useState<string[]>([]);
+
+  // Dynamic Company Sites & Management
+  const [sites, setSites] = useState<CompanySite[]>(() => Object.values(DEFAULT_COMPANY_SITES));
+  const [isManageSitesModalOpen, setIsManageSitesModalOpen] = useState(false);
+  const [manageSitesInitialMode, setManageSitesInitialMode] = useState<'list' | 'add'>('list');
+
+  useEffect(() => {
+    const unsubscribe = subscribeCompanySites((updatedSites) => {
+      setSites(updatedSites);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const siteOptions = useMemo(() => {
+    return sites.map((s) => ({
+      value: s.id,
+      label: s.name.endsWith('Stall') || s.name.endsWith('Cafeteria') ? s.name : `${s.name} Stall`,
+      locations:
+        s.allowedLocations?.length === 2
+          ? 'Hyderabad & Bangalore'
+          : s.allowedLocations?.[0] === 'bangalore'
+          ? 'Bangalore Stall Only'
+          : 'Hyderabad Stall Only',
+      description: s.description || s.tagline || `${s.name} counter sales and daily staff attendance.`,
+      isCustom: Boolean(s.isCustom),
+      hasChallans: Boolean(s.hasChallans),
+    }));
+  }, [sites]);
+
+  const siteHasChallans = (siteId: SiteId) => {
+    return siteId === 'newrelic' || Boolean(COMPANY_SITES[siteId]?.hasChallans);
+  };
 
   // Dynamic available stalls based on currently selected locations
   const availableStalls = useMemo(() => {
@@ -472,8 +482,8 @@ export default function AdminUsersPage() {
       }
       const primary = next[0] || 'newrelic';
       setAssignedSite(primary);
-      const hasNewRelic = next.includes('newrelic');
-      if (!hasNewRelic) {
+      const anyHasChallans = next.some((s) => siteHasChallans(s));
+      if (!anyHasChallans) {
         setPreferredLocations(['hyderabad']);
         setAllowedTabs((curr) => curr.filter((t) => t !== 'newrelic_dc' && t !== 'newrelic_dc_create'));
         if (defaultLandingPage === '/newrelic') {
@@ -488,7 +498,8 @@ export default function AdminUsersPage() {
     let tabs = [...preset.tabs];
     let landing = preset.defaultPage;
 
-    if (assignedSite !== 'newrelic') {
+    const anyHasChallans = assignedSites.some((s) => siteHasChallans(s)) || siteHasChallans(assignedSite);
+    if (!anyHasChallans) {
       tabs = tabs.filter((t) => t !== 'newrelic_dc' && t !== 'newrelic_dc_create');
       if (landing === '/newrelic') {
         landing = '/newrelic/tuckshop';
@@ -537,7 +548,7 @@ export default function AdminUsersPage() {
   const handleToggleCategory = (categoryItems: PermissionDefinition[], checked: boolean) => {
     triggerHaptic('light');
     const validItemIds = categoryItems
-      .filter((item) => !(item.newRelicOnly && assignedSite !== 'newrelic'))
+      .filter((item) => !(item.newRelicOnly && !siteHasChallans(assignedSite)))
       .map((item) => item.id);
 
     if (checked) {
@@ -1378,6 +1389,20 @@ export default function AdminUsersPage() {
               <FileSpreadsheet className="h-4 w-4" />
             )}
             <span>Export Access Matrix</span>
+          </Button>
+
+          <Button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              setManageSitesInitialMode('list');
+              setIsManageSitesModalOpen(true);
+            }}
+            className="flex-1 sm:flex-initial h-11 sm:h-10 px-4 rounded-2xl sm:rounded-xl bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-xs sm:text-sm font-bold shadow-2xs flex items-center justify-center gap-2 active:scale-95 transition-all"
+            title="Add or manage client company stalls and allowed locations"
+          >
+            <Building2 className="h-4 w-4 text-[#3b2fc9] dark:text-indigo-400" />
+            <span>Manage Stalls ({sites.length})</span>
           </Button>
 
           <Button
@@ -2533,12 +2558,26 @@ export default function AdminUsersPage() {
                     <Building2 className="w-3.5 h-3.5 text-[#3b2fc9]" />
                     Assigned Company Stalls / Sites
                   </Label>
-                  <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
-                    {assignedSites.length > 1 ? `Multi-Site (${assignedSites.length} stalls selected)` : 'Click to select / multi-assign'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setManageSitesInitialMode('add');
+                        setIsManageSitesModalOpen(true);
+                      }}
+                      className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 hover:border-indigo-400 transition-colors shadow-2xs"
+                    >
+                      <Plus className="w-3 h-3 stroke-[2.5]" />
+                      <span>Add New Stall</span>
+                    </button>
+                    <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                      {assignedSites.length > 1 ? `Multi-Site (${assignedSites.length} stalls)` : ''}
+                    </span>
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  {SITE_OPTIONS.map((s) => {
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {siteOptions.map((s) => {
                     const isSelected = assignedSites.includes(s.value);
                     return (
                       <button
@@ -2557,12 +2596,19 @@ export default function AdminUsersPage() {
                       >
                         <div>
                           <div className="flex items-center justify-between mb-1.5">
-                            <span className={cn("text-xs font-black", isSelected ? "text-[#3b2fc9] dark:text-indigo-300" : "text-slate-900 dark:text-white")}>
-                              {s.label}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className={cn("text-xs font-black", isSelected ? "text-[#3b2fc9] dark:text-indigo-300" : "text-slate-900 dark:text-white")}>
+                                {s.label}
+                              </span>
+                              {s.isCustom && (
+                                <span className="px-1.5 py-0.2 rounded-md text-[8px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                  Custom
+                                </span>
+                              )}
+                            </div>
                             {/* Checkbox indicator */}
                             <div className={cn(
-                              "w-5 h-5 rounded-md border flex items-center justify-center transition-colors shadow-2xs",
+                              "w-5 h-5 rounded-md border flex items-center justify-center transition-colors shadow-2xs shrink-0",
                               isSelected
                                 ? "bg-[#3b2fc9] border-[#3b2fc9] text-white"
                                 : "border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800"
@@ -2575,7 +2621,7 @@ export default function AdminUsersPage() {
                             {s.locations}
                           </span>
                         </div>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-2">
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-2 line-clamp-2">
                           {s.description}
                         </p>
                       </button>
@@ -3025,7 +3071,7 @@ export default function AdminUsersPage() {
                   {PERMISSION_CATEGORIES.map((category) => {
                     // Check if items are allowed or blocked
                     const validItems = category.items.filter(
-                      (item) => !(item.newRelicOnly && assignedSite !== 'newrelic')
+                      (item) => !(item.newRelicOnly && !siteHasChallans(assignedSite))
                     );
                     const allChecked =
                       validItems.length > 0 &&
@@ -3082,7 +3128,7 @@ export default function AdminUsersPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
                           {category.items.map((item) => {
                             const isBlockedForSite =
-                              item.newRelicOnly && assignedSite !== 'newrelic';
+                              item.newRelicOnly && !siteHasChallans(assignedSite);
                             const isGuestRestricted =
                               userRole === 'guest' &&
                               (item.id === 'invoices' ||
@@ -3300,6 +3346,18 @@ export default function AdminUsersPage() {
         targetUser={selectedUserForDevices}
         onRevokeDevice={handleRevokeDeviceSession}
         onRevokeAllSessions={handleRevokeAllSessionsFromModal}
+      />
+
+      {/* Dynamic Company Sites Management & Creation Modal */}
+      <ManageSitesModal
+        isOpen={isManageSitesModalOpen}
+        onClose={() => setIsManageSitesModalOpen(false)}
+        onSiteCreated={(newSite) => {
+          setAssignedSites((prev) => Array.from(new Set([...prev, newSite.id])));
+          setAssignedSite(newSite.id);
+        }}
+        users={users}
+        initialMode={manageSitesInitialMode}
       />
     </div>
   );

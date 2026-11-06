@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { saveTuckshopRecord, uploadTuckshopBill, NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { PlusCircle, Loader2, IndianRupee, TrendingDown, AlertTriangle } from 'lucide-react';
-import { SiteId, SITE_OPTIONS, resolveSiteId, COMPANY_SITES } from '@/types/site';
+import { SiteId, SITE_OPTIONS, resolveSiteId, COMPANY_SITES, CompanySite, DEFAULT_COMPANY_SITES } from '@/types/site';
+import { subscribeCompanySites } from '@/services/siteService';
 import { triggerHaptic } from '@/lib/haptics';
 
 interface Props {
@@ -34,13 +35,25 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
     return undefined;
   };
 
+  const [sites, setSites] = useState<CompanySite[]>(() => Object.values(DEFAULT_COMPANY_SITES));
+
+  useEffect(() => {
+    const unsub = subscribeCompanySites((updated) => {
+      setSites(updated);
+    });
+    return () => unsub();
+  }, []);
+
   const [selectedSite, setSelectedSite] = useState<SiteId>(() => {
     if (editRecord?.siteId) return resolveSiteId(editRecord.siteId);
     return user?.assignedSite ? resolveSiteId(user.assignedSite) : 'newrelic';
   });
 
   const effectiveSite = isAdmin ? selectedSite : (user?.assignedSite ? resolveSiteId(user.assignedSite) : 'newrelic');
-  const isHydOnlySite = effectiveSite === 'dsm' || effectiveSite === 'ntt_data';
+  const siteConfig = COMPANY_SITES[effectiveSite];
+  const isHydOnlySite = siteConfig
+    ? siteConfig.allowedLocations.length === 1 && siteConfig.allowedLocations[0] === 'hyderabad'
+    : (effectiveSite === 'dsm' || effectiveSite === 'ntt_data');
   
   const defaultLoc = isHydOnlySite ? 'HYD' : getMappedLocation(user?.preferredLocations?.[0]);
   const [location, setLocation] = useState<'HYD' | 'BLR'>(
@@ -49,7 +62,8 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
 
   const handleSiteChange = (newSite: SiteId) => {
     setSelectedSite(newSite);
-    if (newSite === 'dsm' || newSite === 'ntt_data') {
+    const targetSite = COMPANY_SITES[newSite];
+    if (targetSite && targetSite.allowedLocations.length === 1 && targetSite.allowedLocations[0] === 'hyderabad') {
       setLocation('HYD');
     }
   };
@@ -239,9 +253,9 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
                   onChange={(e) => handleSiteChange(e.target.value as SiteId)}
                   className="w-full h-12 sm:h-10 px-3 text-sm border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white font-semibold text-slate-800 shadow-2xs"
                 >
-                  {SITE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label} ({COMPANY_SITES[opt.value]?.tagline || opt.value})
+                  {sites.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} {s.isCustom ? '(Custom)' : ''} — {s.tagline || s.name}
                     </option>
                   ))}
                 </select>

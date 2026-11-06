@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 
 import { TuckshopForm } from '@/components/newrelic/tuckshop/tuckshop-form';
 import { TuckshopList } from '@/components/newrelic/tuckshop/tuckshop-list';
+import { TuckshopShiftPulse } from '@/components/newrelic/tuckshop/TuckshopShiftPulse';
 import { subscribeToTuckshopRecords, NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { Loader2, Plus, TrendingDown, IndianRupee } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 
 import { COMPANY_SITES } from '@/types/site';
+import { subscribeCompanySites } from '@/services/siteService';
 import { triggerHaptic } from '@/lib/haptics';
 
 export default function TuckshopPage() {
@@ -27,7 +29,15 @@ export default function TuckshopPage() {
 
   const isAdmin = role === 'admin' || role === 'superadmin';
   const assignedSite = user?.assignedSite || 'newrelic';
+  const [, setSitesVersion] = useState(0);
   const siteConfig = COMPANY_SITES[assignedSite] || COMPANY_SITES.newrelic;
+
+  useEffect(() => {
+    const unsub = subscribeCompanySites(() => {
+      setSitesVersion((v) => v + 1);
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     const siteFilter = isAdmin ? undefined : assignedSite;
@@ -129,6 +139,14 @@ export default function TuckshopPage() {
           </div>
         </div>
       </div>
+
+      {/* Real-Time Daily Shift Pulse Strip */}
+      <TuckshopShiftPulse
+        records={records}
+        onOpenExpense={() => openDialog('expense')}
+        onOpenSale={() => openDialog('sale')}
+        siteName={isAdmin ? undefined : siteConfig.name}
+      />
         
       <Dialog open={isDialogOpen} onOpenChange={(open) => {
         setIsDialogOpen(open);
@@ -161,7 +179,7 @@ export default function TuckshopPage() {
           <div className="w-full">
             <TuckshopList
               records={records}
-              showDashboard={role === 'admin' || role === 'superadmin'}
+              showDashboard={role !== 'guest'}
               onEdit={handleEditRecord}
             />
           </div>

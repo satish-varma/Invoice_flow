@@ -2,10 +2,14 @@
 
 import React, { useMemo } from 'react';
 import { NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
-import { Wallet, TrendingUp, TrendingDown, PieChart } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, PieChart, Check, X } from 'lucide-react';
+import { triggerHaptic } from '@/lib/haptics';
+import { cn } from '@/lib/utils';
 
 interface Props {
   records: NewRelicTuckshopRecord[];
+  selectedCategory?: string | null;
+  onSelectCategory?: (category: string | null) => void;
 }
 
 export const CATEGORY_STYLES: Record<string, { emoji: string; bg: string; text: string; border: string; bar: string }> = {
@@ -92,7 +96,7 @@ export function getCategoryBadge(category: string, type: 'expense' | 'sale') {
   return { emoji: '📦', label: category ? category.replace(/_/g, ' ') : 'Expense', color: 'text-slate-800 bg-gradient-to-r from-slate-50 to-gray-100 border-slate-300' };
 }
 
-export function TuckshopDashboard({ records }: Props) {
+export function TuckshopDashboard({ records, selectedCategory, onSelectCategory }: Props) {
   const { totalSales, commission, netSales, totalExpenses, netProfit, expensesByCategory } = useMemo(() => {
     let sales = 0;
     let expenses = 0;
@@ -198,14 +202,35 @@ export function TuckshopDashboard({ records }: Props) {
 
       {/* Categories Breakdown */}
       <div className="col-span-2 lg:col-span-4 bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-indigo-100 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center justify-between mb-3.5">
+        <div className="flex items-center justify-between mb-3.5 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <PieChart className="h-4 w-4 text-indigo-600" />
-            <h3 className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider">Expense Breakdown by Category</h3>
+            <h3 className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider">
+              Expense Breakdown by Category
+            </h3>
+            <span className="text-[10px] text-slate-400 font-semibold hidden sm:inline">
+              (Click a card to filter transactions)
+            </span>
           </div>
-          <span className="text-[11px] font-black text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
-            {expensesByCategory.length} {expensesByCategory.length === 1 ? 'category' : 'categories'}
-          </span>
+
+          <div className="flex items-center gap-2">
+            {selectedCategory && onSelectCategory && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  onSelectCategory(null);
+                }}
+                className="text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-0.5 rounded-full border border-rose-200 flex items-center gap-1 transition-colors"
+              >
+                <span>Filter: <strong>{selectedCategory}</strong></span>
+                <X className="w-3 h-3 stroke-[3]" />
+              </button>
+            )}
+            <span className="text-[11px] font-black text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+              {expensesByCategory.length} {expensesByCategory.length === 1 ? 'category' : 'categories'}
+            </span>
+          </div>
         </div>
 
         {expensesByCategory.length === 0 ? (
@@ -214,6 +239,7 @@ export function TuckshopDashboard({ records }: Props) {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
             {expensesByCategory.map(([cat, amount]) => {
               const pct = totalExpenses > 0 ? Math.round((amount / totalExpenses) * 100) : 0;
+              const isSelected = selectedCategory === cat;
               const normalizedCat = cat.toLowerCase();
               let style = CATEGORY_STYLES[cat];
               if (!style) {
@@ -227,20 +253,45 @@ export function TuckshopDashboard({ records }: Props) {
               }
 
               return (
-                <div key={cat} className={`${style.bg} rounded-2xl p-3.5 border ${style.border} flex flex-col justify-between transition-all hover:scale-[1.03] shadow-xs`}>
-                  <div className="flex items-center justify-between gap-1 mb-1.5">
-                    <span className="text-xs font-bold truncate flex items-center gap-1" title={cat}>
-                      <span>{style.emoji}</span>
-                      <span className={style.text}>{cat}</span>
-                    </span>
-                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-white/80 text-gray-700 border border-black/5">{pct}%</span>
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => {
+                    if (onSelectCategory) {
+                      triggerHaptic('light');
+                      onSelectCategory(isSelected ? null : cat);
+                    }
+                  }}
+                  className={cn(
+                    `${style.bg} rounded-2xl p-3.5 border ${style.border} flex flex-col justify-between text-left transition-all hover:scale-[1.03] shadow-xs cursor-pointer relative group`,
+                    isSelected
+                      ? "ring-2 ring-[#3b2fc9] border-[#3b2fc9] shadow-md scale-[1.02]"
+                      : "hover:shadow-sm"
+                  )}
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-1 mb-1.5">
+                      <span className="text-xs font-bold truncate flex items-center gap-1" title={cat}>
+                        <span>{style.emoji}</span>
+                        <span className={style.text}>{cat}</span>
+                      </span>
+                      {isSelected ? (
+                        <span className="w-4 h-4 rounded-full bg-[#3b2fc9] text-white flex items-center justify-center shrink-0">
+                          <Check className="w-2.5 h-2.5 stroke-[3]" />
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-white/80 text-gray-700 border border-black/5">
+                          {pct}%
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-black text-gray-950 text-sm">₹{amount.toLocaleString('en-IN')}</p>
                   </div>
-                  <p className="font-black text-gray-950 text-sm">₹{amount.toLocaleString('en-IN')}</p>
                   {/* Visual progress bar */}
-                  <div className="w-full bg-black/5 h-1.5 rounded-full mt-2 overflow-hidden">
+                  <div className="w-full bg-black/5 h-1.5 rounded-full mt-2.5 overflow-hidden">
                     <div className={`${style.bar} h-full rounded-full transition-all`} style={{ width: `${Math.min(100, Math.max(8, pct))}%` }} />
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

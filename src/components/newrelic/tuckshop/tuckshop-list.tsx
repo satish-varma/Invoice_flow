@@ -1,13 +1,38 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Trash2, Filter, FileText, Search, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, IndianRupee, Pencil, FileSpreadsheet, X, AlertTriangle, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import {
+  Trash2,
+  Filter,
+  FileText,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp,
+  TrendingDown,
+  IndianRupee,
+  Pencil,
+  FileSpreadsheet,
+  X,
+  AlertTriangle,
+  Loader2,
+  BarChart3,
+  Calendar,
+  RotateCcw,
+  Sparkles,
+  Check,
+  Eye,
+} from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { NewRelicTuckshopRecord, deleteTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { TuckshopDashboard, getCategoryBadge } from './tuckshop-dashboard';
+import { TuckshopBillModal } from './TuckshopBillModal';
+import { TuckshopTrendChart } from './TuckshopTrendChart';
 import { useAuth } from '@/contexts/AuthContext';
-import { SiteId, resolveSiteId, SITE_OPTIONS } from '@/types/site';
+import { SiteId, resolveSiteId, SITE_OPTIONS, COMPANY_SITES, CompanySite, DEFAULT_COMPANY_SITES } from '@/types/site';
+import { subscribeCompanySites } from '@/services/siteService';
 import { triggerHaptic } from '@/lib/haptics';
+import { cn } from '@/lib/utils';
 import { RollingCashCounter } from '@/components/effects/RollingCashCounter';
 import { TiltCard } from '@/components/effects/TiltCard';
 import { Input } from '@/components/ui/input';
@@ -40,6 +65,23 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
 
+  // Modern Filter Enhancements
+  type DatePreset = 'all' | 'today' | 'yesterday' | 'week' | 'month' | 'last_month' | 'custom';
+  const [datePreset, setDatePreset] = useState<DatePreset>('all');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  const [viewingBillRecord, setViewingBillRecord] = useState<NewRelicTuckshopRecord | null>(null);
+  const [showTrendChart, setShowTrendChart] = useState(false);
+  const [sites, setSites] = useState<CompanySite[]>(() => Object.values(DEFAULT_COMPANY_SITES));
+
+  useEffect(() => {
+    const unsub = subscribeCompanySites((updated) => {
+      setSites(updated);
+    });
+    return () => unsub();
+  }, []);
+
 
   // Map full names to codes since they are stored as 'bangalore' / 'hyderabad' in users collection
   const getMappedLocation = (locStr?: string) => {
@@ -56,7 +98,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
   // Reset to page 1 when filters change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [filterType, filterLocation, filterSite, filterMonth, filterYear, searchQuery]);
+  }, [filterType, filterLocation, filterSite, filterMonth, filterYear, searchQuery, datePreset, customStartDate, customEndDate, filterCategory]);
 
   // Also update if user object loads later (one-time on mount)
   const hasInitializedTuckshopFilter = React.useRef(false);
@@ -149,6 +191,59 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
     return Array.from(new Set(records.map(r => new Date(r.date).getFullYear()))).sort((a, b) => b - a);
   }, [records]);
 
+  const isDateInPreset = (dateStr: string, preset: DatePreset) => {
+    if (preset === 'all') return true;
+    const recDate = (dateStr || '').split('T')[0];
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    if (preset === 'today') {
+      return recDate === todayStr;
+    }
+    if (preset === 'yesterday') {
+      const y = new Date();
+      y.setDate(now.getDate() - 1);
+      const yesterdayStr = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, '0')}-${String(y.getDate()).padStart(2, '0')}`;
+      return recDate === yesterdayStr;
+    }
+    if (preset === 'week') {
+      const d = new Date(recDate);
+      const pastWeek = new Date();
+      pastWeek.setDate(now.getDate() - 7);
+      return d >= pastWeek && d <= now;
+    }
+    if (preset === 'month') {
+      const d = new Date(recDate);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }
+    if (preset === 'last_month') {
+      const d = new Date(recDate);
+      const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+      const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      return d.getMonth() === lastMonth && d.getFullYear() === year;
+    }
+    if (preset === 'custom') {
+      if (customStartDate && recDate < customStartDate) return false;
+      if (customEndDate && recDate > customEndDate) return false;
+      return true;
+    }
+    return true;
+  };
+
+  const presetCounts = useMemo(() => {
+    let today = 0;
+    let yesterday = 0;
+    let week = 0;
+    let month = 0;
+    records.forEach((r) => {
+      if (isDateInPreset(r.date, 'today')) today++;
+      if (isDateInPreset(r.date, 'yesterday')) yesterday++;
+      if (isDateInPreset(r.date, 'week')) week++;
+      if (isDateInPreset(r.date, 'month')) month++;
+    });
+    return { all: records.length, today, yesterday, week, month };
+  }, [records]);
+
   const filteredRecords = records.filter(record => {
     if (filterType !== 'all' && record.type !== filterType) return false;
     if (filterLocation !== 'all') {
@@ -162,11 +257,21 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
       const recSite = resolveSiteId(record.siteId);
       if (recSite !== filterSite) return false;
     }
+
+    if (filterCategory) {
+      const rawCat = (record.category || '').toLowerCase().replace(/_/g, ' ');
+      const targetCat = filterCategory.toLowerCase().replace(/_/g, ' ');
+      if (!rawCat.includes(targetCat) && !targetCat.includes(rawCat)) {
+        return false;
+      }
+    }
+
+    if (!isDateInPreset(record.date, datePreset)) return false;
     
-    if (filterMonth !== 'all') {
+    if (datePreset === 'all' && filterMonth !== 'all') {
       if (new Date(record.date).getMonth().toString() !== filterMonth) return false;
     }
-    if (filterYear !== 'all') {
+    if (datePreset === 'all' && filterYear !== 'all') {
       if (new Date(record.date).getFullYear().toString() !== filterYear) return false;
     }
     
@@ -174,7 +279,8 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
       const q = searchQuery.toLowerCase().trim();
       const catMatch = record.category.replace('_', ' ').toLowerCase().includes(q);
       const descMatch = (record.description || '').toLowerCase().includes(q);
-      if (!catMatch && !descMatch) return false;
+      const creatorMatch = (record.createdBy || '').toLowerCase().includes(q);
+      if (!catMatch && !descMatch && !creatorMatch) return false;
     }
     
     return true;
@@ -186,13 +292,36 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
     currentPage * ITEMS_PER_PAGE
   );
 
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (datePreset !== 'all') count++;
+    if (filterCategory) count++;
+    if (filterType !== 'all') count++;
+    if (filterLocation !== 'all') count++;
+    if (filterSite !== 'all') count++;
+    if (searchQuery.trim()) count++;
+    return count;
+  }, [datePreset, filterCategory, filterType, filterLocation, filterSite, searchQuery]);
 
+  const handleResetFilters = () => {
+    triggerHaptic('medium');
+    setDatePreset('all');
+    setCustomStartDate('');
+    setCustomEndDate('');
+    setFilterCategory(null);
+    setFilterType('all');
+    setFilterLocation('all');
+    setFilterSite('all');
+    setFilterMonth('all');
+    setFilterYear('all');
+    setSearchQuery('');
+  };
 
   const exportToExcel = () => {
     try {
       const rows = filteredRecords.map((r) => {
         const sId = resolveSiteId(r.siteId);
-        const siteName = sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic';
+        const siteName = COMPANY_SITES[sId]?.name || sId;
         return {
           'Date': new Date(r.date).toLocaleDateString('en-IN'),
           'Company Site': siteName,
@@ -202,6 +331,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
           'Amount (₹)': r.amount,
           'Description': r.description || '',
           'Created By': r.createdBy || '',
+          'Bill Attached': r.billUrl ? 'YES' : 'NO',
         };
       });
 
@@ -216,22 +346,35 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
   };
 
   return (
-    <div className="flex flex-col gap-6 h-full w-full">
-      {showDashboard && <TuckshopDashboard records={filteredRecords} />}
+    <div className="flex flex-col gap-5 sm:gap-6 h-full w-full">
+      {showDashboard && (
+        <TuckshopDashboard
+          records={filteredRecords}
+          selectedCategory={filterCategory}
+          onSelectCategory={(cat) => setFilterCategory(cat)}
+        />
+      )}
+
+      {/* Visual Sales & Expense Trend Chart */}
+      {showTrendChart && (
+        <TuckshopTrendChart records={records} />
+      )}
       
-      <div className="theme-card rounded-2xl shadow-sm overflow-hidden h-full flex flex-col">
-      <div className="p-4 sm:p-5 border-b border-white/10 flex flex-col gap-3.5">
+      <div className="theme-card rounded-2xl sm:rounded-3xl shadow-sm overflow-hidden h-full flex flex-col bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800">
+      <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-3.5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold theme-text-primary text-base sm:text-lg">Transaction Ledger</h3>
-            <span className="text-xs theme-text-muted font-medium">
-              ({filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''})
+            <h3 className="font-black text-slate-900 dark:text-white text-base sm:text-lg tracking-tight">
+              Transaction Ledger
+            </h3>
+            <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-900">
+              {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''}
             </span>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Prominent Segmented Location Filter Switcher */}
-            <div className="flex items-center p-1 bg-slate-200/80 rounded-2xl gap-1 border border-slate-300/70 shadow-2xs">
+            <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl gap-1 border border-slate-200/80 dark:border-slate-700 shadow-2xs">
               <button
                 type="button"
                 onClick={() => {
@@ -241,12 +384,12 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                 className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                   filterLocation === 'all'
                     ? 'bg-gradient-to-r from-indigo-600 to-[#3b2fc9] text-white shadow-xs font-black'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60 dark:hover:bg-slate-700'
                 }`}
               >
                 <span>All Locations</span>
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                  filterLocation === 'all' ? 'bg-white/20 text-white' : 'bg-slate-300/80 text-slate-700'
+                  filterLocation === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                 }`}>
                   {locCounts.all}
                 </span>
@@ -260,12 +403,12 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                 className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                   filterLocation === 'BLR'
                     ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-xs font-black'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60 dark:hover:bg-slate-700'
                 }`}
               >
                 <span>Bangalore</span>
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                  filterLocation === 'BLR' ? 'bg-white/20 text-white' : 'bg-slate-300/80 text-slate-700'
+                  filterLocation === 'BLR' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                 }`}>
                   {locCounts.blr}
                 </span>
@@ -279,23 +422,42 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                 className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                   filterLocation === 'HYD'
                     ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-xs font-black'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60 dark:hover:bg-slate-700'
                 }`}
               >
                 <span>Hyderabad</span>
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                  filterLocation === 'HYD' ? 'bg-white/20 text-white' : 'bg-slate-300/80 text-slate-700'
+                  filterLocation === 'HYD' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                 }`}>
                   {locCounts.hyd}
                 </span>
               </button>
             </div>
 
+            {/* Toggle 14-Day Visual Trend Chart */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setShowTrendChart(!showTrendChart);
+              }}
+              className={cn(
+                "h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 shrink-0",
+                showTrendChart
+                  ? "bg-[#3b2fc9] text-white shadow-sm"
+                  : "bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
+              )}
+              title="Toggle 14-Day Sales & Expense Trend Chart"
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+              <span>{showTrendChart ? 'Hide Trends' : 'View Trends'}</span>
+            </button>
+
             <button
               type="button"
               onClick={exportToExcel}
               disabled={filteredRecords.length === 0}
-              className="h-8 px-2.5 sm:px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
+              className="h-9 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors shrink-0 active:scale-95"
               title="Download Excel report"
             >
               <FileSpreadsheet className="h-3.5 w-3.5" />
@@ -303,6 +465,85 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
             </button>
           </div>
         </div>
+
+        {/* 1-Click Time Range Quick Selector Pills */}
+        <div className="flex items-center gap-1.5 flex-wrap pt-1">
+          {[
+            { key: 'all', label: 'All Time', count: presetCounts.all },
+            { key: 'today', label: 'Today', count: presetCounts.today },
+            { key: 'yesterday', label: 'Yesterday', count: presetCounts.yesterday },
+            { key: 'week', label: 'Last 7 Days', count: presetCounts.week },
+            { key: 'month', label: 'This Month', count: presetCounts.month },
+            { key: 'custom', label: 'Custom Date Range' },
+          ].map((preset) => (
+            <button
+              key={preset.key}
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setDatePreset(preset.key as DatePreset);
+              }}
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+                datePreset === preset.key
+                  ? "bg-[#3b2fc9] text-white shadow-xs font-black ring-2 ring-[#3b2fc9]/20"
+                  : "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700"
+              )}
+            >
+              <span>{preset.label}</span>
+              {typeof preset.count === 'number' && (
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.2 rounded-full font-black",
+                  datePreset === preset.key
+                    ? "bg-white/20 text-white"
+                    : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                )}>
+                  {preset.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Custom Date Range Picker */}
+        {datePreset === 'custom' && (
+          <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 flex-wrap">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+              Custom Date Window:
+            </span>
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] text-slate-500 font-medium">From:</label>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="h-8 px-2.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] text-slate-500 font-medium">To:</label>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="h-8 px-2.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+              />
+            </div>
+            {(customStartDate || customEndDate) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomStartDate('');
+                  setCustomEndDate('');
+                }}
+                className="text-[11px] font-bold text-indigo-600 hover:underline"
+              >
+                Clear Dates
+              </button>
+            )}
+          </div>
+        )}
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3">
           <div className="relative flex-1">
@@ -338,9 +579,9 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                 }}
                 className="w-full sm:w-auto h-11 sm:h-10 px-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
               >
-                <option value="all">All Sites</option>
-                {SITE_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <option value="all">All Stalls / Sites</option>
+                {sites.map(s => (
+                  <option key={s.id} value={s.id}>{s.name} Stall</option>
                 ))}
               </select>
             )}
@@ -404,6 +645,103 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
             </select>
           </div>
         </div>
+
+        {/* Active Filter Chips Bar */}
+        {activeFiltersCount > 0 && (
+          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1">
+              <Filter className="w-3 h-3" />
+              Active Filters ({activeFiltersCount}):
+            </span>
+
+            {datePreset !== 'all' && (
+              <span className="px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold flex items-center gap-1.5">
+                Time: {datePreset === 'week' ? 'Last 7 Days' : datePreset === 'month' ? 'This Month' : datePreset.toUpperCase()}
+                <button
+                  type="button"
+                  onClick={() => setDatePreset('all')}
+                  className="hover:text-rose-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {filterCategory && (
+              <span className="px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold flex items-center gap-1.5">
+                Category: {filterCategory}
+                <button
+                  type="button"
+                  onClick={() => setFilterCategory(null)}
+                  className="hover:text-rose-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {filterType !== 'all' && (
+              <span className="px-2.5 py-1 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 font-bold flex items-center gap-1.5">
+                Type: {filterType.toUpperCase()}
+                <button
+                  type="button"
+                  onClick={() => setFilterType('all')}
+                  className="hover:text-rose-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {filterLocation !== 'all' && (
+              <span className="px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold flex items-center gap-1.5">
+                Location: {filterLocation}
+                <button
+                  type="button"
+                  onClick={() => setFilterLocation('all')}
+                  className="hover:text-rose-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {filterSite !== 'all' && (
+              <span className="px-2.5 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-bold flex items-center gap-1.5">
+                Site: {COMPANY_SITES[filterSite]?.name || filterSite}
+                <button
+                  type="button"
+                  onClick={() => setFilterSite('all')}
+                  className="hover:text-rose-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {searchQuery && (
+              <span className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-bold flex items-center gap-1.5">
+                Query: "{searchQuery}"
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="hover:text-rose-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 ml-auto cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset All Filters
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Mobile Card List View (md:hidden) */}
@@ -436,6 +774,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                       </span>
                       {(() => {
                         const sId = resolveSiteId(record.siteId);
+                        const sName = COMPANY_SITES[sId]?.name || sId;
                         return (
                           <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold border ${
                             sId === 'dsm'
@@ -444,7 +783,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                               ? 'bg-amber-50 text-amber-800 border-amber-200'
                               : 'bg-indigo-50 text-[#3b2fc9] border-indigo-200'
                           }`}>
-                            {sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic'}
+                            {sName}
                           </span>
                         );
                       })()}
@@ -492,16 +831,18 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                   <span className="truncate max-w-[140px] font-medium">By: <span className="font-bold text-slate-700">{record.createdBy || 'Unknown'}</span></span>
                   <div className="flex items-center gap-1.5">
                     {record.billUrl && (
-                      <a
-                        href={record.billUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={() => triggerHaptic('light')}
-                        className="h-8 px-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold flex items-center gap-1 hover:bg-blue-100 transition-colors"
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setViewingBillRecord(record);
+                        }}
+                        className="h-8 px-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold flex items-center gap-1 hover:bg-blue-100 transition-colors shadow-2xs"
+                        title="View Bill in Lightbox"
                       >
                         <FileText className="h-3.5 w-3.5" />
                         <span>Bill</span>
-                      </a>
+                      </button>
                     )}
                     {onEdit && canEditRecord(record) && (
                       <button
@@ -569,6 +910,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {(() => {
                           const sId = resolveSiteId(record.siteId);
+                          const sName = COMPANY_SITES[sId]?.name || sId;
                           return (
                             <span className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-bold border ${
                               sId === 'dsm'
@@ -577,7 +919,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                                 ? 'bg-amber-50 text-amber-800 border-amber-200'
                                 : 'bg-indigo-50 text-[#3b2fc9] border-indigo-200'
                             }`}>
-                              {sId === 'dsm' ? 'DSM' : sId === 'ntt_data' ? 'NTT Data' : 'NewRelic'}
+                              {sName}
                             </span>
                           );
                         })()}
@@ -620,9 +962,17 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
                     {/* Bill */}
                     <td className="px-2.5 py-3 text-center whitespace-nowrap">
                       {record.billUrl ? (
-                        <a href={record.billUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center p-1.5 text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors shadow-2xs" title="View Uploaded Bill">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setViewingBillRecord(record);
+                          }}
+                          className="inline-flex items-center justify-center p-1.5 text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors shadow-2xs cursor-pointer"
+                          title="Inspect Uploaded Bill"
+                        >
                           <FileText className="h-3.5 w-3.5" />
-                        </a>
+                        </button>
                       ) : (
                         <span className="text-gray-300 text-xs">—</span>
                       )}
@@ -786,6 +1136,13 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Lightbox Receipt & Bill Viewer Modal */}
+      <TuckshopBillModal
+        record={viewingBillRecord}
+        isOpen={Boolean(viewingBillRecord)}
+        onClose={() => setViewingBillRecord(null)}
+      />
     </div>
     </div>
   );

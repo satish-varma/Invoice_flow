@@ -274,8 +274,6 @@ export async function syncHungerBoxDirectFromPortal(params?: {
     'DSM Shared Services India Private Limited': { siteId: 'dsm', name: 'DSM' },
     'New Relic One India Private Limited': { siteId: 'newrelic', name: 'NewRelic' },
     'NTT Data': { siteId: 'ntt_data', name: 'NTT Data' },
-    'CGI Information Systems & Management Consultants Pvt Ltd': { siteId: 'newrelic', name: 'NewRelic' },
-    'Madala Holdings Limited': { siteId: 'newrelic', name: 'NewRelic' },
   };
 
   // 5. Aggregate by date & site
@@ -294,7 +292,9 @@ export async function syncHungerBoxDirectFromPortal(params?: {
 
   for (const item of mrpData) {
     if (item.org === 'Total eCafe') continue;
-    const mapping = siteMap[item.org] || { siteId: 'newrelic', name: item.org };
+    const mapping = siteMap[item.org];
+    if (!mapping) continue; // Skip unmapped companies (e.g. CGI, Broadridge)
+    if (mapping.siteId === 'newrelic' && item.date < '2026-09-06') continue; // NewRelic site started Sep 6th
     const key = `${item.date}_${mapping.siteId}`;
     if (!ledger[key]) {
       ledger[key] = {
@@ -313,7 +313,9 @@ export async function syncHungerBoxDirectFromPortal(params?: {
 
   for (const item of nonMrpData) {
     if (item.org === 'Total eCafe') continue;
-    const mapping = siteMap[item.org] || { siteId: 'newrelic', name: item.org };
+    const mapping = siteMap[item.org];
+    if (!mapping) continue; // Skip unmapped companies (e.g. CGI, Broadridge)
+    if (mapping.siteId === 'newrelic' && item.date < '2026-09-06') continue; // NewRelic site started Sep 6th
     const key = `${item.date}_${mapping.siteId}`;
     if (!ledger[key]) {
       ledger[key] = {

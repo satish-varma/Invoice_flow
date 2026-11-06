@@ -56,9 +56,10 @@ export function HungerBoxSyncModal({
   }>({ configured: false });
 
   const [selectedSite, setSelectedSite] = useState<string>(siteId);
-  const [dateRangePreset, setDateRangePreset] = useState<'today' | 'yesterday' | 'week' | 'month'>('today');
+  const [dateRangePreset, setDateRangePreset] = useState<'today' | 'yesterday' | 'week' | 'month' | '6months'>('6months');
   const [startDate, setStartDate] = useState<string>(() => {
     const d = new Date();
+    d.setMonth(d.getMonth() - 6);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
   const [endDate, setEndDate] = useState<string>(() => {
@@ -103,7 +104,7 @@ export function HungerBoxSyncModal({
   }, [open]);
 
   // Handle preset date selection
-  const handleSelectPreset = (preset: 'today' | 'yesterday' | 'week' | 'month') => {
+  const handleSelectPreset = (preset: 'today' | 'yesterday' | 'week' | 'month' | '6months') => {
     setDateRangePreset(preset);
     const now = new Date();
     const formatYmd = (d: Date) =>
@@ -128,10 +129,15 @@ export function HungerBoxSyncModal({
       const m = new Date(now.getFullYear(), now.getMonth(), 1);
       setStartDate(formatYmd(m));
       setEndDate(formatYmd(now));
+    } else if (preset === '6months') {
+      const m = new Date(now);
+      m.setMonth(m.getMonth() - 6);
+      setStartDate(formatYmd(m));
+      setEndDate(formatYmd(now));
     }
   };
 
-  // Trigger Worker Sync
+  // Trigger HungerBox Portal API Sync
   const handleTriggerWorker = async () => {
     triggerHaptic('medium');
     setIsSyncing(true);
@@ -142,7 +148,7 @@ export function HungerBoxSyncModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'worker_sync',
+          action: 'portal_api_sync',
           startDate,
           endDate,
           siteId: selectedSite,
@@ -153,20 +159,20 @@ export function HungerBoxSyncModal({
       if (data.success) {
         setSyncFeedback({
           type: 'success',
-          message: data.message || 'Worker sync executed successfully!',
+          message: data.message || 'HungerBox data synced directly from portal!',
           details: data.feedResults,
         });
         if (onSyncComplete) onSyncComplete();
       } else {
         setSyncFeedback({
           type: 'error',
-          message: data.error || 'Worker sync failed. Please verify credentials.',
+          message: data.error || 'Portal sync failed. Please verify credentials.',
         });
       }
     } catch (err: any) {
       setSyncFeedback({
         type: 'error',
-        message: err.message || 'Failed to trigger worker',
+        message: err.message || 'Failed to trigger portal sync',
       });
     } finally {
       setIsSyncing(false);
@@ -350,31 +356,20 @@ export function HungerBoxSyncModal({
           {/* TAB 1: AUTOMATED WORKER SYNC */}
           {activeTab === 'worker' && (
             <div className="space-y-5">
-              {/* Worker Status Notice */}
-              <div
-                className={`p-3.5 rounded-2xl border text-xs space-y-2 ${
-                  workerStatus.configured
-                    ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300'
-                    : 'bg-amber-50/80 border-amber-200 text-amber-900 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-300'
-                }`}
-              >
+              {/* HungerBox Portal Direct API Status Notice */}
+              <div className="p-3.5 rounded-2xl border text-xs space-y-2 bg-indigo-50/80 border-indigo-200 text-indigo-950 dark:bg-indigo-950/30 dark:border-indigo-800 dark:text-indigo-300">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <span
-                      className={`w-2.5 h-2.5 rounded-full ${
-                        workerStatus.configured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
-                      }`}
-                    />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                     <div>
-                      <p className="font-bold">
-                        {workerStatus.configured
-                          ? 'HungerBox Background Worker Configured'
-                          : 'HungerBox Worker Not Configured Yet'}
+                      <p className="font-bold flex items-center gap-1.5">
+                        HungerBox Portal API Connected
+                        <Badge variant="outline" className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-300 py-0 h-4">
+                          Direct Feed
+                        </Badge>
                       </p>
                       <p className="text-[11px] opacity-80">
-                        {workerStatus.configured
-                          ? `Endpoint: ${workerStatus.workerUrl || 'active'}`
-                          : 'You can configure credentials in Tracker Settings or upload reports directly.'}
+                        admin.hungerbox.com • MRP (19%) & Non-MRP (3%) auto-split • Zero local files
                       </p>
                     </div>
                   </div>
@@ -386,12 +381,12 @@ export function HungerBoxSyncModal({
                 </div>
 
                 {/* Real-time Telemetry Health Strip */}
-                <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-between text-[11px] font-mono">
+                <div className="pt-2 border-t border-indigo-200/60 dark:border-indigo-900/60 flex items-center justify-between text-[11px] font-mono">
                   <span>
-                    Pulled Telemetry: <strong className="font-black">{workerStatus.recentOrders || 0} orders</strong>
+                    Synced Records: <strong className="font-black">{workerStatus.recentOrders || 0} orders</strong>
                   </span>
                   <span>
-                    Last Synced: <strong>{workerStatus.latestSyncedAt ? new Date(workerStatus.latestSyncedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Never'}</strong>
+                    Last Synced: <strong>{workerStatus.latestSyncedAt ? new Date(workerStatus.latestSyncedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Ready'}</strong>
                   </span>
                 </div>
               </div>
@@ -404,10 +399,11 @@ export function HungerBoxSyncModal({
                 </Label>
                 <div className="flex flex-wrap gap-1.5">
                   {[
-                    { id: 'today', label: 'Today' },
-                    { id: 'yesterday', label: 'Yesterday' },
-                    { id: 'week', label: 'Last 7 Days' },
+                    { id: '6months', label: 'Last 6 Months (Recommended)' },
                     { id: 'month', label: 'This Month' },
+                    { id: 'week', label: 'Last 7 Days' },
+                    { id: 'yesterday', label: 'Yesterday' },
+                    { id: 'today', label: 'Today' },
                   ].map((p) => (
                     <button
                       key={p.id}
@@ -459,7 +455,7 @@ export function HungerBoxSyncModal({
                 className="w-full h-11 rounded-2xl bg-[#3b2fc9] hover:bg-[#2f24a8] text-white font-black text-sm shadow-md transition-all active:scale-95"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                {isSyncing ? 'Pulling Sales from HungerBox...' : 'Start Automated Sync'}
+                {isSyncing ? 'Pulling Sales Directly from HungerBox...' : 'Pull HungerBox Data & Feed Ledger'}
               </Button>
             </div>
           )}

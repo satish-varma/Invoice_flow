@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSettings, getHungerBoxSales, createAuditLog, getAuditLogs, turso } from '@/lib/tracker/turso';
 import { parseHungerBoxFileBuffer, parseHungerBoxRows, matchSiteFromLocation, parseDateToYmd } from '@/services/hungerboxParser';
-import { feedHungerBoxAggregatesToTuckshop, triggerHungerBoxWorker } from '@/services/hungerboxSyncService';
+import { feedHungerBoxAggregatesToTuckshop, triggerHungerBoxWorker, syncHungerBoxDirectFromPortal } from '@/services/hungerboxSyncService';
 import { headers } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
@@ -128,7 +128,43 @@ export async function POST(request: Request) {
   // 2. JSON Trigger Mode (Worker Sync or Direct Aggregates Feed)
   try {
     const body = await request.json();
-    const action = body.action || 'worker_sync';
+    const action = body.action || 'portal_api_sync';
+
+    // Direct Sync straight from HungerBox Admin API without reading local downloads
+    if (action === 'portal_api_sync' || action === 'direct_portal_sync') {
+      const syncResult = await syncHungerBoxDirectFromPortal({
+        fromDate: body.startDate,
+        toDate: body.endDate,
+        userEmail,
+      });
+
+      await createAuditLog({
+        userId: (session.user as any).id,
+        userEmail,
+        action: 'Direct HungerBox Portal API Sync',
+        details: JSON.stringify({
+          startDate: body.startDate,
+          endDate: body.endDate,
+          totalSales: syncResult.totalSales,
+          totalOrders: syncResult.totalOrders,
+          totalMrpSales: syncResult.totalMrpSales,
+          totalNonMrpSales: syncResult.totalNonMrpSales,
+          daysProcessed: syncResult.feedResults.length,
+        }),
+        orgId: 'default',
+        ipAddress,
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Successfully pulled ${syncResult.totalOrders.toLocaleString('en-IN')} orders directly from HungerBox API (₹${Math.round(syncResult.totalSales).toLocaleString('en-IN')}) across ${syncResult.feedResults.length} daily site records!`,
+        totalSales: syncResult.totalSales,
+        totalOrders: syncResult.totalOrders,
+        totalMrpSales: syncResult.totalMrpSales,
+        totalNonMrpSales: syncResult.totalNonMrpSales,
+        feedResults: syncResult.feedResults,
+      });
+    }
 
     if (action === 'feed_aggregates' && Array.isArray(body.aggregates)) {
       const feedResults = await feedHungerBoxAggregatesToTuckshop(body.aggregates, userEmail);

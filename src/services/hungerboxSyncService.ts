@@ -1,7 +1,7 @@
 import { collection, query, getDocs, addDoc, updateDoc, doc, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { NEWRELIC_TUCKSHOP_COLLECTION, NewRelicTuckshopRecord } from './newrelicTuckshopService';
-import { HungerBoxDailyAggregate, HungerBoxParsedOrder } from './hungerboxParser';
+import { HungerBoxDailyAggregate, HungerBoxParsedOrder, formatOrdinalDate } from './hungerboxParser';
 import { turso, createAuditLog } from '@/lib/tracker/turso';
 import { COMPANY_SITES, resolveSiteId, SiteId } from '@/types/site';
 
@@ -14,6 +14,16 @@ export interface FeedResult {
   action: 'created' | 'updated';
   recordId: string;
 }
+
+/**
+ * HungerBox Vendor Configuration:
+ * - MRP Vendors (19% fee): Packaged items, tuckshop stalls, confectionery, bakery
+ * - Non-MRP Vendors (3% fee): Fresh kitchen foods, live counters, freshly brewed tea/coffee, juice
+ */
+export const HUNGERBOX_MRP_VENDOR_IDS = [25577, 25579, 26122, 26200, 30225];
+export const HUNGERBOX_NON_MRP_VENDOR_IDS = [23221, 25576, 26121, 26123, 31127, 31142];
+
+export const HUNGERBOX_DEFAULT_CLIENT_ID = '2c0939632f65c1d362ee68675a7757b4';
 
 /**
  * Feeds HungerBox aggregated daily sales into Firestore Tuckshop Ledger (`newrelic_tuckshop`)
@@ -41,7 +51,7 @@ export async function feedHungerBoxAggregatesToTuckshop(
     const locationName = siteConfig.name;
 
     // Build descriptive notes
-    const sessionSummary = agg.mealSessions
+    const sessionSummary = (agg.mealSessions || [])
       .map((s) => `${s.session}: ₹${Math.round(s.amount).toLocaleString('en-IN')}`)
       .join(', ');
     const description = `HungerBox Digital Sales — ${agg.uniqueOrdersCount || agg.orderCount} orders${
@@ -61,7 +71,7 @@ export async function feedHungerBoxAggregatesToTuckshop(
       await updateDoc(docRef, {
         amount: agg.totalAmount,
         orderCount: agg.uniqueOrdersCount || agg.orderCount,
-        mealSessions: agg.mealSessions,
+        mealSessions: agg.mealSessions || [],
         source: 'hungerbox',
         description,
         mrpSales: agg.mrpSales,
@@ -95,7 +105,7 @@ export async function feedHungerBoxAggregatesToTuckshop(
         location: locationName,
         date: `${agg.date}T12:00:00.000Z`,
         orderCount: agg.uniqueOrdersCount || agg.orderCount,
-        mealSessions: agg.mealSessions,
+        mealSessions: agg.mealSessions || [],
         source: 'hungerbox',
         description,
         mrpSales: agg.mrpSales,
@@ -155,6 +165,238 @@ export async function feedHungerBoxAggregatesToTuckshop(
   }
 
   return results;
+}
+
+/**
+ * Directly pulls daily orders & sales from HungerBox Admin API (https://admin.hungerbox.com)
+ * without using local downloads, computes MRP (19%) vs Non-MRP (3%) deductions,
+ * and feeds all aggregates into the Tuckshop Firestore ledger.
+ */
+export async function syncHungerBoxDirectFromPortal(params?: {
+  fromDate?: string;
+  toDate?: string;
+  userEmail?: string;
+  username?: string;
+  password?: string;
+  skipFirestore?: boolean;
+}): Promise<{
+  success: boolean;
+  totalOrders: number;
+  totalSales: number;
+  totalMrpSales: number;
+  totalNonMrpSales: number;
+  dailyAggregates: HungerBoxDailyAggregate[];
+  feedResults: FeedResult[];
+}> {
+  const username = params?.username || process.env.HUNGERBOX_USERNAME || 'the_gut_guru';
+  const password = params?.password || process.env.HUNGERBOX_PASSWORD || 'hungerbox@123';
+  const userEmail = params?.userEmail || 'admin@hungerbox';
+
+  // 1. Authenticate against HungerBox OAuth API
+  const authRes = await fetch('https://admin.hungerbox.com/api/oauth/access_token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      grant_type: 'password',
+      client_id: HUNGERBOX_DEFAULT_CLIENT_ID,
+      client_secret: '',
+      username,
+      password,
+    }),
+  });
+
+  if (!authRes.ok) {
+    const errText = await authRes.text();
+    throw new Error(`HungerBox Authentication failed (${authRes.status}): ${errText}`);
+  }
+
+  const authData = await authRes.json();
+  const accessToken = authData.access_token;
+  if (!accessToken) {
+    throw new Error('HungerBox OAuth response did not contain access_token.');
+  }
+
+  // 2. Determine Date Range (Default 6 months historical)
+  let fromDate = params?.fromDate;
+  let toDate = params?.toDate;
+
+  const now = new Date();
+  if (!toDate) {
+    toDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }
+  if (!fromDate) {
+    const sixMonthsAgo = new Date(now);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    fromDate = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, '0')}-${String(sixMonthsAgo.getDate()).padStart(2, '0')}`;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    Currentcompany: '113',
+    Companyid: '113',
+    'Content-Type': 'application/json',
+  };
+
+  // 3. Parallel fetch of MRP (19% commission) and Non-MRP (3% commission) datasets
+  const [mrpRes, nonMrpRes] = await Promise.all([
+    fetch('https://admin.hungerbox.com/api/v1/order-charts', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        vendor_ids: HUNGERBOX_MRP_VENDOR_IDS,
+        fromDate,
+        toDate,
+      }),
+    }),
+    fetch('https://admin.hungerbox.com/api/v1/order-charts', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        vendor_ids: HUNGERBOX_NON_MRP_VENDOR_IDS,
+        fromDate,
+        toDate,
+      }),
+    }),
+  ]);
+
+  if (!mrpRes.ok || !nonMrpRes.ok) {
+    throw new Error(`HungerBox order-charts API returned error (MRP: ${mrpRes.status}, Non-MRP: ${nonMrpRes.status})`);
+  }
+
+  const mrpJson = await mrpRes.json();
+  const nonMrpJson = await nonMrpRes.json();
+
+  const mrpData: any[] = mrpJson.data || [];
+  const nonMrpData: any[] = nonMrpJson.data || [];
+
+  // 4. Map Organizations to Company Sites
+  const siteMap: Record<string, { siteId: SiteId; name: string }> = {
+    'DSM Shared Services India Private Limited': { siteId: 'dsm', name: 'DSM' },
+    'New Relic One India Private Limited': { siteId: 'newrelic', name: 'NewRelic' },
+    'NTT Data': { siteId: 'ntt_data', name: 'NTT Data' },
+    'CGI Information Systems & Management Consultants Pvt Ltd': { siteId: 'newrelic', name: 'NewRelic' },
+    'Madala Holdings Limited': { siteId: 'newrelic', name: 'NewRelic' },
+  };
+
+  // 5. Aggregate by date & site
+  const ledger: Record<
+    string,
+    {
+      date: string;
+      siteId: SiteId;
+      siteName: string;
+      mrpSales: number;
+      mrpOrders: number;
+      nonMrpSales: number;
+      nonMrpOrders: number;
+    }
+  > = {};
+
+  for (const item of mrpData) {
+    if (item.org === 'Total eCafe') continue;
+    const mapping = siteMap[item.org] || { siteId: 'newrelic', name: item.org };
+    const key = `${item.date}_${mapping.siteId}`;
+    if (!ledger[key]) {
+      ledger[key] = {
+        date: item.date,
+        siteId: mapping.siteId,
+        siteName: mapping.name,
+        mrpSales: 0,
+        mrpOrders: 0,
+        nonMrpSales: 0,
+        nonMrpOrders: 0,
+      };
+    }
+    ledger[key].mrpSales += parseFloat(item.order_value) || 0;
+    ledger[key].mrpOrders += parseInt(item.delivered_orders, 10) || 0;
+  }
+
+  for (const item of nonMrpData) {
+    if (item.org === 'Total eCafe') continue;
+    const mapping = siteMap[item.org] || { siteId: 'newrelic', name: item.org };
+    const key = `${item.date}_${mapping.siteId}`;
+    if (!ledger[key]) {
+      ledger[key] = {
+        date: item.date,
+        siteId: mapping.siteId,
+        siteName: mapping.name,
+        mrpSales: 0,
+        mrpOrders: 0,
+        nonMrpSales: 0,
+        nonMrpOrders: 0,
+      };
+    }
+    ledger[key].nonMrpSales += parseFloat(item.order_value) || 0;
+    ledger[key].nonMrpOrders += parseInt(item.delivered_orders, 10) || 0;
+  }
+
+  // 6. Build typed HungerBoxDailyAggregate objects with exact calculations
+  const dailyAggregates: HungerBoxDailyAggregate[] = Object.values(ledger).map((row) => {
+    const mrpSales = Math.round(row.mrpSales * 100) / 100;
+    const nonMrpSales = Math.round(row.nonMrpSales * 100) / 100;
+    const mrpCommission = Math.round(mrpSales * 0.19 * 100) / 100;
+    const nonMrpCommission = Math.round(nonMrpSales * 0.03 * 100) / 100;
+    const mrpNet = Math.round((mrpSales - mrpCommission) * 100) / 100;
+    const nonMrpNet = Math.round((nonMrpSales - nonMrpCommission) * 100) / 100;
+    const totalCommission = Math.round((mrpCommission + nonMrpCommission) * 100) / 100;
+    const totalAmount = Math.round((mrpSales + nonMrpSales) * 100) / 100;
+    const netSales = Math.round((totalAmount - totalCommission) * 100) / 100;
+    const orderCount = row.mrpOrders + row.nonMrpOrders;
+
+    return {
+      date: row.date,
+      displayDate: formatOrdinalDate(row.date),
+      siteId: row.siteId,
+      locationName: row.siteName,
+      totalAmount,
+      orderCount,
+      uniqueOrdersCount: orderCount,
+      mrpSales,
+      mrpCommission,
+      mrpNet,
+      nonMrpSales,
+      nonMrpCommission,
+      nonMrpNet,
+      totalCommission,
+      netSales,
+      mealSessions: [
+        { session: 'MRP Counter Sales', amount: mrpSales, count: row.mrpOrders },
+        { session: 'Kitchen & Fresh Food', amount: nonMrpSales, count: row.nonMrpOrders },
+      ],
+      topItems: [],
+      orders: [],
+    };
+  });
+
+  // Sort chronologically ascending
+  dailyAggregates.sort((a, b) => a.date.localeCompare(b.date));
+
+  let totalOrders = 0;
+  let totalSales = 0;
+  let totalMrpSales = 0;
+  let totalNonMrpSales = 0;
+
+  for (const a of dailyAggregates) {
+    totalOrders += a.orderCount;
+    totalSales += a.totalAmount;
+    totalMrpSales += a.mrpSales;
+    totalNonMrpSales += a.nonMrpSales;
+  }
+
+  let feedResults: FeedResult[] = [];
+  if (!params?.skipFirestore && dailyAggregates.length > 0) {
+    feedResults = await feedHungerBoxAggregatesToTuckshop(dailyAggregates, userEmail, true);
+  }
+
+  return {
+    success: true,
+    totalOrders,
+    totalSales: Math.round(totalSales * 100) / 100,
+    totalMrpSales: Math.round(totalMrpSales * 100) / 100,
+    totalNonMrpSales: Math.round(totalNonMrpSales * 100) / 100,
+    dailyAggregates,
+    feedResults,
+  };
 }
 
 /**

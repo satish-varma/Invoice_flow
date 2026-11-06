@@ -167,9 +167,13 @@ export async function POST(request: Request) {
       }
 
       // If worker runs asynchronously, look up any orders in Turso for the target date range
-      const targetDate = body.startDate || parseDateToYmd(new Date());
-      const recentSales = await getHungerBoxSales('default', 300);
-      const matchingSales = recentSales.filter((s) => (s.orderDate || '').startsWith(targetDate));
+      const startDate = body.startDate || parseDateToYmd(new Date());
+      const endDate = body.endDate || startDate;
+      const recentSales = await getHungerBoxSales('default', 1000);
+      const matchingSales = recentSales.filter((s) => {
+        const d = (s.orderDate || '').split('T')[0];
+        return d >= startDate && d <= endDate;
+      });
 
       if (matchingSales.length > 0) {
         const rows = matchingSales.map((s) => ({
@@ -185,7 +189,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
           success: true,
-          message: `Worker triggered and synced ${matchingSales.length} orders into Tuckshop ledger.`,
+          message: `Worker synced ${matchingSales.length} orders into Tuckshop ledger across ${feedResults.length} day(s).`,
           feedResults,
           workerResponse: workerRes,
         });
@@ -193,7 +197,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: 'HungerBox Sync worker triggered successfully. Data stream is running in the background.',
+        message: 'HungerBox Sync worker triggered successfully! The background scraper is pulling orders.',
         workerResponse: workerRes,
       });
     }

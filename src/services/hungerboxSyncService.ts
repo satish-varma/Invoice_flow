@@ -159,7 +159,7 @@ export async function triggerHungerBoxWorker(params: {
   }
 
   const payload = {
-    id: 'hungerbox_tuckshop_sync',
+    id: 'hungerbox',
     organizationId: params.orgId || 'default',
     startDate: params.startDate,
     endDate: params.endDate,

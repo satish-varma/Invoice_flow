@@ -24,6 +24,10 @@ import {
   ExternalLink,
   ShieldCheck,
   History,
+  Percent,
+  Receipt,
+  Tag,
+  Filter,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +42,57 @@ import { subscribeCompanySites } from '@/services/siteService';
 import { HungerBoxSyncModal } from '@/components/newrelic/tuckshop/HungerBoxSyncModal';
 import { HungerBoxSale } from '@/lib/tracker/types';
 import { triggerHaptic } from '@/lib/haptics';
+import { formatOrdinalDate } from '@/services/hungerboxParser';
+
+/**
+ * Robust financial extractor ensuring 100% calculation consistency across rows
+ */
+function getRecordFinancials(r: NewRelicTuckshopRecord) {
+  const gross = Number(r.amount) || 0;
+  let mrp = r.mrpSales !== undefined ? Number(r.mrpSales) : 0;
+  let nonMrp = r.nonMrpSales !== undefined ? Number(r.nonMrpSales) : 0;
+
+  // Fallback for legacy records without explicit split
+  if (r.mrpSales === undefined && r.nonMrpSales === undefined) {
+    const isPackaged = /tuck|bakery|packaged/i.test(`${r.location || ''} ${r.description || ''}`);
+    if (isPackaged) {
+      mrp = gross;
+      nonMrp = 0;
+    } else {
+      nonMrp = gross;
+      mrp = 0;
+    }
+  }
+
+  const mrpComm =
+    r.mrpCommission !== undefined
+      ? Number(r.mrpCommission)
+      : Math.round(mrp * 0.19 * 100) / 100;
+  const nonMrpComm =
+    r.nonMrpCommission !== undefined
+      ? Number(r.nonMrpCommission)
+      : Math.round(nonMrp * 0.03 * 100) / 100;
+  const totalComm =
+    r.totalCommission !== undefined
+      ? Number(r.totalCommission)
+      : Math.round((mrpComm + nonMrpComm) * 100) / 100;
+  const net =
+    r.netSales !== undefined
+      ? Number(r.netSales)
+      : Math.round((gross - totalComm) * 100) / 100;
+
+  return {
+    gross,
+    mrp,
+    mrpComm,
+    mrpNet: Math.round((mrp - mrpComm) * 100) / 100,
+    nonMrp,
+    nonMrpComm,
+    nonMrpNet: Math.round((nonMrp - nonMrpComm) * 100) / 100,
+    totalComm,
+    net,
+  };
+}
 
 export default function AllSitesSalesPage() {
   const [records, setRecords] = useState<NewRelicTuckshopRecord[]>([]);
@@ -225,6 +280,10 @@ export default function AllSitesSalesPage() {
 
     const monthStartStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 
+    const sixMonthsAgo = new Date(now);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const sixMonthsAgoStr = formatYmd(sixMonthsAgo);
+
     return records.filter((r) => {
       const recDate = (r.date || '').split('T')[0];
       const recSite = resolveSiteId(r.siteId);
@@ -243,58 +302,141 @@ export default function AllSitesSalesPage() {
       if (selectedDateFilter === 'yesterday' && recDate !== yesterdayStr) return false;
       if (selectedDateFilter === 'week' && (recDate < weekAgoStr || recDate > todayStr)) return false;
       if (selectedDateFilter === 'month' && (recDate < monthStartStr || recDate > todayStr)) return false;
+      if (selectedDateFilter === '6months' && recDate < sixMonthsAgoStr) return false;
       if (selectedDateFilter === 'custom') {
         if (customStartDate && recDate < customStartDate) return false;
         if (customEndDate && recDate > customEndDate) return false;
       }
 
-      // Search term
+      // Search term (searches raw date, ordinal date, site, location, description)
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
         const siteName = COMPANY_SITES[recSite]?.name?.toLowerCase() || '';
         const desc = (r.description || '').toLowerCase();
         const loc = (r.location || '').toLowerCase();
-        if (!siteName.includes(q) && !desc.includes(q) && !loc.includes(q) && !recDate.includes(q)) {
+        const ordDate = formatOrdinalDate(recDate).toLowerCase();
+        if (
+          !siteName.includes(q) &&
+          !desc.includes(q) &&
+          !loc.includes(q) &&
+          !recDate.includes(q) &&
+          !ordDate.includes(q)
+        ) {
           return false;
         }
       }
 
       return true;
     });
-  }, [records, selectedSiteFilter, selectedDateFilter, customStartDate, customEndDate, sourceFilter, searchTerm]);
+  }, [
+    records,
+    selectedSiteFilter,
+    selectedDateFilter,
+    customStartDate,
+    customEndDate,
+    sourceFilter,
+    searchTerm,
+  ]);
 
-  // Aggregate Metrics
-  const totalSalesAmount = useMemo(() => {
-    return filteredRecords.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  // Aggregate Metrics with MRP vs Non-MRP Separation
+  const financials = useMemo(() => {
+    let totalGross = 0;
+    let totalMrp = 0;
+    let totalMrpComm = 0;
+    let totalNonMrp = 0;
+    let totalNonMrpComm = 0;
+    let totalCommission = 0;
+    let totalNet = 0;
+    let totalOrders = 0;
+
+    for (const r of filteredRecords) {
+      const f = getRecordFinancials(r);
+      totalGross += f.gross;
+      totalMrp += f.mrp;
+      totalMrpComm += f.mrpComm;
+      totalNonMrp += f.nonMrp;
+      totalNonMrpComm += f.nonMrpComm;
+      totalCommission += f.totalComm;
+      totalNet += f.net;
+      totalOrders += r.orderCount || 1;
+    }
+
+    const effectiveCommRate =
+      totalGross > 0 ? ((totalCommission / totalGross) * 100).toFixed(1) : '0.0';
+    const aov = totalOrders > 0 ? (totalGross / totalOrders).toFixed(1) : '0.0';
+
+    return {
+      totalGross: Math.round(totalGross),
+      totalMrp: Math.round(totalMrp),
+      totalMrpComm: Math.round(totalMrpComm),
+      totalNonMrp: Math.round(totalNonMrp),
+      totalNonMrpComm: Math.round(totalNonMrpComm),
+      totalCommission: Math.round(totalCommission),
+      totalNet: Math.round(totalNet),
+      totalOrders,
+      effectiveCommRate,
+      aov,
+    };
   }, [filteredRecords]);
-
-  const netEarningsAmount = totalSalesAmount * 0.8; // 20% platform commission
-
-  const totalOrdersCount = useMemo(() => {
-    return filteredRecords.reduce((sum, r) => sum + (r.orderCount || 1), 0);
-  }, [filteredRecords]);
-
-  const avgOrderTicket = totalOrdersCount > 0 ? totalSalesAmount / totalOrdersCount : 0;
 
   // Multi-Site Performance Breakdown
   const sitePerformance = useMemo(() => {
-    const map = new Map<string, { siteId: string; name: string; sales: number; orders: number }>();
+    const map = new Map<
+      string,
+      {
+        siteId: string;
+        name: string;
+        gross: number;
+        mrp: number;
+        nonMrp: number;
+        totalComm: number;
+        net: number;
+        orders: number;
+        recordsCount: number;
+      }
+    >();
 
     for (const [sId, site] of Object.entries(COMPANY_SITES)) {
-      map.set(sId, { siteId: sId, name: site.name, sales: 0, orders: 0 });
+      map.set(sId, {
+        siteId: sId,
+        name: site.name,
+        gross: 0,
+        mrp: 0,
+        nonMrp: 0,
+        totalComm: 0,
+        net: 0,
+        orders: 0,
+        recordsCount: 0,
+      });
     }
 
     for (const r of filteredRecords) {
       const sId = resolveSiteId(r.siteId);
       if (!map.has(sId)) {
-        map.set(sId, { siteId: sId, name: COMPANY_SITES[sId]?.name || sId, sales: 0, orders: 0 });
+        map.set(sId, {
+          siteId: sId,
+          name: COMPANY_SITES[sId]?.name || sId,
+          gross: 0,
+          mrp: 0,
+          nonMrp: 0,
+          totalComm: 0,
+          net: 0,
+          orders: 0,
+          recordsCount: 0,
+        });
       }
       const item = map.get(sId)!;
-      item.sales += Number(r.amount) || 0;
+      const f = getRecordFinancials(r);
+      item.gross += f.gross;
+      item.mrp += f.mrp;
+      item.nonMrp += f.nonMrp;
+      item.totalComm += f.totalComm;
+      item.net += f.net;
       item.orders += r.orderCount || 1;
+      item.recordsCount += 1;
     }
 
-    return Array.from(map.values()).sort((a, b) => b.sales - a.sales);
+    return Array.from(map.values()).sort((a, b) => b.gross - a.gross);
   }, [filteredRecords]);
 
   // Filtered Telemetry Stream
@@ -305,39 +447,51 @@ export default function AllSitesSalesPage() {
         const idMatch = o.orderId.toLowerCase().includes(q);
         const itemMatch = (o.itemName || '').toLowerCase().includes(q);
         const cafeMatch = (o.cafeteriaName || '').toLowerCase().includes(q);
-        if (!idMatch && !itemMatch && !cafeMatch) return false;
+        const ordDateMatch = formatOrdinalDate(o.orderDate).toLowerCase().includes(q);
+        if (!idMatch && !itemMatch && !cafeMatch && !ordDateMatch) return false;
       }
       return true;
     });
   }, [telemetryOrders, searchTerm]);
 
-  // Export to Excel
+  // Export to Excel with separate MRP / Non-MRP and exact "1st-jan-26" dates
   const handleExportExcel = () => {
     triggerHaptic('light');
     const rows = filteredRecords.map((r) => {
       const sId = resolveSiteId(r.siteId);
+      const f = getRecordFinancials(r);
       return {
-        'Date': (r.date || '').split('T')[0],
+        'Date': formatOrdinalDate(r.date),
+        'Raw Date (YYYY-MM-DD)': (r.date || '').split('T')[0],
         'Site ID': sId,
         'Site Name': COMPANY_SITES[sId]?.name || sId,
-        'Location': r.location || '',
-        'Source': r.source === 'hungerbox' ? 'HungerBox Cashless' : 'Manual',
-        'Gross Sales (₹)': r.amount,
-        'Net Earnings (80%) (₹)': Math.round(r.amount * 0.8),
+        'Location / Stall': r.location || '',
+        'Source': r.source === 'hungerbox' ? 'HungerBox Cashless' : 'Manual Entry',
+        'MRP Sales (₹)': Math.round(f.mrp),
+        'MRP Comm (19%) (₹)': Math.round(f.mrpComm),
+        'MRP Net (81%) (₹)': Math.round(f.mrpNet),
+        'Non-MRP Sales (₹)': Math.round(f.nonMrp),
+        'Non-MRP Comm (3%) (₹)': Math.round(f.nonMrpComm),
+        'Non-MRP Net (97%) (₹)': Math.round(f.nonMrpNet),
+        'Total HungerBox Commission (₹)': Math.round(f.totalComm),
+        'Total Gross Sale (₹)': Math.round(f.gross),
+        'Total Sale After Commission (Net Payout) (₹)': Math.round(f.net),
         'Orders Count': r.orderCount || 1,
-        'Description / Sessions': r.description || '',
-        'Logged By': r.createdBy || '',
+        'Session / Notes': r.description || '',
       };
     });
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'All Sites Sales');
-    XLSX.writeFile(workbook, `Tuckshop_Sales_All_Sites_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Multi-Site Sales');
+    XLSX.writeFile(
+      workbook,
+      `Tuckshop_Sales_Reconciliation_${formatOrdinalDate(new Date().toISOString().split('T')[0])}.xlsx`
+    );
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-5">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-6">
       {/* Top Breadcrumb & Navigation */}
       <div className="flex items-center justify-between gap-3">
         <Link
@@ -349,8 +503,17 @@ export default function AllSitesSalesPage() {
         </Link>
 
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-900 border-amber-300 font-black uppercase">
+          <Badge
+            variant="outline"
+            className="text-[10px] bg-amber-50 text-amber-900 border-amber-300 font-black uppercase tracking-wider"
+          >
             ⚡ 100% Cashless App Orders
+          </Badge>
+          <Badge
+            variant="outline"
+            className="text-[10px] bg-indigo-50 text-indigo-900 border-indigo-300 font-black uppercase tracking-wider"
+          >
+            📊 MRP (19%) &amp; Non-MRP (3%) Split
           </Badge>
         </div>
       </div>
@@ -371,14 +534,14 @@ export default function AllSitesSalesPage() {
                   Multi-Site Hub
                 </span>
                 <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full">
-                  All Sites Telemetry
+                  6-Month Ledger Fed
                 </span>
               </div>
               <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                All Sites Sales &amp; HungerBox Telemetry
+                All Sites Sales &amp; Commission Reconciliation
               </h1>
               <p className="text-xs text-rose-100/80 font-medium mt-0.5">
-                Consolidated digital sales, automated HungerBox sync status, and performance breakdown across all cafeterias.
+                Separate MRP (19% fee) &amp; Non-MRP (3% fee) breakdown, HungerBox digital ledger, and site-by-site net payouts.
               </p>
             </div>
           </div>
@@ -401,19 +564,27 @@ export default function AllSitesSalesPage() {
               className="h-10 px-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border-white/20 text-white font-bold text-xs active:scale-95 transition-all"
             >
               <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" />
-              Export Excel
+              Export Excel (Reconciliation)
             </Button>
           </div>
         </div>
       </div>
 
-      {/* 🔴 LIVE DATA PULL STATUS BANNER (Answers: "How do we know is the data pulled or not") */}
+      {/* 🔴 LIVE DATA PULL STATUS BANNER */}
       <div className="rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="relative flex items-center justify-center">
-              <span className={`w-3.5 h-3.5 rounded-full ${syncStatus.workerConfigured ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-              <span className={`absolute w-3.5 h-3.5 rounded-full ${syncStatus.workerConfigured ? 'bg-emerald-400 animate-ping' : ''} opacity-75`} />
+              <span
+                className={`w-3.5 h-3.5 rounded-full ${
+                  syncStatus.workerConfigured ? 'bg-emerald-500' : 'bg-amber-500'
+                }`}
+              />
+              <span
+                className={`absolute w-3.5 h-3.5 rounded-full ${
+                  syncStatus.workerConfigured ? 'bg-emerald-400 animate-ping' : ''
+                } opacity-75`}
+              />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -428,7 +599,9 @@ export default function AllSitesSalesPage() {
                       : 'bg-amber-50 text-amber-800 border-amber-300'
                   }`}
                 >
-                  {syncStatus.workerConfigured ? '🟢 Scraper Worker Active' : '🟡 Manual / Report Mode'}
+                  {syncStatus.workerConfigured
+                    ? '🟢 Scraper Worker Active'
+                    : '🟡 Manual / Report Mode'}
                 </Badge>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
@@ -439,7 +612,8 @@ export default function AllSitesSalesPage() {
                   rel="noopener noreferrer"
                   className="font-bold text-[#3b2fc9] dark:text-indigo-400 hover:underline inline-flex items-center gap-0.5"
                 >
-                  admin.hungerbox.com/va/reporting/download-reports <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
+                  admin.hungerbox.com/va/reporting/download-reports{' '}
+                  <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
                 </a>
               </p>
             </div>
@@ -453,7 +627,11 @@ export default function AllSitesSalesPage() {
               variant="outline"
               className="h-8 rounded-xl font-bold text-xs border-amber-300 text-amber-900 bg-amber-50 hover:bg-amber-100"
             >
-              <Zap className={`w-3 h-3 mr-1.5 text-amber-600 ${isAggregating ? 'animate-spin' : ''}`} />
+              <Zap
+                className={`w-3 h-3 mr-1.5 text-amber-600 ${
+                  isAggregating ? 'animate-spin' : ''
+                }`}
+              />
               {isAggregating ? 'Aggregating...' : 'Aggregate Telemetry to Ledger'}
             </Button>
 
@@ -473,7 +651,9 @@ export default function AllSitesSalesPage() {
         {/* 4 Metadata Cards inside status bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
           <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Cached Orders</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Total Cached Orders
+            </p>
             <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white font-mono mt-0.5">
               {syncStatus.totalOrdersCount.toLocaleString()}
             </p>
@@ -481,30 +661,45 @@ export default function AllSitesSalesPage() {
           </div>
 
           <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Latest Order Date</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Latest Order Date
+            </p>
             <p className="text-base sm:text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono mt-0.5">
-              {syncStatus.latestOrderDate || 'No orders yet'}
+              {syncStatus.latestOrderDate
+                ? formatOrdinalDate(syncStatus.latestOrderDate)
+                : 'No orders yet'}
             </p>
             <p className="text-[10px] text-slate-400">Most recent transaction</p>
           </div>
 
           <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Last Sync Event</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Last Sync Event
+            </p>
             <p className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200 font-mono mt-1 truncate">
-              {syncStatus.latestSyncedAt ? new Date(syncStatus.latestSyncedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Ready to pull'}
+              {syncStatus.latestSyncedAt
+                ? new Date(syncStatus.latestSyncedAt).toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                : 'Ready to pull'}
             </p>
             <p className="text-[10px] text-slate-400 truncate">
-              {syncStatus.latestSyncedAt ? new Date(syncStatus.latestSyncedAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : 'Never'}
+              {syncStatus.latestSyncedAt
+                ? formatOrdinalDate(syncStatus.latestSyncedAt.split('T')[0])
+                : 'Never'}
             </p>
           </div>
 
           <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sync Integrity</p>
-            <p className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Zero Cash Loss</span>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Daily Ledger Records
             </p>
-            <p className="text-[10px] text-slate-400">100% digital matching</p>
+            <p className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1 font-mono">
+              <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+              <span>{records.length} Daily Days</span>
+            </p>
+            <p className="text-[10px] text-slate-400">6 Months Historical Data</p>
           </div>
         </div>
 
@@ -517,147 +712,283 @@ export default function AllSitesSalesPage() {
                 : 'bg-rose-50 text-rose-800 border-rose-200'
             }`}
           >
-            {statusMessage.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />}
+            {statusMessage.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+            ) : (
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            )}
             <span>{statusMessage.text}</span>
           </div>
         )}
       </div>
 
-      {/* KPI Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* 🚀 COMPREHENSIVE FINANCIAL KPI SUMMARY CARDS (Gross, MRP 19%, Non-MRP 3%, Comm, Net) */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
         {/* 1. Total Gross Sales */}
         <div className="p-4 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-              <TrendingUp className="w-3.5 h-3.5" /> Gross Sales
-            </span>
-            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-              {filteredRecords.length} records
+            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1">
+              <TrendingUp className="w-3.5 h-3.5 text-blue-600" /> Total Sale
             </span>
           </div>
-          <p className="text-2xl sm:text-3xl font-mono font-black text-slate-900 dark:text-white tracking-tight">
-            ₹{Math.round(totalSalesAmount).toLocaleString('en-IN')}
+          <p className="text-xl sm:text-2xl font-mono font-black text-slate-900 dark:text-white tracking-tight">
+            ₹{financials.totalGross.toLocaleString('en-IN')}
           </p>
-          <p className="text-[10px] text-slate-400 mt-1">Across selected sites &amp; dates</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">
+            {filteredRecords.length} days recorded
+          </p>
         </div>
 
-        {/* 2. Total Net Digital Earnings */}
-        <div className="p-4 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
-              <DollarSign className="w-3.5 h-3.5" /> Net Earnings (80%)
+        {/* 2. MRP Sales (19% Fee) */}
+        <div className="p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-amber-50/50 to-white dark:from-amber-950/20 dark:to-slate-900 border border-amber-200 dark:border-amber-900/40 shadow-sm">
+          <div className="flex items-center justify-between text-amber-800 dark:text-amber-400 mb-1">
+            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider flex items-center gap-1">
+              <Tag className="w-3 h-3 text-amber-600" /> MRP Sales
             </span>
-            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
-              Payout
-            </span>
+            <Badge className="text-[9px] bg-amber-500 text-white font-mono px-1 py-0 h-4">
+              19% Comm
+            </Badge>
           </div>
-          <p className="text-2xl sm:text-3xl font-mono font-black text-indigo-950 dark:text-indigo-200 tracking-tight">
-            ₹{Math.round(netEarningsAmount).toLocaleString('en-IN')}
+          <p className="text-xl sm:text-2xl font-mono font-black text-amber-950 dark:text-amber-200 tracking-tight">
+            ₹{financials.totalMrp.toLocaleString('en-IN')}
           </p>
-          <p className="text-[10px] text-slate-400 mt-1">After 20% commission</p>
+          <p className="text-[10px] text-amber-700 dark:text-amber-400 font-bold mt-0.5">
+            Fee: -₹{financials.totalMrpComm.toLocaleString('en-IN')}
+          </p>
         </div>
 
-        {/* 3. Total Customer Orders */}
-        <div className="p-4 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1">
-              <ShoppingBag className="w-3.5 h-3.5" /> Total Orders
+        {/* 3. Non-MRP Sales (3% Fee) */}
+        <div className="p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-purple-50/50 to-white dark:from-purple-950/20 dark:to-slate-900 border border-purple-200 dark:border-purple-900/40 shadow-sm">
+          <div className="flex items-center justify-between text-purple-800 dark:text-purple-400 mb-1">
+            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider flex items-center gap-1">
+              <Receipt className="w-3 h-3 text-purple-600" /> Non-MRP Sales
             </span>
-            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
-              App Tickets
-            </span>
+            <Badge className="text-[9px] bg-purple-600 text-white font-mono px-1 py-0 h-4">
+              3% Comm
+            </Badge>
           </div>
-          <p className="text-2xl sm:text-3xl font-mono font-black text-slate-900 dark:text-white tracking-tight">
-            {totalOrdersCount.toLocaleString('en-IN')}
+          <p className="text-xl sm:text-2xl font-mono font-black text-purple-950 dark:text-purple-200 tracking-tight">
+            ₹{financials.totalNonMrp.toLocaleString('en-IN')}
           </p>
-          <p className="text-[10px] text-slate-400 mt-1">Digital customer tokens</p>
+          <p className="text-[10px] text-purple-700 dark:text-purple-400 font-bold mt-0.5">
+            Fee: -₹{financials.totalNonMrpComm.toLocaleString('en-IN')}
+          </p>
         </div>
 
-        {/* 4. Average Order Value */}
-        <div className="p-4 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400 flex items-center gap-1">
-              <Zap className="w-3.5 h-3.5" /> Avg Ticket (AOV)
-            </span>
-            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200">
-              Per Order
+        {/* 4. Total Commission Deducted */}
+        <div className="p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-rose-50/50 to-white dark:from-rose-950/20 dark:to-slate-900 border border-rose-200 dark:border-rose-900/40 shadow-sm">
+          <div className="flex items-center justify-between text-rose-800 dark:text-rose-400 mb-1">
+            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider flex items-center gap-1">
+              <Percent className="w-3 h-3 text-rose-600" /> Total Commission
             </span>
           </div>
-          <p className="text-2xl sm:text-3xl font-mono font-black text-slate-900 dark:text-white tracking-tight">
-            ₹{avgOrderTicket.toFixed(1)}
+          <p className="text-xl sm:text-2xl font-mono font-black text-rose-600 dark:text-rose-400 tracking-tight">
+            -₹{financials.totalCommission.toLocaleString('en-IN')}
           </p>
-          <p className="text-[10px] text-slate-400 mt-1">Counter basket size</p>
+          <p className="text-[10px] text-rose-700 dark:text-rose-400 font-bold mt-0.5">
+            Avg Effective: {financials.effectiveCommRate}%
+          </p>
+        </div>
+
+        {/* 5. Total Sale After Commission (Net Payout) */}
+        <div className="p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-emerald-50/60 to-white dark:from-emerald-950/30 dark:to-slate-900 border-2 border-emerald-400/80 shadow-md">
+          <div className="flex items-center justify-between text-emerald-800 dark:text-emerald-400 mb-1">
+            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider flex items-center gap-1">
+              <DollarSign className="w-3.5 h-3.5 text-emerald-600" /> Net Sale Payout
+            </span>
+            <Badge className="text-[9px] bg-emerald-600 text-white font-mono px-1 py-0 h-4">
+              Vendor Net
+            </Badge>
+          </div>
+          <p className="text-xl sm:text-2xl font-mono font-black text-emerald-700 dark:text-emerald-300 tracking-tight">
+            ₹{financials.totalNet.toLocaleString('en-IN')}
+          </p>
+          <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold mt-0.5">
+            After 19% &amp; 3% cuts
+          </p>
+        </div>
+
+        {/* 6. Total Orders & AOV */}
+        <div className="p-4 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400 mb-1">
+            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1">
+              <ShoppingBag className="w-3.5 h-3.5 text-amber-500" /> Orders
+            </span>
+          </div>
+          <p className="text-xl sm:text-2xl font-mono font-black text-slate-900 dark:text-white tracking-tight">
+            {financials.totalOrders.toLocaleString('en-IN')}
+          </p>
+          <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+            AOV: ₹{financials.aov} / ticket
+          </p>
         </div>
       </div>
 
-      {/* Cross-Site Performance Breakdown Pills */}
-      <div className="space-y-2">
+      {/* 🏢 PROMINENT MULTI-SITE SELECTOR CARDS */}
+      <div className="space-y-2.5">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-black uppercase tracking-wider text-slate-500">
-            Site Breakdown &amp; Performance
+          <p className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+            <Building2 className="w-3.5 h-3.5 text-[#3b2fc9]" />
+            Site Filter &amp; Performance Breakdown
           </p>
-          <span className="text-[11px] text-slate-400 font-medium">Click site to filter</span>
+          <span className="text-[11px] text-slate-400 font-medium">
+            Click any site card to filter records
+          </span>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          {/* All Sites Pill */}
           <button
             type="button"
-            onClick={() => setSelectedSiteFilter('all')}
-            className={`p-3 rounded-2xl border text-left transition-all ${
+            onClick={() => {
+              triggerHaptic('light');
+              setSelectedSiteFilter('all');
+            }}
+            className={`p-3.5 rounded-2xl border text-left transition-all ${
               selectedSiteFilter === 'all'
-                ? 'border-[#3b2fc9] bg-indigo-50/60 dark:bg-indigo-950/40 ring-1 ring-[#3b2fc9]'
+                ? 'border-[#3b2fc9] bg-indigo-50/70 dark:bg-indigo-950/40 ring-2 ring-[#3b2fc9]/80 shadow-sm'
                 : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300'
             }`}
           >
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-black text-slate-900 dark:text-white">All Sites</span>
-              <Badge variant="outline" className="text-[9px] font-mono">100%</Badge>
+              <span className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1">
+                All Sites
+              </span>
+              <Badge
+                variant="outline"
+                className={`text-[9px] font-mono font-bold ${
+                  selectedSiteFilter === 'all' ? 'bg-[#3b2fc9] text-white border-transparent' : ''
+                }`}
+              >
+                {filteredRecords.length} days
+              </Badge>
             </div>
             <p className="text-base font-black text-[#3b2fc9] dark:text-indigo-400 font-mono">
-              ₹{Math.round(totalSalesAmount).toLocaleString('en-IN')}
+              ₹{financials.totalGross.toLocaleString('en-IN')}
             </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">{totalOrdersCount} orders total</p>
+            <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
+              <span>Net: ₹{financials.totalNet.toLocaleString('en-IN')}</span>
+              <span>{financials.totalOrders} ord</span>
+            </div>
           </button>
 
+          {/* Individual Site Cards */}
           {sitePerformance.map((sp) => {
-            const share = totalSalesAmount > 0 ? (sp.sales / totalSalesAmount) * 100 : 0;
             const isSelected = selectedSiteFilter === sp.siteId;
             return (
               <button
                 key={sp.siteId}
                 type="button"
-                onClick={() => setSelectedSiteFilter(isSelected ? 'all' : sp.siteId)}
-                className={`p-3 rounded-2xl border text-left transition-all ${
+                onClick={() => {
+                  triggerHaptic('light');
+                  setSelectedSiteFilter(isSelected ? 'all' : sp.siteId);
+                }}
+                className={`p-3.5 rounded-2xl border text-left transition-all ${
                   isSelected
-                    ? 'border-[#3b2fc9] bg-indigo-50/60 dark:bg-indigo-950/40 ring-1 ring-[#3b2fc9]'
+                    ? 'border-[#3b2fc9] bg-indigo-50/70 dark:bg-indigo-950/40 ring-2 ring-[#3b2fc9]/80 shadow-sm'
                     : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-black text-slate-900 dark:text-white truncate max-w-[120px]">{sp.name}</span>
-                  <Badge variant="outline" className="text-[9px] font-mono">{share.toFixed(0)}%</Badge>
+                  <span className="text-xs font-black text-slate-900 dark:text-white truncate max-w-[130px]">
+                    {sp.name}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className={`text-[9px] font-mono font-bold ${
+                      isSelected ? 'bg-[#3b2fc9] text-white border-transparent' : ''
+                    }`}
+                  >
+                    {sp.recordsCount} days
+                  </Badge>
                 </div>
                 <p className="text-base font-black text-slate-900 dark:text-white font-mono">
-                  ₹{Math.round(sp.sales).toLocaleString('en-IN')}
+                  ₹{Math.round(sp.gross).toLocaleString('en-IN')}
                 </p>
-                <p className="text-[10px] text-slate-400 mt-0.5">{sp.orders} orders</p>
+                <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                    Net: ₹{Math.round(sp.net).toLocaleString('en-IN')}
+                  </span>
+                  <span>{sp.orders} ord</span>
+                </div>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Control Filter Bar */}
-      <div className="p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+      {/* FILTER CONTROL BAR */}
+      <div className="p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3.5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          {/* Date range presets */}
-          <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Prominent Site Filter Dropdown / Selector Bar */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1">
+              <Filter className="w-3 h-3 text-indigo-600" /> Site:
+            </span>
+            <div className="inline-flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => setSelectedSiteFilter('all')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  selectedSiteFilter === 'all'
+                    ? 'bg-white dark:bg-slate-900 text-[#3b2fc9] shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                All Sites
+              </button>
+              {Object.entries(COMPANY_SITES).map(([sId, site]) => (
+                <button
+                  key={sId}
+                  type="button"
+                  onClick={() => setSelectedSiteFilter(sId)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                    selectedSiteFilter === sId
+                      ? 'bg-white dark:bg-slate-900 text-[#3b2fc9] shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  {site.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Source filters */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-slate-400 uppercase">Channel:</span>
             {[
-              { id: 'today', label: 'Today' },
-              { id: 'yesterday', label: 'Yesterday' },
-              { id: 'week', label: 'Last 7 Days' },
+              { id: 'all', label: 'All Channels' },
+              { id: 'hungerbox', label: '⚡ HungerBox Cashless' },
+              { id: 'manual', label: 'Manual Entry' },
+            ].map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setSourceFilter(s.id as any)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  sourceFilter === s.id
+                    ? 'bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-300'
+                    : 'bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Date range presets */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] font-bold text-slate-400 uppercase mr-1">Timeframe:</span>
+            {[
+              { id: 'all', label: 'All Time (Full History)' },
+              { id: '6months', label: '📅 Last 6 Months' },
               { id: 'month', label: 'This Month' },
-              { id: 'all', label: 'All Time' },
+              { id: 'week', label: 'Last 7 Days' },
+              { id: 'yesterday', label: 'Yesterday' },
+              { id: 'today', label: 'Today' },
               { id: 'custom', label: 'Custom Range' },
             ].map((p) => (
               <button
@@ -678,27 +1009,15 @@ export default function AllSitesSalesPage() {
             ))}
           </div>
 
-          {/* Source filters */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Source:</span>
-            {[
-              { id: 'all', label: 'All' },
-              { id: 'hungerbox', label: '⚡ HungerBox' },
-              { id: 'manual', label: 'Manual' },
-            ].map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setSourceFilter(s.id as any)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                  sourceFilter === s.id
-                    ? 'bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-300'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100'
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
+          {/* Search bar */}
+          <div className="relative w-full sm:w-80">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input
+              placeholder="Search date (e.g. 1st-jan-26), site, item..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-9 pl-9 text-xs rounded-xl bg-slate-50/60 dark:bg-slate-800/40 border-slate-200/80"
+            />
           </div>
         </div>
 
@@ -725,17 +1044,6 @@ export default function AllSitesSalesPage() {
             </div>
           </div>
         )}
-
-        {/* Search bar */}
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <Input
-            placeholder="Search date (YYYY-MM-DD), site, location, session notes, or items..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-9 pl-9 text-xs rounded-xl bg-slate-50/60 dark:bg-slate-800/40 border-slate-200/80"
-          />
-        </div>
       </div>
 
       {/* Main Tabbed Views */}
@@ -755,7 +1063,7 @@ export default function AllSitesSalesPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* TAB 1: CONSOLIDATED DAILY SITE LEDGER */}
+        {/* TAB 1: CONSOLIDATED DAILY SITE LEDGER (SEPARATE MRP & NON-MRP COLUMNS + ORDINAL DATES) */}
         <TabsContent value="ledger">
           <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -767,7 +1075,9 @@ export default function AllSitesSalesPage() {
               ) : filteredRecords.length === 0 ? (
                 <div className="p-16 text-center text-slate-500 space-y-3">
                   <Store className="h-10 w-10 text-slate-300 mx-auto" />
-                  <p className="font-bold text-slate-800 dark:text-white">No sales records found for current filters</p>
+                  <p className="font-bold text-slate-800 dark:text-white">
+                    No sales records found for current filters
+                  </p>
                   <p className="text-xs text-slate-400 max-w-sm mx-auto">
                     Try adjusting your site or date filter, or trigger a HungerBox automated sync.
                   </p>
@@ -782,14 +1092,32 @@ export default function AllSitesSalesPage() {
               ) : (
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase text-[10px] tracking-wider">
-                      <th className="py-3 px-4">Date</th>
-                      <th className="py-3 px-4">Site / Cafeteria</th>
-                      <th className="py-3 px-4">Source</th>
-                      <th className="py-3 px-4">Session Breakdown / Notes</th>
-                      <th className="py-3 px-4 text-center">Orders</th>
-                      <th className="py-3 px-4 text-right">Gross Sales</th>
-                      <th className="py-3 px-4 text-right">Net (80%)</th>
+                    <tr className="bg-slate-50/90 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-black uppercase text-[10px] tracking-wider whitespace-nowrap">
+                      <th className="py-3 px-3.5">Date</th>
+                      <th className="py-3 px-3.5">Site / Cafeteria</th>
+                      <th className="py-3 px-3.5">Source</th>
+                      <th className="py-3 px-3 text-right bg-amber-50/50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-300">
+                        MRP Sale (₹)
+                      </th>
+                      <th className="py-3 px-3 text-right bg-amber-50/50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-400">
+                        MRP Comm (19%)
+                      </th>
+                      <th className="py-3 px-3 text-right bg-purple-50/50 dark:bg-purple-950/20 text-purple-900 dark:text-purple-300">
+                        Non-MRP Sale (₹)
+                      </th>
+                      <th className="py-3 px-3 text-right bg-purple-50/50 dark:bg-purple-950/20 text-purple-800 dark:text-purple-400">
+                        Non-MRP Comm (3%)
+                      </th>
+                      <th className="py-3 px-3 text-right text-rose-700 dark:text-rose-400 font-black">
+                        Total Comm (₹)
+                      </th>
+                      <th className="py-3 px-3 text-right text-slate-900 dark:text-white font-black">
+                        Total Gross (₹)
+                      </th>
+                      <th className="py-3 px-3.5 text-right bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-300 font-black">
+                        Sale After Comm (Net) (₹)
+                      </th>
+                      <th className="py-3 px-3 text-center">Orders</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -797,44 +1125,118 @@ export default function AllSitesSalesPage() {
                       const sId = resolveSiteId(record.siteId);
                       const siteName = COMPANY_SITES[sId]?.name || sId;
                       const isHB = record.source === 'hungerbox' || Boolean(record.orderCount);
-                      const netAmt = record.amount * 0.8;
+                      const f = getRecordFinancials(record);
+                      const formattedDate = formatOrdinalDate(record.date);
 
                       return (
-                        <tr key={record.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                          <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
-                            {(record.date || '').split('T')[0]}
+                        <tr
+                          key={record.id}
+                          className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                        >
+                          {/* Formatted Date: "1st-jan-26" */}
+                          <td className="py-3 px-3.5 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                            <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md text-[11px]">
+                              {formattedDate}
+                            </span>
                           </td>
-                          <td className="py-3 px-4 whitespace-nowrap">
-                            <span className="font-bold text-slate-800 dark:text-slate-200">{siteName}</span>
-                            <span className="text-[10px] text-slate-400 block">{record.location}</span>
+
+                          {/* Site & Location */}
+                          <td className="py-3 px-3.5 whitespace-nowrap">
+                            <span className="font-bold text-slate-900 dark:text-slate-100 block">
+                              {siteName}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block truncate max-w-[130px]">
+                              {record.location || 'Main Cafeteria'}
+                            </span>
                           </td>
-                          <td className="py-3 px-4 whitespace-nowrap">
+
+                          {/* Source */}
+                          <td className="py-3 px-3.5 whitespace-nowrap">
                             {isHB ? (
                               <Badge className="bg-amber-100 hover:bg-amber-100 text-amber-900 border-amber-300 font-black text-[10px] gap-1">
-                                <Zap className="w-2.5 h-2.5 fill-amber-500" /> HungerBox App
+                                <Zap className="w-2.5 h-2.5 fill-amber-500" /> HungerBox
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="text-[10px] font-bold">
-                                Manual Entry
+                                Manual
                               </Badge>
                             )}
                           </td>
-                          <td className="py-3 px-4 max-w-xs truncate text-slate-600 dark:text-slate-300" title={record.description || ''}>
-                            {record.description || 'General counter sales'}
+
+                          {/* MRP Sales */}
+                          <td className="py-3 px-3 text-right font-mono font-bold text-amber-950 dark:text-amber-200 bg-amber-50/30 dark:bg-amber-950/10 whitespace-nowrap">
+                            ₹{Math.round(f.mrp).toLocaleString('en-IN')}
                           </td>
-                          <td className="py-3 px-4 text-center font-mono font-bold text-slate-700 dark:text-slate-300">
+
+                          {/* MRP Commission (19%) */}
+                          <td className="py-3 px-3 text-right font-mono text-amber-800 dark:text-amber-400 bg-amber-50/30 dark:bg-amber-950/10 whitespace-nowrap text-[11px]">
+                            -₹{Math.round(f.mrpComm).toLocaleString('en-IN')}
+                          </td>
+
+                          {/* Non-MRP Sales */}
+                          <td className="py-3 px-3 text-right font-mono font-bold text-purple-950 dark:text-purple-200 bg-purple-50/30 dark:bg-purple-950/10 whitespace-nowrap">
+                            ₹{Math.round(f.nonMrp).toLocaleString('en-IN')}
+                          </td>
+
+                          {/* Non-MRP Commission (3%) */}
+                          <td className="py-3 px-3 text-right font-mono text-purple-800 dark:text-purple-400 bg-purple-50/30 dark:bg-purple-950/10 whitespace-nowrap text-[11px]">
+                            -₹{Math.round(f.nonMrpComm).toLocaleString('en-IN')}
+                          </td>
+
+                          {/* Total Commission */}
+                          <td className="py-3 px-3 text-right font-mono font-black text-rose-600 dark:text-rose-400 whitespace-nowrap">
+                            -₹{Math.round(f.totalComm).toLocaleString('en-IN')}
+                          </td>
+
+                          {/* Total Gross Sale */}
+                          <td className="py-3 px-3 text-right font-mono font-black text-slate-900 dark:text-white whitespace-nowrap text-sm">
+                            ₹{Math.round(f.gross).toLocaleString('en-IN')}
+                          </td>
+
+                          {/* Total Sale After Commission (Net Payout) */}
+                          <td className="py-3 px-3.5 text-right font-mono font-black text-emerald-700 dark:text-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20 whitespace-nowrap text-sm">
+                            ₹{Math.round(f.net).toLocaleString('en-IN')}
+                          </td>
+
+                          {/* Orders */}
+                          <td className="py-3 px-3 text-center font-mono font-bold text-slate-700 dark:text-slate-300">
                             {record.orderCount || 1}
-                          </td>
-                          <td className="py-3 px-4 text-right font-black text-emerald-600 dark:text-emerald-400 font-mono text-sm whitespace-nowrap">
-                            ₹{Math.round(record.amount).toLocaleString('en-IN')}
-                          </td>
-                          <td className="py-3 px-4 text-right font-black text-indigo-900 dark:text-indigo-300 font-mono text-sm whitespace-nowrap">
-                            ₹{Math.round(netAmt).toLocaleString('en-IN')}
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
+                  <tfoot className="bg-slate-100/90 dark:bg-slate-800 font-mono font-black text-xs border-t-2 border-slate-300 dark:border-slate-700">
+                    <tr>
+                      <td colSpan={3} className="py-3.5 px-3.5 text-slate-900 dark:text-white uppercase text-[11px]">
+                        Total Summary ({filteredRecords.length} records)
+                      </td>
+                      <td className="py-3.5 px-3 text-right text-amber-950 dark:text-amber-200">
+                        ₹{financials.totalMrp.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3.5 px-3 text-right text-amber-800 dark:text-amber-400 text-[11px]">
+                        -₹{financials.totalMrpComm.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3.5 px-3 text-right text-purple-950 dark:text-purple-200">
+                        ₹{financials.totalNonMrp.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3.5 px-3 text-right text-purple-800 dark:text-purple-400 text-[11px]">
+                        -₹{financials.totalNonMrpComm.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3.5 px-3 text-right text-rose-600 dark:text-rose-400">
+                        -₹{financials.totalCommission.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3.5 px-3 text-right text-slate-900 dark:text-white text-sm">
+                        ₹{financials.totalGross.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3.5 px-3.5 text-right text-emerald-700 dark:text-emerald-300 text-sm bg-emerald-100/50 dark:bg-emerald-900/30">
+                        ₹{financials.totalNet.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3.5 px-3 text-center text-slate-800 dark:text-white">
+                        {financials.totalOrders.toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               )}
             </div>
@@ -844,8 +1246,8 @@ export default function AllSitesSalesPage() {
         {/* TAB 2: ORDER-BY-ORDER TELEMETRY STREAM */}
         <TabsContent value="telemetry">
           <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-            <div className="p-4 bg-slate-50/60 border-b border-slate-200/80 flex items-center justify-between text-xs">
-              <span className="font-bold text-slate-700">
+            <div className="p-4 bg-slate-50/60 dark:bg-slate-800/50 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-xs">
+              <span className="font-bold text-slate-700 dark:text-slate-300">
                 Live Transaction Tickets (Pulled from HungerBox Scraper)
               </span>
               <span className="text-slate-400">
@@ -862,13 +1264,17 @@ export default function AllSitesSalesPage() {
               ) : filteredTelemetry.length === 0 ? (
                 <div className="p-16 text-center text-slate-500 space-y-2">
                   <ShoppingBag className="h-8 w-8 text-slate-300 mx-auto" />
-                  <p className="font-bold text-slate-700">No telemetry tickets found</p>
-                  <p className="text-xs text-slate-400">Trigger sync to pull latest orders into database.</p>
+                  <p className="font-bold text-slate-700 dark:text-slate-300">
+                    No telemetry tickets found
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    Trigger sync to pull latest orders into database.
+                  </p>
                 </div>
               ) : (
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-600 font-black uppercase text-[10px] tracking-wider">
+                    <tr className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase text-[10px] tracking-wider whitespace-nowrap">
                       <th className="py-3 px-4">Order ID</th>
                       <th className="py-3 px-4">Order Date</th>
                       <th className="py-3 px-4">Cafeteria</th>
@@ -878,18 +1284,32 @@ export default function AllSitesSalesPage() {
                       <th className="py-3 px-4">Synced At</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {filteredTelemetry.map((order) => (
-                      <tr key={order.orderId} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3 px-4 font-mono font-bold text-slate-900">{order.orderId}</td>
-                        <td className="py-3 px-4 text-slate-600 font-mono">{order.orderDate}</td>
-                        <td className="py-3 px-4 font-bold text-slate-700">{order.cafeteriaName || 'Main'}</td>
-                        <td className="py-3 px-4 font-bold text-slate-900">{order.itemName || 'Counter Meal'}</td>
-                        <td className="py-3 px-4 text-right font-black text-emerald-700 font-mono">
+                      <tr
+                        key={order.orderId}
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                      >
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white">
+                          {order.orderId}
+                        </td>
+                        <td className="py-3 px-4 text-slate-700 dark:text-slate-300 font-mono">
+                          {formatOrdinalDate(order.orderDate)}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-slate-700 dark:text-slate-300">
+                          {order.cafeteriaName || 'Main'}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">
+                          {order.itemName || 'Counter Meal'}
+                        </td>
+                        <td className="py-3 px-4 text-right font-black text-emerald-700 dark:text-emerald-400 font-mono">
                           ₹{order.amount.toFixed(2)}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-300 font-bold">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-300 font-bold"
+                          >
                             {order.status || 'Completed'}
                           </Badge>
                         </td>
@@ -930,7 +1350,10 @@ export default function AllSitesSalesPage() {
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[10px] bg-indigo-50 text-indigo-700 border-indigo-200 font-black">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] bg-indigo-50 text-indigo-700 border-indigo-200 font-black"
+                        >
                           {log.action}
                         </Badge>
                         <span className="font-mono text-[11px] text-slate-400">
@@ -943,7 +1366,9 @@ export default function AllSitesSalesPage() {
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className="text-[10px] font-bold text-slate-400 block">Triggered by:</span>
+                      <span className="text-[10px] font-bold text-slate-400 block">
+                        Triggered by:
+                      </span>
                       <span className="font-bold text-slate-700 dark:text-slate-300 text-xs">
                         {log.userEmail || 'System'}
                       </span>

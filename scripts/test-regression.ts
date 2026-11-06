@@ -22,6 +22,7 @@ import {
   parseDateToYmd,
   matchSiteFromLocation,
   parseHungerBoxRows,
+  formatOrdinalDate,
 } from '../src/services/hungerboxParser';
 
 let passed = 0;
@@ -214,19 +215,25 @@ async function runRegressionSuite() {
   }
 
   // --- SUITE 6: HungerBox Cashless Sales Telemetry & Parser ---
-  console.log('\n⚡ 6. HungerBox Cashless Sales Telemetry & Parser:');
+  console.log('\n⚡ 6. HungerBox Cashless Sales Telemetry, Split & Ordinal Dates:');
   {
     // Test 1: Date formatting
     assert(parseDateToYmd('2026-11-06') === '2026-11-06', 'Parses YYYY-MM-DD cleanly');
     assert(parseDateToYmd('06-11-2026') === '2026-11-06', 'Parses DD-MM-YYYY accurately');
     assert(parseDateToYmd('06/11/2026') === '2026-11-06', 'Parses DD/MM/YYYY accurately');
 
+    // Test 1b: Ordinal Dates
+    assert(formatOrdinalDate('2026-01-01') === '1st-jan-26', 'Formats 2026-01-01 as 1st-jan-26');
+    assert(formatOrdinalDate('2026-05-02') === '2nd-may-26', 'Formats 2026-05-02 as 2nd-may-26');
+    assert(formatOrdinalDate('2026-08-03') === '3rd-aug-26', 'Formats 2026-08-03 as 3rd-aug-26');
+    assert(formatOrdinalDate('2026-11-23') === '23rd-nov-26', 'Formats 2026-11-23 as 23rd-nov-26');
+
     // Test 2: Site matching
     assert(matchSiteFromLocation('New Relic Hyderabad').siteId === 'newrelic', 'Matches New Relic location to newrelic');
     assert(matchSiteFromLocation('DSM Firmenich Cafeteria').siteId === 'dsm', 'Matches DSM Firmenich location to dsm');
     assert(matchSiteFromLocation('NTT Data Knowledge Park').siteId === 'ntt_data', 'Matches NTT Data location to ntt_data');
 
-    // Test 3: Tabular HungerBox rows extraction
+    // Test 3: Tabular HungerBox rows extraction with MRP & Non-MRP classification
     const sampleRows = [
       {
         'Order ID': 'HB-1001',
@@ -236,6 +243,7 @@ async function runRegressionSuite() {
         'Item Name': 'Masala Dosa',
         'Total Amount': 60,
         'Status': 'Completed',
+        'Type': 'Non-MRP',
       },
       {
         'Order ID': 'HB-1002',
@@ -245,15 +253,17 @@ async function runRegressionSuite() {
         'Item Name': 'Filter Coffee',
         'Total Amount': 25,
         'Status': 'Completed',
+        'Type': 'Non-MRP',
       },
       {
         'Order ID': 'HB-1003',
         'Date': '2026-11-06',
         'Cafeteria': 'New Relic Floor 8',
         'Meal Type': 'Lunch',
-        'Item Name': 'Curd Rice & Pickle',
-        'Total Amount': 80,
+        'Item Name': 'Red Bull Energy Can',
+        'Total Amount': 125,
         'Status': 'Completed',
+        'Type': 'MRP',
       },
       {
         'Order ID': 'HB-1004',
@@ -269,9 +279,19 @@ async function runRegressionSuite() {
     const parsed = parseHungerBoxRows(sampleRows, 'newrelic');
     assert(parsed.success === true, 'Successfully parsed HungerBox report rows');
     assert(parsed.validOrders === 3, 'Skipped cancelled orders and kept 3 valid completed orders');
-    assert(parsed.totalSales === 165, 'Calculated total gross sales (60 + 25 + 80 = 165)');
+    assert(parsed.totalSales === 210, 'Calculated total gross sales (60 + 25 + 125 = 210)');
     assert(parsed.dailyAggregates.length === 1, 'Grouped rows into 1 daily aggregate for 2026-11-06');
     assert(parsed.dailyAggregates[0]?.mealSessions.length === 2, 'Categorized into 2 meal sessions (Breakfast & Lunch)');
+
+    // Commission test assertions (MRP 19%, Non-MRP 3%)
+    const agg = parsed.dailyAggregates[0];
+    assert(agg.mrpSales === 125, 'MRP gross sales correctly identified as 125');
+    assert(agg.mrpCommission === 23.75, 'MRP commission is exact 19% (23.75)');
+    assert(agg.nonMrpSales === 85, 'Non-MRP gross sales correctly identified as 85 (60+25)');
+    assert(agg.nonMrpCommission === 2.55, 'Non-MRP commission is exact 3% (2.55)');
+    assert(agg.totalCommission === 26.3, 'Total commission is exact sum (23.75 + 2.55 = 26.3)');
+    assert(agg.netSales === 183.7, 'Total net sale after commission is exact (210 - 26.3 = 183.7)');
+    assert(agg.displayDate === '6th-nov-26', 'Aggregate display date formatted as 6th-nov-26');
   }
 
   // --- Summary ---

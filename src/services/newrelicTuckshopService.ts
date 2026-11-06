@@ -29,12 +29,23 @@ export interface NewRelicTuckshopRecord {
   location: string;
   type: TuckshopType;
   category: string; // Now fully dynamic
-  amount: number;
+  amount: number; // Total Gross Sale
   description?: string;
   billUrl?: string; // Link to uploaded bill in Storage
   source?: 'hungerbox' | 'manual';
   orderCount?: number;
   mealSessions?: { session: string; amount: number; count?: number }[];
+  
+  // MRP vs Non-MRP Breakdown & Commissions
+  mrpSales?: number; // Gross MRP sales amount
+  mrpCommission?: number; // 19% commission on MRP sales
+  mrpNet?: number; // MRP sales after 19% commission
+  nonMrpSales?: number; // Gross Non-MRP sales amount
+  nonMrpCommission?: number; // 3% deduction on Non-MRP sales
+  nonMrpNet?: number; // Non-MRP sales after 3% deduction
+  totalCommission?: number; // Combined commission (19% on MRP + 3% on Non-MRP)
+  netSales?: number; // Total Sale After Commission (Gross Sale - Total Commission)
+
   createdAt?: string | Timestamp | any;
   createdBy?: string | null;
   updatedAt?: string | Timestamp | any;

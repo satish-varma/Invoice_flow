@@ -14,16 +14,29 @@ export interface HungerBoxParsedOrder {
   amount: number;
   status: string;
   paymentMode?: string;
+  isMrp: boolean;
   raw?: Record<string, any>;
 }
 
 export interface HungerBoxDailyAggregate {
   date: string; // YYYY-MM-DD
+  displayDate?: string; // e.g. "1st-jan-26"
   siteId: SiteId;
   locationName: string;
-  totalAmount: number;
+  totalAmount: number; // Gross Total Sale
   orderCount: number;
   uniqueOrdersCount: number;
+  
+  // MRP vs Non-MRP Sales & Commissions
+  mrpSales: number; // Gross MRP sales
+  mrpCommission: number; // 19% deduction on MRP sales
+  mrpNet: number; // MRP after 19% deduction
+  nonMrpSales: number; // Gross Non-MRP sales
+  nonMrpCommission: number; // 3% deduction on Non-MRP sales
+  nonMrpNet: number; // Non-MRP after 3% deduction
+  totalCommission: number; // mrpCommission + nonMrpCommission
+  netSales: number; // Total Sale After Commission (Gross Sale - Total Commission)
+
   mealSessions: { session: string; amount: number; count: number }[];
   topItems: { name: string; quantity: number; amount: number }[];
   orders: HungerBoxParsedOrder[];
@@ -83,6 +96,66 @@ export function parseDateToYmd(val: any): string {
 
   const today = new Date();
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Formats date into exact "1st-jan-26" format with ordinal suffix
+ */
+export function formatOrdinalDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const clean = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+  const parts = clean.split('-');
+  if (parts.length !== 3) return dateStr;
+  const year = parts[0].slice(-2);
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  if (isNaN(day) || monthIdx < 0 || monthIdx > 11) return dateStr;
+
+  const getSuffix = (n: number) => {
+    if (n >= 11 && n <= 13) return 'th';
+    switch (n % 10) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
+    }
+  };
+  const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+  return `${day}${getSuffix(day)}-${months[monthIdx]}-${year}`;
+}
+
+/**
+ * Classifies whether an item is an MRP packaged product (19% fee) or NON-MRP prepared food/beverage (3% fee)
+ */
+export function isMrpItem(itemName: string, vendorName?: string, rawRow?: Record<string, any>): boolean {
+  if (rawRow) {
+    const rawCategory = String(rawRow['category'] || rawRow['type'] || rawRow['ratetype'] || rawRow['itemtype'] || '').toLowerCase();
+    if (rawCategory.includes('non-mrp') || rawCategory.includes('non_mrp') || rawCategory.includes('kitchen')) return false;
+    if (rawCategory.includes('mrp') || rawCategory.includes('retail') || rawCategory.includes('packaged')) return true;
+  }
+
+  const v = (vendorName || '').toLowerCase();
+  if (v.includes('live counter') || v.includes('juice counter') || v.includes('kitchen') || v.includes('food court')) {
+    return false;
+  }
+
+  const name = (itemName || '').toLowerCase();
+  // Prepared food and freshly brewed beverages -> NON-MRP (3% commission)
+  if (/tea|coffee|chai|milk|horlicks|boost|dosa|idly|idli|rice|chapthi|chapathi|roti|paratha|punugulu|bajji|bonda|curry|curd|puff|samosa|bhel|upma|poha|vada|lemonade|juice|shake|meal|biryani|pulao/i.test(name)) {
+    return false;
+  }
+
+  // Branded packaged snacks, biscuits, confectionery -> MRP (19% commission)
+  if (/lays|haldiram|cadbury|britannia|biscuit|cookie|chikki|chips|chocolate|amul|thumsup|coke|pepsi|kurkure|bingo|parle|snickers|kitkat|dairy milk|wafer|namkeen|packaged|sweet chilli|salted/i.test(name)) {
+    return true;
+  }
+
+  // By default, tuckshop items without fresh kitchen food keywords are considered packaged MRP goods
+  if (v.includes('tuckshop') || v.includes('tuck shop')) {
+    return true;
+  }
+
+  return false;
 }
 
 // Auto-detect which site a location string belongs to
@@ -258,6 +331,7 @@ export function parseHungerBoxRows(
       'HungerBox Digital';
 
     if (amount > 0 || orderId) {
+      const isMrp = isMrpItem(itemName, rowMap['vendor'] || rowMap['vendorname'] || rowMap['stall'], rowMap);
       parsedOrders.push({
         orderId,
         orderDate,
@@ -270,6 +344,7 @@ export function parseHungerBoxRows(
         amount,
         status,
         paymentMode: String(rawPayment),
+        isMrp,
         raw: row,
       });
     }
@@ -283,11 +358,20 @@ export function parseHungerBoxRows(
     if (!aggregatesMap.has(key)) {
       aggregatesMap.set(key, {
         date: order.orderDate,
+        displayDate: formatOrdinalDate(order.orderDate),
         siteId: order.siteId,
         locationName: order.locationName,
         totalAmount: 0,
         orderCount: 0,
         uniqueOrdersCount: 0,
+        mrpSales: 0,
+        mrpCommission: 0,
+        mrpNet: 0,
+        nonMrpSales: 0,
+        nonMrpCommission: 0,
+        nonMrpNet: 0,
+        totalCommission: 0,
+        netSales: 0,
         mealSessions: [],
         topItems: [],
         orders: [],
@@ -300,16 +384,25 @@ export function parseHungerBoxRows(
     agg.orders.push(order);
   }
 
-  // Refine aggregates (sessions and top items)
+  // Refine aggregates (MRP vs Non-MRP, sessions, and top items)
   const dailyAggregates: HungerBoxDailyAggregate[] = Array.from(aggregatesMap.values()).map((agg) => {
     const uniqueOrders = new Set(agg.orders.map((o) => o.orderId));
     agg.uniqueOrdersCount = uniqueOrders.size;
+    agg.displayDate = formatOrdinalDate(agg.date);
 
-    // Sessions map
+    // Sessions map & MRP vs Non-MRP
+    let mrpSum = 0;
+    let nonMrpSum = 0;
     const sessionMap = new Map<string, { amount: number; count: number }>();
     const itemMap = new Map<string, { quantity: number; amount: number }>();
 
     for (const o of agg.orders) {
+      if (o.isMrp) {
+        mrpSum += o.amount;
+      } else {
+        nonMrpSum += o.amount;
+      }
+
       const s = o.mealSession || 'Counter Sales';
       if (!sessionMap.has(s)) sessionMap.set(s, { amount: 0, count: 0 });
       const curS = sessionMap.get(s)!;
@@ -322,6 +415,18 @@ export function parseHungerBoxRows(
       curI.quantity += o.quantity;
       curI.amount += o.amount;
     }
+
+    // Exact commission deductions: 19% on MRP, 3% on Non-MRP
+    agg.mrpSales = Math.round(mrpSum * 100) / 100;
+    agg.mrpCommission = Math.round(mrpSum * 0.19 * 100) / 100;
+    agg.mrpNet = Math.round((agg.mrpSales - agg.mrpCommission) * 100) / 100;
+
+    agg.nonMrpSales = Math.round(nonMrpSum * 100) / 100;
+    agg.nonMrpCommission = Math.round(nonMrpSum * 0.03 * 100) / 100;
+    agg.nonMrpNet = Math.round((agg.nonMrpSales - agg.nonMrpCommission) * 100) / 100;
+
+    agg.totalCommission = Math.round((agg.mrpCommission + agg.nonMrpCommission) * 100) / 100;
+    agg.netSales = Math.round((agg.mrpNet + agg.nonMrpNet) * 100) / 100;
 
     agg.mealSessions = Array.from(sessionMap.entries())
       .map(([session, data]) => ({ session, amount: data.amount, count: data.count }))

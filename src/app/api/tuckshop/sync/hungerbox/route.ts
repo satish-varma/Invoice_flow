@@ -139,6 +139,56 @@ export async function POST(request: Request) {
       });
     }
 
+    if (action === 'aggregate_telemetry') {
+      const { startDate, endDate, siteId } = body;
+      let querySql = 'SELECT order_id, order_date, amount, item_name, cafeteria_name, vendor_name, status FROM hungerbox_sales';
+      const args: any[] = [];
+      if (startDate && endDate) {
+        querySql += ' WHERE order_date >= ? AND order_date <= ?';
+        args.push(startDate, endDate);
+      }
+      querySql += ' ORDER BY order_date DESC LIMIT 50000';
+
+      const res = await turso.execute({ sql: querySql, args });
+      if (res.rows.length === 0) {
+        return NextResponse.json({ success: false, error: 'No order telemetry found in database to aggregate.' });
+      }
+
+      const rows = res.rows.map((r: any) => ({
+        orderid: r.order_id,
+        date: r.order_date,
+        amount: Number(r.amount) || 0,
+        itemname: r.item_name,
+        cafeteria: r.cafeteria_name,
+        vendor: r.vendor_name,
+        status: r.status,
+      }));
+
+      const parseResult = parseHungerBoxRows(rows, siteId || 'newrelic');
+      const feedResults = await feedHungerBoxAggregatesToTuckshop(parseResult.dailyAggregates, userEmail);
+
+      await createAuditLog({
+        userId: (session.user as any).id,
+        userEmail,
+        action: 'Aggregated HungerBox Telemetry into Daily Ledger',
+        details: JSON.stringify({
+          ordersProcessed: rows.length,
+          daysGenerated: feedResults.length,
+          totalSales: parseResult.totalSales,
+        }),
+        orgId: 'default',
+        ipAddress,
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Successfully aggregated ${rows.length} HungerBox orders into ${feedResults.length} daily site ledger records (₹${Math.round(parseResult.totalSales).toLocaleString('en-IN')}).`,
+        totalSales: parseResult.totalSales,
+        validOrders: parseResult.validOrders,
+        feedResults,
+      });
+    }
+
     if (action === 'worker_sync') {
       const settings = await getSettings('default');
       const workerUrl = (body.workerUrl || settings.hungerboxWorkerUrl || process.env.HUNGERBOX_WORKER_URL || '').trim();

@@ -21,7 +21,8 @@ export interface FeedResult {
  */
 export async function feedHungerBoxAggregatesToTuckshop(
   aggregates: HungerBoxDailyAggregate[],
-  userEmail: string = 'system-sync@hungerbox'
+  userEmail: string = 'system-sync@hungerbox',
+  skipTursoTelemetry: boolean = false
 ): Promise<FeedResult[]> {
   const results: FeedResult[] = [];
 
@@ -108,16 +109,14 @@ export async function feedHungerBoxAggregatesToTuckshop(
     }
 
     // 2. Feed individual orders into Turso `hungerbox_sales` table (batched)
-    if (agg.orders && agg.orders.length > 0) {
+    if (!skipTursoTelemetry && agg.orders && agg.orders.length > 0) {
       try {
         const batchStatements = agg.orders.slice(0, 500).map((o) => {
-          const id = `HB-${o.orderId}`;
           return {
             sql: `INSERT OR REPLACE INTO hungerbox_sales 
-                  (id, order_id, order_date, vendor_name, cafeteria_name, amount, item_name, status, org_id) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                  (order_id, order_date, vendor_name, cafeteria_name, amount, item_name, status, org_id) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
-              id,
               o.orderId,
               o.orderDate,
               o.stallName || 'The Gut Guru',

@@ -108,13 +108,13 @@ export function matchSiteFromLocation(rawLocation?: string, fallbackSite: SiteId
   }
 
   // Generic heuristic matches
-  if (loc.includes('relic') || loc.includes('new relic')) {
+  if (loc.includes('relic') || loc.includes('new relic') || loc.includes('orion') || loc.includes('455')) {
     return { siteId: 'newrelic', name: 'New Relic' };
   }
-  if (loc.includes('dsm') || loc.includes('firmenich')) {
+  if (loc.includes('dsm') || loc.includes('firmenich') || loc.includes('458')) {
     return { siteId: 'dsm', name: 'DSM' };
   }
-  if (loc.includes('ntt') || loc.includes('data')) {
+  if (loc.includes('ntt') || loc.includes('data') || loc.includes('2082') || loc.includes('457') || loc.includes('2820')) {
     return { siteId: 'ntt_data', name: 'NTT Data' };
   }
 
@@ -213,16 +213,17 @@ export function parseHungerBoxRows(
     }
 
     // 5. Location / Site
-    const rawLocation =
+    const rawLocField =
       rowMap['cafeteria'] ??
       rowMap['location'] ??
       rowMap['site'] ??
       rowMap['company'] ??
       rowMap['client'] ??
       rowMap['companyname'] ??
-      rowMap['outlet'] ??
-      rowMap['stall'];
-    const { siteId, name: locationName } = matchSiteFromLocation(rawLocation ? String(rawLocation) : undefined, fallbackSite);
+      rowMap['outlet'];
+    const rawVendorField = rowMap['vendor'] ?? rowMap['vendorname'] ?? rowMap['stall'];
+    const combinedLocation = `${rawLocField || ''} ${rawVendorField || ''}`.trim() || undefined;
+    const { siteId, name: locationName } = matchSiteFromLocation(combinedLocation, fallbackSite);
 
     // 6. Meal Session / Slot
     const rawSession =

@@ -61,11 +61,12 @@ export default function AllSitesSalesPage() {
 
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isQuickSyncing, setIsQuickSyncing] = useState(false);
+  const [isAggregating, setIsAggregating] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Filters
   const [selectedSiteFilter, setSelectedSiteFilter] = useState<string>('all');
-  const [selectedDateFilter, setSelectedDateFilter] = useState<string>('month');
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string>('all');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'hungerbox' | 'manual'>('all');
@@ -168,6 +169,42 @@ export default function AllSitesSalesPage() {
       setStatusMessage({ text: err.message || 'Worker sync failed', type: 'error' });
     } finally {
       setIsQuickSyncing(false);
+    }
+  };
+
+  // Aggregate all stored Turso telemetry into daily Firestore ledger
+  const handleAggregateAllTelemetry = async () => {
+    triggerHaptic('medium');
+    setIsAggregating(true);
+    setStatusMessage(null);
+
+    try {
+      const res = await fetch('/api/tuckshop/sync/hungerbox', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'aggregate_telemetry',
+          siteId: selectedSiteFilter === 'all' ? 'newrelic' : selectedSiteFilter,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setStatusMessage({
+          text: data.message || 'Successfully aggregated HungerBox telemetry into the daily site ledger!',
+          type: 'success',
+        });
+        await fetchSyncStatus();
+      } else {
+        setStatusMessage({
+          text: data.error || 'Failed to aggregate telemetry.',
+          type: 'error',
+        });
+      }
+    } catch (err: any) {
+      setStatusMessage({ text: err.message || 'Aggregation failed', type: 'error' });
+    } finally {
+      setIsAggregating(false);
     }
   };
 
@@ -408,7 +445,18 @@ export default function AllSitesSalesPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              onClick={handleAggregateAllTelemetry}
+              disabled={isAggregating}
+              size="sm"
+              variant="outline"
+              className="h-8 rounded-xl font-bold text-xs border-amber-300 text-amber-900 bg-amber-50 hover:bg-amber-100"
+            >
+              <Zap className={`w-3 h-3 mr-1.5 text-amber-600 ${isAggregating ? 'animate-spin' : ''}`} />
+              {isAggregating ? 'Aggregating...' : 'Aggregate Telemetry to Ledger'}
+            </Button>
+
             <Button
               onClick={handleTriggerQuickSync}
               disabled={isQuickSyncing}

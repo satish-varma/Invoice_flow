@@ -121,10 +121,9 @@ export default function AllSitesSalesPage() {
 
   // Filters
   const [selectedSiteFilter, setSelectedSiteFilter] = useState<string>('all');
-  const [selectedDateFilter, setSelectedDateFilter] = useState<string>('all');
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string>('6months');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
-  const [sourceFilter, setSourceFilter] = useState<'all' | 'hungerbox' | 'manual'>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [, setSitesVersion] = useState(0);
 
@@ -293,10 +292,6 @@ export default function AllSitesSalesPage() {
         return false;
       }
 
-      // Source filter
-      if (sourceFilter === 'hungerbox' && r.source !== 'hungerbox') return false;
-      if (sourceFilter === 'manual' && r.source === 'hungerbox') return false;
-
       // Date preset filter
       if (selectedDateFilter === 'today' && recDate !== todayStr) return false;
       if (selectedDateFilter === 'yesterday' && recDate !== yesterdayStr) return false;
@@ -334,7 +329,6 @@ export default function AllSitesSalesPage() {
     selectedDateFilter,
     customStartDate,
     customEndDate,
-    sourceFilter,
     searchTerm,
   ]);
 
@@ -454,7 +448,7 @@ export default function AllSitesSalesPage() {
     });
   }, [telemetryOrders, searchTerm]);
 
-  // Export to Excel with separate MRP / Non-MRP and exact "1st-jan-26" dates
+  // Export to Excel with clean MRP / Non-MRP and exact "1st-jan-26" dates
   const handleExportExcel = () => {
     triggerHaptic('light');
     const rows = filteredRecords.map((r) => {
@@ -463,20 +457,18 @@ export default function AllSitesSalesPage() {
       return {
         'Date': formatOrdinalDate(r.date),
         'Raw Date (YYYY-MM-DD)': (r.date || '').split('T')[0],
-        'Site ID': sId,
-        'Site Name': COMPANY_SITES[sId]?.name || sId,
-        'Location / Stall': r.location || '',
-        'Source': r.source === 'hungerbox' ? 'HungerBox Cashless' : 'Manual Entry',
+        'Site': COMPANY_SITES[sId]?.name || sId,
+        'Location / Stall': r.location || 'Main Cafeteria',
         'MRP Sales (₹)': Math.round(f.mrp),
         'MRP Comm (19%) (₹)': Math.round(f.mrpComm),
         'MRP Net (81%) (₹)': Math.round(f.mrpNet),
         'Non-MRP Sales (₹)': Math.round(f.nonMrp),
         'Non-MRP Comm (3%) (₹)': Math.round(f.nonMrpComm),
         'Non-MRP Net (97%) (₹)': Math.round(f.nonMrpNet),
-        'Total HungerBox Commission (₹)': Math.round(f.totalComm),
         'Total Gross Sale (₹)': Math.round(f.gross),
-        'Total Sale After Commission (Net Payout) (₹)': Math.round(f.net),
-        'Orders Count': r.orderCount || 1,
+        'Total Commission (₹)': Math.round(f.totalComm),
+        'Net Sale After Comm (₹)': Math.round(f.net),
+        'Delivered Orders': r.orderCount || 1,
         'Session / Notes': r.description || '',
       };
     });
@@ -935,7 +927,7 @@ export default function AllSitesSalesPage() {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
-                All Sites
+                All Sites ({filteredRecords.length})
               </button>
               {Object.entries(COMPANY_SITES).map(([sId, site]) => (
                 <button
@@ -954,27 +946,15 @@ export default function AllSitesSalesPage() {
             </div>
           </div>
 
-          {/* Source filters */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Channel:</span>
-            {[
-              { id: 'all', label: 'All Channels' },
-              { id: 'hungerbox', label: '⚡ HungerBox Cashless' },
-              { id: 'manual', label: 'Manual Entry' },
-            ].map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setSourceFilter(s.id as any)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                  sourceFilter === s.id
-                    ? 'bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-300'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100'
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
+          {/* Search bar */}
+          <div className="relative w-full sm:w-80">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input
+              placeholder="Search date (e.g. 1st-jan-26), site, item..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-9 pl-9 text-xs rounded-xl bg-slate-50/60 dark:bg-slate-800/40 border-slate-200/80"
+            />
           </div>
         </div>
 
@@ -983,12 +963,12 @@ export default function AllSitesSalesPage() {
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[10px] font-bold text-slate-400 uppercase mr-1">Timeframe:</span>
             {[
-              { id: 'all', label: 'All Time (Full History)' },
               { id: '6months', label: '📅 Last 6 Months' },
               { id: 'month', label: 'This Month' },
               { id: 'week', label: 'Last 7 Days' },
               { id: 'yesterday', label: 'Yesterday' },
               { id: 'today', label: 'Today' },
+              { id: 'all', label: 'All Time' },
               { id: 'custom', label: 'Custom Range' },
             ].map((p) => (
               <button
@@ -1009,15 +989,9 @@ export default function AllSitesSalesPage() {
             ))}
           </div>
 
-          {/* Search bar */}
-          <div className="relative w-full sm:w-80">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input
-              placeholder="Search date (e.g. 1st-jan-26), site, item..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-9 pl-9 text-xs rounded-xl bg-slate-50/60 dark:bg-slate-800/40 border-slate-200/80"
-            />
+          <div className="text-[11px] text-slate-400 flex items-center gap-1.5 font-medium">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Showing <strong>{filteredRecords.length} days</strong> • 100% HungerBox Cashless</span>
           </div>
         </div>
 
@@ -1093,146 +1067,156 @@ export default function AllSitesSalesPage() {
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-50/90 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-black uppercase text-[10px] tracking-wider whitespace-nowrap">
-                      <th className="py-3 px-3.5">Date</th>
-                      <th className="py-3 px-3.5">Site / Cafeteria</th>
-                      <th className="py-3 px-3.5">Source</th>
-                      <th className="py-3 px-3 text-right bg-amber-50/50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-300">
-                        MRP Sale (₹)
+                      <th className="py-3.5 px-3.5">Date</th>
+                      <th className="py-3.5 px-3.5">Site / Location</th>
+                      <th className="py-3.5 px-4 text-right bg-amber-50/60 dark:bg-amber-950/20 text-amber-950 dark:text-amber-300">
+                        <div className="flex items-center justify-end gap-1">
+                          <Tag className="w-3 h-3 text-amber-600" />
+                          <span>MRP Sale &amp; Comm (19%)</span>
+                        </div>
                       </th>
-                      <th className="py-3 px-3 text-right bg-amber-50/50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-400">
-                        MRP Comm (19%)
+                      <th className="py-3.5 px-4 text-right bg-purple-50/60 dark:bg-purple-950/20 text-purple-950 dark:text-purple-300">
+                        <div className="flex items-center justify-end gap-1">
+                          <Receipt className="w-3 h-3 text-purple-600" />
+                          <span>Non-MRP Sale &amp; Comm (3%)</span>
+                        </div>
                       </th>
-                      <th className="py-3 px-3 text-right bg-purple-50/50 dark:bg-purple-950/20 text-purple-900 dark:text-purple-300">
-                        Non-MRP Sale (₹)
+                      <th className="py-3.5 px-4 text-right bg-slate-100/70 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100">
+                        <div className="flex items-center justify-end gap-1">
+                          <Percent className="w-3 h-3 text-rose-600" />
+                          <span>Total Gross &amp; Comm</span>
+                        </div>
                       </th>
-                      <th className="py-3 px-3 text-right bg-purple-50/50 dark:bg-purple-950/20 text-purple-800 dark:text-purple-400">
-                        Non-MRP Comm (3%)
+                      <th className="py-3.5 px-4 text-right bg-emerald-50/80 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-300 font-black">
+                        <div className="flex items-center justify-end gap-1">
+                          <DollarSign className="w-3 h-3 text-emerald-600" />
+                          <span>Net Sale (After Comm)</span>
+                        </div>
                       </th>
-                      <th className="py-3 px-3 text-right text-rose-700 dark:text-rose-400 font-black">
-                        Total Comm (₹)
-                      </th>
-                      <th className="py-3 px-3 text-right text-slate-900 dark:text-white font-black">
-                        Total Gross (₹)
-                      </th>
-                      <th className="py-3 px-3.5 text-right bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-300 font-black">
-                        Sale After Comm (Net) (₹)
-                      </th>
-                      <th className="py-3 px-3 text-center">Orders</th>
+                      <th className="py-3.5 px-3.5 text-center">Orders</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {filteredRecords.map((record) => {
                       const sId = resolveSiteId(record.siteId);
                       const siteName = COMPANY_SITES[sId]?.name || sId;
-                      const isHB = record.source === 'hungerbox' || Boolean(record.orderCount);
                       const f = getRecordFinancials(record);
                       const formattedDate = formatOrdinalDate(record.date);
 
                       return (
                         <tr
                           key={record.id}
-                          className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                          className="hover:bg-indigo-50/30 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800/60"
                         >
                           {/* Formatted Date: "1st-jan-26" */}
-                          <td className="py-3 px-3.5 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
-                            <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md text-[11px]">
+                          <td className="py-3.5 px-3.5 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 px-2.5 py-1 rounded-lg text-xs font-mono font-bold shadow-2xs">
+                              <Calendar className="w-3 h-3 text-slate-400" />
                               {formattedDate}
                             </span>
                           </td>
 
                           {/* Site & Location */}
-                          <td className="py-3 px-3.5 whitespace-nowrap">
-                            <span className="font-bold text-slate-900 dark:text-slate-100 block">
-                              {siteName}
-                            </span>
-                            <span className="text-[10px] text-slate-400 block truncate max-w-[130px]">
-                              {record.location || 'Main Cafeteria'}
-                            </span>
-                          </td>
-
-                          {/* Source */}
-                          <td className="py-3 px-3.5 whitespace-nowrap">
-                            {isHB ? (
-                              <Badge className="bg-amber-100 hover:bg-amber-100 text-amber-900 border-amber-300 font-black text-[10px] gap-1">
-                                <Zap className="w-2.5 h-2.5 fill-amber-500" /> HungerBox
+                          <td className="py-3.5 px-3.5 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <Badge
+                                variant="outline"
+                                className="font-bold text-[11px] bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 px-2 py-0.5"
+                              >
+                                {siteName}
                               </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-[10px] font-bold">
-                                Manual
-                              </Badge>
-                            )}
+                            </div>
+                            <span className="text-[10px] text-slate-400 block truncate max-w-[140px] mt-0.5">
+                              {record.location || 'Main Counter'}
+                            </span>
                           </td>
 
-                          {/* MRP Sales */}
-                          <td className="py-3 px-3 text-right font-mono font-bold text-amber-950 dark:text-amber-200 bg-amber-50/30 dark:bg-amber-950/10 whitespace-nowrap">
-                            ₹{Math.round(f.mrp).toLocaleString('en-IN')}
+                          {/* Merged: MRP Sale & Comm (19%) */}
+                          <td className="py-3.5 px-4 text-right font-mono bg-amber-50/30 dark:bg-amber-950/10 whitespace-nowrap">
+                            <div className="font-bold text-amber-950 dark:text-amber-200 text-xs sm:text-[13px]">
+                              ₹{Math.round(f.mrp).toLocaleString('en-IN')}
+                            </div>
+                            <div className="text-[10px] text-amber-700/90 dark:text-amber-400 font-semibold mt-0.5">
+                              {f.mrp > 0 ? (
+                                `-₹${Math.round(f.mrpComm).toLocaleString('en-IN')} (19%)`
+                              ) : (
+                                <span className="text-slate-300 dark:text-slate-600">-₹0</span>
+                              )}
+                            </div>
                           </td>
 
-                          {/* MRP Commission (19%) */}
-                          <td className="py-3 px-3 text-right font-mono text-amber-800 dark:text-amber-400 bg-amber-50/30 dark:bg-amber-950/10 whitespace-nowrap text-[11px]">
-                            -₹{Math.round(f.mrpComm).toLocaleString('en-IN')}
+                          {/* Merged: Non-MRP Sale & Comm (3%) */}
+                          <td className="py-3.5 px-4 text-right font-mono bg-purple-50/30 dark:bg-purple-950/10 whitespace-nowrap">
+                            <div className="font-bold text-purple-950 dark:text-purple-200 text-xs sm:text-[13px]">
+                              ₹{Math.round(f.nonMrp).toLocaleString('en-IN')}
+                            </div>
+                            <div className="text-[10px] text-purple-700/90 dark:text-purple-400 font-semibold mt-0.5">
+                              {f.nonMrp > 0 ? (
+                                `-₹${Math.round(f.nonMrpComm).toLocaleString('en-IN')} (3%)`
+                              ) : (
+                                <span className="text-slate-300 dark:text-slate-600">-₹0</span>
+                              )}
+                            </div>
                           </td>
 
-                          {/* Non-MRP Sales */}
-                          <td className="py-3 px-3 text-right font-mono font-bold text-purple-950 dark:text-purple-200 bg-purple-50/30 dark:bg-purple-950/10 whitespace-nowrap">
-                            ₹{Math.round(f.nonMrp).toLocaleString('en-IN')}
-                          </td>
-
-                          {/* Non-MRP Commission (3%) */}
-                          <td className="py-3 px-3 text-right font-mono text-purple-800 dark:text-purple-400 bg-purple-50/30 dark:bg-purple-950/10 whitespace-nowrap text-[11px]">
-                            -₹{Math.round(f.nonMrpComm).toLocaleString('en-IN')}
-                          </td>
-
-                          {/* Total Commission */}
-                          <td className="py-3 px-3 text-right font-mono font-black text-rose-600 dark:text-rose-400 whitespace-nowrap">
-                            -₹{Math.round(f.totalComm).toLocaleString('en-IN')}
-                          </td>
-
-                          {/* Total Gross Sale */}
-                          <td className="py-3 px-3 text-right font-mono font-black text-slate-900 dark:text-white whitespace-nowrap text-sm">
-                            ₹{Math.round(f.gross).toLocaleString('en-IN')}
+                          {/* Merged: Total Gross Sale & Total Comm */}
+                          <td className="py-3.5 px-4 text-right font-mono bg-slate-50/60 dark:bg-slate-800/30 whitespace-nowrap">
+                            <div className="font-black text-slate-900 dark:text-white text-xs sm:text-[13px]">
+                              ₹{Math.round(f.gross).toLocaleString('en-IN')}
+                            </div>
+                            <div className="text-[10px] text-rose-600 dark:text-rose-400 font-bold mt-0.5">
+                              -₹{Math.round(f.totalComm).toLocaleString('en-IN')}
+                            </div>
                           </td>
 
                           {/* Total Sale After Commission (Net Payout) */}
-                          <td className="py-3 px-3.5 text-right font-mono font-black text-emerald-700 dark:text-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20 whitespace-nowrap text-sm">
+                          <td className="py-3.5 px-4 text-right font-mono font-black text-emerald-700 dark:text-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20 whitespace-nowrap text-xs sm:text-sm">
                             ₹{Math.round(f.net).toLocaleString('en-IN')}
                           </td>
 
                           {/* Orders */}
-                          <td className="py-3 px-3 text-center font-mono font-bold text-slate-700 dark:text-slate-300">
-                            {record.orderCount || 1}
+                          <td className="py-3.5 px-3.5 text-center font-mono">
+                            <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
+                              {record.orderCount || 1}
+                            </span>
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
-                  <tfoot className="bg-slate-100/90 dark:bg-slate-800 font-mono font-black text-xs border-t-2 border-slate-300 dark:border-slate-700">
+                  <tfoot className="bg-slate-100/95 dark:bg-slate-800 font-mono font-black text-xs border-t-2 border-slate-300 dark:border-slate-700">
                     <tr>
-                      <td colSpan={3} className="py-3.5 px-3.5 text-slate-900 dark:text-white uppercase text-[11px]">
-                        Total Summary ({filteredRecords.length} records)
+                      <td colSpan={2} className="py-4 px-3.5 text-slate-900 dark:text-white uppercase text-[11px] tracking-wider">
+                        Total Summary ({filteredRecords.length} days)
                       </td>
-                      <td className="py-3.5 px-3 text-right text-amber-950 dark:text-amber-200">
-                        ₹{financials.totalMrp.toLocaleString('en-IN')}
+                      <td className="py-4 px-4 text-right bg-amber-100/40 dark:bg-amber-950/30">
+                        <div className="text-amber-950 dark:text-amber-200 text-xs sm:text-[13px]">
+                          ₹{financials.totalMrp.toLocaleString('en-IN')}
+                        </div>
+                        <div className="text-[10px] text-amber-800 dark:text-amber-400 font-bold mt-0.5">
+                          -₹{financials.totalMrpComm.toLocaleString('en-IN')} (19%)
+                        </div>
                       </td>
-                      <td className="py-3.5 px-3 text-right text-amber-800 dark:text-amber-400 text-[11px]">
-                        -₹{financials.totalMrpComm.toLocaleString('en-IN')}
+                      <td className="py-4 px-4 text-right bg-purple-100/40 dark:bg-purple-950/30">
+                        <div className="text-purple-950 dark:text-purple-200 text-xs sm:text-[13px]">
+                          ₹{financials.totalNonMrp.toLocaleString('en-IN')}
+                        </div>
+                        <div className="text-[10px] text-purple-800 dark:text-purple-400 font-bold mt-0.5">
+                          -₹{financials.totalNonMrpComm.toLocaleString('en-IN')} (3%)
+                        </div>
                       </td>
-                      <td className="py-3.5 px-3 text-right text-purple-950 dark:text-purple-200">
-                        ₹{financials.totalNonMrp.toLocaleString('en-IN')}
+                      <td className="py-4 px-4 text-right bg-slate-200/50 dark:bg-slate-800/60">
+                        <div className="text-slate-900 dark:text-white text-xs sm:text-sm">
+                          ₹{financials.totalGross.toLocaleString('en-IN')}
+                        </div>
+                        <div className="text-[10px] text-rose-600 dark:text-rose-400 font-bold mt-0.5">
+                          -₹{financials.totalCommission.toLocaleString('en-IN')}
+                        </div>
                       </td>
-                      <td className="py-3.5 px-3 text-right text-purple-800 dark:text-purple-400 text-[11px]">
-                        -₹{financials.totalNonMrpComm.toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3.5 px-3 text-right text-rose-600 dark:text-rose-400">
-                        -₹{financials.totalCommission.toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3.5 px-3 text-right text-slate-900 dark:text-white text-sm">
-                        ₹{financials.totalGross.toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3.5 px-3.5 text-right text-emerald-700 dark:text-emerald-300 text-sm bg-emerald-100/50 dark:bg-emerald-900/30">
+                      <td className="py-4 px-4 text-right text-emerald-800 dark:text-emerald-200 text-sm sm:text-base bg-emerald-100/70 dark:bg-emerald-900/40 font-black">
                         ₹{financials.totalNet.toLocaleString('en-IN')}
                       </td>
-                      <td className="py-3.5 px-3 text-center text-slate-800 dark:text-white">
+                      <td className="py-4 px-3.5 text-center text-slate-900 dark:text-white text-xs sm:text-sm">
                         {financials.totalOrders.toLocaleString('en-IN')}
                       </td>
                     </tr>

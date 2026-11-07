@@ -22,6 +22,8 @@ import {
   CheckCircle2,
   AlertCircle,
   ExternalLink,
+  TrendingUp,
+  PieChart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -272,21 +274,28 @@ export default function ItemSalesExplorerPage() {
         </div>
       </div>
 
-      {/* 🧭 NAVIGATION TABS (Daily Ledger vs Item-Level Breakdown) */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+      {/* 🧭 NAVIGATION TABS (Daily Ledger vs Item Breakdown vs P&L Analytics) */}
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto">
         <Link
           href="/newrelic/tuckshop/sales"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors whitespace-nowrap"
         >
           <Building2 className="w-4 h-4" />
           Consolidated Daily Ledger
         </Link>
         <Link
           href="/newrelic/tuckshop/sales/items"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm whitespace-nowrap"
         >
           <ShoppingBag className="w-4 h-4 text-amber-500" />
-          Item Sales Breakdown (Maggi, Sandwich, Juices...)
+          Item Sales Breakdown
+        </Link>
+        <Link
+          href="/newrelic/tuckshop/analytics"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-slate-900 dark:hover:text-white hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 transition-colors whitespace-nowrap"
+        >
+          <TrendingUp className="w-4 h-4 text-emerald-600" />
+          P&amp;L Executive Analytics
         </Link>
       </div>
 

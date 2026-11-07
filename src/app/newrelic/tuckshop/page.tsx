@@ -8,7 +8,7 @@ import { TuckshopList } from '@/components/newrelic/tuckshop/tuckshop-list';
 import { TuckshopShiftPulse } from '@/components/newrelic/tuckshop/TuckshopShiftPulse';
 import { HungerBoxSyncModal } from '@/components/newrelic/tuckshop/HungerBoxSyncModal';
 import { subscribeToTuckshopRecords, NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
-import { Loader2, Plus, TrendingDown, IndianRupee, Zap, Building2 } from 'lucide-react';
+import { Loader2, Plus, TrendingDown, IndianRupee, Zap, Building2, PieChart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
@@ -119,12 +119,19 @@ export default function TuckshopPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:flex gap-2.5">
+          <div className="grid grid-cols-2 sm:flex gap-2.5 flex-wrap">
             <Link
               href="/newrelic/tuckshop/sales"
-              className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 px-3.5 py-3 sm:py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-2xl text-xs sm:text-sm transition-all active:scale-95 shadow-md"
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-2xl text-xs sm:text-sm transition-all active:scale-95 shadow-md"
             >
-              <Building2 className="h-4 w-4 text-amber-300" /> All Sites Sales
+              <Building2 className="h-4 w-4 text-amber-300" /> Sales Ledger
+            </Link>
+
+            <Link
+              href="/newrelic/tuckshop/analytics"
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 border border-emerald-400/30 text-emerald-200 font-bold rounded-2xl text-xs sm:text-sm transition-all active:scale-95 shadow-md"
+            >
+              <PieChart className="h-4 w-4 text-emerald-300" /> P&amp;L Analytics
             </Link>
 
             <button 
@@ -132,7 +139,7 @@ export default function TuckshopPage() {
                 triggerHaptic('medium');
                 setIsHungerBoxModalOpen(true);
               }}
-              className="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 font-black rounded-2xl text-xs sm:text-sm shadow-lg shadow-amber-950/20 hover:from-amber-300 hover:to-orange-400 transition-all active:scale-95"
+              className="flex items-center justify-center gap-2 px-3.5 py-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 font-black rounded-2xl text-xs sm:text-sm shadow-lg shadow-amber-950/20 hover:from-amber-300 hover:to-orange-400 transition-all active:scale-95"
             >
               <Zap className="h-4 w-4 fill-slate-950" /> Sync HungerBox
             </button>
@@ -142,19 +149,9 @@ export default function TuckshopPage() {
                 triggerHaptic('medium');
                 openDialog('expense');
               }}
-              className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 bg-gradient-to-r from-rose-600 to-red-600 text-white rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-rose-950/30 hover:from-rose-700 hover:to-red-700 transition-all active:scale-95"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-rose-600 to-red-600 text-white rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-rose-950/30 hover:from-rose-700 hover:to-red-700 transition-all active:scale-95"
             >
               <TrendingDown className="h-4 w-4" /> Add Expense
-            </button>
-            
-            <button 
-              onClick={() => {
-                triggerHaptic('medium');
-                openDialog('sale');
-              }}
-              className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-emerald-950/30 hover:from-emerald-700 hover:to-teal-700 transition-all active:scale-95"
-            >
-              <IndianRupee className="h-4 w-4" /> Log Sale
             </button>
           </div>
         </div>

@@ -24,6 +24,10 @@ import {
   parseHungerBoxRows,
   formatOrdinalDate,
 } from '../src/services/hungerboxParser';
+import {
+  classifyExpenseCategory,
+  computeTuckshopPnL,
+} from '../src/services/tuckshopPnLService';
 
 let passed = 0;
 let failed = 0;
@@ -292,6 +296,66 @@ async function runRegressionSuite() {
     assert(agg.totalCommission === 19.9, 'Total commission is exact sum (3.75 + 16.15 = 19.9)');
     assert(agg.netSales === 190.1, 'Total net sale after commission is exact (210 - 19.9 = 190.1)');
     assert(agg.displayDate === '6th-nov-26', 'Aggregate display date formatted as 6th-nov-26');
+  }
+
+  // --- SUITE 7: Tuckshop Executive P&L Engine & Margin Accounting ---
+  console.log('\n📊 7. Tuckshop Executive P&L Engine & Margin Accounting:');
+  {
+    // 1. Expense categorization
+    assert(classifyExpenseCategory('Dosa Batter') === 'COGS', 'Dosa Batter classified as COGS');
+    assert(classifyExpenseCategory('Bread') === 'COGS', 'Bread classified as COGS');
+    assert(classifyExpenseCategory('Vegetables') === 'COGS', 'Vegetables classified as COGS');
+    assert(classifyExpenseCategory('Commercial Gas Cylinder') === 'OPEX', 'Gas cylinder classified as OPEX');
+    assert(classifyExpenseCategory('Cutlery') === 'OPEX', 'Cutlery classified as OPEX');
+    assert(classifyExpenseCategory('Staff Salary') === 'OPEX', 'Staff salary classified as OPEX');
+
+    // 2. Full P&L calculation
+    const sampleRecords: any[] = [
+      // Day 1: Sales
+      {
+        id: 'sale-1',
+        siteId: 'newrelic',
+        date: '2026-11-06T10:00:00.000Z',
+        type: 'sale',
+        amount: 10000,
+        mrpSales: 4000, // 3% = 120
+        nonMrpSales: 6000, // 19% = 1140
+        orderCount: 50,
+      },
+      // Day 1: COGS Expense (Batter & Veggies)
+      {
+        id: 'exp-1',
+        siteId: 'newrelic',
+        date: '2026-11-06T08:00:00.000Z',
+        type: 'expense',
+        category: 'Dosa Batter',
+        amount: 1500,
+      },
+      // Day 1: OPEX Expense (Gas Cylinder)
+      {
+        id: 'exp-2',
+        siteId: 'newrelic',
+        date: '2026-11-06T09:00:00.000Z',
+        type: 'expense',
+        category: 'Gas Cylinder',
+        amount: 1850,
+      },
+    ];
+
+    const pnl = computeTuckshopPnL(sampleRecords);
+    assert(pnl.grossSales === 10000, 'Gross sales is 10,000');
+    assert(pnl.mrpCommission === 120, 'MRP commission is 3% of 4,000 = 120');
+    assert(pnl.nonMrpCommission === 1140, 'Non-MRP commission is 19% of 6,000 = 1,140');
+    assert(pnl.totalCommission === 1260, 'Total commission is 1,260 (120 + 1140)');
+    assert(pnl.netRevenue === 8740, 'Net bank settlement is 8,740 (10,000 - 1,260)');
+    assert(pnl.totalCogs === 1500, 'Total COGS is 1,500');
+    assert(pnl.grossProfit === 7240, 'Gross Profit is 7,240 (8,740 - 1,500)');
+    assert(pnl.totalOpex === 1850, 'Total OPEX is 1,850');
+    assert(pnl.totalExpenses === 3350, 'Total Expenses is 3,350 (1,500 + 1,850)');
+    assert(pnl.netProfit === 5390, 'Net Operating Profit is 5,390 (8,740 - 3,350)');
+    assert(pnl.effectiveCommissionRate === 12.6, 'Effective platform take rate is 12.6%');
+    assert(pnl.cogsPercentage === 17.2, 'Food Cost (COGS) % is 17.2% of net revenue');
+    assert(pnl.netProfitMarginPct === 61.7, 'Net Profit Margin is 61.7%');
   }
 
   // --- Summary ---

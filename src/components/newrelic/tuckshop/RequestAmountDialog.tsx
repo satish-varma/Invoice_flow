@@ -54,9 +54,30 @@ export function RequestAmountDialog({
 }: RequestAmountDialogProps) {
   const { user } = useAuth();
 
+  const isMultiSite = Boolean(
+    (user?.assignedSites && user.assignedSites.length > 1) ||
+    (user?.pettyCashSites && user.pettyCashSites.length > 1)
+  );
+
+  const unifiedCounterName = React.useMemo(() => {
+    const rawSites = (user?.assignedSites && user.assignedSites.length > 1)
+      ? user.assignedSites
+      : (user?.pettyCashSites && user.pettyCashSites.length > 1)
+      ? user.pettyCashSites
+      : [];
+    const names = rawSites.map((s) => getCounterDisplayName(s).replace(/\s*\(.*\)/, '').trim());
+    return `Multi-Site Operations (${names.join(', ')})`;
+  }, [user]);
+
   // Multi-counter resolution for users with multiple sites
   const availableCounters = React.useMemo(() => {
     const list: Array<{ scopeKey: string; name: string }> = [];
+
+    if (isMultiSite) {
+      const primaryScope = user?.assignedSites?.[0] || user?.pettyCashSites?.[0] || 'ntt_data';
+      list.push({ scopeKey: primaryScope, name: unifiedCounterName });
+      return list;
+    }
 
     if (user?.pettyCashSites && user.pettyCashSites.length > 0) {
       user.pettyCashSites.forEach((s) => {
@@ -77,7 +98,7 @@ export function RequestAmountDialog({
     }
 
     return list;
-  }, [user, siteId, location]);
+  }, [user, siteId, location, isMultiSite, unifiedCounterName]);
 
   const [selectedScope, setSelectedScope] = useState<string>(() => {
     return availableCounters[0]?.scopeKey || getFloatScopeKey(siteId, location);
@@ -198,8 +219,20 @@ export function RequestAmountDialog({
           </div>
         ) : (
           <div className="space-y-4 pt-2 text-xs">
-            {/* Multi-Counter Picker (if applicable) */}
-            {availableCounters.length > 1 && (
+            {/* Multi-Counter Picker or Unified Info */}
+            {isMultiSite ? (
+              <div className="p-3 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-indigo-950 dark:text-indigo-200 text-xs">
+                  <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Unified Multi-Site Float Advance</span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                  This single advance covers all your assigned stalls ({(user?.assignedSites || user?.pettyCashSites || [])
+                    .map((s) => getCounterDisplayName(s).replace(/\s*\(.*\)/, ''))
+                    .join(', ')}). When you spend, record expenses against the specific stall.
+                </p>
+              </div>
+            ) : availableCounters.length > 1 ? (
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5 text-indigo-600" /> Counter Destination:
@@ -224,7 +257,7 @@ export function RequestAmountDialog({
                   ))}
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Notification Banner */}
             <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 text-slate-700 dark:text-slate-300 flex items-start gap-2.5">

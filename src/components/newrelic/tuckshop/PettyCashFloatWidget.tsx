@@ -74,9 +74,34 @@ export function PettyCashFloatWidget({
 }: Props) {
   const { user } = useAuth();
 
+  const isMultiSiteManager = Boolean(
+    !isAdmin && (
+      (user?.assignedSites && user.assignedSites.length > 1) ||
+      (user?.pettyCashSites && user.pettyCashSites.length > 1)
+    )
+  );
+
+  const assignedSiteList = useMemo(() => {
+    const list = (user?.assignedSites && user.assignedSites.length > 1)
+      ? user.assignedSites
+      : (user?.pettyCashSites && user.pettyCashSites.length > 1)
+      ? user.pettyCashSites
+      : [];
+    return list.map((s) => String(s).toLowerCase());
+  }, [user]);
+
   // Determine user available petty cash counters
   const userCounters = useMemo(() => {
     const list: Array<{ scopeKey: string; name: string }> = [];
+
+    if (isMultiSiteManager) {
+      const primaryScope = user?.assignedSites?.[0] || user?.pettyCashSites?.[0] || 'ntt_data';
+      const siteNames = assignedSiteList
+        .map((s) => getCounterDisplayName(s).replace(/\s*\(.*\)/, '').trim())
+        .join(', ');
+      list.push({ scopeKey: primaryScope, name: `Combined Float (${siteNames})` });
+      return list;
+    }
 
     if (user?.pettyCashSites && user.pettyCashSites.length > 0) {
       user.pettyCashSites.forEach((s) => {
@@ -97,7 +122,7 @@ export function PettyCashFloatWidget({
     }
 
     return list;
-  }, [user, siteId, location]);
+  }, [user, siteId, location, isMultiSiteManager, assignedSiteList]);
 
   const [activeScopeKey, setActiveScopeKey] = useState<string>(() => {
     return userCounters[0]?.scopeKey || getFloatScopeKey(siteId, location);
@@ -169,18 +194,22 @@ export function PettyCashFloatWidget({
       ? 'hyderabad'
       : undefined;
 
-    // Filter tuckshop expenses for this counter
+    // Filter tuckshop expenses for this counter or across assigned sites if multi-site
     const counterExpenses = records.filter((r) => {
       if (r.type !== 'expense') return false;
       const rSite = (r.siteId || 'newrelic').toLowerCase();
+      if (isMultiSiteManager && assignedSiteList.length > 0) {
+        return assignedSiteList.includes(rSite);
+      }
       if (activeScopeKey === 'newrelic_hyderabad' || activeScopeKey === 'newrelic_bangalore') {
         return rSite === 'newrelic';
       }
       return rSite === activeScopeKey;
     });
 
-    return computeFloatBalance(floatData, counterExpenses, locFilter);
-  }, [floatData, records, activeScopeKey]);
+    const allowedSites = isMultiSiteManager && assignedSiteList.length > 0 ? assignedSiteList : undefined;
+    return computeFloatBalance(floatData, counterExpenses, locFilter, allowedSites);
+  }, [floatData, records, activeScopeKey, isMultiSiteManager, assignedSiteList]);
 
   // Combined Cashflow Timeline (Advances Inflow (+) and Purchase Outflows (-))
   const cashflowTimeline = useMemo(() => {
@@ -612,6 +641,60 @@ export function PettyCashFloatWidget({
           </div>
         </div>
       </div>
+
+      {/* 2.b Multi-Site Stall Breakdown (For Multi-Site Managers) */}
+      {isMultiSiteManager && assignedSiteList.length > 1 && (
+        <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+              Expense Breakdown Across Your Stalls:
+            </span>
+            <span className="font-mono text-[11px] font-bold text-slate-500">
+              Total Spent: ₹{balance.totalSpent.toLocaleString('en-IN')}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {assignedSiteList.map((siteKey) => {
+              const stallSpent = records
+                .filter(
+                  (r) =>
+                    r.type === 'expense' &&
+                    (r.siteId || 'newrelic').toLowerCase() === siteKey &&
+                    (r.date || '') >= (floatData.currentCycleStart || '')
+                )
+                .reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+
+              const stallCount = records.filter(
+                (r) =>
+                  r.type === 'expense' &&
+                  (r.siteId || 'newrelic').toLowerCase() === siteKey &&
+                  (r.date || '') >= (floatData.currentCycleStart || '')
+              ).length;
+
+              return (
+                <div
+                  key={siteKey}
+                  className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 shadow-2xs flex flex-col justify-between"
+                >
+                  <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                    {getCounterDisplayName(siteKey).replace(/\s*\(.*\)/, '')}
+                  </span>
+                  <div className="mt-1 flex items-baseline justify-between">
+                    <span className="font-mono font-black text-sm text-rose-600 dark:text-rose-400">
+                      ₹{stallSpent.toLocaleString('en-IN')}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {stallCount} {stallCount === 1 ? 'bill' : 'bills'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* 3. Live Cashflow Statement & Purchase Activity Ledger */}
       <div className="space-y-2.5 pt-1">

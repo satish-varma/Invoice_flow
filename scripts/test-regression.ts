@@ -434,6 +434,18 @@ async function runRegressionSuite() {
     const critResult = computeFloatBalance(mockFloat, criticalSpendExpenses);
     assert(critResult.remainingFloat === 500, 'Remaining is 500');
     assert(critResult.status === 'critical', 'Status triggers critical alert (<= 15% threshold)');
+
+    // Test Multi-Site Manager Unified Float calculation
+    const multiSiteExpenses: any[] = [
+      { id: 'exp-m1', siteId: 'ntt_data', type: 'expense', date: '2026-11-04T00:00:00Z', amount: 1500 },
+      { id: 'exp-m2', siteId: 'dsm', type: 'expense', date: '2026-11-05T00:00:00Z', amount: 1200 },
+      { id: 'exp-m3', siteId: 'resmed', type: 'expense', date: '2026-11-06T00:00:00Z', amount: 800 },
+      { id: 'exp-other', siteId: 'newrelic', type: 'expense', date: '2026-11-06T00:00:00Z', amount: 9999 }, // Outside assigned sites
+    ];
+    const multiSiteResult = computeFloatBalance(mockFloat, multiSiteExpenses, undefined, ['ntt_data', 'dsm', 'resmed']);
+    assert(multiSiteResult.totalSpent === 3500, 'Multi-site manager total spent sums across assigned sites (1500+1200+800=3500)');
+    assert(multiSiteResult.remainingFloat === 3500, 'Multi-site manager remaining float is 3,500 (7,000 - 3,500)');
+    assert(multiSiteResult.status === 'optimal', 'Multi-site status is optimal (>40%)');
   }
 
   // --- Summary ---

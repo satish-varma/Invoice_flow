@@ -630,7 +630,8 @@ export async function updateOpeningFloat(
 export function computeFloatBalance(
   floatData: TuckshopSiteFloat,
   expenses: NewRelicTuckshopRecord[],
-  locationFilter?: string
+  locationFilter?: string,
+  allowedSites?: string[]
 ): FloatCalculationResult {
   const openingFloat = Number(floatData.openingFloat) || 5000;
   const cycleStart = floatData.currentCycleStart || getDefaultCycleStart();
@@ -645,6 +646,11 @@ export function computeFloatBalance(
       if (e.type !== 'expense') return false;
       const expenseDate = e.date || '';
       if (expenseDate < cycleStart) return false;
+
+      // When specific multi-site allowedSites are provided, filter directly
+      if (allowedSites && allowedSites.length > 0) {
+        return allowedSites.includes((e.siteId || 'newrelic').toLowerCase());
+      }
 
       // Location match check for multi-location sites like New Relic
       if (locationFilter) {

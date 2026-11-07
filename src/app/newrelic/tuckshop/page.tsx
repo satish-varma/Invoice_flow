@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-import { COMPANY_SITES } from '@/types/site';
+import { COMPANY_SITES, SiteId } from '@/types/site';
 import { subscribeCompanySites } from '@/services/siteService';
 import { triggerHaptic } from '@/lib/haptics';
 
@@ -42,11 +42,18 @@ export default function TuckshopPage() {
   const [, setSitesVersion] = useState(0);
   const siteConfig = COMPANY_SITES[assignedSite] || COMPANY_SITES.newrelic;
 
-  // For non-admin managers: strictly isolate records to their assigned site and EXPENSES ONLY!
+  const userAssignedSites = useMemo(() => {
+    if (user?.assignedSites && user.assignedSites.length > 0) return user.assignedSites;
+    return [assignedSite];
+  }, [user, assignedSite]);
+
+  const isMultiSiteManager = userAssignedSites.length > 1 && !isAdmin;
+
+  // For non-admin managers: strictly isolate records to their assigned sites and EXPENSES ONLY!
   const siteRecords = useMemo(() => {
     if (isAdmin) return records;
-    return records.filter((r) => (r.siteId || 'newrelic') === assignedSite && r.type === 'expense');
-  }, [records, isAdmin, assignedSite]);
+    return records.filter((r) => userAssignedSites.includes((r.siteId || 'newrelic') as SiteId) && r.type === 'expense');
+  }, [records, isAdmin, userAssignedSites]);
 
   useEffect(() => {
     const unsub = subscribeCompanySites(() => {
@@ -56,13 +63,14 @@ export default function TuckshopPage() {
   }, []);
 
   useEffect(() => {
-    const siteFilter = isAdmin ? undefined : assignedSite;
+    // Multi-site managers fetch all records and filter in memory by assigned sites
+    const siteFilter = isAdmin || isMultiSiteManager ? undefined : assignedSite;
     const unsubscribe = subscribeToTuckshopRecords((data) => {
       setRecords(data);
       setIsLoading(false);
     }, siteFilter);
     return () => unsubscribe();
-  }, [isAdmin, assignedSite]);
+  }, [isAdmin, assignedSite, isMultiSiteManager]);
 
   const existingCategories = useMemo(() => {
     const standard = ['Dosa Batter', 'Bread', 'Fruits', 'Groceries', 'Cutlery', 'Vegetables', 'Sales'];

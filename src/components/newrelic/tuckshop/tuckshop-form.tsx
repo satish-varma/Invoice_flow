@@ -46,16 +46,19 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
     return () => unsub();
   }, []);
 
+  const isMultiSiteManager = Boolean(user?.assignedSites && user.assignedSites.length > 1);
+  const canChooseSite = isAdmin || isMultiSiteManager;
+
   const [selectedSite, setSelectedSite] = useState<SiteId>(() => {
     if (editRecord?.siteId) return resolveSiteId(editRecord.siteId);
     return user?.assignedSite ? resolveSiteId(user.assignedSite) : 'newrelic';
   });
 
-  const effectiveSite = isAdmin ? selectedSite : (user?.assignedSite ? resolveSiteId(user.assignedSite) : 'newrelic');
+  const effectiveSite = canChooseSite ? selectedSite : (user?.assignedSite ? resolveSiteId(user.assignedSite) : 'newrelic');
   const siteConfig = COMPANY_SITES[effectiveSite];
   const isHydOnlySite = siteConfig
     ? siteConfig.allowedLocations.length === 1 && siteConfig.allowedLocations[0] === 'hyderabad'
-    : (effectiveSite === 'dsm' || effectiveSite === 'ntt_data');
+    : (effectiveSite === 'dsm' || effectiveSite === 'ntt_data' || effectiveSite === 'resmed');
   
   const defaultLoc = isHydOnlySite ? 'HYD' : getMappedLocation(user?.preferredLocations?.[0]);
   const [location, setLocation] = useState<'HYD' | 'BLR'>(
@@ -245,21 +248,23 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
         )}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {isAdmin && (
+            {canChooseSite && (
               <div className="sm:col-span-2">
                 <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
-                  Company Site <span className="text-rose-500">*</span>
+                  Company Site / Counter <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={selectedSite}
                   onChange={(e) => handleSiteChange(e.target.value as SiteId)}
                   className="w-full h-12 sm:h-10 px-3 text-sm border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 focus:border-[#3b2fc9] bg-white font-semibold text-slate-800 shadow-2xs"
                 >
-                  {sites.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} {s.isCustom ? '(Custom)' : ''} — {s.tagline || s.name}
-                    </option>
-                  ))}
+                  {sites
+                    .filter((s) => isAdmin || user?.assignedSites?.includes(s.id as SiteId) || s.id === user?.assignedSite)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} {s.isCustom ? '(Custom)' : ''} — {s.tagline || s.name}
+                      </option>
+                    ))}
                 </select>
               </div>
             )}

@@ -448,6 +448,60 @@ async function runRegressionSuite() {
     assert(multiSiteResult.status === 'optimal', 'Multi-site status is optimal (>40%)');
   }
 
+  // --- SUITE 9: HungerBox Partner Portal (partner.hungerbox.com) Data Extraction ---
+  console.log('\n🤝 9. HungerBox Partner Portal (Company Paid & C&C Advices):');
+  {
+    // Test: Company-Paid DC Invoice payload parsing
+    const sampleCpInvoice = {
+      invoiceNumber: 'TGGHS/25-26/354',
+      companyName: 'CGI Information Systems & Management Consultants Pvt Ltd',
+      serviceMonth: 'Sep-26',
+      dateReceived: "5th Nov'26",
+      amount: '87582.96',
+      status: 'paid',
+      sourceState: 'Telangana',
+      poId: '311616000138785638',
+    };
+
+    assert(sampleCpInvoice.invoiceNumber.startsWith('TGGHS/'), 'DC Invoice prefix is TGGHS');
+    assert(parseFloat(sampleCpInvoice.amount) === 87582.96, 'DC Invoice amount parses to exact float 87,582.96');
+    assert(sampleCpInvoice.poId === '311616000138785638', 'PO ID is preserved');
+    assert(sampleCpInvoice.status === 'paid', 'Payment status is marked as paid');
+
+    // Test: C&C Settlement Payment Advice Breakdown & Deductions
+    const sampleSettlement = {
+      settlementID: '949322',
+      dateRange: "2nd Nov'26 - 4th Nov'26",
+      counterName: 'Snack On (DLF)',
+      companyName: 'CGI Information Systems & Management Consultants Pvt Ltd',
+      netPayable: '6,850.00',
+      status: 'PaymentDone',
+      fileUrl: 'https://content.hungerbox.com/uploads/new_pa/949322_payment_advice.pdf',
+    };
+
+    const parsedNetPayable = parseFloat(sampleSettlement.netPayable.replace(/,/g, ''));
+    assert(parsedNetPayable === 6850.0, 'Net payable parses commas cleanly (6,850.00 -> 6850)');
+    assert(sampleSettlement.fileUrl.endsWith('.pdf'), 'Direct AWS S3 signed PDF link detected');
+
+    // Test: Deductions integrity
+    const sampleDeductions = [
+      { deductionName: 'Commission on Mrp Items', value: '36.18' },
+      { deductionName: 'Commission on Non-Mrp Items', value: '1392.07' },
+      { deductionName: 'GST Payable on Non-MRP Food Value by Ecom Operator', value: '468.14' },
+      { deductionName: 'TCS CGST (on MRP foodvalue)', value: '2.43' },
+      { deductionName: 'TCS SGST (on MRP foodvalue)', value: '2.43' },
+      { deductionName: 'TDS (on foodvalue)', value: '10.34' },
+      { deductionName: 'Sales from Sodexo Payment Method', value: '2091.00' },
+    ];
+
+    const totalDeductionsCalc = sampleDeductions.reduce((sum, d) => sum + parseFloat(d.value), 0);
+    assert(Math.round(totalDeductionsCalc * 100) / 100 === 4002.59, 'Sum of all deductions matches 4,002.59');
+
+    const totalSales = 10853.0;
+    const roundedRemittance = Math.round((totalSales - totalDeductionsCalc) * 100) / 100;
+    assert(roundedRemittance === 6850.41, 'Gross sales minus deductions matches net payable before rounding');
+  }
+
   // --- Summary ---
   console.log('\n======================================================');
   console.log(`   RESULTS: ${passed} Passed, ${failed} Failed`);

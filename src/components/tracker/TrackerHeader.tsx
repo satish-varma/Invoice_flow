@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Wallet,
   RefreshCw,
+  Building2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { triggerHaptic } from '@/lib/haptics';
@@ -48,6 +49,7 @@ export function TrackerHeader({
   const navItems = [
     { label: 'Overview', href: '/tracker', icon: LayoutDashboard, exact: true, show: true },
     { label: 'Remittances', href: '/tracker/invoices', icon: FileText, show: canViewInvoices },
+    { label: 'Partner Portal (DCs)', href: '/tracker/partner', icon: Building2, show: canViewInvoices },
     { label: 'Sales Feed', href: '/tracker/sales', icon: ShoppingBag, show: canSyncOrSettings },
     { label: 'Analytics', href: '/tracker/analytics', icon: BarChart3, show: canSyncOrSettings },
     { label: 'Sync & Settings', href: '/tracker/settings', icon: Settings, show: canAccessSettings },

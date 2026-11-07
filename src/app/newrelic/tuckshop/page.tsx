@@ -9,9 +9,10 @@ import { TuckshopShiftPulse } from '@/components/newrelic/tuckshop/TuckshopShift
 import { HungerBoxSyncModal } from '@/components/newrelic/tuckshop/HungerBoxSyncModal';
 import { CogsHealthGauge } from '@/components/newrelic/tuckshop/CogsHealthGauge';
 import { PettyCashFloatWidget } from '@/components/newrelic/tuckshop/PettyCashFloatWidget';
+import { RequestAmountDialog } from '@/components/newrelic/tuckshop/RequestAmountDialog';
 import { computeTuckshopPnL } from '@/services/tuckshopPnLService';
 import { subscribeToTuckshopRecords, NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
-import { Loader2, Plus, TrendingDown, IndianRupee, Zap, Building2, PieChart } from 'lucide-react';
+import { Loader2, Plus, TrendingDown, IndianRupee, Zap, Building2, PieChart, Send } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
@@ -32,6 +33,7 @@ export default function TuckshopPage() {
   const [dialogInitialTab, setDialogInitialTab] = useState<'expense' | 'sale'>('expense');
   const [editingRecord, setEditingRecord] = useState<NewRelicTuckshopRecord | null>(null);
   const [isHungerBoxModalOpen, setIsHungerBoxModalOpen] = useState(false);
+  const [isRequestAmountOpen, setIsRequestAmountOpen] = useState(false);
 
   const isAdmin = role === 'admin' || role === 'superadmin';
   const assignedSite = user?.assignedSite || 'newrelic';
@@ -173,6 +175,16 @@ export default function TuckshopPage() {
             >
               <TrendingDown className="h-4 w-4" /> Add Expense
             </button>
+
+            <button 
+              onClick={() => {
+                triggerHaptic('medium');
+                setIsRequestAmountOpen(true);
+              }}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 text-slate-950 rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-amber-950/20 hover:from-amber-400 hover:to-orange-400 transition-all active:scale-95"
+            >
+              <Send className="h-4 w-4 fill-slate-950" /> Request Amount
+            </button>
           </div>
         </div>
       </div>
@@ -194,6 +206,7 @@ export default function TuckshopPage() {
           siteId={assignedSite}
           records={siteRecords}
           isAdmin={isAdmin}
+          onRequestAmount={() => setIsRequestAmountOpen(true)}
         />
         {isAdmin && (
           <CogsHealthGauge
@@ -205,6 +218,13 @@ export default function TuckshopPage() {
           />
         )}
       </div>
+
+      {/* Request Amount Modal (Accessible by both Managers and Admins) */}
+      <RequestAmountDialog
+        open={isRequestAmountOpen}
+        onOpenChange={setIsRequestAmountOpen}
+        siteId={assignedSite}
+      />
 
       {/* HungerBox Cashless Automated Sync Modal */}
       {isAdmin && (

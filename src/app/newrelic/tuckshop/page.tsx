@@ -36,6 +36,7 @@ export default function TuckshopPage() {
   const [isRequestAmountOpen, setIsRequestAmountOpen] = useState(false);
 
   const isAdmin = role === 'admin' || role === 'superadmin';
+  const hasPettyCashAccess = isAdmin || Boolean(user?.pettyCashEnabled);
   const assignedSite = user?.assignedSite || 'newrelic';
   const [, setSitesVersion] = useState(0);
   const siteConfig = COMPANY_SITES[assignedSite] || COMPANY_SITES.newrelic;
@@ -132,7 +133,9 @@ export default function TuckshopPage() {
               <p className="text-xs text-rose-100/80 font-medium mt-0.5">
                 {isAdmin
                   ? 'Real-time sales, raw materials, vendor expenses & daily net profit.'
-                  : `Record morning supplies and manage petty cash float for ${siteConfig.name}.`}
+                  : hasPettyCashAccess
+                  ? `Record morning supplies and manage petty cash float for ${siteConfig.name}.`
+                  : `Record morning supplies and operational expenses for ${siteConfig.name}.`}
               </p>
             </div>
           </div>
@@ -176,15 +179,17 @@ export default function TuckshopPage() {
               <TrendingDown className="h-4 w-4" /> Add Expense
             </button>
 
-            <button 
-              onClick={() => {
-                triggerHaptic('medium');
-                setIsRequestAmountOpen(true);
-              }}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 text-slate-950 rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-amber-950/20 hover:from-amber-400 hover:to-orange-400 transition-all active:scale-95"
-            >
-              <Send className="h-4 w-4 fill-slate-950" /> Request Amount
-            </button>
+            {hasPettyCashAccess && (
+              <button 
+                onClick={() => {
+                  triggerHaptic('medium');
+                  setIsRequestAmountOpen(true);
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 text-slate-950 rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-amber-950/20 hover:from-amber-400 hover:to-orange-400 transition-all active:scale-95"
+              >
+                <Send className="h-4 w-4 fill-slate-950" /> Request Amount
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -200,31 +205,37 @@ export default function TuckshopPage() {
         />
       )}
 
-      {/* 🏦 Petty Cash Float Tracker & 📉 COGS Health Gauge (Admin Only) */}
-      <div className={isAdmin ? "grid grid-cols-1 lg:grid-cols-2 gap-4" : "grid grid-cols-1 gap-4"}>
-        <PettyCashFloatWidget
-          siteId={assignedSite}
-          records={siteRecords}
-          isAdmin={isAdmin}
-          onRequestAmount={() => setIsRequestAmountOpen(true)}
-        />
-        {isAdmin && (
-          <CogsHealthGauge
-            cogsAmount={sitePnL.totalCogs}
-            netRevenue={sitePnL.netRevenue}
-            grossSales={sitePnL.grossSales}
-            cogsPercentage={sitePnL.cogsPercentage}
-            topIngredients={sitePnL.cogsCategories}
-          />
-        )}
-      </div>
+      {/* 🏦 Petty Cash Float Tracker & 📉 COGS Health Gauge */}
+      {(hasPettyCashAccess || isAdmin) && (
+        <div className={isAdmin ? "grid grid-cols-1 lg:grid-cols-2 gap-4" : "grid grid-cols-1 gap-4"}>
+          {hasPettyCashAccess && (
+            <PettyCashFloatWidget
+              siteId={assignedSite}
+              records={siteRecords}
+              isAdmin={isAdmin}
+              onRequestAmount={() => setIsRequestAmountOpen(true)}
+            />
+          )}
+          {isAdmin && (
+            <CogsHealthGauge
+              cogsAmount={sitePnL.totalCogs}
+              netRevenue={sitePnL.netRevenue}
+              grossSales={sitePnL.grossSales}
+              cogsPercentage={sitePnL.cogsPercentage}
+              topIngredients={sitePnL.cogsCategories}
+            />
+          )}
+        </div>
+      )}
 
-      {/* Request Amount Modal (Accessible by both Managers and Admins) */}
-      <RequestAmountDialog
-        open={isRequestAmountOpen}
-        onOpenChange={setIsRequestAmountOpen}
-        siteId={assignedSite}
-      />
+      {/* Request Amount Modal (Accessible only if Petty Cash is Enabled) */}
+      {hasPettyCashAccess && (
+        <RequestAmountDialog
+          open={isRequestAmountOpen}
+          onOpenChange={setIsRequestAmountOpen}
+          siteId={assignedSite}
+        />
+      )}
 
       {/* HungerBox Cashless Automated Sync Modal */}
       {isAdmin && (

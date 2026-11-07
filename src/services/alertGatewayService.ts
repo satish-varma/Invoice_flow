@@ -1065,7 +1065,10 @@ export async function dispatchPettyCashRequestAlert(
   const site = data.siteName || (data as any).counterName || 'Tuckshop Counter';
   const loc = data.location || (data as any).locationName || 'Stall';
   const reasonText = data.reason || (data as any).purpose || 'Morning supplies replenishment';
-  const modeText = (data.preferredMode || '').toLowerCase().includes('cash') ? '💵 Cash Handover' : '📱 UPI Transfer';
+  const rawMode = (data.preferredMode || '').toLowerCase();
+  const modeText = rawMode.includes('bank') ? '🏦 HDFC NetBanking / IMPS' : '📱 PhonePe / UPI Transfer';
+  const payeeUpi = (data as any).payeeUpi || '7709632898@ybl';
+  const upiPayLink = `upi://pay?pa=${encodeURIComponent(payeeUpi)}&pn=${encodeURIComponent(staffName)}&am=${amountVal}&cu=INR&tn=${encodeURIComponent('Tuckshop-Petty-Cash')}`;
 
   const message = `🚨 *PETTY CASH FLOAT TOP-UP REQUEST*
 ━━━━━━━━━━━━━━━━━━━━
@@ -1077,6 +1080,9 @@ export async function dispatchPettyCashRequestAlert(
 💳 *Preferred Mode:* ${modeText}
 ⏰ *Time:* ${timeStr}
 ━━━━━━━━━━━━━━━━━━━━
+⚡ *1-Tap Pay via PhonePe / UPI:*
+${upiPayLink}
+
 👉 *Review & Approve in Portal:*
 https://invoiceflow.thegutguru.in/newrelic/tuckshop?floatReq=${data.requestId}`;
 

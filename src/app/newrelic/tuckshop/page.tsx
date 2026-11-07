@@ -10,6 +10,7 @@ import { HungerBoxSyncModal } from '@/components/newrelic/tuckshop/HungerBoxSync
 import { CogsHealthGauge } from '@/components/newrelic/tuckshop/CogsHealthGauge';
 import { PettyCashFloatWidget } from '@/components/newrelic/tuckshop/PettyCashFloatWidget';
 import { RequestAmountDialog } from '@/components/newrelic/tuckshop/RequestAmountDialog';
+import { AdminFloatNotificationPill } from '@/components/newrelic/tuckshop/AdminFloatApprovalModal';
 import { computeTuckshopPnL } from '@/services/tuckshopPnLService';
 import { subscribeToTuckshopRecords, NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { Loader2, Plus, TrendingDown, IndianRupee, Zap, Building2, PieChart, Send } from 'lucide-react';
@@ -143,6 +144,8 @@ export default function TuckshopPage() {
           <div className="grid grid-cols-2 sm:flex gap-2.5 flex-wrap">
             {isAdmin && (
               <>
+                <AdminFloatNotificationPill />
+
                 <Link
                   href="/newrelic/tuckshop/sales"
                   className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-2xl text-xs sm:text-sm transition-all active:scale-95 shadow-md"

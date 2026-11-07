@@ -231,10 +231,10 @@ export async function getSiteFloat(scopeKey: string): Promise<TuckshopSiteFloat>
 export function subscribeToAllPendingRequests(
   callback: (requests: FloatRequestEntry[]) => void
 ) {
+  // Query by status only (avoids requiring a composite index in Firestore)
   const q = query(
     collection(db, TUCKSHOP_FLOAT_REQUESTS_COLLECTION),
-    where('status', '==', 'pending'),
-    orderBy('date', 'desc')
+    where('status', '==', 'pending')
   );
 
   return onSnapshot(
@@ -244,6 +244,8 @@ export function subscribeToAllPendingRequests(
         id: d.id,
         ...d.data(),
       })) as FloatRequestEntry[];
+      // Sort newest requests first in-memory
+      items.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       callback(items);
     },
     (err) => {

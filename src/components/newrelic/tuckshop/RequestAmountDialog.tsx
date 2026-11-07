@@ -91,7 +91,8 @@ export function RequestAmountDialog({
 
   const [amount, setAmount] = useState<string>('2000');
   const [reason, setReason] = useState<string>('Morning bread, milk & curd');
-  const [preferredMode, setPreferredMode] = useState<'upi' | 'cash'>('upi');
+  const [preferredMode, setPreferredMode] = useState<'upi' | 'bank_transfer'>('upi');
+  const [payeeUpi, setPayeeUpi] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -123,6 +124,7 @@ export function RequestAmountDialog({
           amount: numAmount,
           reason: reason.trim() || 'Supplies purchase',
           preferredMode,
+          payeeUpi: payeeUpi.trim() || undefined,
           currentBalance: currentBalance ?? 0,
         }),
       });
@@ -293,25 +295,46 @@ export function RequestAmountDialog({
                   }`}
                 >
                   <Smartphone className="w-4 h-4 text-indigo-600" />
-                  <span>UPI (PhonePe / GPay)</span>
+                  <span>PhonePe / UPI</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => {
                     triggerHaptic('light');
-                    setPreferredMode('cash');
+                    setPreferredMode('bank_transfer');
                   }}
                   className={`py-2.5 px-3 rounded-2xl font-bold text-xs border flex items-center justify-center gap-2 transition-all ${
-                    preferredMode === 'cash'
+                    preferredMode === 'bank_transfer'
                       ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-200 ring-2 ring-emerald-600/50 shadow-xs'
                       : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
                   }`}
                 >
                   <Banknote className="w-4 h-4 text-emerald-600" />
-                  <span>Physical Cash</span>
+                  <span>HDFC NetBanking</span>
                 </button>
               </div>
+
+              {/* UPI ID / Mobile Input */}
+              {preferredMode === 'upi' ? (
+                <div className="pt-1.5">
+                  <Input
+                    value={payeeUpi}
+                    onChange={(e) => setPayeeUpi(e.target.value)}
+                    placeholder="Enter your PhonePe Mobile No or UPI ID (e.g. 9876543210@ybl)"
+                    className="h-9 rounded-xl text-xs font-mono"
+                  />
+                </div>
+              ) : (
+                <div className="pt-1.5">
+                  <Input
+                    value={payeeUpi}
+                    onChange={(e) => setPayeeUpi(e.target.value)}
+                    placeholder="Enter HDFC Account No &amp; IFSC"
+                    className="h-9 rounded-xl text-xs font-mono"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Reason / Supplies */}

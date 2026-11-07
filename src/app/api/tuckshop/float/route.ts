@@ -36,6 +36,7 @@ export async function POST(request: Request) {
         currentBalance,
         counterName,
         location,
+        payeeUpi,
       } = body;
 
       if (!scopeKey || !amount || Number(amount) <= 0) {
@@ -53,7 +54,8 @@ export async function POST(request: Request) {
         currentBalance: currentBalance !== undefined ? Number(currentBalance) : 0,
         requestedBy: `${userName} (${userEmail})`,
         requestedByEmail: userEmail,
-      });
+        ...(payeeUpi ? { payeeUpi } : {}),
+      } as any);
 
       // Dispatch WhatsApp Alert to Admin
       let whatsappResult = { totalSent: 0, totalFailed: 0, results: [] as any[] };
@@ -67,7 +69,8 @@ export async function POST(request: Request) {
           reason: newRequest.reason || 'Supplies purchase',
           currentBalance: currentBalance !== undefined ? Number(currentBalance) : 0,
           preferredMode: preferredMode || 'upi',
-        });
+          payeeUpi,
+        } as any);
       } catch (waErr: any) {
         console.warn('[FloatAPI] WhatsApp dispatch warning:', waErr.message);
       }

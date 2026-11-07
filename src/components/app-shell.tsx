@@ -184,6 +184,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       {/* Mobile Top App Bar (sm:hidden) */}
       <div className="sm:hidden">
         <MobileAppBar>
+          <AdminFloatNotificationPill />
           {isAdmin && <FinancialStatusBadge />}
         </MobileAppBar>
       </div>

@@ -21,6 +21,7 @@ import {
   Check,
   Edit2,
   Phone,
+  MessageCircle,
 } from 'lucide-react';
 import {
   Dialog,
@@ -62,7 +63,7 @@ export function AdminFloatApprovalDialog({
   const [payeeUpi, setPayeeUpi] = useState('');
   const [isEditingUpi, setIsEditingUpi] = useState(false);
 
-  const [mode, setMode] = useState<'upi' | 'bank_transfer'>('upi');
+  const [mode, setMode] = useState<'whatsapp' | 'upi' | 'bank_transfer'>('whatsapp');
   const [transactionRef, setTransactionRef] = useState('');
   const [adminNote, setAdminNote] = useState('');
   const [declineReason, setDeclineReason] = useState('');
@@ -75,7 +76,14 @@ export function AdminFloatApprovalDialog({
     if (!request || !open) return;
 
     const pref = (request.preferredMode || '').toLowerCase();
-    setMode(pref.includes('bank') ? 'bank_transfer' : 'upi');
+    if (pref.includes('bank')) {
+      setMode('bank_transfer');
+    } else if (pref.includes('phonepe')) {
+      setMode('upi');
+    } else {
+      setMode('whatsapp');
+    }
+
     setTransactionRef('');
     setAdminNote(`Approved top-up of ₹${request.amount.toLocaleString('en-IN')}`);
     setIsDeclining(false);
@@ -173,6 +181,12 @@ export function AdminFloatApprovalDialog({
   };
 
   const cleanUpi = payeeUpi.trim();
+  const cleanPhone = (payeePhone || '').replace(/\D/g, '').slice(-10);
+  const whatsappChatUrl = cleanPhone
+    ? `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(
+        `Hi ${payeeName}, approving petty cash float top-up of ₹${request.amount.toLocaleString('en-IN')} for ${request.counterName}.`
+      )}`
+    : null;
   const upiIntentUrl = cleanUpi
     ? `upi://pay?pa=${encodeURIComponent(cleanUpi)}&pn=${encodeURIComponent(payeeName)}&am=${request.amount}&cu=INR&tn=${encodeURIComponent('Tuckshop-Petty-Cash')}`
     : '';
@@ -252,21 +266,37 @@ export function AdminFloatApprovalDialog({
                 <label className="font-bold text-slate-700 dark:text-slate-300">
                   Payment Transfer Method:
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setMode('whatsapp');
+                    }}
+                    className={`py-2 px-2 rounded-2xl font-bold text-[11px] sm:text-xs border flex items-center justify-center gap-1.5 transition-all ${
+                      mode === 'whatsapp'
+                        ? 'border-emerald-500 bg-emerald-500 text-slate-950 font-black shadow-xs ring-2 ring-emerald-400/50'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+                    }`}
+                  >
+                    <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>WhatsApp</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
                       triggerHaptic('light');
                       setMode('upi');
                     }}
-                    className={`py-2.5 px-3 rounded-2xl font-bold text-xs border flex items-center justify-center gap-2 transition-all ${
+                    className={`py-2 px-2 rounded-2xl font-bold text-[11px] sm:text-xs border flex items-center justify-center gap-1.5 transition-all ${
                       mode === 'upi'
-                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-950 dark:text-indigo-200 ring-2 ring-indigo-600/50 shadow-xs'
+                        ? 'border-indigo-600 bg-indigo-600 text-white font-black shadow-xs ring-2 ring-indigo-500/50'
                         : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
                     }`}
                   >
-                    <Smartphone className="w-4 h-4 text-indigo-600" />
-                    <span>PhonePe / UPI</span>
+                    <Smartphone className="w-3.5 h-3.5 shrink-0" />
+                    <span>PhonePe</span>
                   </button>
 
                   <button
@@ -275,17 +305,98 @@ export function AdminFloatApprovalDialog({
                       triggerHaptic('light');
                       setMode('bank_transfer');
                     }}
-                    className={`py-2.5 px-3 rounded-2xl font-bold text-xs border flex items-center justify-center gap-2 transition-all ${
+                    className={`py-2 px-2 rounded-2xl font-bold text-[11px] sm:text-xs border flex items-center justify-center gap-1.5 transition-all ${
                       mode === 'bank_transfer'
-                        ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-200 ring-2 ring-emerald-600/50 shadow-xs'
+                        ? 'border-blue-600 bg-blue-600 text-white font-black shadow-xs ring-2 ring-blue-500/50'
                         : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
                     }`}
                   >
-                    <Landmark className="w-4 h-4 text-emerald-600" />
-                    <span>HDFC NetBanking</span>
+                    <Landmark className="w-3.5 h-3.5 shrink-0" />
+                    <span>HDFC Bank</span>
                   </button>
                 </div>
               </div>
+
+              {/* Mode 0: WhatsApp Pay Direct Chat & UPI Transfer */}
+              {mode === 'whatsapp' && (
+                <div className="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 space-y-3">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-100 dark:border-emerald-900/60 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                        <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="font-bold text-[11px]">Payee (Employee Directory):</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-xs text-emerald-900 dark:text-emerald-300">
+                          {payeePhone ? `+91 ${payeePhone}` : 'No phone linked'}
+                        </span>
+                        {payeePhone && (
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(payeePhone, 'phone')}
+                            className="p-1 rounded text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0 text-[10px] font-bold flex items-center gap-0.5"
+                            title="Copy Phone Number"
+                          >
+                            {copiedField === 'phone' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                        <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="font-bold text-[11px]">Manager UPI ID:</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-xs text-slate-900 dark:text-white">
+                          {payeeUpi || 'Not set'}
+                        </span>
+                        {payeeUpi && (
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(payeeUpi, 'upi')}
+                            className="p-1 rounded text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0 text-[10px] font-bold flex items-center gap-0.5"
+                            title="Copy UPI ID"
+                          >
+                            {copiedField === 'upi' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {whatsappChatUrl ? (
+                    <a
+                      href={whatsappChatUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-950/20 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <MessageCircle className="w-4 h-4 fill-white text-emerald-600" />
+                      <span>⚡ Open WhatsApp &amp; Pay ₹{request.amount.toLocaleString('en-IN')}</span>
+                    </a>
+                  ) : (
+                    <p className="text-rose-500 font-bold text-xs">
+                      No phone number linked to this manager in Employee Directory.
+                    </p>
+                  )}
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-200/60 dark:border-emerald-900/60 text-[11px] text-slate-700 dark:text-slate-300 space-y-1.5">
+                    <span className="font-bold text-emerald-700 dark:text-emerald-400 block">
+                      👉 How to complete transfer in WhatsApp:
+                    </span>
+                    <div className="space-y-1 text-[10px] text-slate-600 dark:text-slate-400">
+                      <p>
+                        <strong>1. Tap ₹ icon in chat:</strong> Tapping the button opens chat with {payeeName}. Hit <strong>₹</strong> at the bottom, enter <strong>₹{request.amount.toLocaleString('en-IN')}</strong>, and enter your UPI PIN.
+                      </p>
+                      <p>
+                        <strong>2. Or Pay via UPI ID:</strong> In WhatsApp payment, you can also tap <strong>&quot;Send to a UPI ID&quot;</strong> and paste <code>{payeeUpi}</code>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Mode 1: 1-Click PhonePe / UPI Fast Automation */}
               {mode === 'upi' && (

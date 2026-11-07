@@ -512,7 +512,7 @@ export function PettyCashFloatWidget({
                     className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
                   >
                     <Smartphone className="w-3.5 h-3.5" />
-                    <span>Pay ₹{req.amount.toLocaleString('en-IN')} via PhonePe</span>
+                    <span>Pay ₹{req.amount.toLocaleString('en-IN')} (WhatsApp / UPI)</span>
                     <ArrowRight className="w-3 h-3" />
                   </button>
                 ) : (

@@ -130,29 +130,33 @@ export default function TuckshopPage() {
           </div>
 
           <div className="grid grid-cols-2 sm:flex gap-2.5 flex-wrap">
-            <Link
-              href="/newrelic/tuckshop/sales"
-              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-2xl text-xs sm:text-sm transition-all active:scale-95 shadow-md"
-            >
-              <Building2 className="h-4 w-4 text-amber-300" /> Sales Ledger
-            </Link>
+            {isAdmin && (
+              <>
+                <Link
+                  href="/newrelic/tuckshop/sales"
+                  className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-2xl text-xs sm:text-sm transition-all active:scale-95 shadow-md"
+                >
+                  <Building2 className="h-4 w-4 text-amber-300" /> Sales Ledger
+                </Link>
 
-            <Link
-              href="/newrelic/tuckshop/analytics"
-              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 border border-emerald-400/30 text-emerald-200 font-bold rounded-2xl text-xs sm:text-sm transition-all active:scale-95 shadow-md"
-            >
-              <PieChart className="h-4 w-4 text-emerald-300" /> P&amp;L Analytics
-            </Link>
+                <Link
+                  href="/newrelic/tuckshop/analytics"
+                  className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 border border-emerald-400/30 text-emerald-200 font-bold rounded-2xl text-xs sm:text-sm transition-all active:scale-95 shadow-md"
+                >
+                  <PieChart className="h-4 w-4 text-emerald-300" /> P&amp;L Analytics
+                </Link>
 
-            <button 
-              onClick={() => {
-                triggerHaptic('medium');
-                setIsHungerBoxModalOpen(true);
-              }}
-              className="flex items-center justify-center gap-2 px-3.5 py-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 font-black rounded-2xl text-xs sm:text-sm shadow-lg shadow-amber-950/20 hover:from-amber-300 hover:to-orange-400 transition-all active:scale-95"
-            >
-              <Zap className="h-4 w-4 fill-slate-950" /> Sync HungerBox
-            </button>
+                <button 
+                  onClick={() => {
+                    triggerHaptic('medium');
+                    setIsHungerBoxModalOpen(true);
+                  }}
+                  className="flex items-center justify-center gap-2 px-3.5 py-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 font-black rounded-2xl text-xs sm:text-sm shadow-lg shadow-amber-950/20 hover:from-amber-300 hover:to-orange-400 transition-all active:scale-95"
+                >
+                  <Zap className="h-4 w-4 fill-slate-950" /> Sync HungerBox
+                </button>
+              </>
+            )}
 
             <button 
               onClick={() => {
@@ -172,24 +176,26 @@ export default function TuckshopPage() {
         records={records}
         onOpenExpense={() => openDialog('expense')}
         onOpenSale={() => openDialog('sale')}
-        onOpenHungerBoxSync={() => setIsHungerBoxModalOpen(true)}
+        onOpenHungerBoxSync={isAdmin ? () => setIsHungerBoxModalOpen(true) : undefined}
         siteName={isAdmin ? undefined : siteConfig.name}
       />
 
-      {/* 📉 COGS Health Gauge & 🏦 Petty Cash Float Tracker */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* 🏦 Petty Cash Float Tracker & 📉 COGS Health Gauge (Admin Only) */}
+      <div className={isAdmin ? "grid grid-cols-1 lg:grid-cols-2 gap-4" : "grid grid-cols-1 gap-4"}>
         <PettyCashFloatWidget
           siteId={assignedSite}
           records={records}
           isAdmin={isAdmin}
         />
-        <CogsHealthGauge
-          cogsAmount={sitePnL.totalCogs}
-          netRevenue={sitePnL.netRevenue}
-          grossSales={sitePnL.grossSales}
-          cogsPercentage={sitePnL.cogsPercentage}
-          topIngredients={sitePnL.cogsCategories}
-        />
+        {isAdmin && (
+          <CogsHealthGauge
+            cogsAmount={sitePnL.totalCogs}
+            netRevenue={sitePnL.netRevenue}
+            grossSales={sitePnL.grossSales}
+            cogsPercentage={sitePnL.cogsPercentage}
+            topIngredients={sitePnL.cogsCategories}
+          />
+        )}
       </div>
 
       {/* HungerBox Cashless Automated Sync Modal */}

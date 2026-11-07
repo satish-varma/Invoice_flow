@@ -14,6 +14,12 @@ export async function GET() {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
+  const userRole = (session.user as any).role;
+  const isAdmin = userRole === 'admin' || userRole === 'superadmin';
+  if (!isAdmin) {
+    return NextResponse.json({ success: false, error: 'Unauthorized: Admin access required for HungerBox sync status' }, { status: 403 });
+  }
+
   try {
     const settings = await getSettings('default');
     const recentSales = await getHungerBoxSales('default', 10);
@@ -73,8 +79,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user || (session.user as any).role === 'guest') {
-    return NextResponse.json({ success: false, error: 'Unauthorized or Read-Only mode' }, { status: 401 });
+  if (!session || !session.user) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const userRole = (session.user as any).role;
+  const isAdmin = userRole === 'admin' || userRole === 'superadmin';
+  if (!isAdmin) {
+    return NextResponse.json({ success: false, error: 'Unauthorized: Admin access required to sync HungerBox' }, { status: 403 });
   }
 
   const userEmail = session.user.email || 'admin@hungerbox';

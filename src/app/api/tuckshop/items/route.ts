@@ -78,6 +78,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
+  const userRole = (session.user as any).role;
+  const isAdmin = userRole === 'admin' || userRole === 'superadmin';
+  if (!isAdmin) {
+    return NextResponse.json({ success: false, error: 'Unauthorized: Admin access required for item sales telemetry' }, { status: 403 });
+  }
+
   try {
     const url = new URL(request.url);
     const siteFilter = url.searchParams.get('siteId') || 'all';

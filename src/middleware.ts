@@ -151,6 +151,16 @@ export default withAuth(
       return NextResponse.redirect(new URL('/newrelic/tuckshop', req.url));
     }
 
+    // Sales Ledger and P&L Executive Analytics are strictly reserved for Super Admins
+    if (
+      pathname.startsWith('/newrelic/tuckshop/sales') ||
+      pathname.startsWith('/tuckshop/sales') ||
+      pathname.startsWith('/newrelic/tuckshop/analytics') ||
+      pathname.startsWith('/tuckshop/analytics')
+    ) {
+      return NextResponse.redirect(new URL('/newrelic/tuckshop', req.url));
+    }
+
     // Map URL path to required permission key
     let requiredPerm: string | null = null;
 

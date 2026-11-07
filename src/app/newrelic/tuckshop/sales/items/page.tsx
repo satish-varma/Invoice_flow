@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
 import {
   ShoppingBag,
@@ -47,6 +49,16 @@ const CATEGORY_PRESETS = [
 ];
 
 export default function ItemSalesExplorerPage() {
+  const { role, loading } = useAuth();
+  const router = useRouter();
+  const isAdmin = role === 'admin' || role === 'superadmin';
+
+  useEffect(() => {
+    if (!loading && !isAdmin) {
+      router.replace('/newrelic/tuckshop');
+    }
+  }, [loading, isAdmin, router]);
+
   const [data, setData] = useState<{
     summary: {
       totalGross: number;
@@ -193,6 +205,15 @@ export default function ItemSalesExplorerPage() {
     if (!data?.days || data.days.length === 0) return false;
     return data.days.every((d) => expandedDates[d.date]);
   }, [data, expandedDates]);
+
+  if (loading || !isAdmin) {
+    return (
+      <div className="w-full min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <RefreshCw className="w-6 h-6 animate-spin text-slate-400" />
+        <p className="text-xs font-bold text-slate-500">Checking administrator clearance...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-6">

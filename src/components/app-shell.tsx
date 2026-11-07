@@ -310,29 +310,33 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                 Tuckshop
               </Link>
 
-              <Link
-                href="/newrelic/tuckshop/sales"
-                className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border ${
-                  pathname === '/newrelic/tuckshop/sales' || pathname === '/tuckshop/sales'
-                    ? 'bg-indigo-50 border-indigo-200 text-[#3b2fc9] dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 shadow-xs'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
-                }`}
-              >
-                <Building2 className="h-3.5 w-3.5 text-amber-500" />
-                All Sites Sales
-              </Link>
+              {isAdmin && (
+                <>
+                  <Link
+                    href="/newrelic/tuckshop/sales"
+                    className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border ${
+                      pathname === '/newrelic/tuckshop/sales' || pathname === '/tuckshop/sales'
+                        ? 'bg-indigo-50 border-indigo-200 text-[#3b2fc9] dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300 shadow-xs'
+                        : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <Building2 className="h-3.5 w-3.5 text-amber-500" />
+                    All Sites Sales
+                  </Link>
 
-              <Link
-                href="/newrelic/tuckshop/analytics"
-                className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border ${
-                  pathname === '/newrelic/tuckshop/analytics' || pathname === '/tuckshop/analytics'
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/60 dark:border-emerald-800 dark:text-emerald-300 shadow-xs'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
-                }`}
-              >
-                <PieChart className="h-3.5 w-3.5 text-emerald-500" />
-                P&amp;L Analytics
-              </Link>
+                  <Link
+                    href="/newrelic/tuckshop/analytics"
+                    className={`px-3 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 border ${
+                      pathname === '/newrelic/tuckshop/analytics' || pathname === '/tuckshop/analytics'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/60 dark:border-emerald-800 dark:text-emerald-300 shadow-xs'
+                        : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <PieChart className="h-3.5 w-3.5 text-emerald-500" />
+                    P&amp;L Analytics
+                  </Link>
+                </>
+              )}
             </>
           )}
 
@@ -620,7 +624,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                     </Link>
                   </DropdownMenuItem>
                 )}
-                {hasPermission(user, 'tuckshop') && (
+                {isAdmin && (
                   <>
                     <DropdownMenuItem asChild>
                       <Link href="/newrelic/tuckshop/sales" className="flex items-center gap-2 cursor-pointer font-medium text-xs">

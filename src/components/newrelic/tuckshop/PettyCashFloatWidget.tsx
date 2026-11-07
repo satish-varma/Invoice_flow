@@ -24,6 +24,8 @@ import {
   User,
   Eye,
   Filter,
+  Smartphone,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -43,12 +45,15 @@ import {
   createDefaultFloat,
   getFloatScopeKey,
   getCounterDisplayName,
+  subscribeToAllPendingRequests,
+  FloatRequestEntry,
 } from '@/services/tuckshopFloatService';
 import { NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { triggerHaptic } from '@/lib/haptics';
 import { formatOrdinalDate } from '@/services/hungerboxParser';
 import { useAuth } from '@/contexts/AuthContext';
 import { RequestAmountDialog } from './RequestAmountDialog';
+import { AdminFloatApprovalDialog } from './AdminFloatApprovalModal';
 
 interface Props {
   siteId: string;
@@ -125,6 +130,25 @@ export function PettyCashFloatWidget({
   const [isSubmittingAdv, setIsSubmittingAdv] = useState(false);
 
   const [newOpeningFloat, setNewOpeningFloat] = useState<string>('5000');
+
+  // Pending Float Top-Up Requests (Live from tuckshop_float_requests)
+  const [allPendingRequests, setAllPendingRequests] = useState<FloatRequestEntry[]>([]);
+  const [selectedApprovalReq, setSelectedApprovalReq] = useState<FloatRequestEntry | null>(null);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+
+  useEffect(() => {
+    const unsub = subscribeToAllPendingRequests((items) => {
+      setAllPendingRequests(items);
+    });
+    return () => unsub();
+  }, []);
+
+  const pendingRequestsToDisplay = useMemo(() => {
+    if (isAdmin) return allPendingRequests;
+    return allPendingRequests.filter(
+      (r) => r.requestedByEmail === user?.email || r.floatKey === activeScopeKey
+    );
+  }, [allPendingRequests, isAdmin, user?.email, activeScopeKey]);
 
   // Real-time subscription to active float document
   useEffect(() => {
@@ -420,6 +444,94 @@ export function PettyCashFloatWidget({
           )}
         </div>
       </div>
+
+      {/* 1.5. Live Staff Float Top-Up Requests Alert Banner */}
+      {pendingRequestsToDisplay.length > 0 && (
+        <div className="p-4 rounded-3xl bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-600/10 border-2 border-amber-400/50 shadow-md space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold shadow-xs shrink-0">
+                <Coins className="w-4 h-4 fill-slate-950" />
+              </div>
+              <div>
+                <span className="font-black text-xs sm:text-sm text-slate-900 dark:text-white block">
+                  {isAdmin
+                    ? `${pendingRequestsToDisplay.length} Pending Float Top-Up ${pendingRequestsToDisplay.length === 1 ? 'Request' : 'Requests'} (₹${pendingRequestsToDisplay.reduce((s, r) => s + r.amount, 0).toLocaleString('en-IN')})`
+                    : 'Your Pending Petty Cash Top-Up Request'}
+                </span>
+                <span className="text-[11px] text-amber-700 dark:text-amber-300 font-medium">
+                  {isAdmin
+                    ? 'Review and pay managers directly via PhonePe or HDFC NetBanking'
+                    : 'Awaiting Admin review and payment transfer'}
+                </span>
+              </div>
+            </div>
+            {isAdmin && (
+              <Badge className="bg-amber-500 text-slate-950 font-black text-[10px] animate-pulse shrink-0">
+                Action Required
+              </Badge>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {pendingRequestsToDisplay.map((req) => (
+              <div
+                key={req.id}
+                className="p-3.5 rounded-2xl bg-white dark:bg-slate-800/90 border border-amber-200/80 dark:border-amber-800/80 shadow-xs flex flex-col justify-between space-y-2.5"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                      {req.payeeName || req.requestedBy?.split('(')[0]?.trim()}
+                    </span>
+                    <Badge variant="outline" className="text-[9px] font-bold shrink-0 bg-slate-50 dark:bg-slate-900">
+                      {req.counterName}
+                    </Badge>
+                  </div>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 block mt-0.5">
+                    {req.reason}
+                  </span>
+                  <div className="mt-1.5 flex items-baseline gap-1.5">
+                    <span className="text-lg font-mono font-black text-indigo-600 dark:text-indigo-400">
+                      ₹{req.amount.toLocaleString('en-IN')}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      ({formatOrdinalDate(req.date)})
+                    </span>
+                  </div>
+                </div>
+
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('medium');
+                      setSelectedApprovalReq(req);
+                      setIsApprovalModalOpen(true);
+                    }}
+                    className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Smartphone className="w-3.5 h-3.5" />
+                    <span>Pay ₹{req.amount.toLocaleString('en-IN')} via PhonePe</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                ) : (
+                  <Badge variant="outline" className="w-fit text-amber-600 border-amber-300 font-bold text-[10px]">
+                    ⏳ Awaiting Admin Approval
+                  </Badge>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Admin Approval Dialog for widget direct pay */}
+      <AdminFloatApprovalDialog
+        request={selectedApprovalReq}
+        open={isApprovalModalOpen}
+        onOpenChange={setIsApprovalModalOpen}
+      />
 
       {/* 2. Sleek Modern Wallet Display with Embedded Metrics */}
       <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900 via-[#1a1c2e] to-[#0f172a] text-white p-5 sm:p-6 shadow-xl relative overflow-hidden">

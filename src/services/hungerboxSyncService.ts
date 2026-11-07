@@ -274,6 +274,7 @@ export async function syncHungerBoxDirectFromPortal(params?: {
     'DSM Shared Services India Private Limited': { siteId: 'dsm', name: 'DSM' },
     'New Relic One India Private Limited': { siteId: 'newrelic', name: 'NewRelic' },
     'NTT Data': { siteId: 'ntt_data', name: 'NTT Data' },
+    'Madala Holdings Limited': { siteId: 'ntt_data', name: 'NTT Data' }, // Corporate entity operating within NTT Data campus
   };
 
   // 5. Aggregate by date & site

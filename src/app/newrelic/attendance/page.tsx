@@ -1070,7 +1070,7 @@ function AttendancePageContent() {
           toast({
             variant: 'destructive',
             title: `⚠️ Checked In (Late by ${res.lateMinutes} mins)`,
-            description: `Shift deadline was ${res.cutoff || effectiveRule.cutoff} AM. Notifying managers on WhatsApp...`,
+            description: `Shift deadline was ${res.cutoff || effectiveRule.cutoff} AM.`,
           });
           // Real-time automated WhatsApp alert to top managers
           fetch('/api/attendance/alerts', {
@@ -2102,7 +2102,7 @@ function AttendancePageContent() {
                   Salaries & Advances
                 </button>
               )}
-              {canManageAttendance && (
+              {isOwnerOrAdmin && (
                 <button
                   type="button"
                   onClick={() => {
@@ -2178,44 +2178,48 @@ function AttendancePageContent() {
                       <span className="hidden sm:inline">Refresh</span>
                     </button>
 
-                    {/* Interactive WhatsApp Shift Digest Modal Trigger (100% Free) */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic('light');
-                        setShowWhatsAppDigestModal(true);
-                      }}
-                      className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all whitespace-nowrap"
-                      title="Preview, customize, or share shift attendance digest via WhatsApp (100% Free)"
-                    >
-                      <MessageCircle className="h-3.5 w-3.5" />
-                      <span>WhatsApp Digest</span>
-                    </button>
+                    {/* Admin-Only Alert & Broadcast Operations */}
+                    {isOwnerOrAdmin && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setShowWhatsAppDigestModal(true);
+                          }}
+                          className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all whitespace-nowrap"
+                          title="Preview, customize, or share shift attendance digest via WhatsApp (100% Free)"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          <span>WhatsApp Digest</span>
+                        </button>
 
-                    <button
-                      type="button"
-                      onClick={handleBroadcastDigest}
-                      disabled={isBroadcastingDigest}
-                      title="Broadcast morning shift digest to manager on WhatsApp / SMS"
-                      className="h-8 px-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all disabled:opacity-50 whitespace-nowrap"
-                    >
-                      {isBroadcastingDigest ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Send className="h-3.5 w-3.5" />
-                      )}
-                      <span>Broadcast Digest</span>
-                    </button>
+                        <button
+                          type="button"
+                          onClick={handleBroadcastDigest}
+                          disabled={isBroadcastingDigest}
+                          title="Broadcast morning shift digest to manager on WhatsApp / SMS"
+                          className="h-8 px-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all disabled:opacity-50 whitespace-nowrap"
+                        >
+                          {isBroadcastingDigest ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Send className="h-3.5 w-3.5" />
+                          )}
+                          <span>Broadcast Digest</span>
+                        </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setShowAlertModal(true)}
-                      title="Configure Multi-Provider WhatsApp & SMS Gateway"
-                      className="h-8 px-2.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all whitespace-nowrap"
-                    >
-                      <Bell className="h-3.5 w-3.5 text-indigo-600" />
-                      <span>Alert Gateway</span>
-                    </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowAlertModal(true)}
+                          title="Configure Multi-Provider WhatsApp & SMS Gateway"
+                          className="h-8 px-2.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all whitespace-nowrap"
+                        >
+                          <Bell className="h-3.5 w-3.5 text-indigo-600" />
+                          <span>Alert Gateway</span>
+                        </button>
+                      </>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -2374,8 +2378,7 @@ function AttendancePageContent() {
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1 font-medium flex items-center justify-between">
                       <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded flex items-center gap-1">
-                        <MessageCircle className="w-2.5 h-2.5" />
-                        WhatsApp Alerts
+                        Pending Check-In
                       </span>
                       {todayStatusFilter === 'absent' ? (
                         <span className="text-[10px] font-black text-rose-700">Active</span>
@@ -2467,34 +2470,36 @@ function AttendancePageContent() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {/* Batch Absent Alert Operations Banner */}
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-rose-50 via-rose-50/70 to-amber-50/70 p-3.5 rounded-2xl border border-rose-200/80 shadow-2xs">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
-                            <UserX className="w-4 h-4" />
+                      {/* Batch Absent Alert Operations Banner (Admins Only) */}
+                      {isOwnerOrAdmin && (
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-rose-50 via-rose-50/70 to-amber-50/70 p-3.5 rounded-2xl border border-rose-200/80 shadow-2xs">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+                              <UserX className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-rose-950">
+                                {filteredAbsentEmployees.length} Team Member{filteredAbsentEmployees.length !== 1 ? 's' : ''} Pending Check-In
+                              </p>
+                              <p className="text-[11px] text-rose-700 font-medium">
+                                Shift cutoff deadline has passed. Send instant 1-to-1 reminders or broadcast to your operations group.
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-xs font-bold text-rose-950">
-                              {filteredAbsentEmployees.length} Team Member{filteredAbsentEmployees.length !== 1 ? 's' : ''} Pending Check-In
-                            </p>
-                            <p className="text-[11px] text-rose-700 font-medium">
-                              Shift cutoff deadline has passed. Send instant 1-to-1 reminders or broadcast to your operations group.
-                            </p>
-                          </div>
-                        </div>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            triggerHaptic('light');
-                            setShowBatchAbsentModal(true);
-                          }}
-                          className="h-8 px-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all whitespace-nowrap"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5 text-white" />
-                          <span>Batch Alert All Absent ({filteredAbsentEmployees.length})</span>
-                        </button>
-                      </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic('light');
+                              setShowBatchAbsentModal(true);
+                            }}
+                            className="h-8 px-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all whitespace-nowrap"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5 text-white" />
+                            <span>Batch Alert All Absent ({filteredAbsentEmployees.length})</span>
+                          </button>
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {filteredAbsentEmployees.map((emp) => {
@@ -2541,7 +2546,7 @@ function AttendancePageContent() {
                                   <span>· Cutoff: <strong className="text-amber-700">{rule.cutoff}</strong></span>
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
-                                  {contacted && (
+                                  {isOwnerOrAdmin && contacted && (
                                     <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
                                       <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                                       <span>Alerted {contacted.formattedTime}</span>
@@ -2559,28 +2564,30 @@ function AttendancePageContent() {
                                 return (
                                   <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 flex-wrap">
                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                      {/* Interactive WhatsApp Quick-Send Drawer (100% Free) */}
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          triggerHaptic('light');
-                                          setWhatsAppRecipient({
-                                            id: emp.id!,
-                                            name: emp.name,
-                                            employeeId: emp.employeeId,
-                                            phone: emp.phone,
-                                            siteName: emp.location?.toUpperCase() || 'Hub',
-                                            designation: emp.designation,
-                                            isAbsent: true,
-                                            cutoffTime: rule.cutoff + ' AM',
-                                          });
-                                        }}
-                                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all"
-                                        title={cleanPhone ? `Open WhatsApp chat with ${emp.name} (Preview & Edit)` : 'Open WhatsApp to share pre-filled absent reminder'}
-                                      >
-                                        <MessageCircle className="w-3.5 h-3.5 text-white" />
-                                        <span>WhatsApp</span>
-                                      </button>
+                                      {/* Interactive WhatsApp Quick-Send Drawer (Admins Only) */}
+                                      {isOwnerOrAdmin && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            triggerHaptic('light');
+                                            setWhatsAppRecipient({
+                                              id: emp.id!,
+                                              name: emp.name,
+                                              employeeId: emp.employeeId,
+                                              phone: emp.phone,
+                                              siteName: emp.location?.toUpperCase() || 'Hub',
+                                              designation: emp.designation,
+                                              isAbsent: true,
+                                              cutoffTime: rule.cutoff + ' AM',
+                                            });
+                                          }}
+                                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all"
+                                          title={cleanPhone ? `Open WhatsApp chat with ${emp.name} (Preview & Edit)` : 'Open WhatsApp to share pre-filled absent reminder'}
+                                        >
+                                          <MessageCircle className="w-3.5 h-3.5 text-white" />
+                                          <span>WhatsApp</span>
+                                        </button>
+                                      )}
 
                                       {emp.phone ? (
                                         <>
@@ -2592,20 +2599,22 @@ function AttendancePageContent() {
                                             <Phone className="w-3 h-3 text-slate-600" />
                                             <span>Call</span>
                                           </a>
-                                          <button
-                                            type="button"
-                                            disabled={sendingAlertEmpId === emp.id}
-                                            onClick={() => handleSendAbsentAlert(emp)}
-                                            className="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50"
-                                            title="Dispatch automated gateway alert"
-                                          >
-                                            {sendingAlertEmpId === emp.id ? (
-                                              <Loader2 className="w-3 h-3 animate-spin text-amber-700" />
-                                            ) : (
-                                              <Bell className="w-3 h-3 text-amber-700" />
-                                            )}
-                                            <span>Send Alert</span>
-                                          </button>
+                                          {isOwnerOrAdmin && (
+                                            <button
+                                              type="button"
+                                              disabled={sendingAlertEmpId === emp.id}
+                                              onClick={() => handleSendAbsentAlert(emp)}
+                                              className="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50"
+                                              title="Dispatch automated gateway alert"
+                                            >
+                                              {sendingAlertEmpId === emp.id ? (
+                                                <Loader2 className="w-3 h-3 animate-spin text-amber-700" />
+                                              ) : (
+                                                <Bell className="w-3 h-3 text-amber-700" />
+                                              )}
+                                              <span>Send Alert</span>
+                                            </button>
+                                          )}
                                         </>
                                       ) : (
                                         <button
@@ -2618,7 +2627,7 @@ function AttendancePageContent() {
                                             });
                                           }}
                                           className="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold flex items-center gap-1 transition-colors"
-                                          title="Add phone number for direct 1-click WhatsApp"
+                                          title="Add phone number"
                                         >
                                           <Phone className="w-3 h-3 text-blue-600" />
                                           <span>+ Add Phone</span>
@@ -2696,6 +2705,7 @@ function AttendancePageContent() {
                           employeePhone={empMatch?.phone}
                           contactedInfo={empKey ? contactedMap[empKey] : undefined}
                           onOpenWhatsApp={(item) => setWhatsAppRecipient(item)}
+                          isOwnerOrAdmin={isOwnerOrAdmin}
                           isExpanded={expandedRecord === rec.id}
                           onToggle={() => setExpandedRecord(expandedRecord === rec.id ? null : rec.id!)}
                         />
@@ -2779,6 +2789,7 @@ function AttendancePageContent() {
                             employeePhone={empMatch?.phone}
                             contactedInfo={empKey ? contactedMap[empKey] : undefined}
                             onOpenWhatsApp={(item) => setWhatsAppRecipient(item)}
+                            isOwnerOrAdmin={isOwnerOrAdmin}
                             isExpanded={expandedRecord === rec.id}
                             onToggle={() => setExpandedRecord(expandedRecord === rec.id ? null : rec.id!)}
                           />
@@ -4007,7 +4018,7 @@ function AttendancePageContent() {
             </div>
 
             <p className="text-xs text-slate-600 mb-4">
-              Enter this employee's 10-digit mobile number to enable direct 1-click WhatsApp alerts and calls.
+              Enter this employee's 10-digit mobile number for phone calls and team contact records.
             </p>
 
             <div className="space-y-3">
@@ -4171,6 +4182,7 @@ function AdminAttendanceCard({
   employeePhone,
   contactedInfo,
   onOpenWhatsApp,
+  isOwnerOrAdmin = false,
   isExpanded,
   onToggle,
 }: {
@@ -4178,6 +4190,7 @@ function AdminAttendanceCard({
   employeePhone?: string;
   contactedInfo?: ContactedRecord;
   onOpenWhatsApp?: (recipient: WhatsAppRecipient) => void;
+  isOwnerOrAdmin?: boolean;
   isExpanded: boolean;
   onToggle: () => void;
 }) {
@@ -4288,40 +4301,42 @@ function AdminAttendanceCard({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {contactedInfo && (
+          {isOwnerOrAdmin && contactedInfo && (
             <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1 hidden md:flex shadow-2xs">
               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
               <span>Alerted {contactedInfo.formattedTime}</span>
             </span>
           )}
 
-          {/* Interactive WhatsApp Quick-Send Drawer (100% Free) */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              triggerHaptic('light');
-              if (onOpenWhatsApp) {
-                onOpenWhatsApp({
-                  id: record.employeeDocId || record.employeeId || record.id!,
-                  name: record.employeeName,
-                  employeeId: record.employeeId,
-                  phone: employeePhone,
-                  siteName: record.location?.toUpperCase() || 'Hub',
-                  isLate: record.isLate,
-                  lateMinutes: record.lateMinutes,
-                  checkInTime: inTimeStr,
-                });
-              } else {
-                openWhatsAppChat(employeePhone, waMsg);
-              }
-            }}
-            className="h-7 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-2xs transition-all active:scale-95 cursor-pointer"
-            title={cleanPhone ? `Chat with ${record.employeeName} on WhatsApp (Preview & Edit)` : 'Share status update on WhatsApp (100% Free)'}
-          >
-            <MessageCircle className="h-3.5 w-3.5 text-white" />
-            <span className="hidden sm:inline">WhatsApp</span>
-          </button>
+          {/* Interactive WhatsApp Quick-Send Drawer (Admins Only) */}
+          {isOwnerOrAdmin && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerHaptic('light');
+                if (onOpenWhatsApp) {
+                  onOpenWhatsApp({
+                    id: record.employeeDocId || record.employeeId || record.id!,
+                    name: record.employeeName,
+                    employeeId: record.employeeId,
+                    phone: employeePhone,
+                    siteName: record.location?.toUpperCase() || 'Hub',
+                    isLate: record.isLate,
+                    lateMinutes: record.lateMinutes,
+                    checkInTime: inTimeStr,
+                  });
+                } else {
+                  openWhatsAppChat(employeePhone, waMsg);
+                }
+              }}
+              className="h-7 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-2xs transition-all active:scale-95 cursor-pointer"
+              title={cleanPhone ? `Chat with ${record.employeeName} on WhatsApp (Preview & Edit)` : 'Share status update on WhatsApp (100% Free)'}
+            >
+              <MessageCircle className="h-3.5 w-3.5 text-white" />
+              <span className="hidden sm:inline">WhatsApp</span>
+            </button>
+          )}
 
           <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold shrink-0 ${statusColor}`}>
             {isWorking ? (

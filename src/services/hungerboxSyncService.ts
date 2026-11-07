@@ -15,15 +15,129 @@ export interface FeedResult {
   recordId: string;
 }
 
-/**
- * HungerBox Vendor Configuration:
- * - MRP Vendors (3% fee): Packaged items, tuckshop stalls, confectionery, packaged retail goods
- * - Non-MRP Vendors (19% fee): Fresh kitchen foods, live counters, freshly brewed tea/coffee, juice, Maggi, sandwich, omelette
- */
-export const HUNGERBOX_MRP_VENDOR_IDS = [25577, 25579, 26122, 26200, 30225];
-export const HUNGERBOX_NON_MRP_VENDOR_IDS = [23221, 25576, 26121, 26123, 31127, 31142];
-
 export const HUNGERBOX_DEFAULT_CLIENT_ID = '2c0939632f65c1d362ee68675a7757b4';
+
+export interface SiteSyncProfile {
+  siteId: SiteId;
+  companyId: number;
+  siteName: string;
+  defaultStartDate: string;
+  vendors: number[];
+  locations: number[];
+}
+
+export const SITE_SYNC_PROFILES: Record<string, SiteSyncProfile> = {
+  newrelic: {
+    siteId: 'newrelic',
+    companyId: 665,
+    siteName: 'NewRelic',
+    defaultStartDate: '2026-09-01',
+    vendors: [31127, 31142],
+    locations: [2849, 3123],
+  },
+  ntt_data: {
+    siteId: 'ntt_data',
+    companyId: 299,
+    siteName: 'NTT Data',
+    defaultStartDate: '2026-07-20',
+    vendors: [30225],
+    locations: [3070],
+  },
+  dsm: {
+    siteId: 'dsm',
+    companyId: 403,
+    siteName: 'DSM',
+    defaultStartDate: '2025-06-15',
+    vendors: [23221],
+    locations: [1992, 139, 2292],
+  },
+};
+
+/**
+ * Splits date range into chunks <= 80 days to respect HungerBox 3-month limit per report
+ */
+function splitDateRange(startDate: string, endDate: string, maxDays = 80): { from: string; to: string }[] {
+  const chunks: { from: string; to: string }[] = [];
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  let currentStart = new Date(start);
+
+  while (currentStart < end) {
+    const currentEnd = new Date(currentStart);
+    currentEnd.setDate(currentEnd.getDate() + maxDays - 1);
+
+    const actualEnd = currentEnd > end ? end : currentEnd;
+
+    const fromStr = currentStart.toISOString().split('T')[0];
+    const toStr = actualEnd.toISOString().split('T')[0];
+    chunks.push({ from: fromStr, to: toStr });
+
+    currentStart = new Date(actualEnd);
+    currentStart.setDate(currentStart.getDate() + 1);
+  }
+
+  return chunks;
+}
+
+// Convert Excel serial number or date string to YYYY-MM-DD
+function parseOrderDate(rawDate: any): string {
+  if (!rawDate) return '';
+  const str = String(rawDate).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    return str.substring(0, 10);
+  }
+  const num = parseFloat(str);
+  if (!isNaN(num) && num > 40000 && num < 60000) {
+    const epoch = new Date(Date.UTC(1899, 11, 30));
+    const d = new Date(epoch.getTime() + num * 86400000);
+    return d.toISOString().substring(0, 10);
+  }
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return d.toISOString().substring(0, 10);
+  }
+  return str.substring(0, 10);
+}
+
+// Parse CSV manually and robustly
+function parseCsvRows(text: string): Record<string, string>[] {
+  const lines = text.split('\n').filter((l) => l.trim().length > 0);
+  if (lines.length < 2) return [];
+
+  const parseLine = (line: string): string[] => {
+    const values: string[] = [];
+    let cur = '';
+    let inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') {
+        inQuote = !inQuote;
+      } else if (c === ',' && !inQuote) {
+        values.push(cur.trim());
+        cur = '';
+      } else {
+        cur += c;
+      }
+    }
+    values.push(cur.trim());
+    return values.map((v) => v.replace(/^"|"$/g, '').trim());
+  };
+
+  const headers = parseLine(lines[0]).map((h) => h.toLowerCase().replace(/[^a-z0-9_]/g, ''));
+  const rows: Record<string, string>[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseLine(lines[i]);
+    const row: Record<string, string> = {};
+    for (let j = 0; j < headers.length; j++) {
+      row[headers[j]] = values[j] !== undefined ? values[j] : '';
+    }
+    rows.push(row);
+  }
+
+  return rows;
+}
 
 /**
  * Feeds HungerBox aggregated daily sales into Firestore Tuckshop Ledger (`newrelic_tuckshop`)
@@ -54,15 +168,15 @@ export async function feedHungerBoxAggregatesToTuckshop(
     const sessionSummary = (agg.mealSessions || [])
       .map((s) => `${s.session}: ₹${Math.round(s.amount).toLocaleString('en-IN')}`)
       .join(', ');
-    const description = `HungerBox Digital Sales — ${agg.uniqueOrdersCount || agg.orderCount} orders${
-      sessionSummary ? ` (${sessionSummary})` : ''
+    const description = `HungerBox Verified Product Sales — ${agg.uniqueOrdersCount || agg.orderCount} items (MRP: ₹${agg.mrpSales.toLocaleString('en-IN')}, Non-MRP: ₹${agg.nonMrpSales.toLocaleString('en-IN')})${
+      sessionSummary ? ` [${sessionSummary}]` : ''
     }`;
 
     // Find if a sale record already exists for this date and site
     const existing = existingSales.find((r) => {
       const recDate = (r.date || '').split('T')[0];
       const recSite = resolveSiteId(r.siteId);
-      return recDate === agg.date && recSite === agg.siteId && (r.category === 'Sales' || r.source === 'hungerbox');
+      return recDate === agg.date && (recSite === agg.siteId || (r.location && r.location.toLowerCase().includes(locationName.toLowerCase())));
     });
 
     if (existing) {
@@ -82,6 +196,7 @@ export async function feedHungerBoxAggregatesToTuckshop(
         nonMrpNet: agg.nonMrpNet,
         totalCommission: agg.totalCommission,
         netSales: agg.netSales,
+        topItems: agg.topItems || [],
         updatedAt: serverTimestamp(),
         updatedBy: userEmail,
       });
@@ -116,6 +231,7 @@ export async function feedHungerBoxAggregatesToTuckshop(
         nonMrpNet: agg.nonMrpNet,
         totalCommission: agg.totalCommission,
         netSales: agg.netSales,
+        topItems: agg.topItems || [],
         createdAt: serverTimestamp(),
         createdBy: userEmail,
         updatedAt: serverTimestamp(),
@@ -134,23 +250,23 @@ export async function feedHungerBoxAggregatesToTuckshop(
       });
     }
 
-    // 2. Feed individual orders into Turso `hungerbox_sales` table (batched)
-    if (!skipTursoTelemetry && agg.orders && agg.orders.length > 0) {
+    // 2. Feed individual orders / top items into Turso `hungerbox_sales` table
+    if (!skipTursoTelemetry && agg.topItems && agg.topItems.length > 0) {
       try {
-        const batchStatements = agg.orders.slice(0, 500).map((o) => {
+        const batchStatements = agg.topItems.map((item) => {
           return {
             sql: `INSERT OR REPLACE INTO hungerbox_sales 
                   (order_id, order_date, vendor_name, cafeteria_name, amount, item_name, status, org_id) 
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
-              o.orderId,
-              o.orderDate,
-              o.stallName || 'The Gut Guru',
-              o.locationName,
-              o.amount,
-              o.itemName,
-              o.status || 'Completed',
-              'default',
+              `${agg.siteId}_${agg.date}_${item.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20)}`,
+              agg.date,
+              locationName,
+              agg.siteId,
+              item.amount,
+              item.name,
+              item.amount > 0 ? (item.amount <= 30 ? 'MRP (3%)' : 'Non-MRP (19%)') : 'Completed',
+              agg.siteId,
             ],
           };
         });
@@ -168,13 +284,188 @@ export async function feedHungerBoxAggregatesToTuckshop(
 }
 
 /**
- * Directly pulls daily orders & sales from HungerBox Admin API (https://admin.hungerbox.com)
- * without using local downloads, computes MRP (19%) vs Non-MRP (3%) deductions,
- * and feeds all aggregates into the Tuckshop Firestore ledger.
+ * Pulls HBR2 (Datewise Product wise Sales Report) from HungerBox Admin Redshift API
+ * for a specific site profile and date range, parses `is_mrp_item` per item line,
+ * and compiles daily aggregates with 3% (MRP) and 19% (Non-MRP) fees.
+ */
+async function pullHbr2SiteData(
+  accessToken: string,
+  profile: SiteSyncProfile,
+  fromDate: string,
+  toDate: string
+): Promise<HungerBoxDailyAggregate[]> {
+  const chunks = splitDateRange(fromDate, toDate, 80);
+  const dailyMap: Record<
+    string,
+    {
+      date: string;
+      mrpSales: number;
+      nonMrpSales: number;
+      itemsCount: number;
+      totalUnits: number;
+      topItems: Record<string, { qty: number; amount: number; isMrp: boolean }>;
+    }
+  > = {};
+
+  for (const chunk of chunks) {
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      Currentcompany: String(profile.companyId),
+      Companyid: String(profile.companyId),
+      'Content-Type': 'application/json',
+    };
+
+    const options = [
+      { type: 'timestamp', label: 'From Date', key: '#fromDate', value: chunk.from, from_tz: 'Asia/Kolkata', to_tz: 'Asia/Kolkata' },
+      { type: 'timestamp', label: 'To Date', key: '#toDate', value: chunk.to, from_tz: 'Asia/Kolkata', to_tz: 'Asia/Kolkata' },
+      { type: 'vendor', label: 'Select Vendors', key: '#vendors', value: profile.vendors },
+      { type: 'location', label: 'Select Cafeteria', key: '#locations', value: profile.locations },
+    ];
+
+    try {
+      const schedRes = await fetch('https://admin.hungerbox.com/api/report/schedule', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          companyId: profile.companyId,
+          options: JSON.stringify(options),
+          reportRef: 'HBR2',
+        }),
+      });
+
+      if (!schedRes.ok) continue;
+      const schedJson = await schedRes.json();
+      const reportId = schedJson.data?.id;
+      if (!reportId) continue;
+
+      let fileDownloadId: number | null = null;
+      for (let poll = 0; poll < 12; poll++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const pRes = await fetch(`https://admin.hungerbox.com/api/report/download/${profile.companyId}`, { headers });
+        if (!pRes.ok) continue;
+        const pJson = await pRes.json();
+        const rep = pJson.data?.find((r: any) => r.id === reportId);
+        if (rep?.status === 'ready_for_download' && rep.file_download_id) {
+          fileDownloadId = rep.file_download_id;
+          break;
+        }
+        if (rep?.status === 'error') break;
+      }
+
+      if (!fileDownloadId) continue;
+
+      const sRes = await fetch(`https://admin.hungerbox.com/api/report/signed-url/${fileDownloadId}`, { headers });
+      if (!sRes.ok) continue;
+      const sJson = await sRes.json();
+      const signedUrl = sJson.data?.signed_url;
+      if (!signedUrl) continue;
+
+      const fRes = await fetch(signedUrl);
+      if (!fRes.ok) continue;
+      const csvText = await fRes.text();
+      const rows = parseCsvRows(csvText);
+
+      for (const row of rows) {
+        const rawDate = row['order_date'] || row['orderdate'] || row['date'];
+        const date = parseOrderDate(rawDate);
+        if (!date || date < fromDate || date > toDate) continue;
+
+        const amount = parseFloat(row['actual_value'] || row['actualvalue'] || row['price'] || '0') || 0;
+        const qty = parseInt(row['qty'] || row['quantity'] || '1', 10) || 1;
+        const isMrp = row['is_mrp_item'] === '1' || row['ismrpitem'] === '1' || row['is_mrp'] === '1';
+        const productName = row['product_name'] || row['productname'] || 'Item';
+
+        if (!dailyMap[date]) {
+          dailyMap[date] = {
+            date,
+            mrpSales: 0,
+            nonMrpSales: 0,
+            itemsCount: 0,
+            totalUnits: 0,
+            topItems: {},
+          };
+        }
+
+        if (isMrp) {
+          dailyMap[date].mrpSales += amount;
+        } else {
+          dailyMap[date].nonMrpSales += amount;
+        }
+
+        dailyMap[date].itemsCount++;
+        dailyMap[date].totalUnits += qty;
+
+        if (!dailyMap[date].topItems[productName]) {
+          dailyMap[date].topItems[productName] = { qty: 0, amount: 0, isMrp };
+        }
+        dailyMap[date].topItems[productName].qty += qty;
+        dailyMap[date].topItems[productName].amount += amount;
+      }
+    } catch (chunkErr) {
+      console.warn(`[HungerBoxSync] Chunk error ${profile.siteId} ${chunk.from}-${chunk.to}:`, chunkErr);
+    }
+  }
+
+  // Convert dailyMap to HungerBoxDailyAggregate
+  const aggregates: HungerBoxDailyAggregate[] = Object.values(dailyMap).map((d) => {
+    const mrpSales = Math.round(d.mrpSales * 100) / 100;
+    const nonMrpSales = Math.round(d.nonMrpSales * 100) / 100;
+    const totalAmount = Math.round((mrpSales + nonMrpSales) * 100) / 100;
+
+    const mrpCommission = Math.round(mrpSales * 0.03 * 100) / 100; // 3%
+    const nonMrpCommission = Math.round(nonMrpSales * 0.19 * 100) / 100; // 19%
+    const mrpNet = Math.round((mrpSales - mrpCommission) * 100) / 100;
+    const nonMrpNet = Math.round((nonMrpSales - nonMrpCommission) * 100) / 100;
+    const totalCommission = Math.round((mrpCommission + nonMrpCommission) * 100) / 100;
+    const netSales = Math.round((totalAmount - totalCommission) * 100) / 100;
+
+    const topItemsList = Object.entries(d.topItems)
+      .map(([name, stat]) => ({
+        name,
+        quantity: stat.qty,
+        amount: Math.round(stat.amount * 100) / 100,
+        isMrp: stat.isMrp,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
+    return {
+      date: d.date,
+      displayDate: formatOrdinalDate(d.date),
+      siteId: profile.siteId,
+      locationName: profile.siteName,
+      totalAmount,
+      orderCount: d.totalUnits,
+      uniqueOrdersCount: d.totalUnits,
+      mrpSales,
+      mrpCommission,
+      mrpNet,
+      nonMrpSales,
+      nonMrpCommission,
+      nonMrpNet,
+      totalCommission,
+      netSales,
+      mealSessions: [
+        { session: 'MRP Counter Sales (3%)', amount: mrpSales, count: topItemsList.filter((i) => i.isMrp).length },
+        { session: 'Kitchen & Beverages (19%)', amount: nonMrpSales, count: topItemsList.filter((i) => !i.isMrp).length },
+      ],
+      topItems: topItemsList.slice(0, 10),
+      orders: [],
+    };
+  });
+
+  aggregates.sort((a, b) => a.date.localeCompare(b.date));
+  return aggregates;
+}
+
+/**
+ * Pulls daily product sales directly from HungerBox Admin API (HBR2 Redshift report),
+ * calculates verified MRP (3%) vs Non-MRP (19%) figures per day,
+ * and feeds all aggregates into the Tuckshop Firestore ledger and Turso telemetry.
  */
 export async function syncHungerBoxDirectFromPortal(params?: {
   fromDate?: string;
   toDate?: string;
+  siteId?: string;
   userEmail?: string;
   username?: string;
   password?: string;
@@ -216,170 +507,35 @@ export async function syncHungerBoxDirectFromPortal(params?: {
     throw new Error('HungerBox OAuth response did not contain access_token.');
   }
 
-  // 2. Determine Date Range (Default 6 months historical)
-  let fromDate = params?.fromDate;
-  let toDate = params?.toDate;
+  // 2. Select Site Profiles to sync
+  const targetProfiles: SiteSyncProfile[] = [];
+  if (params?.siteId && SITE_SYNC_PROFILES[params.siteId]) {
+    targetProfiles.push(SITE_SYNC_PROFILES[params.siteId]);
+  } else {
+    targetProfiles.push(SITE_SYNC_PROFILES.newrelic, SITE_SYNC_PROFILES.ntt_data, SITE_SYNC_PROFILES.dsm);
+  }
 
   const now = new Date();
-  if (!toDate) {
-    toDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  }
-  if (!fromDate) {
-    const sixMonthsAgo = new Date(now);
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    fromDate = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, '0')}-${String(sixMonthsAgo.getDate()).padStart(2, '0')}`;
-  }
+  const defaultToDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-  const headers = {
-    Authorization: `Bearer ${accessToken}`,
-    Currentcompany: '113',
-    Companyid: '113',
-    'Content-Type': 'application/json',
-  };
+  const allAggregates: HungerBoxDailyAggregate[] = [];
 
-  // 3. Parallel fetch of MRP (19% commission) and Non-MRP (3% commission) datasets
-  const [mrpRes, nonMrpRes] = await Promise.all([
-    fetch('https://admin.hungerbox.com/api/v1/order-charts', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        vendor_ids: HUNGERBOX_MRP_VENDOR_IDS,
-        fromDate,
-        toDate,
-      }),
-    }),
-    fetch('https://admin.hungerbox.com/api/v1/order-charts', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        vendor_ids: HUNGERBOX_NON_MRP_VENDOR_IDS,
-        fromDate,
-        toDate,
-      }),
-    }),
-  ]);
+  for (const profile of targetProfiles) {
+    const fromDate = params?.fromDate || profile.defaultStartDate;
+    const toDate = params?.toDate || defaultToDate;
 
-  if (!mrpRes.ok || !nonMrpRes.ok) {
-    throw new Error(`HungerBox order-charts API returned error (MRP: ${mrpRes.status}, Non-MRP: ${nonMrpRes.status})`);
+    const siteAggregates = await pullHbr2SiteData(accessToken, profile, fromDate, toDate);
+    allAggregates.push(...siteAggregates);
   }
 
-  const mrpJson = await mrpRes.json();
-  const nonMrpJson = await nonMrpRes.json();
-
-  const mrpData: any[] = mrpJson.data || [];
-  const nonMrpData: any[] = nonMrpJson.data || [];
-
-  // 4. Map Organizations to Company Sites
-  const siteMap: Record<string, { siteId: SiteId; name: string }> = {
-    'DSM Shared Services India Private Limited': { siteId: 'dsm', name: 'DSM' },
-    'New Relic One India Private Limited': { siteId: 'newrelic', name: 'NewRelic' },
-    'NTT Data': { siteId: 'ntt_data', name: 'NTT Data' },
-    'Madala Holdings Limited': { siteId: 'ntt_data', name: 'NTT Data' }, // Corporate entity operating within NTT Data campus
-  };
-
-  // 5. Aggregate by date & site
-  const ledger: Record<
-    string,
-    {
-      date: string;
-      siteId: SiteId;
-      siteName: string;
-      mrpSales: number;
-      mrpOrders: number;
-      nonMrpSales: number;
-      nonMrpOrders: number;
-    }
-  > = {};
-
-  for (const item of mrpData) {
-    if (item.org === 'Total eCafe') continue;
-    const mapping = siteMap[item.org];
-    if (!mapping) continue; // Skip unmapped companies (e.g. CGI, Broadridge)
-    if (mapping.siteId === 'newrelic' && item.date < '2026-09-06') continue; // NewRelic site started Sep 6th
-    const key = `${item.date}_${mapping.siteId}`;
-    if (!ledger[key]) {
-      ledger[key] = {
-        date: item.date,
-        siteId: mapping.siteId,
-        siteName: mapping.name,
-        mrpSales: 0,
-        mrpOrders: 0,
-        nonMrpSales: 0,
-        nonMrpOrders: 0,
-      };
-    }
-    ledger[key].mrpSales += parseFloat(item.order_value) || 0;
-    ledger[key].mrpOrders += parseInt(item.delivered_orders, 10) || 0;
-  }
-
-  for (const item of nonMrpData) {
-    if (item.org === 'Total eCafe') continue;
-    const mapping = siteMap[item.org];
-    if (!mapping) continue; // Skip unmapped companies (e.g. CGI, Broadridge)
-    if (mapping.siteId === 'newrelic' && item.date < '2026-09-06') continue; // NewRelic site started Sep 6th
-    const key = `${item.date}_${mapping.siteId}`;
-    if (!ledger[key]) {
-      ledger[key] = {
-        date: item.date,
-        siteId: mapping.siteId,
-        siteName: mapping.name,
-        mrpSales: 0,
-        mrpOrders: 0,
-        nonMrpSales: 0,
-        nonMrpOrders: 0,
-      };
-    }
-    ledger[key].nonMrpSales += parseFloat(item.order_value) || 0;
-    ledger[key].nonMrpOrders += parseInt(item.delivered_orders, 10) || 0;
-  }
-
-  // 6. Build typed HungerBoxDailyAggregate objects with exact calculations
-  const dailyAggregates: HungerBoxDailyAggregate[] = Object.values(ledger).map((row) => {
-    const mrpSales = Math.round(row.mrpSales * 100) / 100;
-    const nonMrpSales = Math.round(row.nonMrpSales * 100) / 100;
-    const mrpCommission = Math.round(mrpSales * 0.03 * 100) / 100;
-    const nonMrpCommission = Math.round(nonMrpSales * 0.19 * 100) / 100;
-    const mrpNet = Math.round((mrpSales - mrpCommission) * 100) / 100;
-    const nonMrpNet = Math.round((nonMrpSales - nonMrpCommission) * 100) / 100;
-    const totalCommission = Math.round((mrpCommission + nonMrpCommission) * 100) / 100;
-    const totalAmount = Math.round((mrpSales + nonMrpSales) * 100) / 100;
-    const netSales = Math.round((totalAmount - totalCommission) * 100) / 100;
-    const orderCount = row.mrpOrders + row.nonMrpOrders;
-
-    return {
-      date: row.date,
-      displayDate: formatOrdinalDate(row.date),
-      siteId: row.siteId,
-      locationName: row.siteName,
-      totalAmount,
-      orderCount,
-      uniqueOrdersCount: orderCount,
-      mrpSales,
-      mrpCommission,
-      mrpNet,
-      nonMrpSales,
-      nonMrpCommission,
-      nonMrpNet,
-      totalCommission,
-      netSales,
-      mealSessions: [
-        { session: 'MRP Counter Sales', amount: mrpSales, count: row.mrpOrders },
-        { session: 'Kitchen & Fresh Food', amount: nonMrpSales, count: row.nonMrpOrders },
-      ],
-      topItems: [],
-      orders: [],
-    };
-  });
-
-  // Sort chronologically ascending
-  dailyAggregates.sort((a, b) => a.date.localeCompare(b.date));
+  allAggregates.sort((a, b) => a.date.localeCompare(b.date));
 
   let totalOrders = 0;
   let totalSales = 0;
   let totalMrpSales = 0;
   let totalNonMrpSales = 0;
 
-  for (const a of dailyAggregates) {
+  for (const a of allAggregates) {
     totalOrders += a.orderCount;
     totalSales += a.totalAmount;
     totalMrpSales += a.mrpSales;
@@ -387,8 +543,8 @@ export async function syncHungerBoxDirectFromPortal(params?: {
   }
 
   let feedResults: FeedResult[] = [];
-  if (!params?.skipFirestore && dailyAggregates.length > 0) {
-    feedResults = await feedHungerBoxAggregatesToTuckshop(dailyAggregates, userEmail, true);
+  if (!params?.skipFirestore && allAggregates.length > 0) {
+    feedResults = await feedHungerBoxAggregatesToTuckshop(allAggregates, userEmail, false);
   }
 
   return {
@@ -397,7 +553,7 @@ export async function syncHungerBoxDirectFromPortal(params?: {
     totalSales: Math.round(totalSales * 100) / 100,
     totalMrpSales: Math.round(totalMrpSales * 100) / 100,
     totalNonMrpSales: Math.round(totalNonMrpSales * 100) / 100,
-    dailyAggregates,
+    dailyAggregates: allAggregates,
     feedResults,
   };
 }

@@ -49,7 +49,8 @@ export default withAuth(
     if (
       pathname.startsWith('/api/attendance/cron') ||
       pathname.startsWith('/api/attendance/webhook') ||
-      pathname.startsWith('/api/tracker/cron')
+      pathname.startsWith('/api/tracker/cron') ||
+      pathname.startsWith('/api/tuckshop/cron')
     ) {
       return NextResponse.next();
     }
@@ -235,7 +236,8 @@ export default withAuth(
         if (
           pathname.startsWith('/api/attendance/cron') ||
           pathname.startsWith('/api/attendance/webhook') ||
-          pathname.startsWith('/api/tracker/cron')
+          pathname.startsWith('/api/tracker/cron') ||
+          pathname.startsWith('/api/tuckshop/cron')
         ) {
           return true;
         }

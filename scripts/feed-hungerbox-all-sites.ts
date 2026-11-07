@@ -75,7 +75,7 @@ function splitDateRange(startDate: string, endDate: string, maxDays = 80): { fro
 
   let currentStart = new Date(start);
 
-  while (currentStart < end) {
+  while (currentStart <= end) {
     const currentEnd = new Date(currentStart);
     currentEnd.setDate(currentEnd.getDate() + maxDays - 1);
 

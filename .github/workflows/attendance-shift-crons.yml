@@ -6,6 +6,8 @@ on:
     - cron: '15 1 * * *'
     # 07:30 AM IST = 02:00 UTC (Morning Shift Turnout Digest)
     - cron: '0 2 * * *'
+    # 08:00 AM IST = 02:30 UTC (HungerBox Daily Tuckshop Sales Sync for Yesterday)
+    - cron: '30 2 * * *'
     # 08:30 AM IST = 03:00 UTC (Tracker Audit Cron)
     - cron: '0 3 * * *'
     # 07:30 PM IST = 14:00 UTC (Evening Missed Checkout Reminder)
@@ -26,6 +28,8 @@ on:
           - checkout
           - billing_cycle
           - tracker
+          - tuckshop
+          - hungerbox
 
 jobs:
   run-shift-cron:
@@ -39,9 +43,12 @@ jobs:
 
           if [ "$TRIGGER" = "tracker" ]; then
             curl -f -s -S --max-time 30 "$TARGET_URL/api/tracker/cron" || echo "Warning: Tracker cron returned non-200"
+          elif [ "$TRIGGER" = "tuckshop" ] || [ "$TRIGGER" = "hungerbox" ]; then
+            curl -f -s -S --max-time 180 "$TARGET_URL/api/tuckshop/cron?force=true" || echo "Warning: Tuckshop cron returned non-200"
           elif [ "$TRIGGER" = "all" ]; then
             curl -f -s -S --max-time 30 "$TARGET_URL/api/attendance/cron?trigger=all&force=true" || echo "Warning: Attendance cron returned non-200"
             curl -f -s -S --max-time 30 "$TARGET_URL/api/tracker/cron" || echo "Warning: Tracker cron returned non-200"
+            curl -f -s -S --max-time 180 "$TARGET_URL/api/tuckshop/cron?force=true" || echo "Warning: Tuckshop cron returned non-200"
           else
             curl -f -s -S --max-time 30 "$TARGET_URL/api/attendance/cron?trigger=${TRIGGER}&force=true" || echo "Warning: Attendance cron returned non-200"
           fi

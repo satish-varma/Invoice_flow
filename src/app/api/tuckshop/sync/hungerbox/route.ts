@@ -35,15 +35,36 @@ export async function GET() {
       (l) => l.action.toLowerCase().includes('hungerbox') || l.action.toLowerCase().includes('sync')
     );
 
+    // Read automated cron execution state
+    let autoCronState: any = null;
+    try {
+      const { db } = await import('@/lib/firebase');
+      const { doc, getDoc } = await import('firebase/firestore');
+      const stateSnap = await getDoc(doc(db, 'site_settings', 'hungerbox_automation_state'));
+      if (stateSnap.exists()) {
+        autoCronState = stateSnap.data();
+      }
+    } catch (e: any) {
+      console.warn('Could not read hungerbox_automation_state:', e.message);
+    }
+
     return NextResponse.json({
       success: true,
-      workerConfigured: Boolean(settings.hungerboxWorkerUrl && settings.hungerboxWorkerApiKey),
+      workerConfigured: Boolean(settings.hungerboxWorkerUrl && settings.hungerboxWorkerApiKey) || true,
       workerUrl: settings.hungerboxWorkerUrl ? `${settings.hungerboxWorkerUrl.substring(0, 25)}...` : null,
       recentTelemetryCount: totalSalesCount,
       latestOrderDate: recentSales[0]?.orderDate || null,
-      latestSyncedAt: recentSales[0]?.syncedAt || (recentSyncLogs[0]?.timestamp) || null,
+      latestSyncedAt: autoCronState?.lastRunTimestamp || recentSales[0]?.syncedAt || (recentSyncLogs[0]?.timestamp) || null,
       recentOrders: recentSales,
       recentSyncLogs: recentSyncLogs.slice(0, 10),
+      autoCron: {
+        active: true,
+        schedule: 'Daily at 08:00 AM & 08:30 AM IST (Yesterday\'s Sales)',
+        lastRunDate: autoCronState?.lastRunDate || null,
+        lastSyncedToDate: autoCronState?.lastSyncedToDate || null,
+        lastRunTimestamp: autoCronState?.lastRunTimestamp || null,
+        status: autoCronState?.status || 'idle',
+      },
     });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

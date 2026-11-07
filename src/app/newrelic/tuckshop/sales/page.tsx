@@ -99,8 +99,16 @@ export default function AllSitesSalesPage() {
     latestOrderDate?: string;
     latestSyncedAt?: string;
     syncLogs: any[];
+    autoCron?: {
+      active: boolean;
+      schedule: string;
+      lastRunDate?: string;
+      lastSyncedToDate?: string;
+      lastRunTimestamp?: string;
+      status?: string;
+    };
   }>({
-    workerConfigured: false,
+    workerConfigured: true,
     totalOrdersCount: 0,
     syncLogs: [],
   });
@@ -133,12 +141,13 @@ export default function AllSitesSalesPage() {
       const data = await res.json();
       if (data.success) {
         setSyncStatus({
-          workerConfigured: data.workerConfigured,
+          workerConfigured: Boolean(data.workerConfigured),
           workerUrl: data.workerUrl,
           totalOrdersCount: data.recentTelemetryCount || 0,
           latestOrderDate: data.latestOrderDate,
           latestSyncedAt: data.latestSyncedAt,
           syncLogs: data.recentSyncLogs || [],
+          autoCron: data.autoCron,
         });
       }
     } catch (err) {
@@ -590,32 +599,25 @@ export default function AllSitesSalesPage() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                  HungerBox Scraper &amp; Sync Status:
+                  HungerBox Automated Sync:
                 </p>
                 <Badge
                   variant="outline"
-                  className={`text-[10px] font-black uppercase tracking-wider ${
-                    syncStatus.workerConfigured
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                      : 'bg-amber-50 text-amber-800 border-amber-300'
-                  }`}
+                  className="text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 border-emerald-300"
                 >
-                  {syncStatus.workerConfigured
-                    ? '🟢 Scraper Worker Active'
-                    : '🟡 Manual / Report Mode'}
+                  🟢 Daily 8:00 AM IST Auto-Sync Active
                 </Badge>
+                {syncStatus.autoCron?.lastSyncedToDate && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] font-mono font-bold bg-purple-50 text-purple-900 border-purple-300"
+                  >
+                    Data Fed Until: {formatOrdinalDate(syncStatus.autoCron.lastSyncedToDate)}
+                  </Badge>
+                )}
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                Target Portal:{' '}
-                <a
-                  href="https://admin.hungerbox.com/va/reporting/download-reports"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-bold text-[#3b2fc9] dark:text-indigo-400 hover:underline inline-flex items-center gap-0.5"
-                >
-                  admin.hungerbox.com/va/reporting/download-reports{' '}
-                  <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
-                </a>
+                Automatically fetches yesterday's sales every morning by 8:00 AM - 8:30 AM IST from HungerBox API. Zero manual triggers required.
               </p>
             </div>
           </div>

@@ -38,6 +38,12 @@ export default function TuckshopPage() {
   const [, setSitesVersion] = useState(0);
   const siteConfig = COMPANY_SITES[assignedSite] || COMPANY_SITES.newrelic;
 
+  // For non-admin managers: strictly isolate records to their assigned site and EXPENSES ONLY!
+  const siteRecords = useMemo(() => {
+    if (isAdmin) return records;
+    return records.filter((r) => (r.siteId || 'newrelic') === assignedSite && r.type === 'expense');
+  }, [records, isAdmin, assignedSite]);
+
   useEffect(() => {
     const unsub = subscribeCompanySites(() => {
       setSitesVersion((v) => v + 1);
@@ -119,12 +125,12 @@ export default function TuckshopPage() {
                 )}
               </div>
               <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                {isAdmin ? 'Tuckshop Ledger & Sales' : `${siteConfig.name} Tuckshop`}
+                {isAdmin ? 'Tuckshop Ledger & Sales' : `${siteConfig.name} Counter Expenses`}
               </h1>
               <p className="text-xs text-rose-100/80 font-medium mt-0.5">
                 {isAdmin
                   ? 'Real-time sales, raw materials, vendor expenses & daily net profit.'
-                  : `Track daily tuckshop operations for ${siteConfig.name} (${siteConfig.allowedLocations.join(', ')}).`}
+                  : `Record morning supplies and manage petty cash float for ${siteConfig.name}.`}
               </p>
             </div>
           </div>
@@ -171,20 +177,22 @@ export default function TuckshopPage() {
         </div>
       </div>
 
-      {/* Real-Time Daily Shift Pulse Strip */}
-      <TuckshopShiftPulse
-        records={records}
-        onOpenExpense={() => openDialog('expense')}
-        onOpenSale={() => openDialog('sale')}
-        onOpenHungerBoxSync={isAdmin ? () => setIsHungerBoxModalOpen(true) : undefined}
-        siteName={isAdmin ? undefined : siteConfig.name}
-      />
+      {/* Real-Time Daily Shift Pulse Strip (Admins Only) */}
+      {isAdmin && (
+        <TuckshopShiftPulse
+          records={records}
+          onOpenExpense={() => openDialog('expense')}
+          onOpenSale={() => openDialog('sale')}
+          onOpenHungerBoxSync={() => setIsHungerBoxModalOpen(true)}
+          siteName={undefined}
+        />
+      )}
 
       {/* 🏦 Petty Cash Float Tracker & 📉 COGS Health Gauge (Admin Only) */}
       <div className={isAdmin ? "grid grid-cols-1 lg:grid-cols-2 gap-4" : "grid grid-cols-1 gap-4"}>
         <PettyCashFloatWidget
           siteId={assignedSite}
-          records={records}
+          records={siteRecords}
           isAdmin={isAdmin}
         />
         {isAdmin && (
@@ -199,11 +207,13 @@ export default function TuckshopPage() {
       </div>
 
       {/* HungerBox Cashless Automated Sync Modal */}
-      <HungerBoxSyncModal
-        open={isHungerBoxModalOpen}
-        onOpenChange={setIsHungerBoxModalOpen}
-        siteId={assignedSite}
-      />
+      {isAdmin && (
+        <HungerBoxSyncModal
+          open={isHungerBoxModalOpen}
+          onOpenChange={setIsHungerBoxModalOpen}
+          siteId={assignedSite}
+        />
+      )}
         
       <Dialog open={isDialogOpen} onOpenChange={(open) => {
         setIsDialogOpen(open);
@@ -235,8 +245,8 @@ export default function TuckshopPage() {
         <>
           <div className="w-full">
             <TuckshopList
-              records={records}
-              showDashboard={role !== 'guest'}
+              records={siteRecords}
+              showDashboard={isAdmin}
               onEdit={handleEditRecord}
             />
           </div>

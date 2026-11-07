@@ -21,7 +21,9 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
   const isAdmin = role === 'admin' || role === 'superadmin';
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'expense' | 'sale'>(editRecord?.type || initialTab);
+  const [activeTab, setActiveTab] = useState<'expense' | 'sale'>(
+    isAdmin ? (editRecord?.type || initialTab) : 'expense'
+  );
 
   const [date, setDate] = useState<string>(
     editRecord?.date ? editRecord.date.split('T')[0] : new Date().toISOString().split('T')[0]
@@ -198,7 +200,7 @@ export function TuckshopForm({ existingCategories, initialTab = 'expense', editR
           </div>
         </div>
 
-        {!editRecord && (
+        {!editRecord && isAdmin && (
           <div className="flex items-center p-1 bg-slate-100 rounded-2xl border border-slate-200">
             <button
               type="button"

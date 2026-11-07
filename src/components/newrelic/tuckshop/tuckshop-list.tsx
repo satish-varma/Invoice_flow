@@ -246,6 +246,8 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
   }, [records]);
 
   const filteredRecords = records.filter(record => {
+    // If not owner/admin, strictly restrict to expense records only (never expose sales)
+    if (!isOwnerOrAdmin && record.type !== 'expense') return false;
     if (filterType !== 'all' && record.type !== filterType) return false;
     if (filterLocation !== 'all') {
       const loc = (record.location || '').toUpperCase();
@@ -356,8 +358,8 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
         />
       )}
 
-      {/* Visual Sales & Expense Trend Chart */}
-      {showTrendChart && (
+      {/* Visual Sales & Expense Trend Chart (Admin Only) */}
+      {showTrendChart && isOwnerOrAdmin && (
         <TuckshopTrendChart records={records} />
       )}
       
@@ -366,93 +368,97 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <h3 className="font-black text-slate-900 dark:text-white text-base sm:text-lg tracking-tight">
-              Transaction Ledger
+              {isOwnerOrAdmin ? 'Transaction Ledger' : 'Counter Expenses'}
             </h3>
             <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-900">
-              {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''}
+              {filteredRecords.length} {isOwnerOrAdmin ? (filteredRecords.length !== 1 ? 'records' : 'record') : (filteredRecords.length !== 1 ? 'expenses' : 'expense')}
             </span>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Prominent Segmented Location Filter Switcher */}
-            <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl gap-1 border border-slate-200/80 dark:border-slate-700 shadow-2xs">
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setFilterLocation('all');
-                }}
-                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  filterLocation === 'all'
-                    ? 'bg-gradient-to-r from-indigo-600 to-[#3b2fc9] text-white shadow-xs font-black'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60 dark:hover:bg-slate-700'
-                }`}
-              >
-                <span>All Locations</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                  filterLocation === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                }`}>
-                  {locCounts.all}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setFilterLocation('BLR');
-                }}
-                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  filterLocation === 'BLR'
-                    ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-xs font-black'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60 dark:hover:bg-slate-700'
-                }`}
-              >
-                <span>Bangalore</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                  filterLocation === 'BLR' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                }`}>
-                  {locCounts.blr}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setFilterLocation('HYD');
-                }}
-                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  filterLocation === 'HYD'
-                    ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-xs font-black'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60 dark:hover:bg-slate-700'
-                }`}
-              >
-                <span>Hyderabad</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                  filterLocation === 'HYD' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                }`}>
-                  {locCounts.hyd}
-                </span>
-              </button>
-            </div>
+            {/* Prominent Segmented Location Filter Switcher - Admin Only */}
+            {isOwnerOrAdmin && (
+              <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl gap-1 border border-slate-200/80 dark:border-slate-700 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setFilterLocation('all');
+                  }}
+                  className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    filterLocation === 'all'
+                      ? 'bg-gradient-to-r from-indigo-600 to-[#3b2fc9] text-white shadow-xs font-black'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <span>All Locations</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                    filterLocation === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                  }`}>
+                    {locCounts.all}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setFilterLocation('BLR');
+                  }}
+                  className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    filterLocation === 'BLR'
+                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-xs font-black'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <span>Bangalore</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                    filterLocation === 'BLR' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                  }`}>
+                    {locCounts.blr}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setFilterLocation('HYD');
+                  }}
+                  className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    filterLocation === 'HYD'
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-xs font-black'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white/60 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <span>Hyderabad</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                    filterLocation === 'HYD' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                  }`}>
+                    {locCounts.hyd}
+                  </span>
+                </button>
+              </div>
+            )}
 
-            {/* Toggle 14-Day Visual Trend Chart */}
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setShowTrendChart(!showTrendChart);
-              }}
-              className={cn(
-                "h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 shrink-0",
-                showTrendChart
-                  ? "bg-[#3b2fc9] text-white shadow-sm"
-                  : "bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
-              )}
-              title="Toggle 14-Day Sales & Expense Trend Chart"
-            >
-              <BarChart3 className="h-3.5 w-3.5" />
-              <span>{showTrendChart ? 'Hide Trends' : 'View Trends'}</span>
-            </button>
+            {/* Toggle 14-Day Visual Trend Chart - Admin Only */}
+            {isOwnerOrAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowTrendChart(!showTrendChart);
+                }}
+                className={cn(
+                  "h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 shrink-0",
+                  showTrendChart
+                    ? "bg-[#3b2fc9] text-white shadow-sm"
+                    : "bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
+                )}
+                title="Toggle 14-Day Sales & Expense Trend Chart"
+              >
+                <BarChart3 className="h-3.5 w-3.5" />
+                <span>{showTrendChart ? 'Hide Trends' : 'View Trends'}</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -587,34 +593,38 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
               </select>
             )}
 
-            <div className="relative w-full sm:w-auto">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            {isOwnerOrAdmin && (
+              <div className="relative w-full sm:w-auto">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <select
+                  value={filterLocation}
+                  onChange={(e) => {
+                    triggerHaptic('light');
+                    setFilterLocation(e.target.value as any);
+                  }}
+                  className="w-full sm:w-auto h-11 sm:h-10 pl-8 pr-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
+                >
+                  <option value="all">All Locations</option>
+                  <option value="BLR">Bangalore (BLR)</option>
+                  <option value="HYD">Hyderabad (HYD)</option>
+                </select>
+              </div>
+            )}
+            
+            {isOwnerOrAdmin && (
               <select
-                value={filterLocation}
+                value={filterType}
                 onChange={(e) => {
                   triggerHaptic('light');
-                  setFilterLocation(e.target.value as any);
+                  setFilterType(e.target.value as any);
                 }}
-                className="w-full sm:w-auto h-11 sm:h-10 pl-8 pr-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
+                className="w-full sm:w-auto h-11 sm:h-10 px-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
               >
-                <option value="all">All Locations</option>
-                <option value="BLR">Bangalore (BLR)</option>
-                <option value="HYD">Hyderabad (HYD)</option>
+                <option value="all">All Types</option>
+                <option value="expense">Expenses Only</option>
+                <option value="sale">Sales Only</option>
               </select>
-            </div>
-            
-            <select
-              value={filterType}
-              onChange={(e) => {
-                triggerHaptic('light');
-                setFilterType(e.target.value as any);
-              }}
-              className="w-full sm:w-auto h-11 sm:h-10 px-3 text-xs sm:text-sm font-semibold border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3b2fc9]/20 bg-white shadow-2xs text-slate-800"
-            >
-              <option value="all">All Types</option>
-              <option value="expense">Expenses Only</option>
-              <option value="sale">Sales Only</option>
-            </select>
+            )}
 
             <select
               value={filterMonth}
@@ -681,7 +691,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
               </span>
             )}
 
-            {filterType !== 'all' && (
+            {isOwnerOrAdmin && filterType !== 'all' && (
               <span className="px-2.5 py-1 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 font-bold flex items-center gap-1.5">
                 Type: {filterType.toUpperCase()}
                 <button
@@ -694,7 +704,7 @@ export function TuckshopList({ records, showDashboard, onEdit }: Props) {
               </span>
             )}
 
-            {filterLocation !== 'all' && (
+            {isOwnerOrAdmin && filterLocation !== 'all' && (
               <span className="px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold flex items-center gap-1.5">
                 Location: {filterLocation}
                 <button

@@ -1073,6 +1073,12 @@ export async function dispatchPettyCashRequestAlert(
     ? `upi://pay?pa=${encodeURIComponent(payeeUpi)}&pn=${encodeURIComponent(staffName)}&am=${amountVal}&cu=INR&tn=${encodeURIComponent('Tuckshop-Petty-Cash')}`
     : '';
 
+  const waPayLink = rawPhone
+    ? `https://wa.me/91${rawPhone}?text=${encodeURIComponent(`Hi ${staffName}, approving petty cash float top-up of ₹${amountVal.toLocaleString('en-IN')} for ${site}.`)}`
+    : '';
+
+  const portalLink = `https://studio--invoiceflow-24nxt.us-central1.hosted.app/newrelic/tuckshop?floatReq=${data.requestId}`;
+
   const message = `🚨 *PETTY CASH FLOAT TOP-UP REQUEST*
 ━━━━━━━━━━━━━━━━━━━━
 👤 *Staff:* ${staffName}
@@ -1083,11 +1089,8 @@ export async function dispatchPettyCashRequestAlert(
 💳 *Preferred Mode:* ${modeText}
 ⏰ *Time:* ${timeStr}
 ━━━━━━━━━━━━━━━━━━━━
-⚡ *1-Tap Pay via PhonePe / UPI:*
-${upiPayLink}
-
-👉 *Review & Approve in Portal:*
-https://invoiceflow.thegutguru.in/newrelic/tuckshop?floatReq=${data.requestId}`;
+${waPayLink ? `💬 *1-Tap Pay via WhatsApp:*\n${waPayLink}\n\n` : ''}${rawPhone ? `📱 *Phone / UPI:* +91 ${rawPhone} (${payeeUpi})\n\n` : ''}👉 *Review & Approve in Portal:*
+${portalLink}`;
 
   const results: Array<{ phone: string; success: boolean; error?: string }> = [];
   let totalSent = 0;

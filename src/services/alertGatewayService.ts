@@ -1008,3 +1008,100 @@ export async function dispatchBillingCycleDigest(
 
   return { totalSent, totalFailed, results };
 }
+
+/**
+ * Dispatch real-time WhatsApp alert when counter staff requests a Petty Cash Float replenishment
+ * Sends alert directly to Operational Admin (+91 77096 32898 / configured admin phones)
+ */
+export async function dispatchPettyCashRequestAlert(
+  data: {
+    requestId: string;
+    siteName: string;
+    location: string;
+    requestedBy: string;
+    amount: number;
+    reason: string;
+    currentBalance: number;
+    preferredMode?: string;
+  },
+  configOverride?: AlertGatewayConfig,
+  senderEmail?: string | null
+): Promise<{
+  totalSent: number;
+  totalFailed: number;
+  results: Array<{ phone: string; success: boolean; error?: string }>;
+}> {
+  const config = configOverride || (await getAlertGatewayConfig());
+
+  const rawTargets: string[] = [];
+  if (config.adminPhones && Array.isArray(config.adminPhones)) {
+    rawTargets.push(...config.adminPhones);
+  }
+  if (config.managerPhone) {
+    rawTargets.push(config.managerPhone);
+  }
+  if (rawTargets.length === 0) {
+    rawTargets.push('917709632898');
+  }
+
+  // Deduplicate and filter out staff phones to ensure alerts reach the business owner/admin
+  const uniquePhones = Array.from(
+    new Set(rawTargets.map((p) => formatPhoneNumber(p).cleanDigits).filter((p) => p && !p.includes('8897036993')))
+  ).slice(0, 5);
+
+  const timeStr = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).format(new Date());
+
+  const amountVal = Number(data.amount ?? (data as any).requestedAmount ?? 0);
+  const currentBalanceVal = Number(data.currentBalance ?? 0);
+  const staffName = data.requestedBy || (data as any).staffName || 'Counter Staff';
+  const site = data.siteName || (data as any).counterName || 'Tuckshop Counter';
+  const loc = data.location || (data as any).locationName || 'Stall';
+  const reasonText = data.reason || (data as any).purpose || 'Morning supplies replenishment';
+  const modeText = (data.preferredMode || '').toLowerCase().includes('cash') ? '💵 Cash Handover' : '📱 UPI Transfer';
+
+  const message = `🚨 *PETTY CASH FLOAT TOP-UP REQUEST*
+━━━━━━━━━━━━━━━━━━━━
+👤 *Staff:* ${staffName}
+🏢 *Counter:* ${site} (${loc})
+💰 *Requested Amount:* ₹${amountVal.toLocaleString('en-IN')}
+📝 *Purpose:* ${reasonText}
+💵 *Current Drawer Balance:* ₹${currentBalanceVal.toLocaleString('en-IN')}
+💳 *Preferred Mode:* ${modeText}
+⏰ *Time:* ${timeStr}
+━━━━━━━━━━━━━━━━━━━━
+👉 *Review & Approve in Portal:*
+https://invoiceflow.thegutguru.in/newrelic/tuckshop?floatReq=${data.requestId}`;
+
+  const results: Array<{ phone: string; success: boolean; error?: string }> = [];
+  let totalSent = 0;
+  let totalFailed = 0;
+
+  for (const phone of uniquePhones) {
+    const res = await dispatchAlert(
+      {
+        to: phone,
+        recipientName: 'Tuckshop Ops Admin',
+        alertType: 'custom',
+        customMessage: message,
+      },
+      config,
+      senderEmail || 'system:petty-cash-request'
+    );
+    if (res.success) {
+      totalSent++;
+    } else {
+      totalFailed++;
+    }
+    results.push({ phone, success: res.success, error: res.error });
+  }
+
+  return { totalSent, totalFailed, results };
+}

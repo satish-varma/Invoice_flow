@@ -16,6 +16,12 @@ import {
   Coins,
   Settings2,
   ExternalLink,
+  ChevronRight,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Receipt,
+  Building2,
+  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,10 +36,11 @@ import {
   TuckshopSiteFloat,
   subscribeToSiteFloat,
   addFloatTopUp,
-  requestFloatTopUp,
   updateOpeningFloat,
   computeFloatBalance,
   createDefaultFloat,
+  getFloatScopeKey,
+  getCounterDisplayName,
 } from '@/services/tuckshopFloatService';
 import { NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { triggerHaptic } from '@/lib/haptics';
@@ -43,6 +50,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
   siteId: string;
+  location?: string;
   records: NewRelicTuckshopRecord[];
   isAdmin?: boolean;
   compact?: boolean;
@@ -50,13 +58,53 @@ interface Props {
 
 export function PettyCashFloatWidget({
   siteId,
+  location,
   records,
   isAdmin = false,
   compact = false,
 }: Props) {
   const { user } = useAuth();
+
+  // Determine user available petty cash counters
+  const userCounters = useMemo(() => {
+    // If user has specific petty cash sites assigned (e.g. Swamy with ntt_data, dsm, resmed)
+    const list: Array<{ scopeKey: string; name: string }> = [];
+
+    if (user?.pettyCashSites && user.pettyCashSites.length > 0) {
+      user.pettyCashSites.forEach((s) => {
+        if (s === 'newrelic') {
+          list.push({ scopeKey: 'newrelic_hyderabad', name: 'New Relic (Hyderabad)' });
+          list.push({ scopeKey: 'newrelic_bangalore', name: 'New Relic (Bangalore)' });
+        } else {
+          list.push({ scopeKey: s, name: getCounterDisplayName(s) });
+        }
+      });
+    } else if (user?.assignedSites && user.assignedSites.length > 1) {
+      user.assignedSites.forEach((s) => {
+        list.push({ scopeKey: s, name: getCounterDisplayName(s) });
+      });
+    } else {
+      // Default derived from siteId and location
+      const defaultKey = getFloatScopeKey(siteId, location);
+      list.push({ scopeKey: defaultKey, name: getCounterDisplayName(defaultKey) });
+    }
+
+    return list;
+  }, [user, siteId, location]);
+
+  const [activeScopeKey, setActiveScopeKey] = useState<string>(() => {
+    return userCounters[0]?.scopeKey || getFloatScopeKey(siteId, location);
+  });
+
+  useEffect(() => {
+    const key = getFloatScopeKey(siteId, location);
+    if (!userCounters.some((c) => c.scopeKey === activeScopeKey)) {
+      setActiveScopeKey(key);
+    }
+  }, [siteId, location, userCounters, activeScopeKey]);
+
   const [floatData, setFloatData] = useState<TuckshopSiteFloat>(() =>
-    createDefaultFloat(siteId as SiteId)
+    createDefaultFloat(activeScopeKey)
   );
   const [isLoading, setIsLoading] = useState(true);
 
@@ -66,57 +114,154 @@ export function PettyCashFloatWidget({
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
-  // Form states
+  // Request form state
   const [reqAmount, setReqAmount] = useState<string>('2000');
   const [reqReason, setReqReason] = useState<string>('Morning bread, fresh veggies & milk');
+  const [reqMode, setReqMode] = useState<'upi' | 'cash'>('upi');
   const [isSubmittingReq, setIsSubmittingReq] = useState(false);
+  const [requestFeedback, setRequestFeedback] = useState<string | null>(null);
 
+  // Advance form state
   const [advAmount, setAdvAmount] = useState<string>('3000');
   const [advMode, setAdvMode] = useState<'cash' | 'upi'>('upi');
-  const [advNote, setAdvNote] = useState<string>('Petty cash replenishment via UPI');
+  const [advNote, setAdvNote] = useState<string>('Petty cash replenishment');
+  const [advTxRef, setAdvTxRef] = useState<string>('');
   const [isSubmittingAdv, setIsSubmittingAdv] = useState(false);
 
   const [newOpeningFloat, setNewOpeningFloat] = useState<string>('5000');
 
-  // Real-time subscription to float document for this site
+  // Real-time subscription to active float document
   useEffect(() => {
     setIsLoading(true);
-    const unsub = subscribeToSiteFloat(siteId, (data) => {
+    const unsub = subscribeToSiteFloat(activeScopeKey, (data) => {
       setFloatData(data);
       setNewOpeningFloat(String(data.openingFloat || 5000));
       setIsLoading(false);
     });
     return () => unsub();
-  }, [siteId]);
+  }, [activeScopeKey]);
 
   // Compute live balance
   const balance = useMemo(() => {
-    // Filter records belonging to this site
-    const siteExpenses = records.filter(
-      (r) => (r.siteId || 'newrelic') === siteId && r.type === 'expense'
-    );
-    return computeFloatBalance(floatData, siteExpenses);
-  }, [floatData, records, siteId]);
+    const locFilter = activeScopeKey.includes('bangalore')
+      ? 'bangalore'
+      : activeScopeKey.includes('hyderabad')
+      ? 'hyderabad'
+      : undefined;
 
-  // Handle Staff Top-Up Request
+    // Filter tuckshop expenses for this counter
+    const counterExpenses = records.filter((r) => {
+      if (r.type !== 'expense') return false;
+      const rSite = (r.siteId || 'newrelic').toLowerCase();
+      if (activeScopeKey === 'newrelic_hyderabad' || activeScopeKey === 'newrelic_bangalore') {
+        return rSite === 'newrelic';
+      }
+      return rSite === activeScopeKey;
+    });
+
+    return computeFloatBalance(floatData, counterExpenses, locFilter);
+  }, [floatData, records, activeScopeKey]);
+
+  // Combined Cashflow Timeline (Advances Inflow (+) and Purchase Outflows (-))
+  const cashflowTimeline = useMemo(() => {
+    const items: Array<{
+      id: string;
+      date: string;
+      displayDate: string;
+      type: 'inflow' | 'outflow';
+      category: string;
+      amount: number;
+      note?: string;
+      source: string;
+      billUrl?: string;
+    }> = [];
+
+    // 1. Inflows from Top-Ups
+    floatData.topUps.forEach((t) => {
+      items.push({
+        id: t.id,
+        date: t.date,
+        displayDate: formatOrdinalDate(t.date),
+        type: 'inflow',
+        category: `Advance (${t.mode.toUpperCase()})`,
+        amount: t.amount,
+        note: t.note || 'Petty cash replenishment',
+        source: t.addedBy || 'Admin',
+      });
+    });
+
+    // 2. Outflows from Tuckshop Purchases
+    const cycleStart = floatData.currentCycleStart;
+    records
+      .filter((r) => {
+        if (r.type !== 'expense') return false;
+        const rSite = (r.siteId || 'newrelic').toLowerCase();
+        if (activeScopeKey === 'newrelic_hyderabad' || activeScopeKey === 'newrelic_bangalore') {
+          if (rSite !== 'newrelic') return false;
+          if (activeScopeKey === 'newrelic_bangalore') {
+            return (r.location || '').toLowerCase().includes('bangalore');
+          } else {
+            return !(r.location || '').toLowerCase().includes('bangalore');
+          }
+        }
+        return rSite === activeScopeKey;
+      })
+      .filter((r) => (r.date || '') >= cycleStart)
+      .forEach((r) => {
+        items.push({
+          id: r.id || `exp_${r.date}`,
+          date: r.date,
+          displayDate: formatOrdinalDate(r.date),
+          type: 'outflow',
+          category: r.category || 'Supplies',
+          amount: Number(r.amount) || 0,
+          note: r.description,
+          source: r.createdBy || 'Staff',
+          billUrl: r.billUrl,
+        });
+      });
+
+    // Sort descending by date
+    return items.sort((a, b) => b.date.localeCompare(a.date));
+  }, [floatData, records, activeScopeKey]);
+
+  // Handle Staff Top-Up Request (Dispatches WhatsApp + Saves In-App Request)
   const handleSendRequest = async () => {
     const amt = parseFloat(reqAmount);
     if (isNaN(amt) || amt <= 0) {
       alert('Please enter a valid request amount');
       return;
     }
-    triggerHaptic('medium');
+    triggerHaptic('heavy');
     setIsSubmittingReq(true);
+    setRequestFeedback(null);
+
     try {
-      await requestFloatTopUp(siteId, {
-        amount: amt,
-        reason: reqReason,
-        userEmail: user?.email,
+      const res = await fetch('/api/tuckshop/float', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'request',
+          scopeKey: activeScopeKey,
+          counterName: floatData.counterName,
+          location: floatData.location,
+          amount: amt,
+          reason: reqReason,
+          preferredMode: reqMode,
+          currentBalance: balance.remainingFloat,
+        }),
       });
-      setIsRequestModalOpen(false);
-      alert(`Float top-up request for ₹${amt.toLocaleString('en-IN')} submitted successfully!`);
+
+      const data = await res.json();
+      if (data.success) {
+        setIsRequestModalOpen(false);
+        setRequestFeedback(`✅ Request for ₹${amt.toLocaleString('en-IN')} sent! WhatsApp alert delivered to Admin.`);
+        triggerHaptic('medium');
+      } else {
+        alert(data.error || 'Could not submit float request');
+      }
     } catch (e: any) {
-      alert(e.message || 'Could not submit float request');
+      alert(e.message || 'Error submitting request');
     } finally {
       setIsSubmittingReq(false);
     }
@@ -132,13 +277,15 @@ export function PettyCashFloatWidget({
     triggerHaptic('medium');
     setIsSubmittingAdv(true);
     try {
-      await addFloatTopUp(siteId, {
+      await addFloatTopUp(activeScopeKey, {
         amount: amt,
         mode: advMode,
         note: advNote,
+        transactionRef: advTxRef.trim() || undefined,
         userEmail: user?.email,
       });
       setIsAddAdvanceModalOpen(false);
+      setAdvTxRef('');
     } catch (e: any) {
       alert(e.message || 'Could not record advance');
     } finally {
@@ -151,7 +298,7 @@ export function PettyCashFloatWidget({
     const amt = parseFloat(newOpeningFloat);
     if (isNaN(amt) || amt < 0) return;
     try {
-      await updateOpeningFloat(siteId, amt, user?.email);
+      await updateOpeningFloat(activeScopeKey, amt, user?.email);
       setIsSettingsModalOpen(false);
     } catch (e: any) {
       alert(e.message || 'Could not update float setting');
@@ -165,16 +312,14 @@ export function PettyCashFloatWidget({
       ? 'text-amber-700 bg-amber-50 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300'
       : 'text-rose-700 bg-rose-50 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300';
 
-  const siteName = COMPANY_SITES[siteId as SiteId]?.name || siteId;
-
   if (compact) {
     return (
       <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Wallet className="w-4 h-4 text-indigo-600" />
-            <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
-              Petty Cash Float
+            <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider truncate max-w-[150px]">
+              {floatData.counterName} Float
             </span>
           </div>
           <Badge variant="outline" className={`text-[10px] font-bold ${statusColor}`}>
@@ -187,7 +332,7 @@ export function PettyCashFloatWidget({
             <span className="text-2xl font-black font-mono text-slate-900 dark:text-white">
               ₹{balance.remainingFloat.toLocaleString('en-IN')}
             </span>
-            <span className="text-[11px] text-slate-400 ml-1.5 font-medium">available</span>
+            <span className="text-[11px] text-slate-400 ml-1.5 font-medium">in cash drawer</span>
           </div>
           <Button
             size="sm"
@@ -197,7 +342,7 @@ export function PettyCashFloatWidget({
             }}
             className="h-7 text-[11px] font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white"
           >
-            <Send className="w-3 h-3 mr-1" /> Top-Up
+            <Send className="w-3 h-3 mr-1" /> Request Top-Up
           </Button>
         </div>
       </div>
@@ -206,7 +351,7 @@ export function PettyCashFloatWidget({
 
   return (
     <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
-      {/* Top Header */}
+      {/* Top Header & Multi-Counter Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-300/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 shadow-md">
@@ -215,17 +360,17 @@ export function PettyCashFloatWidget({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-sm font-black text-slate-900 dark:text-white">
-                Petty Cash Float &amp; Supplier Payout Tracker
+                Petty Cash Float &amp; Purchase Tracker
               </h3>
               <Badge
                 variant="outline"
                 className="text-[10px] font-bold bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300"
               >
-                ⚡ 100% Cashless App Sales
+                ⚡ 100% Cashless App Counter
               </Badge>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Because all customer orders are cashless HungerBox payments, physical expenses rely on this company cash float.
+              Morning ingredients (milk, bread, vegetables, gas) rely on this company cash float.
             </p>
           </div>
         </div>
@@ -265,7 +410,7 @@ export function PettyCashFloatWidget({
             className="h-9 px-3 rounded-2xl border-slate-200 dark:border-slate-700 text-xs font-bold"
           >
             <History className="w-3 h-3 mr-1 text-slate-400" />
-            History
+            Audit History ({cashflowTimeline.length})
           </Button>
 
           {isAdmin && (
@@ -282,12 +427,51 @@ export function PettyCashFloatWidget({
         </div>
       </div>
 
+      {/* Multi-Counter Scopes Bar (For Swamy handling NTT Data, DSM, ResMed or Laxman/Ravi) */}
+      {userCounters.length > 1 && (
+        <div className="flex items-center gap-2 pt-1 overflow-x-auto pb-1">
+          <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1 shrink-0">
+            <Building2 className="w-3 h-3 text-indigo-600" /> Counter:
+          </span>
+          {userCounters.map((c) => (
+            <button
+              key={c.scopeKey}
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setActiveScopeKey(c.scopeKey);
+              }}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                activeScopeKey === c.scopeKey
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+              }`}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Request Success Feedback Toast */}
+      {requestFeedback && (
+        <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center justify-between">
+          <span>{requestFeedback}</span>
+          <button
+            onClick={() => setRequestFeedback(null)}
+            className="text-emerald-700 hover:text-emerald-950 font-black ml-2"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Main Float Balance Cards Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {/* 1. Remaining Cash Float (Hero) */}
         <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/40 dark:from-indigo-950/40 dark:via-slate-900 dark:to-purple-950/20 border-2 border-indigo-400/80 shadow-md col-span-2 sm:col-span-1">
           <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 block mb-1">
-            Cash Float Remaining
+            Cash Float in Drawer
           </span>
           <p className="text-2xl font-mono font-black text-slate-950 dark:text-white tracking-tight">
             ₹{balance.remainingFloat.toLocaleString('en-IN')}
@@ -309,7 +493,7 @@ export function PettyCashFloatWidget({
             </p>
           </div>
           <span className="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-            Monthly base cash advance
+            Base monthly cash advance
           </span>
         </div>
 
@@ -339,7 +523,7 @@ export function PettyCashFloatWidget({
             </p>
           </div>
           <span className="text-[10px] text-rose-600/80 font-bold mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-            Morning raw materials &amp; supplies
+            Auto-deducted from logged expenses
           </span>
         </div>
       </div>
@@ -348,10 +532,10 @@ export function PettyCashFloatWidget({
       <div className="space-y-1.5 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700">
         <div className="flex items-center justify-between text-xs">
           <span className="font-bold text-slate-700 dark:text-slate-300">
-            Float Drawdown:
+            {floatData.counterName} Drawdown:
           </span>
           <span className="font-mono text-[11px] text-slate-500">
-            ₹{balance.remainingFloat.toLocaleString('en-IN')} remaining of ₹{balance.totalAdvanceAvailable.toLocaleString('en-IN')} advance
+            ₹{balance.remainingFloat.toLocaleString('en-IN')} remaining of ₹{balance.totalAdvanceAvailable.toLocaleString('en-IN')} available
           </span>
         </div>
 
@@ -375,20 +559,86 @@ export function PettyCashFloatWidget({
         </div>
       </div>
 
-      {/* DIALOG 1: STAFF TOP-UP REQUEST */}
+      {/* LIVE CASHFLOW STATEMENT FEED */}
+      {cashflowTimeline.length > 0 && (
+        <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-black text-slate-900 dark:text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <History className="w-3.5 h-3.5 text-indigo-600" />
+              Live Cashflow &amp; Purchases Ledger
+            </span>
+            <span className="text-[10px] text-slate-400">
+              Showing recent transactions
+            </span>
+          </div>
+
+          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+            {cashflowTimeline.slice(0, 5).map((item) => (
+              <div
+                key={item.id}
+                className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700 flex items-center justify-between text-xs"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                      item.type === 'inflow'
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                    }`}
+                  >
+                    {item.type === 'inflow' ? (
+                      <ArrowDownLeft className="w-4 h-4" />
+                    ) : (
+                      <ArrowUpRight className="w-4 h-4" />
+                    )}
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-900 dark:text-white block">
+                      {item.category}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {item.displayDate} • {item.note || item.source}
+                    </span>
+                  </div>
+                </div>
+
+                <span
+                  className={`font-mono font-black text-xs ${
+                    item.type === 'inflow' ? 'text-emerald-600' : 'text-rose-600'
+                  }`}
+                >
+                  {item.type === 'inflow' ? '+' : '-'}₹{item.amount.toLocaleString('en-IN')}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* DIALOG 1: STAFF TOP-UP REQUEST (DISPATCHES WHATSAPP ALERT TO ADMIN) */}
       <Dialog open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen}>
         <DialogContent className="sm:max-w-[440px] rounded-3xl p-6 bg-white dark:bg-slate-900">
           <DialogHeader>
             <DialogTitle className="text-base font-black flex items-center gap-2">
               <Send className="w-5 h-5 text-indigo-600" />
-              Request Petty Cash Float Top-Up
+              Request Float Top-Up
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 pt-2 text-xs">
-            <p className="text-slate-500">
-              Submit an emergency float replenishment request for <strong>{siteName}</strong>.
-            </p>
+            <div className="p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 text-slate-700 dark:text-slate-300">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-indigo-950 dark:text-indigo-200">
+                  {floatData.counterName}
+                </span>
+                <span className="font-mono font-black text-slate-900 dark:text-white">
+                  Current Float: ₹{balance.remainingFloat.toLocaleString('en-IN')}
+                </span>
+              </div>
+              <p className="text-[11px] opacity-80">
+                Submitting this request alerts Admin immediately via <strong>WhatsApp (+91 77096 32898)</strong> and in-app dashboard.
+              </p>
+            </div>
 
             <div className="space-y-1.5">
               <label className="font-bold text-slate-700 dark:text-slate-300">
@@ -430,12 +680,37 @@ export function PettyCashFloatWidget({
 
             <div className="space-y-1.5">
               <label className="font-bold text-slate-700 dark:text-slate-300">
+                Preferred Handover Mode:
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'upi', label: '📱 PhonePe / GPay UPI' },
+                  { id: 'cash', label: '💵 Cash Handover' },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setReqMode(m.id as any)}
+                    className={`py-2 rounded-xl font-bold text-xs border transition-all ${
+                      reqMode === m.id
+                        ? 'border-indigo-600 bg-indigo-50 text-indigo-900 ring-2 ring-indigo-600/60 shadow-xs'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-700 dark:text-slate-300">
                 Reason / Required Supplies:
               </label>
               <Input
                 value={reqReason}
                 onChange={(e) => setReqReason(e.target.value)}
-                placeholder="e.g. Morning milk, vegetables, gas cylinder"
+                placeholder="e.g. Morning bread, milk, vegetables & gas"
                 className="h-10 rounded-xl"
               />
             </div>
@@ -451,9 +726,9 @@ export function PettyCashFloatWidget({
               <Button
                 onClick={handleSendRequest}
                 disabled={isSubmittingReq}
-                className="rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white"
+                className="rounded-xl text-xs font-black bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 shadow-md shadow-amber-950/20"
               >
-                {isSubmittingReq ? 'Submitting...' : 'Send Request'}
+                {isSubmittingReq ? 'Notifying Admin...' : `Send Request (₹${Number(reqAmount || 0).toLocaleString('en-IN')})`}
               </Button>
             </div>
           </div>
@@ -472,7 +747,7 @@ export function PettyCashFloatWidget({
 
           <div className="space-y-4 pt-2 text-xs">
             <p className="text-slate-500">
-              Record cash or UPI advance given to <strong>{siteName}</strong> counter staff.
+              Record cash or UPI advance given to <strong>{floatData.counterName}</strong> staff.
             </p>
 
             <div className="space-y-1.5">
@@ -515,12 +790,24 @@ export function PettyCashFloatWidget({
 
             <div className="space-y-1.5">
               <label className="font-bold text-slate-700 dark:text-slate-300">
+                UPI Reference / UTR Number (Optional):
+              </label>
+              <Input
+                value={advTxRef}
+                onChange={(e) => setAdvTxRef(e.target.value)}
+                placeholder="e.g. 431092839201"
+                className="h-10 rounded-xl font-mono text-xs"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-700 dark:text-slate-300">
                 Note / Description:
               </label>
               <Input
                 value={advNote}
                 onChange={(e) => setAdvNote(e.target.value)}
-                placeholder="e.g. Replenishment via PhonePe to Ramesh"
+                placeholder="e.g. Replenishment via PhonePe"
                 className="h-10 rounded-xl"
               />
             </div>
@@ -545,13 +832,13 @@ export function PettyCashFloatWidget({
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG 3: FLOAT HISTORY */}
+      {/* DIALOG 3: FLOAT HISTORY & AUDIT TRAIL */}
       <Dialog open={isHistoryModalOpen} onOpenChange={setIsHistoryModalOpen}>
-        <DialogContent className="sm:max-w-[500px] rounded-3xl p-6 bg-white dark:bg-slate-900 max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[520px] rounded-3xl p-6 bg-white dark:bg-slate-900 max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-black flex items-center gap-2">
               <History className="w-5 h-5 text-indigo-600" />
-              Petty Cash Float Audit History
+              {floatData.counterName} Cashflow Audit History
             </DialogTitle>
           </DialogHeader>
 
@@ -559,7 +846,7 @@ export function PettyCashFloatWidget({
             {/* Top-Ups List */}
             <div>
               <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] mb-2">
-                Recent Advances &amp; Top-Ups:
+                Recent Advances Received (+):
               </h4>
               {floatData.topUps.length === 0 ? (
                 <p className="text-slate-400 py-2 border border-dashed rounded-xl text-center">
@@ -580,6 +867,11 @@ export function PettyCashFloatWidget({
                           <Badge variant="outline" className="text-[9px] uppercase font-bold">
                             {t.mode}
                           </Badge>
+                          {t.transactionRef && (
+                            <span className="text-[10px] font-mono text-slate-400">
+                              Ref: {t.transactionRef}
+                            </span>
+                          )}
                         </div>
                         <span className="text-[11px] text-slate-500 block mt-0.5">{t.note}</span>
                       </div>
@@ -647,7 +939,7 @@ export function PettyCashFloatWidget({
 
           <div className="space-y-3.5 pt-2 text-xs">
             <p className="text-slate-500">
-              Set the base opening advance for <strong>{siteName}</strong>.
+              Set the base opening advance for <strong>{floatData.counterName}</strong>.
             </p>
             <div className="space-y-1.5">
               <label className="font-bold text-slate-700 dark:text-slate-300">

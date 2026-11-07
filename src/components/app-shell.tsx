@@ -38,6 +38,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { FinancialAuthProvider, useFinancialAuth } from '@/contexts/FinancialAuthContext';
 import { FinancialPasswordModal } from '@/components/newrelic/financial-password-modal';
+import { AdminFloatNotificationPill } from '@/components/newrelic/tuckshop/AdminFloatApprovalModal';
 import { MobileAppNavigation } from '@/components/newrelic/mobile-app-navigation';
 import { MobileAppBar } from '@/components/newrelic/mobile-app-bar';
 import { NetworkStatusIndicator } from '@/components/newrelic/network-status-indicator';
@@ -241,6 +242,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
           {/* Right Action Items */}
           <div className="flex items-center gap-3">
+            <AdminFloatNotificationPill />
+
             {isAdmin && <FinancialStatusBadge darkHeader />}
 
             {role === 'guest' && (

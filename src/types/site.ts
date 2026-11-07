@@ -1,4 +1,4 @@
-export type SiteId = 'newrelic' | 'dsm' | 'ntt_data' | (string & {});
+export type SiteId = 'newrelic' | 'dsm' | 'ntt_data' | 'resmed' | (string & {});
 
 export interface CompanySite {
   id: SiteId;
@@ -36,6 +36,14 @@ export const DEFAULT_COMPANY_SITES: Record<string, CompanySite> = {
     tagline: 'Hyderabad Tuckshop',
     description: 'Tuckshop counter sales and daily staff attendance. Dedicated NewRelic DC is forbidden.',
   },
+  resmed: {
+    id: 'resmed',
+    name: 'ResMed',
+    allowedLocations: ['hyderabad'],
+    hasChallans: false,
+    tagline: 'Hyderabad Tuckshop',
+    description: 'Tuckshop counter sales and daily staff attendance.',
+  },
 };
 
 export const COMPANY_SITES: Record<string, CompanySite> = {
@@ -71,6 +79,13 @@ export const SITE_OPTIONS: SiteOption[] = [
     label: 'NTT Data Stall',
     locations: 'Hyderabad Stall Only',
     description: 'Tuckshop counter sales and daily staff attendance. Dedicated NewRelic DC is forbidden.',
+    hasChallans: false,
+  },
+  {
+    value: 'resmed',
+    label: 'ResMed Stall',
+    locations: 'Hyderabad Stall Only',
+    description: 'Tuckshop counter sales and daily staff attendance.',
     hasChallans: false,
   },
 ];

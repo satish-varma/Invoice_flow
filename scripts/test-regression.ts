@@ -367,6 +367,8 @@ async function runRegressionSuite() {
   {
     const mockFloat: TuckshopSiteFloat = {
       siteId: 'newrelic',
+      scopeKey: 'newrelic_hyderabad',
+      counterName: 'New Relic (Hyderabad)',
       openingFloat: 5000,
       currentCycleStart: '2026-11-01T00:00:00.000Z',
       topUps: [

@@ -98,6 +98,10 @@ interface DbUser {
   allowedTabs?: PermissionKey[];
   sessions?: Record<string, DeviceSession>;
   lastActiveAt?: string;
+  pettyCashEnabled?: boolean;
+  pettyCashSites?: SiteId[];
+  pettyCashLocations?: string[];
+  pettyCashLimit?: number;
 }
 
 
@@ -255,6 +259,10 @@ export default function AdminUsersPage() {
   const [assignedStartDate, setAssignedStartDate] = useState<string>('');
   const [assignedLocations, setAssignedLocations] = useState<string[]>([]);
   const [assignedStalls, setAssignedStalls] = useState<string[]>([]);
+  const [pettyCashEnabled, setPettyCashEnabled] = useState<boolean>(false);
+  const [pettyCashSites, setPettyCashSites] = useState<string[]>([]);
+  const [pettyCashLocations, setPettyCashLocations] = useState<string[]>([]);
+  const [pettyCashLimit, setPettyCashLimit] = useState<number>(5000);
 
   // Dynamic Company Sites & Management
   const [sites, setSites] = useState<CompanySite[]>(() => Object.values(DEFAULT_COMPANY_SITES));
@@ -455,6 +463,10 @@ export default function AdminUsersPage() {
           assignedStartDate: data.assignedStartDate || null,
           sessions: data.sessions || {},
           lastActiveAt: data.lastActiveAt || null,
+          pettyCashEnabled: Boolean(data.pettyCashEnabled),
+          pettyCashSites: Array.isArray(data.pettyCashSites) ? data.pettyCashSites : [],
+          pettyCashLocations: Array.isArray(data.pettyCashLocations) ? data.pettyCashLocations : [],
+          pettyCashLimit: typeof data.pettyCashLimit === 'number' ? data.pettyCashLimit : 5000,
         };
       }) as DbUser[];
       setUsers(fetchedUsers);
@@ -649,6 +661,10 @@ export default function AdminUsersPage() {
           ? false
           : userToEdit.canDelete === true || userTabs.includes('can_delete') || false
       );
+      setPettyCashEnabled(Boolean(userToEdit.pettyCashEnabled));
+      setPettyCashSites(Array.isArray(userToEdit.pettyCashSites) ? userToEdit.pettyCashSites : []);
+      setPettyCashLocations(Array.isArray(userToEdit.pettyCashLocations) ? userToEdit.pettyCashLocations : []);
+      setPettyCashLimit(typeof userToEdit.pettyCashLimit === 'number' ? userToEdit.pettyCashLimit : 5000);
     } else {
       setEditingUser(null);
       setEmail('');
@@ -666,6 +682,10 @@ export default function AdminUsersPage() {
       setExpiresAt('');
       setExpirationPreset('permanent');
       setCanDeleteRecord(false);
+      setPettyCashEnabled(false);
+      setPettyCashSites([]);
+      setPettyCashLocations([]);
+      setPettyCashLimit(5000);
     }
     setIsModalOpen(true);
   };
@@ -751,6 +771,10 @@ export default function AdminUsersPage() {
           assignedApps: legacyApps,
           expiresAt: effectiveExpiresAt,
           canDelete: effectiveCanDelete,
+          pettyCashEnabled: pettyCashEnabled,
+          pettyCashSites: pettyCashSites,
+          pettyCashLocations: pettyCashLocations,
+          pettyCashLimit: Number(pettyCashLimit) || 5000,
         };
 
         // If status changed or account is suspended, bump tokenVersion to immediately kill all active client sessions!
@@ -830,6 +854,10 @@ export default function AdminUsersPage() {
           defaultLandingPage: defaultLandingPage,
           allowedTabs: effectiveTabs,
           assignedApps: legacyApps,
+          pettyCashEnabled: pettyCashEnabled,
+          pettyCashSites: pettyCashSites,
+          pettyCashLocations: pettyCashLocations,
+          pettyCashLimit: Number(pettyCashLimit) || 5000,
           createdAt: new Date().toISOString(),
         };
         await setDoc(newDocRef, newUserData);
@@ -1061,6 +1089,10 @@ export default function AdminUsersPage() {
         ? false
         : sourceUser.canDelete === true || userTabs.includes('can_delete') || false
     );
+    setPettyCashEnabled(Boolean(sourceUser.pettyCashEnabled));
+    setPettyCashSites(Array.isArray(sourceUser.pettyCashSites) ? sourceUser.pettyCashSites : []);
+    setPettyCashLocations(Array.isArray(sourceUser.pettyCashLocations) ? sourceUser.pettyCashLocations : []);
+    setPettyCashLimit(typeof sourceUser.pettyCashLimit === 'number' ? sourceUser.pettyCashLimit : 5000);
     setIsModalOpen(true);
 
     logAuditEvent({
@@ -1118,6 +1150,10 @@ export default function AdminUsersPage() {
         ? false
         : sourceUser.canDelete === true || userTabs.includes('can_delete') || false
     );
+    setPettyCashEnabled(Boolean(sourceUser.pettyCashEnabled));
+    setPettyCashSites(Array.isArray(sourceUser.pettyCashSites) ? sourceUser.pettyCashSites : []);
+    setPettyCashLocations(Array.isArray(sourceUser.pettyCashLocations) ? sourceUser.pettyCashLocations : []);
+    setPettyCashLimit(typeof sourceUser.pettyCashLimit === 'number' ? sourceUser.pettyCashLimit : 5000);
 
     toast({
       title: 'Permissions Copied!',
@@ -2016,6 +2052,14 @@ export default function AdminUsersPage() {
                           >
                             {COMPANY_SITES[u.assignedSite || 'newrelic']?.name || 'NewRelic'}
                           </span>
+                        )}
+                        {u.pettyCashEnabled && (
+                          <div className="mt-1 flex items-center gap-1">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300">
+                              <Wallet className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                              <span>Petty Cash · ₹{(u.pettyCashLimit || 5000).toLocaleString('en-IN')}</span>
+                            </span>
+                          </div>
                         )}
                       </TableCell>
 
@@ -3052,6 +3096,188 @@ export default function AdminUsersPage() {
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* Petty Cash Float & Supplier Payout Tracker Configuration */}
+            <div className="p-4 sm:p-5 rounded-2xl border-2 border-emerald-200/80 dark:border-emerald-800/60 bg-gradient-to-br from-emerald-50/60 via-teal-50/30 to-emerald-50/40 dark:from-emerald-950/20 dark:via-teal-950/10 dark:to-emerald-950/20 space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Wallet className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                        Petty Cash Float &amp; Expense Tracker
+                      </Label>
+                      {pettyCashEnabled && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                      Enable morning raw materials purchases, cashflow ledger tracking, and 1-click WhatsApp top-up requests.
+                    </p>
+                  </div>
+                </div>
+
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={pettyCashEnabled}
+                    onChange={(e) => setPettyCashEnabled(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {pettyCashEnabled && (
+                <div className="space-y-4 pt-3 border-t border-emerald-200/60 dark:border-emerald-800/40 animate-in fade-in duration-200">
+                  {/* Quick staff assignment presets */}
+                  <div>
+                    <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                      Quick Staff Assignment Presets
+                    </Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPettyCashSites(['newrelic_hyderabad']);
+                          setPettyCashLimit(5000);
+                          toast({ title: 'Assigned Laxman Preset', description: 'Counter: New Relic (Hyderabad), Limit: ₹5,000' });
+                        }}
+                        className={cn(
+                          "p-2 rounded-xl border text-left text-xs transition-all",
+                          pettyCashSites.length === 1 && pettyCashSites.includes('newrelic_hyderabad')
+                            ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                            : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-emerald-400"
+                        )}
+                      >
+                        <p className="font-bold">Laxman</p>
+                        <p className={cn("text-[10px]", pettyCashSites.length === 1 && pettyCashSites.includes('newrelic_hyderabad') ? "text-emerald-100" : "text-slate-500")}>
+                          New Relic Hyderabad
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPettyCashSites(['newrelic_bangalore']);
+                          setPettyCashLimit(5000);
+                          toast({ title: 'Assigned Ravi Preset', description: 'Counter: New Relic (Bangalore), Limit: ₹5,000' });
+                        }}
+                        className={cn(
+                          "p-2 rounded-xl border text-left text-xs transition-all",
+                          pettyCashSites.length === 1 && pettyCashSites.includes('newrelic_bangalore')
+                            ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                            : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-emerald-400"
+                        )}
+                      >
+                        <p className="font-bold">Ravi</p>
+                        <p className={cn("text-[10px]", pettyCashSites.length === 1 && pettyCashSites.includes('newrelic_bangalore') ? "text-emerald-100" : "text-slate-500")}>
+                          New Relic Bangalore
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPettyCashSites(['ntt_data', 'dsm', 'resmed']);
+                          setPettyCashLimit(15000);
+                          toast({ title: 'Assigned Swamy Preset', description: 'Counters: NTT Data, DSM & ResMed, Limit: ₹15,000' });
+                        }}
+                        className={cn(
+                          "p-2 rounded-xl border text-left text-xs transition-all",
+                          pettyCashSites.includes('ntt_data') && pettyCashSites.includes('dsm') && pettyCashSites.includes('resmed')
+                            ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                            : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-emerald-400"
+                        )}
+                      >
+                        <p className="font-bold">Swamy</p>
+                        <p className={cn("text-[10px]", pettyCashSites.includes('ntt_data') && pettyCashSites.includes('dsm') && pettyCashSites.includes('resmed') ? "text-emerald-100" : "text-slate-500")}>
+                          NTT Data, DSM &amp; ResMed
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Accessible Counters / Sites Checkboxes */}
+                  <div>
+                    <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                      Assigned Petty Cash Counters
+                    </Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {[
+                        { id: 'newrelic_hyderabad', name: 'New Relic (Hyderabad)', loc: 'Hyd Stall' },
+                        { id: 'newrelic_bangalore', name: 'New Relic (Bangalore)', loc: 'Blr Stall' },
+                        { id: 'ntt_data', name: 'NTT Data (Hyderabad)', loc: 'Hyd Stall' },
+                        { id: 'dsm', name: 'DSM (Hyderabad)', loc: 'Hyd Stall' },
+                        { id: 'resmed', name: 'ResMed (Hyderabad)', loc: 'Hyd Stall' },
+                      ].map((counter) => {
+                        const isChecked = pettyCashSites.includes(counter.id);
+                        return (
+                          <label
+                            key={counter.id}
+                            className={cn(
+                              "flex items-center gap-2.5 p-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-colors",
+                              isChecked
+                                ? "bg-white dark:bg-slate-800 border-emerald-400 text-slate-900 dark:text-white shadow-2xs"
+                                : "bg-white/60 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setPettyCashSites((prev) => Array.from(new Set([...prev, counter.id])));
+                                } else {
+                                  setPettyCashSites((prev) => prev.filter((s) => s !== counter.id));
+                                }
+                              }}
+                              className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold truncate">{counter.name}</p>
+                              <p className="text-[10px] text-slate-400 font-normal">{counter.loc}</p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Float / Advance Limit */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        Float / Advance Cycle Limit (₹)
+                      </Label>
+                      <Input
+                        type="number"
+                        min="500"
+                        step="500"
+                        value={pettyCashLimit}
+                        onChange={(e) => setPettyCashLimit(Number(e.target.value) || 0)}
+                        className="h-9 text-xs font-bold"
+                        placeholder="5000"
+                      />
+                      <p className="text-[10px] text-slate-500">
+                        Default operational cycle advance assigned to this staff.
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex flex-col justify-center">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Admin Notification Dispatch</p>
+                      <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mt-0.5">
+                        WhatsApp alert to +91 77096 32898 &amp; In-App approval drawer.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Categorized Granular Tab & Endpoint Permissions (ALL CHECKBOXES + SELECT ALL) */}

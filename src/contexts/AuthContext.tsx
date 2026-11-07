@@ -31,6 +31,10 @@ export interface AppUser {
   defaultLandingPage?: string;
   allowedTabs?: string[];
   sessions?: Record<string, DeviceSession>;
+  pettyCashEnabled?: boolean;
+  pettyCashSites?: SiteId[];
+  pettyCashLocations?: string[];
+  pettyCashLimit?: number;
 }
 
 interface AuthContextType {
@@ -155,6 +159,11 @@ function AuthProviderInner({ children }: { children: React.ReactNode }) {
               assignedStartDate: data.assignedStartDate || null,
               assignedApps: data.assignedApps || [],
               assignedSite: data.assignedSite,
+              assignedSites: data.assignedSites || (data.assignedSite ? [data.assignedSite] : []),
+              pettyCashEnabled: Boolean(data.pettyCashEnabled),
+              pettyCashSites: data.pettyCashSites || [],
+              pettyCashLocations: data.pettyCashLocations || [],
+              pettyCashLimit: typeof data.pettyCashLimit === 'number' ? data.pettyCashLimit : 5000,
               defaultLandingPage: data.defaultLandingPage || '',
               allowedTabs: data.allowedTabs || [],
               sessions: data.sessions || {},

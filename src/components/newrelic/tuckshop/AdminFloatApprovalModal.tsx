@@ -38,7 +38,6 @@ import {
 } from '@/services/tuckshopFloatService';
 import { triggerHaptic } from '@/lib/haptics';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSearchParams } from 'next/navigation';
 
 const QUICK_UPI_HANDLES = ['@ybl', '@upi', '@paytm', '@okaxis', '@okhdfcbank'];
 
@@ -572,7 +571,6 @@ export function AdminFloatApprovalDialog({
 
 export function AdminFloatNotificationPill({ compact }: { compact?: boolean }) {
   const { role } = useAuth();
-  const searchParams = useSearchParams();
   const isAdmin = role === 'admin' || role === 'superadmin';
   const [pendingRequests, setPendingRequests] = useState<FloatRequestEntry[]>([]);
   const [selectedReq, setSelectedReq] = useState<FloatRequestEntry | null>(null);
@@ -586,10 +584,12 @@ export function AdminFloatNotificationPill({ compact }: { compact?: boolean }) {
     return () => unsub();
   }, [isAdmin]);
 
-  // Handle URL deep-link query parameter e.g. /newrelic/tuckshop?floatReq=req_xxx
+  // Handle URL deep-link query parameter e.g. /newrelic/tuckshop?floatReq=req_xxx safely without CSR bailouts
   useEffect(() => {
     if (!isAdmin || pendingRequests.length === 0) return;
-    const floatReqId = searchParams?.get('floatReq');
+    if (typeof window === 'undefined') return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const floatReqId = urlParams.get('floatReq');
     if (floatReqId) {
       const match = pendingRequests.find((r) => r.id === floatReqId);
       if (match) {
@@ -597,7 +597,7 @@ export function AdminFloatNotificationPill({ compact }: { compact?: boolean }) {
         setIsModalOpen(true);
       }
     }
-  }, [searchParams, pendingRequests, isAdmin]);
+  }, [pendingRequests, isAdmin]);
 
   if (!isAdmin || pendingRequests.length === 0) return null;
 

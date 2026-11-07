@@ -56,7 +56,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { SiteId, COMPANY_SITES, resolveSiteId, CompanySite, DEFAULT_COMPANY_SITES } from '@/types/site';
@@ -2547,9 +2547,9 @@ export default function AdminUsersPage() {
                   <User className="w-5 h-5 text-[#3b2fc9]" />
                   <span>{editingUser ? `Edit User: ${editingUser.email}` : 'Add New User & Assign Permissions'}</span>
                 </DialogTitle>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Configure credentials, stall scoping, petty cash limits, and granular endpoint access.
-                </p>
+                </DialogDescription>
               </div>
 
               {/* Clone Permissions Quick Selector */}
@@ -4056,7 +4056,7 @@ export default function AdminUsersPage() {
       >
         <DialogContent className="max-w-md rounded-3xl p-6 bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800">
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
+            <DialogHeader className="text-left sm:text-left flex-row items-center gap-3 space-y-0">
               <div
                 className={cn(
                   "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0",
@@ -4076,18 +4076,18 @@ export default function AdminUsersPage() {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                <DialogTitle className="text-base font-black text-slate-900 dark:text-white">
                   {confirmModal.type === 'suspend'
                     ? 'Suspend User Account'
                     : confirmModal.type === 'activate'
                     ? 'Activate User Account'
                     : 'Revoke Active Sessions'}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
                   {confirmModal.targetUser?.email}
-                </p>
+                </DialogDescription>
               </div>
-            </div>
+            </DialogHeader>
 
             <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 space-y-1.5">
               {confirmModal.type === 'suspend' ? (

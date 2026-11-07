@@ -1067,8 +1067,11 @@ export async function dispatchPettyCashRequestAlert(
   const reasonText = data.reason || (data as any).purpose || 'Morning supplies replenishment';
   const rawMode = (data.preferredMode || '').toLowerCase();
   const modeText = rawMode.includes('bank') ? '🏦 HDFC NetBanking / IMPS' : '📱 PhonePe / UPI Transfer';
-  const payeeUpi = (data as any).payeeUpi || '7709632898@ybl';
-  const upiPayLink = `upi://pay?pa=${encodeURIComponent(payeeUpi)}&pn=${encodeURIComponent(staffName)}&am=${amountVal}&cu=INR&tn=${encodeURIComponent('Tuckshop-Petty-Cash')}`;
+  const rawPhone = (data as any).payeePhone ? String((data as any).payeePhone).replace(/\D/g, '').slice(-10) : '';
+  const payeeUpi = (data as any).payeeUpi || (rawPhone ? `${rawPhone}@ybl` : '');
+  const upiPayLink = payeeUpi
+    ? `upi://pay?pa=${encodeURIComponent(payeeUpi)}&pn=${encodeURIComponent(staffName)}&am=${amountVal}&cu=INR&tn=${encodeURIComponent('Tuckshop-Petty-Cash')}`
+    : '';
 
   const message = `🚨 *PETTY CASH FLOAT TOP-UP REQUEST*
 ━━━━━━━━━━━━━━━━━━━━

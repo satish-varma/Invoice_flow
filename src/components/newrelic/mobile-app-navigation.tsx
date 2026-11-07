@@ -33,12 +33,14 @@ import {
   UserCheck,
   CalendarDays,
   CloudUpload,
+  Coins,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { triggerHaptic } from '@/lib/haptics';
 import { hasPermission, PermissionKey } from '@/types/permissions';
 import { COMPANY_SITES } from '@/types/site';
 import { subscribeToOfflineQueue } from '@/services/offlineSyncService';
+import { subscribeToAllPendingRequests } from '@/services/tuckshopFloatService';
 
 interface GlowTheme {
   activePill: string;
@@ -128,6 +130,7 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showCreateSheet, setShowCreateSheet] = useState(false);
   const [offlinePendingCount, setOfflinePendingCount] = useState(0);
+  const [pendingFloatCount, setPendingFloatCount] = useState(0);
 
   useEffect(() => {
     const unsub = subscribeToOfflineQueue((items) => {
@@ -138,6 +141,14 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
   }, []);
 
   const isAdmin = role === 'admin' || role === 'superadmin';
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const unsub = subscribeToAllPendingRequests((items) => {
+      setPendingFloatCount(items.length);
+    });
+    return unsub;
+  }, [isAdmin]);
   const site = user?.assignedSite || 'newrelic';
   const siteConfig = COMPANY_SITES[site] || COMPANY_SITES.newrelic;
 
@@ -182,6 +193,7 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
       isActive: pathname.startsWith('/newrelic/tuckshop') || pathname === '/tuckshop',
       glowTheme: GLOW_THEMES.emerald,
       permissionKey: 'tuckshop',
+      badge: isAdmin && pendingFloatCount > 0 ? pendingFloatCount : undefined,
     });
   }
 
@@ -332,6 +344,15 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
       href: '/newrelic/tuckshop',
       icon: Store,
       desc: 'Counter sales, daily collections & petty cash',
+    });
+  }
+  if (isAdmin) {
+    operationItems.push({
+      label: 'Petty Cash Requests',
+      href: '/newrelic/tuckshop?view=floats',
+      icon: Coins,
+      desc: 'Review & approve manager float requests via PhonePe/HDFC',
+      badge: pendingFloatCount > 0 ? pendingFloatCount : undefined,
     });
   }
   if (hasPermission(user, 'attendance')) {
@@ -682,6 +703,10 @@ export function MobileAppNavigation({ pendingStockCount = 0 }: { pendingStockCou
                     ) : pendingStockCount > 0 ? (
                       <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-rose-600 text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-[0_0_8px_#f43f5e] ring-2 ring-[#090b16] animate-pulse">
                         {pendingStockCount}
+                      </span>
+                    ) : (isAdmin && pendingFloatCount > 0) ? (
+                      <span className="absolute -top-1 -right-1 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-[0_0_8px_#f59e0b] ring-2 ring-[#090b16] animate-pulse" title={`${pendingFloatCount} pending petty cash requests`}>
+                        {pendingFloatCount}
                       </span>
                     ) : null}
                   </div>

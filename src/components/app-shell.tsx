@@ -38,7 +38,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { FinancialAuthProvider, useFinancialAuth } from '@/contexts/FinancialAuthContext';
 import { FinancialPasswordModal } from '@/components/newrelic/financial-password-modal';
-import { AdminFloatNotificationPill } from '@/components/newrelic/tuckshop/AdminFloatApprovalModal';
+import { AdminFloatNotificationPill, AdminFloatMobileBanner } from '@/components/newrelic/tuckshop/AdminFloatApprovalModal';
 import { MobileAppNavigation } from '@/components/newrelic/mobile-app-navigation';
 import { MobileAppBar } from '@/components/newrelic/mobile-app-bar';
 import { NetworkStatusIndicator } from '@/components/newrelic/network-status-indicator';
@@ -184,9 +184,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       {/* Mobile Top App Bar (sm:hidden) */}
       <div className="sm:hidden">
         <MobileAppBar>
-          <AdminFloatNotificationPill />
+          <AdminFloatNotificationPill compact />
           {isAdmin && <FinancialStatusBadge />}
         </MobileAppBar>
+        {isAdmin && <AdminFloatMobileBanner />}
       </div>
 
       {/* Desktop Top Header (hidden sm:block) */}

@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { triggerHaptic } from '@/lib/haptics';
 import { useAuth } from '@/contexts/AuthContext';
-import { getFloatScopeKey, getCounterDisplayName } from '@/services/tuckshopFloatService';
+import { getFloatScopeKey, getCounterDisplayName, resolveManagerPaymentDetails } from '@/services/tuckshopFloatService';
 
 interface RequestAmountDialogProps {
   open: boolean;
@@ -93,8 +93,24 @@ export function RequestAmountDialog({
   const [reason, setReason] = useState<string>('Morning bread, milk & curd');
   const [preferredMode, setPreferredMode] = useState<'upi' | 'bank_transfer'>('upi');
   const [payeeUpi, setPayeeUpi] = useState<string>('');
+  const [managerInfo, setManagerInfo] = useState<{ name: string; phone: string; upiId: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    resolveManagerPaymentDetails({
+      requestedByEmail: user?.email,
+      requestedBy: (user as any)?.name || user?.email?.split('@')[0],
+      siteId,
+      location,
+    }).then((res) => {
+      setManagerInfo(res);
+      if (res.upiId) {
+        setPayeeUpi((prev) => prev || res.upiId);
+      }
+    });
+  }, [open, user, siteId, location]);
 
   const selectedCounterObj = availableCounters.find((c) => c.scopeKey === selectedScope) || {
     scopeKey: selectedScope,
@@ -124,7 +140,9 @@ export function RequestAmountDialog({
           amount: numAmount,
           reason: reason.trim() || 'Supplies purchase',
           preferredMode,
-          payeeUpi: payeeUpi.trim() || undefined,
+          payeeUpi: payeeUpi.trim() || managerInfo?.upiId || undefined,
+          payeePhone: managerInfo?.phone || undefined,
+          payeeName: managerInfo?.name || (user as any)?.name || user?.email?.split('@')[0] || undefined,
           currentBalance: currentBalance ?? 0,
         }),
       });
@@ -317,13 +335,18 @@ export function RequestAmountDialog({
 
               {/* UPI ID / Mobile Input */}
               {preferredMode === 'upi' ? (
-                <div className="pt-1.5">
+                <div className="pt-1.5 space-y-1">
                   <Input
                     value={payeeUpi}
                     onChange={(e) => setPayeeUpi(e.target.value)}
                     placeholder="Enter your PhonePe Mobile No or UPI ID (e.g. 9876543210@ybl)"
                     className="h-9 rounded-xl text-xs font-mono"
                   />
+                  {managerInfo?.phone && (
+                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                      ✓ Auto-detected PhonePe: <strong>+91 {managerInfo.phone}</strong> from employee directory
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="pt-1.5">

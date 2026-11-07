@@ -64,12 +64,13 @@ export async function POST(request: Request) {
           requestId: newRequest.id,
           siteName: counterName || newRequest.counterName,
           location: location || newRequest.location || 'Counter Hub',
-          requestedBy: userName,
+          requestedBy: newRequest.payeeName || userName,
           amount: newRequest.amount,
           reason: newRequest.reason || 'Supplies purchase',
           currentBalance: currentBalance !== undefined ? Number(currentBalance) : 0,
           preferredMode: preferredMode || 'upi',
-          payeeUpi,
+          payeeUpi: newRequest.payeeUpi || payeeUpi,
+          payeePhone: newRequest.payeePhone,
         } as any);
       } catch (waErr: any) {
         console.warn('[FloatAPI] WhatsApp dispatch warning:', waErr.message);

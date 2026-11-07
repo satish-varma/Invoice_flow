@@ -45,6 +45,9 @@ export interface FloatRequestEntry {
   status: 'pending' | 'approved' | 'rejected';
   requestedBy: string;
   requestedByEmail?: string | null;
+  payeePhone?: string;
+  payeeUpi?: string;
+  payeeName?: string;
   reviewedBy?: string | null;
   reviewedAt?: string | null;
   reviewNotes?: string | null;
@@ -297,6 +300,97 @@ export async function addFloatTopUp(
 }
 
 /**
+ * Resolves requesting manager's Phone & PhonePe/UPI ID from newrelic_employees
+ */
+export async function resolveManagerPaymentDetails(req: {
+  requestedByEmail?: string | null;
+  requestedBy?: string;
+  siteId?: string;
+  location?: string;
+  payeePhone?: string;
+  payeeUpi?: string;
+  payeeName?: string;
+}): Promise<{ name: string; phone: string; upiId: string; source: string }> {
+  // If already specified on the request
+  if (req.payeePhone && req.payeeUpi) {
+    return {
+      name: req.payeeName || req.requestedBy?.split('(')[0]?.trim() || 'Manager',
+      phone: req.payeePhone,
+      upiId: req.payeeUpi,
+      source: 'request',
+    };
+  }
+
+  try {
+    const employeesSnapshot = await getDocs(collection(db, 'newrelic_employees'));
+    const employees = employeesSnapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    })) as any[];
+
+    const email = (req.requestedByEmail || '').toLowerCase().trim();
+    const rawName = (req.requestedBy || '').toLowerCase().trim();
+    const siteId = (req.siteId || '').toLowerCase().trim();
+    const location = (req.location || '').toLowerCase().trim();
+    const emailPrefix = email.includes('@') ? email.split('@')[0] : '';
+
+    // Match 1: Direct email match
+    let match = employees.find((e) => e.email && e.email.toLowerCase() === email);
+
+    // Match 2: Email prefix in employee name (e.g. swami -> chennuri swamy, laxman -> Laxman Behra, ravi -> Ravi Kumar Yadav)
+    if (!match && emailPrefix) {
+      match = employees.find((e) => {
+        const eName = (e.name || '').toLowerCase();
+        return eName.includes(emailPrefix);
+      });
+    }
+
+    // Match 3: Requested by name match
+    if (!match && rawName) {
+      const cleanRequested = rawName.split('(')[0].trim().split(' ')[0];
+      match = employees.find((e) => {
+        const eName = (e.name || '').toLowerCase();
+        return cleanRequested && (eName.includes(cleanRequested) || cleanRequested.includes(eName.split(' ')[0]));
+      });
+    }
+
+    // Match 4: Site & Location match
+    if (!match && siteId) {
+      match = employees.find((e) => {
+        const eSite = (e.siteId || 'newrelic').toLowerCase();
+        const eLoc = (e.location || '').toLowerCase();
+        const matchesSite = eSite === siteId || (siteId === 'newrelic' && eSite === 'newrelic');
+        const matchesLoc = location ? eLoc === location : true;
+        return matchesSite && matchesLoc && e.phone;
+      });
+    }
+
+    if (match) {
+      const rawPhone = match.phone || '';
+      const cleanPhone = rawPhone.replace(/\D/g, '').slice(-10);
+      const upiId = match.upiId || (cleanPhone ? `${cleanPhone}@ybl` : '');
+      return {
+        name: match.name || req.requestedBy?.split('(')[0]?.trim() || 'Manager',
+        phone: cleanPhone,
+        upiId: req.payeeUpi || upiId,
+        source: 'employee_directory',
+      };
+    }
+  } catch (err) {
+    console.warn('[TuckshopFloat] Error resolving employee payment details:', err);
+  }
+
+  const fallbackName = req.requestedBy?.split('(')[0]?.trim() || 'Manager';
+  const fallbackPhone = (req.payeePhone || '').replace(/\D/g, '').slice(-10);
+  return {
+    name: fallbackName,
+    phone: fallbackPhone,
+    upiId: req.payeeUpi || (fallbackPhone ? `${fallbackPhone}@ybl` : ''),
+    source: 'fallback',
+  };
+}
+
+/**
  * Submit an emergency float replenishment request from counter staff
  */
 export async function submitFloatRequest(
@@ -308,10 +402,24 @@ export async function submitFloatRequest(
     currentBalance?: number;
     requestedBy: string;
     requestedByEmail?: string | null;
+    payeePhone?: string;
+    payeeUpi?: string;
+    payeeName?: string;
   }
 ): Promise<FloatRequestEntry> {
   await assertWritePermission('Requesting Float Top-Up');
   const current = await getSiteFloat(scopeKey);
+
+  // Auto-resolve Manager Phone and UPI ID from Employee Directory
+  const payment = await resolveManagerPaymentDetails({
+    requestedByEmail: entry.requestedByEmail,
+    requestedBy: entry.requestedBy,
+    siteId: current.siteId,
+    location: current.location,
+    payeePhone: entry.payeePhone,
+    payeeUpi: entry.payeeUpi,
+    payeeName: entry.payeeName,
+  });
 
   const reqId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const newRequest: FloatRequestEntry = {
@@ -328,6 +436,9 @@ export async function submitFloatRequest(
     status: 'pending',
     requestedBy: entry.requestedBy,
     requestedByEmail: entry.requestedByEmail,
+    payeePhone: payment.phone,
+    payeeUpi: payment.upiId,
+    payeeName: payment.name,
   };
 
   // 1. Save in site's float document

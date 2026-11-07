@@ -10,6 +10,7 @@ import {
   query,
   where,
   orderBy,
+  limit,
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
@@ -322,13 +323,37 @@ export async function resolveManagerPaymentDetails(req: {
   }
 
   try {
+    const email = (req.requestedByEmail || '').toLowerCase().trim();
+
+    // Match 0: Direct user account lookup in 'users' collection
+    if (email) {
+      try {
+        const userQ = query(collection(db, 'users'), where('email', '==', email), limit(1));
+        const userSnap = await getDocs(userQ);
+        if (!userSnap.empty) {
+          const uData = userSnap.docs[0].data();
+          if (uData.phone || uData.upiId || uData.name) {
+            const cleanPhone = (uData.phone || '').replace(/\D/g, '').slice(-10);
+            const upiId = uData.upiId || (cleanPhone ? `${cleanPhone}@ybl` : '');
+            return {
+              name: uData.name || req.payeeName || req.requestedBy?.split('(')[0]?.trim() || 'Manager',
+              phone: cleanPhone || req.payeePhone || '',
+              upiId: req.payeeUpi || upiId,
+              source: 'user_profile',
+            };
+          }
+        }
+      } catch (uErr) {
+        console.warn('[TuckshopFloat] User lookup error:', uErr);
+      }
+    }
+
     const employeesSnapshot = await getDocs(collection(db, 'newrelic_employees'));
     const employees = employeesSnapshot.docs.map((d) => ({
       id: d.id,
       ...d.data(),
     })) as any[];
 
-    const email = (req.requestedByEmail || '').toLowerCase().trim();
     const rawName = (req.requestedBy || '').toLowerCase().trim();
     const siteId = (req.siteId || '').toLowerCase().trim();
     const location = (req.location || '').toLowerCase().trim();

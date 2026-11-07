@@ -28,6 +28,10 @@ import {
   classifyExpenseCategory,
   computeTuckshopPnL,
 } from '../src/services/tuckshopPnLService';
+import {
+  computeFloatBalance,
+  TuckshopSiteFloat,
+} from '../src/services/tuckshopFloatService';
 
 let passed = 0;
 let failed = 0;
@@ -356,6 +360,78 @@ async function runRegressionSuite() {
     assert(pnl.effectiveCommissionRate === 12.6, 'Effective platform take rate is 12.6%');
     assert(pnl.cogsPercentage === 17.2, 'Food Cost (COGS) % is 17.2% of net revenue');
     assert(pnl.netProfitMarginPct === 61.7, 'Net Profit Margin is 61.7%');
+  }
+
+  // --- SUITE 8: Counter Petty Cash Float & Supplies Drawdown ---
+  console.log('\n🏦 8. Counter Petty Cash Float & Supplies Drawdown:');
+  {
+    const mockFloat: TuckshopSiteFloat = {
+      siteId: 'newrelic',
+      openingFloat: 5000,
+      currentCycleStart: '2026-11-01T00:00:00.000Z',
+      topUps: [
+        {
+          id: 'topup-1',
+          amount: 2000,
+          date: '2026-11-03T10:00:00.000Z',
+          mode: 'upi',
+          note: 'Mid-week replenishment',
+        },
+      ],
+      requests: [],
+    };
+
+    const mockExpenses: any[] = [
+      // In-cycle expense: Morning bread & milk
+      {
+        id: 'exp-1',
+        siteId: 'newrelic',
+        type: 'expense',
+        date: '2026-11-04T07:30:00.000Z',
+        amount: 1500,
+      },
+      // In-cycle expense: Fresh vegetables
+      {
+        id: 'exp-2',
+        siteId: 'newrelic',
+        type: 'expense',
+        date: '2026-11-05T08:00:00.000Z',
+        amount: 1350,
+      },
+      // Out-of-cycle prior month expense (should NOT be deducted)
+      {
+        id: 'exp-old',
+        siteId: 'newrelic',
+        type: 'expense',
+        date: '2026-10-25T08:00:00.000Z',
+        amount: 4000,
+      },
+    ];
+
+    const result = computeFloatBalance(mockFloat, mockExpenses);
+    assert(result.openingFloat === 5000, 'Opening float is 5,000');
+    assert(result.totalTopUps === 2000, 'Top-ups added sum to 2,000');
+    assert(result.totalAdvanceAvailable === 7000, 'Total available advance is 7,000 (5,000 + 2,000)');
+    assert(result.totalSpent === 2850, 'Current cycle spent is 2,850 (1,500 + 1,350), excluding prior month');
+    assert(result.remainingFloat === 4150, 'Remaining cash in drawer is 4,150 (7,000 - 2,850)');
+    assert(result.remainingPercentage === 59.3, 'Remaining percentage is 59.3%');
+    assert(result.status === 'optimal', 'Status is optimal (> 40% threshold)');
+
+    // Test low float (< 40%) warning
+    const highSpendExpenses: any[] = [
+      { id: 'exp-h1', siteId: 'newrelic', type: 'expense', date: '2026-11-04T00:00:00Z', amount: 4500 },
+    ];
+    const warnResult = computeFloatBalance(mockFloat, highSpendExpenses);
+    assert(warnResult.remainingFloat === 2500, 'Remaining is 2,500');
+    assert(warnResult.status === 'warning', 'Status triggers warning (<= 40% threshold)');
+
+    // Test critical float (<= 15%) alert
+    const criticalSpendExpenses: any[] = [
+      { id: 'exp-c1', siteId: 'newrelic', type: 'expense', date: '2026-11-04T00:00:00Z', amount: 6500 },
+    ];
+    const critResult = computeFloatBalance(mockFloat, criticalSpendExpenses);
+    assert(critResult.remainingFloat === 500, 'Remaining is 500');
+    assert(critResult.status === 'critical', 'Status triggers critical alert (<= 15% threshold)');
   }
 
   // --- Summary ---

@@ -40,7 +40,7 @@ export interface DateGroupedItemSales {
   items: GroupedItemDetail[];
 }
 
-export function classifyItemCategory(itemName: string, isMrp: boolean): string {
+function classifyItemCategory(itemName: string, isMrp: boolean): string {
   const name = (itemName || '').toLowerCase();
   if (/maggi|maggie|noodle/i.test(name)) return 'Maggi & Noodles';
   if (/sandwich|toast|bread|sub/i.test(name)) return 'Sandwiches & Toast';
@@ -55,7 +55,7 @@ export function classifyItemCategory(itemName: string, isMrp: boolean): string {
   return 'Kitchen Fresh Food';
 }
 
-export function resolveSiteFromRow(cafeteria?: string, vendor?: string): { siteId: SiteId; name: string } {
+function resolveSiteFromRow(cafeteria?: string, vendor?: string): { siteId: SiteId; name: string } {
   const c = (cafeteria || '').toLowerCase();
   const v = (vendor || '').toLowerCase();
 

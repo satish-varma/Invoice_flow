@@ -7,6 +7,9 @@ import { TuckshopForm } from '@/components/newrelic/tuckshop/tuckshop-form';
 import { TuckshopList } from '@/components/newrelic/tuckshop/tuckshop-list';
 import { TuckshopShiftPulse } from '@/components/newrelic/tuckshop/TuckshopShiftPulse';
 import { HungerBoxSyncModal } from '@/components/newrelic/tuckshop/HungerBoxSyncModal';
+import { CogsHealthGauge } from '@/components/newrelic/tuckshop/CogsHealthGauge';
+import { PettyCashFloatWidget } from '@/components/newrelic/tuckshop/PettyCashFloatWidget';
+import { computeTuckshopPnL } from '@/services/tuckshopPnLService';
 import { subscribeToTuckshopRecords, NewRelicTuckshopRecord } from '@/services/newrelicTuckshopService';
 import { Loader2, Plus, TrendingDown, IndianRupee, Zap, Building2, PieChart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -61,6 +64,13 @@ export default function TuckshopPage() {
     });
     return Array.from(unique);
   }, [records]);
+
+  // Compute live COGS & unit economics for assigned site
+  const sitePnL = useMemo(() => {
+    return computeTuckshopPnL(records, {
+      siteId: isAdmin ? undefined : assignedSite,
+    });
+  }, [records, isAdmin, assignedSite]);
 
   const openDialog = (tab: 'expense' | 'sale') => {
     if (role === 'guest') {
@@ -165,6 +175,22 @@ export default function TuckshopPage() {
         onOpenHungerBoxSync={() => setIsHungerBoxModalOpen(true)}
         siteName={isAdmin ? undefined : siteConfig.name}
       />
+
+      {/* 📉 COGS Health Gauge & 🏦 Petty Cash Float Tracker */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <PettyCashFloatWidget
+          siteId={assignedSite}
+          records={records}
+          isAdmin={isAdmin}
+        />
+        <CogsHealthGauge
+          cogsAmount={sitePnL.totalCogs}
+          netRevenue={sitePnL.netRevenue}
+          grossSales={sitePnL.grossSales}
+          cogsPercentage={sitePnL.cogsPercentage}
+          topIngredients={sitePnL.cogsCategories}
+        />
+      </div>
 
       {/* HungerBox Cashless Automated Sync Modal */}
       <HungerBoxSyncModal

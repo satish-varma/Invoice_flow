@@ -57,6 +57,9 @@ import {
 import { COMPANY_SITES, SiteId, resolveSiteId } from '@/types/site';
 import { subscribeCompanySites } from '@/services/siteService';
 import { HungerBoxSyncModal } from '@/components/newrelic/tuckshop/HungerBoxSyncModal';
+import { CogsHealthGauge } from '@/components/newrelic/tuckshop/CogsHealthGauge';
+import { PettyCashFloatWidget } from '@/components/newrelic/tuckshop/PettyCashFloatWidget';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   computeTuckshopPnL,
   TuckshopPnLSummary,
@@ -69,6 +72,8 @@ import { formatOrdinalDate } from '@/services/hungerboxParser';
 const PIE_COLORS = ['#3b2fc9', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#ef4444', '#64748b'];
 
 export default function TuckshopAnalyticsPage() {
+  const { role } = useAuth();
+  const isAdmin = role === 'admin' || role === 'superadmin';
   const [records, setRecords] = useState<NewRelicTuckshopRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
@@ -916,6 +921,22 @@ export default function TuckshopAnalyticsPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* 📉 COGS Health Gauge & 🏦 Petty Cash Float Tracker */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <CogsHealthGauge
+          cogsAmount={pnl.totalCogs}
+          netRevenue={pnl.netRevenue}
+          grossSales={pnl.grossSales}
+          cogsPercentage={pnl.cogsPercentage}
+          topIngredients={pnl.cogsCategories}
+        />
+        <PettyCashFloatWidget
+          siteId={selectedSiteFilter === 'all' ? 'newrelic' : selectedSiteFilter}
+          records={records}
+          isAdmin={isAdmin}
+        />
       </div>
 
       {/* 🏢 MULTI-SITE P&L COMPARISON TABLE */}

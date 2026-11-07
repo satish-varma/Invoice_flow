@@ -256,8 +256,8 @@ export async function feedHungerBoxAggregatesToTuckshop(
         const batchStatements = agg.topItems.map((item) => {
           return {
             sql: `INSERT OR REPLACE INTO hungerbox_sales 
-                  (order_id, order_date, vendor_name, cafeteria_name, amount, item_name, status, org_id) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                  (order_id, order_date, vendor_name, cafeteria_name, amount, item_name, status, org_id, quantity) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
               `${agg.siteId}_${agg.date}_${item.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20)}`,
               agg.date,
@@ -265,8 +265,11 @@ export async function feedHungerBoxAggregatesToTuckshop(
               agg.siteId,
               item.amount,
               item.name,
-              item.amount > 0 ? (item.amount <= 30 ? 'MRP (3%)' : 'Non-MRP (19%)') : 'Completed',
+              item.isMrp !== undefined
+                ? (item.isMrp ? 'MRP (3%)' : 'Non-MRP (19%)')
+                : (item.amount <= 30 ? 'MRP (3%)' : 'Non-MRP (19%)'),
               agg.siteId,
+              item.quantity || 1,
             ],
           };
         });

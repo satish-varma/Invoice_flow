@@ -38,7 +38,7 @@ export interface HungerBoxDailyAggregate {
   netSales: number; // Total Sale After Commission (Gross Sale - Total Commission)
 
   mealSessions: { session: string; amount: number; count: number }[];
-  topItems: { name: string; quantity: number; amount: number }[];
+  topItems: { name: string; quantity: number; amount: number; isMrp?: boolean }[];
   orders: HungerBoxParsedOrder[];
 }
 

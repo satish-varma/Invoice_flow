@@ -464,8 +464,8 @@ async function main() {
       for (const item of topItemsList) {
         tursoBatch.push({
           sql: `INSERT OR REPLACE INTO hungerbox_sales 
-                (order_id, order_date, vendor_name, cafeteria_name, amount, item_name, status, org_id) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                (order_id, order_date, vendor_name, cafeteria_name, amount, item_name, status, org_id, quantity) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           args: [
             `${site.siteId}_${d}_${item.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20)}`,
             d,
@@ -475,6 +475,7 @@ async function main() {
             item.name,
             item.isMrp ? 'MRP (3%)' : 'Non-MRP (19%)',
             site.siteId,
+            item.quantity,
           ],
         });
         tursoItemsCount++;

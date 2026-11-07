@@ -40,33 +40,33 @@ export interface DateGroupedItemSales {
   items: GroupedItemDetail[];
 }
 
-function classifyItemCategory(itemName: string, isMrp: boolean): string {
+export function classifyItemCategory(itemName: string, isMrp: boolean): string {
   const name = (itemName || '').toLowerCase();
   if (/maggi|maggie|noodle/i.test(name)) return 'Maggi & Noodles';
-  if (/sandwich|toast|bread/i.test(name)) return 'Sandwiches & Toast';
-  if (/juice|shake|smoothie/i.test(name)) return 'Fresh Juices & Shakes';
+  if (/sandwich|toast|bread|sub/i.test(name)) return 'Sandwiches & Toast';
+  if (/juice|shake|smoothie|fruit/i.test(name)) return 'Fresh Juices & Shakes';
   if (/omlet|omelet|egg/i.test(name)) return 'Omelettes & Eggs';
   if (/tea|coffee|chai|milk|horlicks|boost|bournvita/i.test(name)) return 'Tea & Coffee';
-  if (/puff|samosa|dilkush|pastry|cake|bakery/i.test(name)) return 'Puffs & Bakery';
-  if (/dosa|idly|idli|vada|upma|poha|punugulu|bonda|bajji/i.test(name)) return 'South Indian Breakfast';
+  if (/puff|samosa|dilkush|pastry|cake|bakery|roll|muffin/i.test(name)) return 'Puffs & Bakery';
+  if (/dosa|idly|idli|vada|upma|poha|punugulu|bonda|bajji|pesarattu/i.test(name)) return 'South Indian Breakfast';
   if (/rice|chapathi|chapthi|roti|paratha|meal|biryani|pulao|curry|curd/i.test(name)) return 'Meals & Rice';
   if (/bhel|chaat|fries|snack/i.test(name)) return 'Snacks & Live Counter';
   if (isMrp) return 'Packaged Snacks (MRP)';
   return 'Kitchen Fresh Food';
 }
 
-function resolveSiteFromRow(cafeteria?: string, vendor?: string): { siteId: SiteId; name: string } {
+export function resolveSiteFromRow(cafeteria?: string, vendor?: string): { siteId: SiteId; name: string } {
   const c = (cafeteria || '').toLowerCase();
   const v = (vendor || '').toLowerCase();
 
-  if (c.includes('455') || c.includes('relic') || c.includes('orion') || v.includes('relic')) {
-    return { siteId: 'newrelic', name: 'New Relic' };
+  if (c === 'ntt_data' || c.includes('ntt') || v.includes('ntt')) {
+    return { siteId: 'ntt_data', name: 'NTT Data' };
   }
-  if (c.includes('458') || c.includes('dsm') || c.includes('firmenich') || v.includes('gut guru')) {
+  if (c === 'dsm' || c.includes('dsm') || c.includes('firmenich') || v.includes('dsm') || v.includes('gut guru')) {
     return { siteId: 'dsm', name: 'DSM' };
   }
-  if (c.includes('457') || c.includes('2082') || c.includes('2820') || c.includes('ntt')) {
-    return { siteId: 'ntt_data', name: 'NTT Data' };
+  if (c === 'newrelic' || c.includes('relic') || v.includes('relic') || c.includes('455')) {
+    return { siteId: 'newrelic', name: 'New Relic' };
   }
 
   return { siteId: 'newrelic', name: COMPANY_SITES.newrelic.name };
@@ -85,32 +85,58 @@ export async function GET(request: Request) {
     const categoryFilter = url.searchParams.get('category') || 'all';
     const startDate = url.searchParams.get('startDate') || '';
     const endDate = url.searchParams.get('endDate') || '';
-    const limit = parseInt(url.searchParams.get('limit') || '5000', 10);
+    const limit = parseInt(url.searchParams.get('limit') || '50000', 10);
 
-    // Fetch order rows from Turso hungerbox_sales
-    const queryRes = await turso.execute({
-      sql: `SELECT order_id, order_date, vendor_name, cafeteria_name, amount, item_name, status, org_id
-            FROM hungerbox_sales
-            WHERE (status IS NULL OR status = 'Completed' OR status = '' OR status = 'Delivered')
-            ORDER BY order_date DESC
-            LIMIT ?`,
-      args: [limit],
-    });
+    // Build dynamic SQL query for Turso
+    let sql = `SELECT order_id, order_date, vendor_name, cafeteria_name, amount, item_name, status, org_id, quantity
+               FROM hungerbox_sales
+               WHERE 1=1`;
+    const args: any[] = [];
 
+    if (siteFilter !== 'all') {
+      sql += ` AND (cafeteria_name = ? OR org_id = ?)`;
+      args.push(siteFilter, siteFilter);
+    }
+
+    if (startDate) {
+      sql += ` AND order_date >= ?`;
+      args.push(startDate);
+    }
+
+    if (endDate) {
+      sql += ` AND order_date <= ?`;
+      args.push(endDate);
+    }
+
+    sql += ` ORDER BY order_date DESC LIMIT ?`;
+    args.push(limit);
+
+    const queryRes = await turso.execute({ sql, args });
     const rows = queryRes.rows || [];
 
     // Filter and process rows
-    const byDate = new Map<string, {
-      date: string;
-      rawOrders: any[];
-    }>();
+    const byDate = new Map<
+      string,
+      {
+        date: string;
+        rawOrders: {
+          orderId: string;
+          orderDate: string;
+          amount: number;
+          quantity: number;
+          itemName: string;
+          siteId: SiteId;
+          siteName: string;
+          vendorName: string;
+          isMrp: boolean;
+          category: string;
+        }[];
+      }
+    >();
 
     for (const r of rows) {
       const orderDate = String(r.order_date || '').split('T')[0];
       if (!orderDate) continue;
-
-      if (startDate && orderDate < startDate) continue;
-      if (endDate && orderDate > endDate) continue;
 
       const { siteId, name: siteName } = resolveSiteFromRow(
         String(r.cafeteria_name || ''),
@@ -121,18 +147,28 @@ export async function GET(request: Request) {
 
       const itemName = String(r.item_name || 'Counter Purchase').trim();
       const amount = Number(r.amount) || 0;
+      const quantity = Number(r.quantity) > 0 ? Number(r.quantity) : 1;
       const orderId = String(r.order_id || '');
+      const statusStr = String(r.status || '').toLowerCase();
 
       // Check item search filter
       if (searchTerm && !itemName.toLowerCase().includes(searchTerm) && !orderId.toLowerCase().includes(searchTerm)) {
         continue;
       }
 
-      // Check MRP vs Non-MRP (Rules: Maggi, Sandwich, Juice, Omelette, Fresh food -> Non-MRP 19%)
-      const isPreparedFood = /maggi|maggie|sandwich|toast|juice|shake|omlet|omelet|egg|tea|coffee|chai|milk|dosa|idly|rice|chapathi|roti|paratha|puff|samosa|punugulu|bajji|bonda|curry|curd|upma|poha|vada|lemonade|meal|biryani|pulao|fries|combo|soup|noodles/i.test(itemName);
-      const isBrandedPackaged = /lays|haldiram|cadbury|britannia|biscuit|cookie|chikki|chips|chocolate|amul|thumsup|coke|pepsi|kurkure|bingo|parle|snickers|kitkat|dairy milk|wafer|namkeen|packaged|tropicana|paper boat/i.test(itemName);
+      // Determine MRP vs Non-MRP accurately
+      let isMrp = false;
+      if (statusStr.includes('mrp (3%)') || statusStr === 'mrp') {
+        isMrp = true;
+      } else if (statusStr.includes('non-mrp') || statusStr.includes('19%')) {
+        isMrp = false;
+      } else {
+        // Fallback heuristic classification
+        const isPreparedFood = /maggi|maggie|sandwich|toast|juice|shake|omlet|omelet|egg|tea|coffee|chai|milk|dosa|idly|rice|chapathi|roti|paratha|puff|samosa|punugulu|bajji|bonda|curry|curd|upma|poha|vada|lemonade|meal|biryani|pulao|fries|combo|soup|noodles/i.test(itemName);
+        const isBrandedPackaged = /lays|haldiram|cadbury|britannia|biscuit|cookie|chikki|chips|chocolate|amul|thumsup|coke|pepsi|kurkure|bingo|parle|snickers|kitkat|dairy milk|wafer|namkeen|packaged|tropicana|paper boat/i.test(itemName);
+        isMrp = !isPreparedFood && isBrandedPackaged;
+      }
 
-      const isMrp = !isPreparedFood && isBrandedPackaged;
       const category = classifyItemCategory(itemName, isMrp);
 
       if (categoryFilter !== 'all' && category !== categoryFilter) {
@@ -147,10 +183,11 @@ export async function GET(request: Request) {
         orderId,
         orderDate,
         amount,
+        quantity,
         itemName,
         siteId,
         siteName,
-        vendorName: String(r.vendor_name || 'HungerBox Vendor'),
+        vendorName: String(r.vendor_name || siteName),
         isMrp,
         category,
       });
@@ -179,21 +216,21 @@ export async function GET(request: Request) {
           dayNonMrpGross += o.amount;
         }
 
-        // Sites
+        // Sites breakdown
         if (!siteMap.has(o.siteId)) {
           siteMap.set(o.siteId, { siteId: o.siteId, name: o.siteName, amount: 0, count: 0 });
         }
         const sEntry = siteMap.get(o.siteId)!;
         sEntry.amount += o.amount;
-        sEntry.count++;
+        sEntry.count += o.quantity;
 
-        // Categories
+        // Categories breakdown
         if (!catMap.has(o.category)) {
           catMap.set(o.category, { category: o.category, amount: 0, count: 0 });
         }
         const cEntry = catMap.get(o.category)!;
         cEntry.amount += o.amount;
-        cEntry.count++;
+        cEntry.count += o.quantity;
 
         // Aggregate by item name
         const itemKey = `${o.itemName}_${o.siteId}`;
@@ -217,7 +254,7 @@ export async function GET(request: Request) {
         }
 
         const itemRecord = itemsMap.get(itemKey)!;
-        itemRecord.quantity++;
+        itemRecord.quantity += o.quantity;
         itemRecord.totalGross += o.amount;
         if (itemRecord.orderIds.length < 5) {
           itemRecord.orderIds.push(o.orderId);

@@ -297,9 +297,21 @@ export function AdminFloatApprovalDialog({
                         <Phone className="w-3.5 h-3.5 text-indigo-600" />
                         <span className="font-bold text-[11px]">Payee (Employee Directory):</span>
                       </div>
-                      <span className="font-mono font-bold text-xs text-indigo-900 dark:text-indigo-300">
-                        {payeePhone ? `+91 ${payeePhone}` : 'No phone linked'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-xs text-indigo-900 dark:text-indigo-300">
+                          {payeePhone ? `+91 ${payeePhone}` : 'No phone linked'}
+                        </span>
+                        {payeePhone && (
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(payeePhone, 'phone')}
+                            className="p-1 rounded text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0 text-[10px] font-bold flex items-center gap-0.5"
+                            title="Copy Phone Number for PhonePe"
+                          >
+                            {copiedField === 'phone' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* UPI Address field with Live Edit */}
@@ -405,15 +417,39 @@ export function AdminFloatApprovalDialog({
                         Pay <strong>{payeeName}</strong> directly on PhonePe with <strong>₹{request.amount.toLocaleString('en-IN')}</strong>:
                       </p>
                       {upiIntentUrl ? (
-                        <a
-                          href={upiIntentUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-indigo-950/20 active:scale-95 transition-all"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          ⚡ Open &amp; Pay ₹{request.amount.toLocaleString('en-IN')} on PhonePe App
-                        </a>
+                        <>
+                          <a
+                            href={upiIntentUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-indigo-950/20 active:scale-95 transition-all"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            ⚡ Open &amp; Pay ₹{request.amount.toLocaleString('en-IN')} on PhonePe App
+                          </a>
+
+                          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[10px] text-amber-900 dark:text-amber-200 space-y-1">
+                            <span className="font-bold flex items-center gap-1">
+                              💡 PhonePe showing a ₹2,000 limit?
+                            </span>
+                            <p>
+                              NPCI caps QR codes / web links for unverified contacts at ₹2,000. To pay full amount without limits:
+                            </p>
+                            <div className="flex items-center gap-2 pt-0.5">
+                              <span>1. Copy phone: <strong>{payeePhone}</strong></span>
+                              {payeePhone && (
+                                <button
+                                  type="button"
+                                  onClick={() => copyToClipboard(payeePhone, 'phone')}
+                                  className="underline font-bold text-indigo-600 dark:text-indigo-400 cursor-pointer"
+                                >
+                                  {copiedField === 'phone' ? 'Copied!' : 'Copy'}
+                                </button>
+                              )}
+                            </div>
+                            <p>2. Open PhonePe &rarr; Tap <strong>&quot;To Mobile Number&quot;</strong> &rarr; Enter full amount and pay.</p>
+                          </div>
+                        </>
                       ) : (
                         <p className="text-amber-600 text-xs font-bold">
                           Add the manager&apos;s UPI ID above to open PhonePe.
